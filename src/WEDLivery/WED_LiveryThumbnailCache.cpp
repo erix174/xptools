@@ -40,6 +40,7 @@
 #include "MathUtils.h"				// fltmax3
 #include <algorithm>				// std::max - parenthesised at every call site, see below
 #include <cmath>
+#include <cstring>				// strstr, for the APL extension check
 
 // <windows.h> (force-included via XDefs.h) defines min/max as macros, which swallow
 // std::max(...) into a compile error - every call here is written as (std::max)(...)
@@ -90,9 +91,17 @@ static bool FBOAvailable(void)
 	if (s_state >= 0) return s_state != 0;
 
 #if APL
-	// Mac links the ARB entry points directly out of the system GL framework;
-	// there is no pointer to be null.
-	s_state = 1;
+	// Mac links the ARB entry points straight out of the system GL framework, so
+	// there is no pointer to be null - but that only means calling them cannot
+	// crash, not that they WORK. An old Mac whose driver predates
+	// ARB_framebuffer_object returns a GL error and an incomplete framebuffer,
+	// and without this check we would rediscover that by allocating, attaching,
+	// checking and deleting an FBO for every visible card, every frame, forever.
+	// WED_LibraryPreviewPane.cpp:109 already does exactly this test.
+	const char * ext_str = (const char *) glGetString(GL_EXTENSIONS);
+	s_state = (ext_str && strstr(ext_str, "GL_ARB_framebuffer_object")) ? 1 : 0;
+	if (!s_state)
+		LOG_MSG("E/LiveryThumb no GL_ARB_framebuffer_object - preview cards disabled.\n");
 #else
 	s_state = (glGenFramebuffers  != NULL && glBindFramebuffer        != NULL &&
 			   glGenRenderbuffers != NULL && glFramebufferTexture2D   != NULL &&
@@ -177,7 +186,12 @@ const WED_LiveryThumbnail * WED_LiveryThumbnailCache::GetThumbnail(WED_ResourceM
 	GLuint depth_rb = 0;
 	glGenRenderbuffers(1, &depth_rb);
 	glBindRenderbuffer(GL_RENDERBUFFER, depth_rb);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, kThumbW, kThumbH);
+	// GL_DEPTH_COMPONENT24, not the unsized GL_DEPTH_COMPONENT. ARB_framebuffer_object
+	// accepts the base format, but the older EXT_framebuffer_object spec requires a
+	// SIZED one - an older Mac or Linux driver exposing only EXT answers the unsized
+	// token with GL_INVALID_ENUM, and the framebuffer then comes out incomplete for a
+	// reason that looks nothing like its cause.
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, kThumbW, kThumbH);
 
 	GLuint fbo = 0;
 	glGenFramebuffers(1, &fbo);
@@ -287,8 +301,13 @@ const WED_LiveryThumbnail * WED_LiveryThumbnailCache::GetThumbnail(WED_ResourceM
 	}
 	else
 	{
+		// Remember it, like the GetObj failure above. Without this the whole
+		// gen/attach/check/delete cycle repeats every frame for every visible
+		// card - on a machine where FBOs do not work at all, that is the steady
+		// state, not an edge case.
 		LOG_MSG("E/LiveryThumb offscreen FBO incomplete for %s\n", obj_vpath.c_str());
 		LOG_FLUSH();
+		mFailed.insert(obj_vpath);
 	}
 
 	glBindFramebuffer(GL_FRAMEBUFFER, (GLuint) prev_fbo);

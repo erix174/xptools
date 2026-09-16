@@ -951,6 +951,10 @@ void	WED_LiveryPane::EnsureFlagTexture(const string & ioc_country_code)
 	// (matches this machine's 0xAARRGGBB-in-a-uint32 layout on little-endian,
 	// same "OpenGL convention" BitmapUtils.h already documents) and flip the
 	// V texture-coordinate at draw time instead of flipping row order here.
+	// &v[0] on an empty vector is undefined - and the decoder sizes its output
+	// from the PNG's own dimensions, which come from the file.
+	if (composited.empty()) return;
+
 	glGenTextures(1, &mFlagTexId);
 	glBindTexture(GL_TEXTURE_2D, mFlagTexId);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -980,7 +984,8 @@ const WED_LiveryThumbnail *	WED_LiveryPane::EnsureRawFlagTexture(const string & 
 	string path = WED_FlagSourcePathForCountry(ioc_country_code);
 	vector<uint32_t> source_argb;
 	int src_w = 0, src_h = 0;
-	if (WED_LoadPngTopDownARGB(path, source_argb, src_w, src_h))
+	if (WED_LoadPngTopDownARGB(path, source_argb, src_w, src_h) &&
+		!source_argb.empty() && src_w > 0 && src_h > 0)
 	{
 		glGenTextures(1, &entry.tex);
 		glBindTexture(GL_TEXTURE_2D, entry.tex);
@@ -1412,8 +1417,16 @@ int		WED_LiveryPane::RowForY(int bounds[4], int y) const
 	float top = ContentTop(bounds);
 	if (y > top) return -1;
 
-	int row = (int) ((top + mScrollOffset - CardsBlockHeight(bounds) - y) / row_h);
-	return row;		// caller clamps against the visible-entry count (negative = inside the cards)
+	// Truncation toward zero is the trap here: a point inside the card block gives
+	// a NEGATIVE numerator, and C truncation turns everything in (-row_h, 0) into
+	// row 0 - so a click in the bottom row-height of the card strip used to toggle
+	// the first airline's checkbox. Reject the whole negative range explicitly
+	// rather than relying on the cast.
+	float rel = top + mScrollOffset - CardsBlockHeight(bounds) - y;
+	if (rel < 0) return -1;		// inside the cards, not on a checklist row
+
+	int row = (int) (rel / row_h);
+	return row;		// caller clamps against the visible-entry count
 }
 
 // Only vertical (axis 0) scrolling means anything for this single-column list.
@@ -2636,7 +2649,17 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			// straight over the toolbar/slider above it.
 			glPushAttrib(GL_SCISSOR_BIT);
 			glEnable(GL_SCISSOR_TEST);
-			glScissor((int) b[0], (int) content_bot, (int) (b[2] - b[0]), (int) (content_top - content_bot));
+			// Clamp both extents to >= 0. content_top subtracts a chain of fixed
+			// section heights from the pane's top edge, so dragging the property
+			// panel short - easy at gFontSize 18 - puts it BELOW content_bot and
+			// makes this height negative. glScissor rejects negative width or
+			// height with GL_INVALID_VALUE, which the next CHECK_GL_ERR in the
+			// frame turns into an assert in a debug build.
+			int sc_w = (int) (b[2] - b[0]);
+			int sc_h = (int) (content_top - content_bot);
+			if (sc_w < 0) sc_w = 0;
+			if (sc_h < 0) sc_h = 0;
+			glScissor((int) b[0], (int) content_bot, sc_w, sc_h);
 
 			// Caps how many BRAND NEW (not-yet-cached) thumbnails get rendered in this
 			// one Draw() call. A big scrollbar jump can reveal several never-before-

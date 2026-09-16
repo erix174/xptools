@@ -121,6 +121,26 @@ static bool LoadNodesCsv(const string & path, vector<WED_UvNode> & out_nodes, in
 		if (!std::getline(iss, tok, ',')) return false; n.x = atof(tok.c_str());
 		if (!std::getline(iss, tok, ',')) return false; n.y = atof(tok.c_str());
 
+		// Validate the grid coordinates HERE, before anything is sized or indexed
+		// from them. This file ships loose next to WED and can be replaced or
+		// hand-edited, so these two integers are untrusted input:
+		//
+		//   - A NEGATIVE row or column used to survive all the way to the write
+		//     loop below, where (size_t) n.row * out_cols wraps to an enormous
+		//     index and smashes the heap. max_row/max_col only ever track the
+		//     MAXIMUM, so they never noticed a negative one.
+		//   - A huge row ("999999999,0,...") used to be believed, and the assign()
+		//     below then asked for billions of elements. That throws
+		//     std::length_error or std::bad_alloc, nothing on the path up to
+		//     WED_LiveryPane::Draw() catches it, and WED disappears mid-frame.
+		//
+		// kMaxGridDim is far above the 9 x 17 mesh this file actually describes -
+		// the point is to bound the allocation, not to hard-code the shape. The
+		// exact 9 x 17 check still happens in the caller.
+		const int kMaxGridDim = 1024;
+		if (n.row < 0 || n.column < 0)						return false;
+		if (n.row >= kMaxGridDim || n.column >= kMaxGridDim)	return false;
+
 		nodes.push_back(n);
 		if (n.row > max_row) max_row = n.row;
 		if (n.column > max_col) max_col = n.column;
