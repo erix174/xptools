@@ -70,8 +70,16 @@ void	WED_RampPosition::Import(const AptGate_t& x, void (* print_func)(void *, co
 	if(width == -1)
 	{
 		print_func(ref,"Illegal ramp size: %d\n",x.type);
-		ramp_type = width_E;
+		width = width_E;			// was "ramp_type = width_E" - a size assigned to the TYPE
 	}
+
+	// apt.dat carries ONE size letter per ramp start (row 1301's first field), so
+	// an imported stand is a single class, not a range - min and max are equal.
+	// Without this, width_min keeps its property default of width_A and every
+	// imported ramp reads as [A .. whatever], a range the author never wrote and
+	// which the Liveries tab then presents as a wide-open slider.
+	width_min = width.value;
+
 	ENUM_ImportSet(equip_type.domain,x.equipment,equip_type.value);
 }
 
