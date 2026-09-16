@@ -24,9 +24,24 @@ I
 # One row per (airline, aircraft type) combination that has a real, installed
 # livery - an airline with liveries for three aircraft types gets three rows.
 #
-# STATUS: empty template - no real data yet. This needs an actual inventory of
-# what's in the X-Plane resource library (installed liveries + whatever
-# library.txt export data identifies their airline/aircraft/op_type), which
-# doesn't exist yet as a canonical source WED can read. Needs to be
-# established (and then kept up to date - see the project's engineering
-# notes) before this file can be populated for real.
+# STATUS: DEPRECATED - never populated, superseded before it carried any data.
+# Kept (renamed with the _deprecated_ prefix) only so the reasoning below stays
+# findable; nothing loads it and nothing should.
+#
+# SUPERSEDED BY: livery_index.txt, which lives on the X-PLANE side at
+#   <X-Plane root>/Resources/default scenery/sim objects/apt_aircraft/livery_index.txt
+#
+# WHY IT MOVED OUT OF WED: this file was going to catalogue which (airline,
+# aircraft type) liveries exist, but that inventory is a property of the
+# X-Plane installation, not of WED. Putting it here would have meant WED
+# shipping its own opinion about another product's asset library and going
+# stale the moment X-Plane shipped a new livery. On the X-Plane side it sits
+# next to the assets it describes, so the PR that adds a livery is already
+# touching that directory. WED reads it through the X-Plane root the user has
+# already selected (gPackageMgr->GetXPlaneFolder()) - which is a hard
+# prerequisite for loading any livery at all, so the dependency costs nothing.
+#
+# The replacement also carries more than this file's three columns: aircraft
+# type, operator, registration, country of registration, and a livery note
+# (Default / Retro / Special / Alliance / Government / Unpainted). See
+# WED_ProjectNotes.md in the repo root for how the pieces fit together.

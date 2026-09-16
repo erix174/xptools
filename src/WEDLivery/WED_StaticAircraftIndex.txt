@@ -1,0 +1,806 @@
+I
+1 WED Aviation Database
+# WED Static Aircraft Index - GENERATED, do not hand-edit.
+# Airline header : <ICAO> *** <Name> *** <Country> *** <Fleet size>
+# Aircraft row   : \t<TYPE> *** <CLASS> *** <OP TYPE> *** <VARIANT> *** <path>
+#
+# OP TYPE is Airline | Cargo | GA | Military - what WED filters the
+# recommendation list by, per the user's ramp-operation setting.
+# Lookup key     : <TYPE>_<ICAO>_<VARIANT>   (what apt.dat stores)
+#
+# CLASS is the ICAO wingspan class A-F, joined from
+# WED_AircraftSizeReference.txt by TYPE. It is duplicated here on purpose:
+# this file is machine-facing and the consumer must not need a second join
+# to size a stand. Drift is impossible because this file is generated - if
+# a class is corrected upstream, regenerating propagates it.
+# '?' means the TYPE is absent from the size reference - needs adding there.
+#
+# VARIANT vocabulary: Default | Modern | Legacy | Government |
+#   Subsidiary_<country> | Special_<token>   (reserved: Star_Alliance,
+#   OneWorld, SkyTeam - none present in the current asset set)
+#
+
+AAL *** American Airlines *** USA *** 1034
+	A320 *** C *** Airline *** Default *** jet/A320_AAL/A320_AAL_static.obj
+	B738 *** C *** Airline *** Default *** jet/B738_AAL/B738_AAL_static.obj
+	B772 *** E *** Airline *** Default_DUP0 *** heavy/B772_AAL/B772_AAL_static.obj
+	B772 *** E *** Airline *** Default_DUP1 *** heavy/B772_AAl/B772_AAL_static.obj
+
+AAR *** Asiana Airlines *** KOR *** 67
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_Asiana.obj
+
+ABP *** ABS Jets *** CZE *** 7
+	GLF6 *** C *** GA *** Default *** jet/GLF6/GLF6_ABP.obj
+
+ACA *** Air Canada *** CAN *** 236
+	A320 *** C *** Airline *** Default *** jet/A320_ACA/A320_ACA_static.obj
+
+AEA *** Air Europa *** ESP *** 47
+	B738 *** C *** Airline *** Default *** jet/B738_AEA/738_AirEuropa_ECNZR.obj
+
+AFL *** Aeroflot - Russian Airlines *** RUS *** 171
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_Aeroflot.obj
+	B738 *** C *** Airline *** Default *** jet/B738_AFL/738_Aeroflot_RA73093.obj
+
+AFR *** Air France *** FRA *** 226
+	A320 *** C *** Airline *** Default *** jet/A320_AFR/A320_AFR_static.obj
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_AirFrance.obj
+	CRJ1 *** B *** Airline *** Default_DUP0 *** jet/CRJ1_AFR/CRJ100_Air_France.obj
+	CRJ1 *** B *** Airline *** Default_DUP1 *** jet/CRJ1_AFR/CRJ1_AFR_static.obj
+
+AHY *** AZAL Azerbaijan Airlines *** AZE *** 40
+	B752 *** D *** Airline *** Default *** jet/B752/757_Azerbaijan_4KAZ11.obj
+
+AIB *** ? *** ? *** ?
+	A359 *** E *** GA *** Default *** heavy/A359/A359_Factory.obj
+	A35K *** E *** GA *** Default *** heavy/A35K/A35K_Factory.obj
+
+AIC *** Air India *** IND *** 181
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_AirIndia.obj
+
+AIO *** ? *** ? *** ?
+	B752 *** D *** Military *** Default *** jet/B752/757_C32A.obj
+	C30J *** D *** Military *** Default *** turboprop/C30J/C30J_USAF.obj
+	CL60 *** B *** Military *** Default *** jet/CL60/CL60_N488CR.obj
+	DC10 *** D *** Military *** Default *** heavy/DC10_AIO/DC10_AIO_static.obj
+	F15 *** A *** Military *** Default_DUP0 *** fighter/F15/F15EX_cft_usaf.obj
+	F15 *** A *** Military *** Default_DUP1 *** fighter/F15/F15EX_usaf.obj
+	J328 *** B *** Military *** Default *** jet/J328_AIO/J328_AIO_static.obj
+	PC12 *** B *** Military *** Default *** turboprop/PC12/PC12_US_Army.obj
+
+AME *** ? *** ? *** ?
+	EUFI *** A *** Military *** Default *** fighter/EUFI/EUFI_AME.obj
+
+AMX *** Aeroméxico *** MEX *** 136
+	B738 *** C *** Airline *** Default *** jet/B738_AMX/738_AeroMexico_Modern_XAAMA.obj
+
+ANA *** All Nippon Airways *** JPN *** 246
+	B738 *** C *** Airline *** Default *** jet/B738_ANA/738_ANA_JA79AN.obj
+	B763 *** D *** Airline *** Default *** jet/B763_ANA/B763_ANA_static.obj
+
+ANZ *** Air New Zealand *** NZL *** 114
+	B772 *** E *** Airline *** Default *** heavy/B772_ANZ/B772_ANZ_static.obj
+
+ARG *** Aerolineas Argentinas *** ARG *** 81
+	B738 *** C *** Airline *** Default *** jet/B738_ARG/738_AerolineasArgentinas_LVFQZ.obj
+
+ASA *** Alaska Airlines *** USA *** 351
+	A320 *** C *** Airline *** Default *** jet/A320_ASA/A320_ASA_static.obj
+	B738 *** C *** Airline *** Default *** jet/B738_ASA/B738_ASA_static.obj
+
+ASY *** ? *** ? *** ?
+	C30J *** D *** Military *** Default *** turboprop/C30J/C30J_RAAF.obj
+
+ATN *** Air Transport International *** USA *** 50
+	B752 *** D *** Cargo *** Default *** jet/B752/757_ATI_N752CX.obj
+
+AUA *** Austrian Airlines *** AUT *** 66
+	CRJ1 *** B *** Airline *** Default_DUP0 *** jet/CRJ1_AUA/CRJ100_Austrian_Arrows.obj
+	CRJ1 *** B *** Airline *** Default_DUP1 *** jet/CRJ1_AUA/CRJ1_AUA_static.obj
+
+AWE *** ? *** ? *** ?
+	A320 *** C *** Airline *** Default *** jet/A320_AWE/A320_AWE_static.obj
+
+AZA *** ? *** ? *** ?
+	MD82 *** C *** Airline *** Default_DUP0 *** jet/MD80_AZA/MD80_AZA_static.obj
+	MD82 *** C *** Airline *** Default_DUP1 *** jet/MD80_AZA/MD80_Alitalia.obj
+
+AZU *** Azul *** BRA *** 171
+	A320 *** C *** Airline *** Default *** jet/A320_AZU/A320_AZU_static.obj
+
+AZV *** Azur Air *** RUS *** 18
+	B752 *** D *** Airline *** Default *** jet/B752/757_azurair_RA73076.obj
+
+BAW *** British Airways *** GBR *** 299
+	A320 *** C *** Airline *** Default *** jet/A320_BAW/A320_BAW_static.obj
+	A35K *** E *** Airline *** Default *** heavy/A35K/A35K_BritishAirways.obj
+	B772 *** E *** Airline *** Default *** heavy/B772_BAW/B772_BAW_static.obj
+
+BDA *** Blue Dart Aviation *** IND *** 8
+	B752 *** D *** Cargo *** Default *** jet/B752/757_BlueDart_VTBDM.obj
+
+BER *** Fly Air41 Airways *** CRO *** 7
+	A320 *** C *** Airline *** Default *** jet/A320_BER/A320_BER_static.obj
+
+BOE *** ? *** ? *** ?
+	B738 *** C *** GA *** Default *** jet/B738_Factory/738_Factory.obj
+	B752 *** D *** GA *** Default *** jet/B752/757_N757A.obj
+	CL60 *** B *** GA *** Default *** jet/CL60/CL60_N543BA.obj
+
+BTK *** Batik Air *** INA *** 60
+	B738 *** C *** Airline *** Default *** jet/B738_BTK/738_BatikAir_PKLDL.obj
+
+BTQ *** ? *** ? *** ?
+	PC12 *** B *** Airline *** Default *** turboprop/PC12/PC12_N220JP.obj
+
+CAI *** Corendon Airlines *** TUR *** 14
+	B738 *** C *** Airline *** Default *** jet/B738_CAI/738_CorendonAirlines_TCTJO.obj
+
+CAL *** China Airlines *** TPE *** 85
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_ChinaAirlines.obj
+	B738 *** C *** Airline *** Default *** jet/B738_CAL/738_ChinaAirlines_B18660.obj
+
+CCA *** Air China *** CHN *** 535
+	A320 *** C *** Airline *** Default *** jet/A320_CCA/A320_CCA_static.obj
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_AirChina.obj
+	B738 *** C *** Airline *** Default *** jet/B738_CCA/B738_CCA_static.obj
+	B738 *** C *** Airline *** Special_Peony_B2642 *** jet/B738_CCA_Peony_2642/738_AirChina_Peony_B2642.obj
+	B738 *** C *** Airline *** Special_Peony_B5177 *** jet/B738_CCA_Peony_5177/738_AirChina_Peony_B5177.obj
+	B738 *** C *** Airline *** Special_Peony_B5178 *** jet/B738_CCA_Peony_5178/738_AirChina_Peony_B5178.obj
+	B738 *** C *** Airline *** Special_Peony_B5198 *** jet/B738_CCA_Peony_5198/738_AirChina_Peony_B5198.obj
+	B738 *** C *** Airline *** Special_Peony_B5390 *** jet/B738_CCA_Peony_5390/738_AirChina_Peony_B5390.obj
+
+CCD *** Dalian Airlines *** CHN *** 12
+	B738 *** C *** Airline *** Default *** jet/B738_CCD/738_DalianAirlines_B5639.obj
+
+CDG *** Shandong Airlines *** CHN *** 140
+	B738 *** C *** Airline *** Default *** jet/B738_CDG/738_ShandongAirlines_B1438.obj
+
+CES *** China Eastern Airlines *** CHN *** 678
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_ChinaEastern.obj
+	B738 *** C *** Airline *** Default *** jet/B738_CES/738_ChinaEastern_B1722.obj
+
+CFC *** ? *** ? *** ?
+	C30J *** D *** Military *** Default *** turboprop/C30J/C30J_RCAF.obj
+
+CHH *** Hainan Airlines *** CHN *** 219
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_HainanAirlines.obj
+
+CJT *** Cargojet Airways *** CAN *** 44
+	B722 *** C *** Cargo *** Default *** jet/B722_CJT/B722_CJT_static.obj
+	B752 *** D *** Cargo *** Special_CFKCJ *** jet/B752/757_Cargojet_CFKCJ.obj
+	B752 *** D *** Cargo *** Special_CGCJT *** jet/B752/757_Cargojet_CGCJT.obj
+
+CJX *** Jiangxi Air *** CHN *** 19
+	B738 *** C *** Airline *** Default *** jet/B738_CJX/738_JiangxiAir_B5566.obj
+
+CKJ *** ? *** ? *** ?
+	B738 *** C *** Military *** Default *** jet/B738_PLAAF_Mil/738_PLAAF_B4000.obj
+
+CMP *** Copa Airlines *** PAN *** 119
+	B738 *** C *** Airline *** Default *** jet/B738_CMP/738_CopaAirlines_HP1539CMP.obj
+
+CNS *** PlaneSense *** USA *** 47
+	PC12 *** B *** GA *** Default *** turboprop/PC12/PC12_N283AF.obj
+
+CNV *** ? *** ? *** ?
+	E2 *** C *** Military *** Default *** turboprop/E2/E2_Hawkeye_static.obj
+	F18S *** A *** Military *** Default *** fighter/F18/FA_18E_static.obj
+	H60 *** B *** Military *** Default *** helo/H60/SH60_Seahawk_static.obj
+
+CNW *** North-Western Cargo *** CHN *** 4
+	B752 *** D *** Cargo *** Default *** jet/B752/757_NorthwesternCargo_B2862.obj
+
+CPA *** Cathay Pacific *** HKG *** 180
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_CathayPacific.obj
+	A35K *** E *** Airline *** Default *** heavy/A35K/A35K_CathayPacific.obj
+
+CSC *** Sichuan Airlines *** CHN *** 214
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_Sichuan_Panda.obj
+
+CSN *** China Southern Airlines *** CHN *** 693
+	A320 *** C *** Airline *** Default *** jet/A320_CSN/A320_CSN_static.obj
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_ChinaSouthern.obj
+	B738 *** C *** Airline *** Default *** jet/B738_CSN/738_ChinaSouthern_B1410.obj
+
+CSS *** SF Airlines *** CHN *** 89
+	B752 *** D *** Cargo *** Default *** jet/B752/757_SF_B2826.obj
+
+CSZ *** Shenzhen Airlines *** CHN *** 211
+	B738 *** C *** Airline *** Default *** jet/B738_CSZ/738_ShenzhenAirlines_B5613.obj
+
+CUA *** China United Airlines *** CHN *** 60
+	B738 *** C *** Airline *** Default *** jet/B738_CUA/738_ChinaUnitedAirlines_B1280.obj
+
+CUH *** Urumqi Air *** CHN *** 20
+	B738 *** C *** Airline *** Default *** jet/B738_CUH/738_UrumqiAir_B2157.obj
+
+CXA *** Xiamen Airlines *** CHN *** 175
+	B738 *** C *** Airline *** Default *** jet/B738_CXA/B738_CXA_static.obj
+
+CYH *** ? *** ? *** ?
+	B738 *** C *** Airline *** Default *** jet/B738_CYH/738_ChinaEasternYN_B6147.obj
+	B738 *** C *** Airline *** Special_Peacock *** jet/B738_CYH_Peacock/738_ChinaEasternYNPeacock_B6143.obj
+
+CYZ *** China Postal Airlines *** CHN *** 40
+	B752 *** D *** Cargo *** Default *** jet/B752/757_EMS_B2831.obj
+
+DAH *** Air Algérie *** ALG *** 64
+	B738 *** C *** Airline *** Default *** jet/B738_DAH/738_AirAlgerie_7TVKB.obj
+	B738 *** C *** Military *** Government *** jet/B738_DAH_Mil/738_AirAlgerie_VIP_7TVKQ.obj
+
+DAL *** Delta Air Lines *** USA *** 1002
+	A320 *** C *** Airline *** Default *** jet/A320_DAL/A320_DAL_static.obj
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_Delta.obj
+	B738 *** C *** Airline *** Default *** jet/B738_DAL/B738_DAL_static.obj
+	B752 *** D *** Airline *** Special_N654DL *** jet/B752/757_Delta_N654DL.obj
+	B752 *** D *** Airline *** Special_N695DL *** jet/B752/757_Delta_N695DL.obj
+	B763 *** D *** Airline *** Default *** jet/B763_DAL/B763_DAL_static.obj
+	B772 *** E *** Airline *** Default *** heavy/B772_DAL/B772_DAL_static.obj
+	CRJ2 *** B *** Airline *** Default *** jet/CRJ2_DAL/CRJ2_DAL_static.obj
+	MD82 *** C *** Airline *** Default_DUP0 *** jet/MD80_DAL/MD80_DAL_static.obj
+	MD82 *** C *** Airline *** Default_DUP1 *** jet/MD80_DAL/MD80_Delta.obj
+
+DCS *** DC Aviation *** GER *** 1
+	GLF6 *** C *** GA *** Default *** jet/GLF6/GLF6_DCS.obj
+
+DHK *** DHL Air UK *** GBR *** 19
+	B752 *** D *** Cargo *** Special_DALES *** jet/B752/757_DHL_DALES.obj
+	B752 *** D *** Cargo *** Special_GBMRB *** jet/B752/757_DHL_GBMRB.obj
+	B763 *** D *** Cargo *** Default *** jet/B763_DHK/B763_DHK_static.obj
+
+DLA *** Air Dolomiti *** ITA *** 30
+	AT45 *** C *** Airline *** Default_DUP0 *** turboprop/AT45_DLA/AT45_DLA_static.obj
+	AT45 *** C *** Airline *** Default_DUP1 *** turboprop/AT45_DLA/ATR42-500_Air_Dolomiti.obj
+
+DLH *** Lufthansa *** GER *** 266
+	A320 *** C *** Airline *** Default *** jet/A320_DLH/A320_DLH_static.obj
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_Lufthansa.obj
+	AT72 *** C *** Airline *** Default_DUP0 *** turboprop/AT72_DLH/AT72_DLH_static.obj
+	AT72 *** C *** Airline *** Default_DUP1 *** turboprop/AT72_DLH/ATR72-500_Lufthansa_Regional.obj
+
+DOJ *** ? *** ? *** ?
+	B752 *** D *** Military *** Default *** jet/B752/757_USDOJ_N119NA.obj
+
+EDW *** Edelweiss *** SUI *** 23
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_Edelweiss.obj
+
+EGF *** ? *** ? *** ?
+	AT72 *** C *** Airline *** Default_DUP0 *** turboprop/AT72_EGF/AT72_EGF_static.obj
+	AT72 *** C *** Airline *** Default_DUP1 *** turboprop/AT72_EGF/ATR72-500_American_Eagle.obj
+
+EJA *** NetJets Aviation *** USA *** 244
+	CL60 *** B *** GA *** Default *** jet/CL60/CL60_EJA.obj
+	E55P *** B *** GA *** Default *** jet/E55P/E55P_EJA.obj
+
+ELY *** El Al Israel Airlines *** ISR *** 57
+	B738 *** C *** Airline *** Default *** jet/B738_ELY/738_ElAl_4XEKA.obj
+
+ENT *** Enter Air *** POL *** 40
+	B738 *** C *** Airline *** Default *** jet/B738_ENT/738_EnterAir_SPESH.obj
+
+EPA *** Donghai Airlines *** CHN *** 23
+	B738 *** C *** Airline *** Default *** jet/B738_EPA/738_DonghaiAirlines_B1590.obj
+
+ETD *** Etihad Airways *** UAE *** 126
+	A35K *** E *** Airline *** Default *** heavy/A35K/A35K_Etihad.obj
+
+ETH *** Ethiopian Airlines *** ETH *** 165
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_Ethiopian.obj
+	A35K *** E *** Airline *** Default *** heavy/A35K/A35K_Ethiopian.obj
+
+EVE *** Iberojet *** ESP *** 4
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_iberojet.obj
+
+EXS *** Jet2 *** GBR *** 139
+	B738 *** C *** Airline *** Default *** jet/B738_EXS/738_Jet2_Modern_GDRTR.obj
+	B752 *** D *** Airline *** Default *** jet/B752/757_Jet2_GLSAJ.obj
+
+EZY *** easyJet *** GBR *** 197
+	A320 *** C *** Airline *** Default *** jet/A320_EZY/A320_EZY_static.obj
+
+FAG *** ? *** ? *** ?
+	B752 *** D *** Military *** Default *** jet/B752/757_FAA_ARG01.obj
+
+FBU *** French bee *** FRA *** 6
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_Frenchbee.obj
+	A35K *** E *** Airline *** Default *** heavy/A35K/A35K_Frenchbee.obj
+
+FDB *** flydubai *** UAE *** 96
+	B738 *** C *** Airline *** Default *** jet/B738_FDB/738_FlyDubai_A6FDB.obj
+
+FDX *** FedEx Express *** USA *** 478
+	AT45 *** C *** Cargo *** Default_DUP0 *** turboprop/AT45_FDX/AT45_FDX_static.obj
+	AT45 *** C *** Airline *** Default_DUP1 *** turboprop/AT45_FDX/ATR42-500_FedEx.obj
+	B722 *** C *** Cargo *** Default *** jet/B722_FDX/B722_FDX_static.obj
+	B752 *** D *** Cargo *** Default *** jet/B752/757_Fedex_N927FD.obj
+	B763 *** D *** Cargo *** Default *** jet/B763_FDX/B763_FDX_static.obj
+	DC10 *** D *** Cargo *** Default *** heavy/DC10_FDX/DC10_FDX_static.obj
+
+FIN *** Finnair *** FIN *** 79
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_Finnair.obj
+
+FJI *** Fiji Airways *** FIJ *** 14
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_Fiji.obj
+
+FSF *** Fly7 Finland *** FIN *** 8
+	PC12 *** B *** Cargo *** Default *** turboprop/PC12/PC12_OHZRH.obj
+
+FWI *** Air Caraïbes *** FRA *** 13
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_AirCaraibes.obj
+	A35K *** E *** Airline *** Default *** heavy/A35K/A35K_AirCaraibes.obj
+
+GAF *** ? *** ? *** ?
+	A359 *** E *** Military *** Default *** heavy/A359/A359_Luftwaffe.obj
+	EUFI *** A *** Military *** Default *** fighter/EUFI/EUFI_GAF.obj
+
+GDC *** Grand China Air *** CHN *** 3
+	B738 *** C *** Airline *** Default *** jet/B738_GDC/738_GrandChina_B5482.obj
+
+GEL *** Geosky *** GEO *** 4
+	B752 *** D *** Cargo *** Default *** jet/B752/757_Geosky_4LGEG.obj
+
+GIA *** Garuda Indonesia *** INA *** 74
+	B738 *** C *** Airline *** Default *** jet/B738_GIA/738_GarudaIndonesia_PKGNG.obj
+
+GLF *** ? *** ? *** ?
+	GLF6 *** C *** GA *** Default *** jet/GLF6/GLF6_GLF.obj
+
+GOL *** ? *** ? *** ?
+	B738 *** C *** Airline *** Default *** jet/B738_GOL/738_GOL_PRGYA.obj
+
+GPD *** Tradewind Aviation *** USA *** 9
+	PC12 *** B *** Airline *** Default *** turboprop/PC12/PC12_N293TW.obj
+
+GTI *** Atlas Air *** USA *** 86
+	B763 *** D *** Cargo *** Default *** jet/B763_GTI/B763_GTI_static.obj
+
+HBH *** Hebei Airlines *** CHN *** 29
+	B738 *** C *** Airline *** Default *** jet/B738_HBH/738_HebeiAirlines_B6868.obj
+
+HGB *** Greater Bay Airlines *** HKG *** 8
+	B738 *** C *** Airline *** Default *** jet/B738_HGB/738_GreaterBayAirlines_BKJH.obj
+
+HNA *** ? *** ? *** ?
+	B738 *** C *** Airline *** Default *** jet/B738_HNA/738_HainanAirlines_B1995.obj
+	B738 *** C *** Airline *** Special_Mixue *** jet/B738_HNA_Mixue/738_HainanAirlines_Mixue_B1131.obj
+
+HVN *** Vietnam Airlines *** VIE *** 97
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_Vietnam.obj
+
+IAM *** ? *** ? *** ?
+	C30J *** D *** Military *** Default *** turboprop/C30J/C30J_AM.obj
+	EUFI *** A *** Military *** Default *** fighter/EUFI/EUFI_IAM.obj
+
+IAW *** Iraqi Airways *** IRQ *** 41
+	B738 *** C *** Airline *** Default *** jet/B738_IAW/738_IraqiAirways_YIAST.obj
+
+IBE *** Iberia *** ESP *** 99
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_Iberia.obj
+
+ICE *** Icelandair *** ISL *** 43
+	B752 *** D *** Airline *** Default *** jet/B752/757_Icelandair_TFFIV.obj
+
+IGO *** IndiGo *** IND *** 421
+	A320 *** C *** Airline *** Default *** jet/A320_IGO/A320_IGO_static.obj
+
+ITY *** ITA Airways *** ITA *** 109
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_ITA.obj
+
+JAF *** TUI fly Belgium *** BEL *** 20
+	B738 *** C *** Airline *** Default *** jet/B738_JAF/738_TUI_OOJAQ.obj
+
+JAL *** Japan Airlines *** JPN *** 150
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_JapanAirlines.obj
+	A35K *** E *** Airline *** Default *** heavy/A35K/A35K_JapanAirlines.obj
+	B738 *** C *** Airline *** Default *** jet/B738_JAL/738_JapanAirlines_JA312J.obj
+	B763 *** D *** Airline *** Default *** jet/B763_JAL/B763_JAL_static.obj
+
+JFA *** Jetfly Aviation *** LUX *** 35
+	PC12 *** B *** GA *** Default *** turboprop/PC12/PC12_LXFLN.obj
+
+JJA *** Jeju Air *** KOR *** 45
+	B738 *** C *** Airline *** Default *** jet/B738_JJA/738_JejuAir_HL8332.obj
+
+JNA *** Jin Air *** KOR *** 32
+	B738 *** C *** Airline *** Default *** jet/B738_JNA/738_JinAir_HL8244.obj
+
+JTA *** Japan Transocean Air *** JPN *** 14
+	B738 *** C *** Airline *** Default *** jet/B738_JTA/738_JapanTransoceanAir_JA10RK.obj
+
+JTD *** Jettime *** DEN *** 13
+	B738 *** C *** Airline *** Default *** jet/B738_JTD/738_Jettime_OYJYD.obj
+
+JYH *** 9 Air *** CHN *** 27
+	B738 *** C *** Airline *** Modern *** jet/B738_JYH_Modern/738_9Air_Modern_B1552.obj
+	B738 *** C *** Airline *** Special_Blue *** jet/B738_JYH_Blue/738_9Air_Blue.obj
+	B738 *** C *** Airline *** Special_Canaloupe *** jet/B738_JYH_Canaloupe/738_9Air_Cantaloupe.obj
+	B738 *** C *** Airline *** Special_Cyan *** jet/B738_JYH_Cyan/738_9Air_Cyan.obj
+	B738 *** C *** Airline *** Special_DarkGreen *** jet/B738_JYH_DarkGreen/738_9Air_DarkGreen.obj
+	B738 *** C *** Airline *** Special_Grape *** jet/B738_JYH_Grape/738_9Air_Grape.obj
+	B738 *** C *** Airline *** Special_KellyGreen *** jet/B738_JYH_KellyGreen/738_9Air_KellyGreen.obj
+	B738 *** C *** Airline *** Special_Purple *** jet/B738_JYH_Purple/738_9Air_Purple.obj
+	B738 *** C *** Airline *** Special_Red *** jet/B738_JYH_Red/738_9Air_Red.obj
+	B738 *** C *** Airline *** Special_Wine *** jet/B738_JYH_Wine/738_9Air_Wine.obj
+	B738 *** C *** Airline *** Special_Yellow *** jet/B738_JYH_Yellow/738_9Air_Yellow.obj
+
+KAL *** Korean Air *** KOR *** 170
+	A359 *** E *** Airline *** Default_DUP0 *** heavy/A359/A359_Korean.obj
+	A359 *** E *** Airline *** Default_DUP1 *** heavy/A359/A359_Korean_Modern.obj
+
+KAY *** K5-Aviation *** GER *** 5
+	A359 *** E *** GA *** Default *** heavy/A359/A359_K5Aviation.obj
+
+KLM *** KLM Royal Dutch Airlines *** NED *** 125
+	B738 *** C *** Airline *** Default *** jet/B738_KLM/B738_KLM_static.obj
+
+KNA *** Kunming Airlines *** CHN *** 32
+	B738 *** C *** Airline *** Default *** jet/B738_KNA/738_KunmingAirlines_B1926.obj
+
+KRC *** ? *** ? *** ?
+	B752 *** D *** Military *** Default *** jet/B752/757_RNZAF_NZ7571.obj
+
+LAN *** LATAM Airlines Chile *** CHI *** 180
+	A320 *** C *** Airline *** Default *** jet/A320_LAN/A320_LAN_static.obj
+	B763 *** D *** Airline *** Default *** jet/B763_LAN/B763_LAN_static.obj
+
+LKE *** Lucky Air *** CHN *** 53
+	B738 *** C *** Airline *** Default *** jet/B738_LKE/738_LuckyAir_B7989.obj
+
+LNI *** Lion Air *** INA *** 90
+	B738 *** C *** Airline *** Default *** jet/B738_LNI/738_LionAir_PKLOR.obj
+
+LOT *** LOT Polish Airlines *** POL *** 94
+	B738 *** C *** Airline *** Default *** jet/B738_LOT/738_LOTPolishAirlines_SPLWD.obj
+
+LPV *** ? *** ? *** ?
+	D328 *** B *** Airline *** Default_DUP0 *** turboprop/D328_LPV/D328_LPV_static.obj
+	D328 *** B *** Airline *** Default_DUP1 *** turboprop/D328_LPV/Dornier_328_prop_Air_Alps.obj
+
+LXJ *** Flexjet *** USA *** 216
+	E55P *** B *** GA *** Default *** jet/E55P/E55P_LXJ.obj
+	GLF6 *** C *** GA *** Default *** jet/GLF6/GLF6_LXJ.obj
+
+MAS *** Malaysia Airlines *** MAS *** 92
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_Malaysia.obj
+	B738 *** C *** Airline *** Legacy *** jet/B738_MAS_Legacy/738_Malaysia_Legacy_9MFFF.obj
+	B738 *** C *** Airline *** Modern *** jet/B738_MAS_Modern/738_Malaysia_Modern_9MMXH.obj
+
+MAU *** Air Mauritius *** MRI *** 11
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_AirMauritius.obj
+
+MAY *** Malta Air *** MLT *** 179
+	B738 *** C *** Airline *** Default *** jet/B738_RYR_9H/738_RyanairMalta_9HQCG.obj
+
+MFX *** Centrum Air / My Freighter *** UZB *** 43
+	B752 *** D *** Cargo *** Default *** jet/B752/757_Myfrighter_UK75001.obj
+
+MSR *** Egyptair *** EGY *** 69
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_EgyptAir.obj
+	B738 *** C *** Airline *** Default *** jet/B738_MSR/738_EgyptAir_SUGEK.obj
+
+MXD *** Batik Air Malaysia *** MAS *** 48
+	B738 *** C *** Airline *** Special_9MLDC *** jet/B738_MXD/738_BatikAirMalaysia_9MLDC.obj
+	B738 *** C *** Airline *** Special_9MLNY *** jet/B738_MXD2/738_BatikAirMalaysia_9MLNY.obj
+
+NOK *** Nok Air *** THA *** 9
+	B738 *** C *** Airline *** Default *** jet/B738_NOK/738_NokAir_HSDBQ.obj
+
+NOZ *** Norwegian Air Shuttle AOC *** NOR *** 41
+	B738 *** C *** Airline *** Special_LNENN *** jet/B738_NOZ/738_Norwegian_LNENN.obj
+	B738 *** C *** Airline *** Special_LRAUS *** jet/B738_Fiction1/738_FICTION_LRAUS.obj
+	B738 *** C *** Airline *** Special_LRXUT *** jet/B738_Fiction2/738_FICTION_LRXUT.obj
+
+OKA *** Okay Airways *** CHN *** 21
+	B738 *** C *** Airline *** Default *** jet/B738_OKA/738_OKAir_B1962.obj
+
+OMA *** Oman Air *** OMA *** 36
+	B738 *** C *** Airline *** Default *** jet/B738_OMA/738_OmanAir_A4OBAA.obj
+
+PAF *** ? *** ? *** ?
+	B738 *** C *** Military *** Government *** jet/B738_PAF_Mil/738_PAF_0111.obj
+
+PAL *** Philippine Airlines *** PHI *** 85
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_Philippines.obj
+	A35K *** E *** Airline *** Default *** heavy/A35K/A35K_Philippines.obj
+
+PBD *** Pobeda *** RUS *** 42
+	B738 *** C *** Airline *** Default *** jet/B738_PBD/738_Pobeda_RA73240.obj
+
+PGT *** Pegasus *** TUR *** 132
+	B738 *** C *** Airline *** Default *** jet/B738_PGT/738_PegasusAirlines_TCCPD.obj
+
+QFA *** Qantas *** AUS *** 138
+	B738 *** C *** Airline *** Default *** jet/B738_QFA/B738_QFA_static.obj
+
+QLK *** QantasLink *** AUS *** 127
+	A320 *** C *** Airline *** Default *** jet/A320_QLK/A320_QLK_static.obj
+
+QQE *** Qatar Executive *** QAT *** 29
+	GLF6 *** C *** GA *** Default *** jet/GLF6/GLF6_QQE.obj
+
+QTR *** Qatar Airways *** QAT *** 270
+	A320 *** C *** Airline *** Default *** jet/A320_QTR/A320_QTR_static.obj
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_Qatar.obj
+	A35K *** E *** Airline *** Default *** heavy/A35K/A35K_Qatar.obj
+
+RAF *** ? *** ? *** ?
+	EUFI *** A *** Military *** Default *** fighter/EUFI/EUFI_RAF.obj
+
+RAM *** Royal Air Maroc *** MAR *** 69
+	B738 *** C *** Airline *** Default *** jet/B738_RAM/738_RoyalAirMaroc_CNROT.obj
+
+RGN *** Cygnus Air *** ESP *** 5
+	B752 *** D *** Cargo *** Default *** jet/B752/757_CygusAir_ECFTR.obj
+
+RLH *** Ruili Airlines *** CHN *** 28
+	B738 *** C *** Airline *** Special_B1960 *** jet/B738_RLH1/738_Ruili_B1960.obj
+	B738 *** C *** Airline *** Special_B7865 *** jet/B738_RLH2/738_Ruili_B7865.obj
+
+RSF *** ? *** ? *** ?
+	EUFI *** A *** Military *** Default *** fighter/EUFI/EUFI_RSF.obj
+
+RUK *** Ryanair UK *** GBR *** 15
+	B738 *** C *** Airline *** Default *** jet/B738_RYR_G/738_RyanairUK_GRUKK.obj
+
+RUS *** ? *** ? *** ?
+	J328 *** B *** Airline *** Default_DUP0 *** jet/J328_RUS/Dornier_328_jet_Cirrus_Airlines.obj
+	J328 *** B *** Airline *** Default_DUP1 *** jet/J328_RUS/J328_RUS_static.obj
+
+RVF *** ? *** ? *** ?
+	B752 *** D *** Airline *** Default *** jet/B752/757_NewPacific_N628NP.obj
+
+RYR *** Ryanair *** IRL *** 344
+	B738 *** C *** Airline *** Default_DUP0 *** jet/B738_RYR/B738_RYR_static.obj
+	B738 *** C *** Airline *** Special_EIDAC *** jet/B738_RYR_EI/738_RyanairDAC_EIDAC.obj
+
+RYS *** Buzz *** POL *** 87
+	B738 *** C *** Airline *** Default *** jet/B738_RYR_SP/738_RyanairBuzz_SPRSQ.obj
+
+SAS *** SAS Scandinavian Airlines *** SWE *** 143
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_SAS.obj
+	MD82 *** C *** Airline *** Default_DUP0 *** jet/MD80_SAS/MD80_SAS_static.obj
+	MD82 *** C *** Airline *** Default_DUP1 *** jet/MD80_SAS/MD80_Scandinavian.obj
+
+SBI *** S7 Airlines *** RUS *** 107
+	B738 *** C *** Airline *** Default *** jet/B738_SBI/738_S7_RA73668.obj
+
+SCX *** Sun Country Airlines *** USA *** 68
+	B738 *** C *** Airline *** Default *** jet/B738_SCX/738_SunCountry_N850SY.obj
+
+SFR *** FlySafair *** RSA *** 37
+	B738 *** C *** Airline *** Default *** jet/B738_SFR/738_FlySafair_ZSSJT.obj
+
+SIA *** Singapore Airlines *** SGP *** 164
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_Singapore.obj
+	B738 *** C *** Airline *** Default *** jet/B738_SIA/738_SingaporeAirlines_9VMGM.obj
+
+SJX *** STARLUX Airlines *** TPE *** 36
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_Starlux.obj
+	A35K *** E *** Airline *** Default *** heavy/A35K/A35K_Starlux.obj
+
+SKY *** Skymark Airlines *** JPN *** 31
+	B738 *** C *** Airline *** Default *** jet/B738_SKY/738_SkymarkAirlines_JA737T.obj
+
+STB *** St Barth Executive *** FRA *** 5
+	PC12 *** B *** Airline *** Default *** turboprop/PC12/PC12_FONGX.obj
+
+SWA *** Southwest Airlines *** USA *** 801
+	B738 *** C *** Airline *** Default *** jet/B738_SWA/B738_SWA_static.obj
+
+SWG *** ? *** ? *** ?
+	B738 *** C *** Airline *** Default *** jet/B738_SWG/738_Sunwing_CGNCH.obj
+
+SWQ *** ? *** ? *** ?
+	B738 *** C *** Airline *** Default *** jet/B738_SWQ/738_iAeroAirways_N276EA.obj
+
+SWR *** Swiss *** SUI *** 90
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_Swiss.obj
+
+SWT *** Swiftair *** ESP *** 43
+	B752 *** D *** Cargo *** Default *** jet/B752/757_swiftair_ECNQJ.obj
+
+SXS *** SunExpress *** TUR *** 86
+	B738 *** C *** Airline *** Default *** jet/B738_SXS/738_SunExpress_TCSOP.obj
+
+THA *** Thai Airways *** THA *** 90
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_Thai.obj
+
+THY *** Turkish Airlines *** TUR *** 417
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_Turkish.obj
+	B738 *** C *** Airline *** Default *** jet/B738_THY/738_Turkish_TCJHP.obj
+
+TKJ *** AJet *** TUR *** 138
+	B738 *** C *** Airline *** Default *** jet/B738_TKJ/738_Anadolujet_TCJZL.obj
+
+TLM *** Thai Lion Air *** THA *** 36
+	B738 *** C *** Airline *** Default *** jet/B738_TLM/B738_TLM_static.obj
+
+TOM *** TUI Airways *** GBR *** 75
+	B738 *** C *** Airline *** Default *** jet/B738_TOM/738_TUI_GTUKT.obj
+
+TRA *** Tara Air *** NEP *** 3
+	B738 *** C *** Airline *** Default *** jet/B738_TRA/738_Transavia_PHHBK.obj
+
+TUA *** Turkmenistan Airlines *** TKM *** 23
+	B738 *** C *** Airline *** Default *** jet/B738_TUA/738_TurkmenistanAirlines_EZA020.obj
+
+TVF *** Transavia France *** FRA *** 98
+	B738 *** C *** Airline *** Default *** jet/B738_TVF/738_Transavia_FHTVN.obj
+
+TVS *** Smartwings *** CZE *** 41
+	B738 *** C *** Airline *** Default *** jet/B738_TVS/738_SmartWings_OKTVH.obj
+
+TWB *** Trinity Airways *** KOR *** 48
+	B738 *** C *** Airline *** Default *** jet/B738_TWB/738_TWayAir_HL8378.obj
+
+UAE *** Emirates *** UAE *** 289
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_Emirates.obj
+	B772 *** E *** Airline *** Default *** heavy/B772_UAE/B772_UAE_static.obj
+
+UAL *** United Airlines *** USA *** 1138
+	A320 *** C *** Airline *** Default *** jet/A320_UAL/A320_UAL_static.obj
+	B738 *** C *** Airline *** Legacy *** jet/B738_UAL_Legacy/738_United_Legacy_N78540.obj
+	B738 *** C *** Airline *** Modern *** jet/B738_UAL_Modern/738_United_Modern_N79521.obj
+	B744 *** E *** Airline *** Default *** heavy/B744_UAL/B744_UAL_static.obj
+	B752 *** D *** Airline *** Special_N14121 *** jet/B752/757_United_Legacy_N14121.obj
+	B752 *** D *** Airline *** Special_N48127 *** jet/B752/757_United_Modern_N48127.obj
+	B763 *** D *** Airline *** Default *** jet/B763_UAL/B763_UAL_static.obj
+
+UPS *** United Parcel Service (UPS) *** USA *** 277
+	B752 *** D *** Cargo *** Special_N417UP *** jet/B752/757_UPS_N417UP.obj
+	B752 *** D *** Cargo *** Special_N464UP *** jet/B752/757_UPS_N464UP.obj
+	B763 *** D *** Cargo *** Default *** jet/B763_UPS/B763_UPS_static.obj
+
+URF *** ? *** ? *** ?
+	PC12 *** B *** Airline *** Default *** turboprop/PC12/PC12_N821SA.obj
+
+UTA *** UTair Aviation *** RUS *** 60
+	B738 *** C *** Airline *** Default *** jet/B738_UTA/738_UTair_RA73087.obj
+
+VIR *** Virgin Atlantic *** GBR *** 43
+	A35K *** E *** Airline *** Default *** heavy/A35K/A35K_VirginAtlantic.obj
+
+VJT *** VistaJet Malta *** MLT *** 77
+	CL60 *** B *** GA *** Default *** jet/CL60/CL60_VJT.obj
+
+VLG *** Vueling *** ESP *** 137
+	A320 *** C *** Airline *** Default *** jet/A320_VLG/A320_VLG_static.obj
+
+VOZ *** Virgin Australia *** AUS *** 111
+	B738 *** C *** Airline *** Default *** jet/B738_VOZ/738_VirginAus_VHYFW.obj
+
+WFL *** World2Fly *** ESP *** 6
+	A359 *** E *** Airline *** Default *** heavy/A359/A359_World2Fly.obj
+
+WJA *** WestJet *** CAN *** 164
+	B738 *** C *** Airline *** Default *** jet/B738_WJA/738_WestJet_CFWSE.obj
+
+WLC *** ? *** ? *** ?
+	J328 *** B *** Airline *** Default_DUP0 *** jet/J328_WLC/Dornier_328_jet_Welcome_Air.obj
+	J328 *** B *** Airline *** Default_DUP1 *** jet/J328_WLC/J328_WLC_static.obj
+
+WML *** ? *** ? *** ?
+	CL60 *** B *** GA *** Default *** jet/CL60/CL60_N949MC.obj
+
+WUP *** Wheels Up *** USA *** 11
+	E55P *** B *** GA *** Default *** jet/E55P/E55P_WUP.obj
+
+XPBZ *** ? *** ? *** ?
+	P180 *** A *** GA *** Default *** turboprop/P180/P180_avanti_white.obj
+	P180 *** A *** GA *** Special_Ferrari *** turboprop/P180_Ferrari/P180_avanti_ferrari.obj
+
+XPGA *** ? *** ? *** ?
+	B06 *** A *** GA *** Default *** helo/B06/B06_static.obj
+	B738 *** C *** GA *** Special_BBJ1 *** jet/B738_BBJ1/738_BBJ1.obj
+	B738 *** C *** GA *** Special_BBJ2 *** jet/B738_BBJ2/738_BBJ2.obj
+	B738 *** C *** GA *** Special_BBJ3 *** jet/B738_BBJ3/738_BBJ3.obj
+	B738 *** C *** GA *** Special_BBJ4 *** jet/B738_BBJ4/738_BBJ4.obj
+	B738 *** C *** GA *** Special_BBJ5 *** jet/B738_BBJ5/738_BBJ5.obj
+	B752 *** D *** GA *** Default *** jet/B752/757_BBJ1.obj
+	BE58 *** A *** GA *** Default *** prop/BE58/BE58_static.obj
+	BE9L *** A *** GA *** Default_DUP0 *** Aircraft/General_Aviation/KingAirC90B.obj
+	BE9L *** A *** GA *** Default_DUP1 *** turboprop/BE9L/BE9L_static.obj
+	C172 *** A *** GA *** Default_DUP0 *** Aircraft/General_Aviation/Cessna_172.obj
+	C172 *** A *** GA *** Default_DUP1 *** prop/C172/C172_static.obj
+	C172 *** A *** GA *** Default_DUP2 *** prop/C172_skyhawk/C172_skyhawk_static.obj
+	C172 *** A *** GA *** Default_DUP3 *** prop/C172_waves/C172_waves_static.obj
+	CL60 *** B *** GA *** Special_CGENL *** jet/CL60/CL60_CGENL.obj
+	CL60 *** B *** GA *** Special_N415JA *** jet/CL60/CL60_N415JA.obj
+	CL60 *** B *** GA *** Special_N605LC *** jet/CL60/CL60_N605LC.obj
+	CL60 *** B *** GA *** Special_N650CF *** jet/CL60/CL60_N650CF.obj
+	CL60 *** B *** GA *** Special_N702LV *** jet/CL60/CL60_N702LV.obj
+	E55P *** B *** GA *** Special_DCASH *** jet/E55P/E55P_DCASH.obj
+	E55P *** B *** GA *** Special_N417N *** jet/E55P/E55P_N417N.obj
+	E55P *** B *** GA *** Special_N503ER *** jet/E55P/E55P_N503ER.obj
+	E55P *** B *** GA *** Special_PPJDB *** jet/E55P/E55P_PPJDB.obj
+	GLF6 *** C *** GA *** Special_N918TA *** jet/GLF6/GLF6_N918TA.obj
+	GLF6 *** C *** GA *** Special_VPCTS *** jet/GLF6/GLF6_VPCTS.obj
+	HDJT *** A *** GA *** Special_DIRAS *** jet/HDJT/HDJT_DIRAS.obj
+	HDJT *** A *** GA *** Special_FHLTT *** jet/HDJT/HDJT_FHLTT.obj
+	HDJT *** A *** GA *** Special_N286TW *** jet/HDJT/HDJT_N286TW.obj
+	HDJT *** A *** GA *** Special_N420VF *** jet/HDJT/HDJT_N420VF.obj
+	HDJT *** A *** GA *** Special_N820JL *** jet/HDJT/HDJT_N820JL.obj
+	P28A *** A *** GA *** Special_N157WA *** prop/PA28/PA28_N157WA.obj
+	P28A *** A *** GA *** Special_N292JE *** prop/PA28/PA28_N292JE.obj
+	P28A *** A *** GA *** Special_N4135W *** prop/PA28/PA28_N4135W.obj
+	P28A *** A *** GA *** Special_N4373T *** prop/PA28/PA28_N4373T.obj
+	P28A *** A *** GA *** Special_N501MA *** prop/PA28/PA28_N501MA.obj
+	P28A *** A *** GA *** Special_N563DF *** prop/PA28/PA28_N563DF.obj
+	P28A *** A *** GA *** Special_N8308C *** prop/PA28/PA28_N8308C.obj
+	P46T *** A *** GA *** Special_DFCRA *** turboprop/P46T/M500_DFCRA.obj
+	P46T *** A *** GA *** Special_N392MA *** turboprop/P46T/M500_N392MA.obj
+	P46T *** A *** GA *** Special_N4415E *** turboprop/P46T/M500_N4415E.obj
+	P46T *** A *** GA *** Special_N86MH *** turboprop/P46T/M500_N86MH.obj
+	P46T *** A *** GA *** Special_OKNOW *** turboprop/P46T/M500_OKNOW.obj
+	P46T *** A *** GA *** Special_OYJBS *** turboprop/P46T/M500_OYJBS.obj
+	P46T *** A *** GA *** Special_PPBBF *** turboprop/P46T/M500_PPBBF.obj
+	PC12 *** B *** GA *** Special_DFIRE *** turboprop/PC12/PC12_DFIRE.obj
+	PC12 *** B *** GA *** Special_FHNGX *** turboprop/PC12/PC12_FHNGX.obj
+	PC12 *** B *** GA *** Special_N26XM *** turboprop/PC12/PC12_N26XM.obj
+	PC12 *** B *** GA *** Special_OEEMI *** turboprop/PC12/PC12_OEEMI.obj
+	PC12 *** B *** GA *** Special_OHFUK *** turboprop/PC12/PC12_OHFUK.obj
+	PC12 *** B *** GA *** Special_VHFXN *** turboprop/PC12/PC12_VHFXN.obj
+	S76 *** A *** Military *** Special_coastguard *** helo/S76_coastguard/S76_coastguard_static.obj
+	SF50 *** A *** GA *** Default *** jet/SF50_gold/SF50_gold_static.obj
+	XPGP5 *** A *** GA *** Default *** Aircraft/General_Aviation/Osprey_GP5.obj
+
+XPGL *** ? *** ? *** ?
+	AS21 *** B *** GA *** Special_D5236 *** Aircraft/gliders/ask_21_D5236.obj
+	AS21 *** B *** GA *** Special_D7619 *** Aircraft/gliders/ask_21_D7619.obj
+	AS21 *** B *** GA *** Special_D8021 *** Aircraft/gliders/ask_21_D8021.obj
+	AS21 *** B *** GA *** Special_FCEHV *** Aircraft/gliders/ask_21_FCEHV.obj
+	AS21 *** B *** GA *** Special_FCTZP *** Aircraft/gliders/ask_21_FCTZP.obj
+	AS21 *** B *** GA *** Special_GCJOS *** Aircraft/gliders/ask_21_GCJOS.obj
+	AS21 *** B *** GA *** Special_GCXAT *** Aircraft/gliders/ask_21_GCXAT.obj
+	AS21 *** B *** GA *** Special_HB1225 *** Aircraft/gliders/ask_21_HB1225.obj
+	AS21 *** B *** GA *** Special_ICRIS *** Aircraft/gliders/ask_21_ICRIS.obj
+	AS21 *** B *** GA *** Special_JA2851 *** Aircraft/gliders/ask_21_JA2851.obj
+	AS21 *** B *** GA *** Special_N145JW *** Aircraft/gliders/ask_21_N145JW.obj
+	AS21 *** B *** GA *** Special_N212XP *** Aircraft/gliders/ask_21_N212XP.obj
+	AS21 *** B *** GA *** Special_N84GL *** Aircraft/gliders/ask_21_N84GL.obj
+	AS21 *** B *** GA *** Special_OE2917 *** Aircraft/gliders/ask_21_OE2917.obj
+	AS21 *** B *** GA *** Special_OE4283 *** Aircraft/gliders/ask_21_OE4283.obj
+	AS21 *** B *** GA *** Special_OK9018 *** Aircraft/gliders/ask_21_OK9018.obj
+	AS21 *** B *** GA *** Special_PH5931 *** Aircraft/gliders/ask_21_PH5931.obj
+	AS21 *** B *** GA *** Special_SP3812 *** Aircraft/gliders/ask_21_SP3812.obj
+	AS21 *** B *** GA *** Special_VHLMR *** Aircraft/gliders/ask_21_VHLMR.obj
+	VENT *** B *** GA *** Special_D4812 *** Aircraft/gliders/ventus_3_D4812.obj
+	VENT *** B *** GA *** Special_FCMDA *** Aircraft/gliders/ventus_3_FCMDA.obj
+	VENT *** B *** GA *** Special_GCJYE *** Aircraft/gliders/ventus_3_GCJYE.obj
+	VENT *** B *** GA *** Special_HB2391 *** Aircraft/gliders/ventus_3_HB2391.obj
+	VENT *** B *** GA *** Special_IVNTS *** Aircraft/gliders/ventus_3_IVNTS.obj
+	VENT *** B *** GA *** Special_N634MX *** Aircraft/gliders/ventus_3_N634MX.obj
+	VENT *** B *** GA *** Special_OE2112 *** Aircraft/gliders/ventus_3_OE2112.obj
+	VENT *** B *** GA *** Special_SP2112 *** Aircraft/gliders/ventus_3_SP2112.obj
+	VENT *** B *** GA *** Special_VHDUN *** Aircraft/gliders/ventus_3_VHDUN.obj
+
+XPGN *** ? *** ? *** ?
+	B744 *** E *** Airline *** Default *** Aircraft/Heavy_Metal/747United.obj
+	B752 *** D *** Military *** Default_DUP0 *** jet/B752/757PW_static.obj
+	B752 *** D *** Military *** Default_DUP1 *** jet/B752/757PW_winglet_static.obj
+	B752 *** D *** Military *** Default_DUP2 *** jet/B752/757RR_static.obj
+	B752 *** D *** Military *** Default_DUP3 *** jet/B752/757RR_winglet_static.obj
+	BE9L *** A *** Cargo *** Default *** turboprop/BE9L_white/BE9L_white_static.obj
+	C172 *** A *** Cargo *** Default *** prop/C172_white/C172_white_static.obj
+	DC10 *** D *** Airline *** Default *** heavy/DC10_white/DC10_white_static.obj
+	HDJT *** A *** Airline *** Default *** jet/HDJT/HDJT_N542MP.obj
+	P28A *** A *** Airline *** Default *** prop/PA28/PA28_N2442S.obj
+	P46T *** A *** Cargo *** Special_N12XP *** turboprop/P46T/M500_N12XP.obj
+	P46T *** A *** Airline *** Special_N867DM *** turboprop/P46T/M500_N867DM.obj
+	PC12 *** B *** Cargo *** Special_CFXAB *** turboprop/PC12/PC12_CFXAB.obj
+	PC12 *** B *** Cargo *** Special_CGXTB *** turboprop/PC12/PC12_CGXTB.obj
+	S76 *** A *** Cargo *** Default *** helo/S76/S76_static.obj
+	SF50 *** A *** Military *** Special_blue *** jet/SF50_blue/SF50_blue_static.obj
+
+XPMI *** ? *** ? *** ?
+	B752 *** D *** Military *** Default *** jet/B752/757_KAF_5701.obj
+	BE9L *** A *** Military *** Special_navy *** turboprop/BE9L_navy/BE9L_navy_static.obj
+	C172 *** A *** Military *** Default *** prop/C172_olive/C172_olive_static.obj
+	P46T *** A *** Military *** Default *** turboprop/P46T/M500_MIL.obj
+
+XSR *** Airshare *** USA *** 10
+	E55P *** B *** GA *** Default *** jet/E55P/E55P_XSR.obj
+
+YZR *** Suparna Airlines *** CHN *** 17
+	B738 *** C *** Airline *** Default *** jet/B738_YZR/738_SuparnaAirlines_B1992.obj

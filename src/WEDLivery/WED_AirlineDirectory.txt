@@ -130,7 +130,7 @@ AKL *** Air Kiribati *** KIR *** Pax *** 6
 KOR *** Air Koryo *** PRK *** Pax *** 4
 LSJ *** Air Liaison *** CAN *** Pax *** 3
 TLR *** Air Libya *** LBA *** Pax *** 7
-AMU *** Air Macau *** CHN *** Pax *** 23
+AMU *** Air Macau *** MAC *** Pax *** 23
 CWM *** Air Marshall Islands *** MHL *** Pax *** 7
 RMX *** Air Master *** EGY *** Pax *** 2
 MAU *** Air Mauritius *** MRI *** Pax *** 11
