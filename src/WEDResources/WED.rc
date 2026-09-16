@@ -149,6 +149,12 @@ ClassD.png						GUI_RES		parking_spots/ClassD.png
 ClassE.png						GUI_RES		parking_spots/ClassE.png
 ClassF.png						GUI_RES		parking_spots/ClassF.png
 
+/* static livery picker. Underscore, not a hyphen, deliberately: an unquoted
+   hyphenated name makes the RC compiler split the token ("file not found:
+   livery"), and quoting it compiles but then never matches FindResourceW at
+   runtime. Every other resource here is underscored for the same reason. */
+livery_selected.png				GUI_RES		livery_selected.png
+
 /* Versioning info */
 #include "..\WEDCore\WED_Version.h"
 #include <winver.h>

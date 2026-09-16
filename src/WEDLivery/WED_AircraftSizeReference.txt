@@ -1,0 +1,2705 @@
+I
+1 WED Aviation Database
+# WED Aircraft Size Reference
+# ============================================================================
+# WHAT THIS FILE IS: maps an aircraft ICAO type designator (A21N, B744, ...) to
+# the ramp/gate size class it needs, using the same six classes WED's own
+# ramp-start "Size" property already uses (ATCIcaoWidth: A-F), which follow
+# the ICAO Aerodrome Reference Code wingspan bands:
+#   A: wingspan <15 m   B: 15-<24 m   C: 24-<36 m   D: 36-<52 m
+#   E: 52-<65 m         F: >=65 m (also covers outsized aircraft, e.g. An-225)
+#
+# FORMAT: <AIRCRAFT_ICAO> *** <SIZE_CLASS>
+#
+# SOURCE / METHOD: initial pass built from Wikipedia's "List of aircraft type
+# designators" (https://en.wikipedia.org/wiki/List_of_aircraft_type_designators),
+# cross-referenced against ICAO Doc 8643
+# (https://www.icao.int/operational-safety/doc-8643-aircraft-type-designators/search)
+# for any type not on that list. Class assigned from each type's published
+# wingspan (manufacturer spec sheet or that aircraft's own Wikipedia
+# "Specifications" section) - not guessed. One row per ICAO code; where a
+# code covers several sub-variants with materially different wingspans (e.g.
+# winglet retrofits), the class reflects the commonly-cited/production
+# wingspan for that code as a whole.
+#
+# CONFIDENCE NOTE: every row below reflects a well-documented published
+# wingspan. A handful sit within about half a meter of a class boundary
+# (noted in the "verify" list at the end of this file) - worth a second look
+# before treating those specific rows as final, everything else is solid.
+#
+A124 *** F
+A140 *** C
+A148 *** C
+A158 *** C
+A19N *** C
+A20N *** C
+A21N *** C
+A225 *** F
+A306 *** D
+A30B *** D
+A310 *** D
+A318 *** C
+A319 *** C
+A320 *** C
+A321 *** C
+A332 *** E
+A333 *** E
+A337 *** E
+A338 *** E
+A339 *** E
+A342 *** E
+A343 *** E
+A345 *** E
+A346 *** E
+A359 *** E
+A35K *** E
+A388 *** F
+A3ST *** D
+A400 *** D
+A748 *** C
+AC90 *** A
+AJ27 *** C
+AN12 *** D
+AN24 *** C
+AN26 *** C
+AN28 *** B
+AN30 *** C
+AN32 *** C
+AN72 *** C
+AS21 *** B
+AT43 *** C
+AT45 *** C
+AT46 *** C
+AT72 *** C
+AT73 *** C
+AT75 *** C
+AT76 *** C
+ATP *** C
+B190 *** B
+B37M *** C
+B38M *** C
+B39M *** C
+B3XM *** C
+B461 *** C
+B462 *** C
+B463 *** C
+B52 *** E
+B703 *** D
+B712 *** C
+B720 *** D
+B721 *** C
+B722 *** C
+B732 *** C
+B733 *** C
+B734 *** C
+B735 *** C
+B736 *** C
+B737 *** C
+B738 *** C
+B739 *** C
+B741 *** E
+B742 *** E
+B743 *** E
+B744 *** E
+B748 *** F
+B74R *** E
+B74S *** E
+B752 *** D
+B753 *** D
+B762 *** D
+B763 *** D
+B764 *** D
+B772 *** E
+B773 *** E
+B778 *** F
+B779 *** F
+B77L *** E
+B77W *** E
+B788 *** E
+B789 *** E
+B78X *** E
+BA11 *** C
+BCS1 *** C
+BCS3 *** C
+BE20 *** B
+BE40 *** A
+BE99 *** A
+BELF *** D
+BER2 *** C
+BLCF *** E
+C130 *** D
+C17 *** D
+C208 *** B
+C212 *** B
+C25A *** B
+C25B *** B
+C25C *** B
+C30J *** D
+C408 *** B
+C500 *** B
+C510 *** A
+C525 *** A
+C550 *** B
+C560 *** B
+C56X *** B
+C5M *** F
+C650 *** B
+C680 *** B
+C68A *** B
+C700 *** B
+C750 *** B
+C919 *** C
+CL2T *** C
+CL30 *** B
+CL35 *** B
+CL60 *** B
+CN35 *** C
+CRJ1 *** B
+CRJ2 *** B
+CRJ7 *** B
+CRJ9 *** C
+CRJX *** C
+CVLT *** C
+D228 *** B
+D328 *** B
+DC10 *** D
+DC85 *** D
+DC86 *** D
+DC87 *** D
+DC91 *** C
+DC92 *** C
+DC93 *** C
+DC94 *** C
+DC95 *** C
+DH8A *** C
+DH8B *** C
+DH8C *** C
+DH8D *** C
+DHC5 *** C
+DHC6 *** B
+DHC7 *** C
+E110 *** B
+E120 *** B
+E135 *** B
+E145 *** B
+E170 *** C
+E190 *** C
+E195 *** C
+E290 *** C
+E295 *** C
+E35L *** B
+E50P *** A
+E545 *** B
+E550 *** B
+E55P *** B
+E75L *** C
+E75S *** C
+EA50 *** A
+F100 *** C
+F27 *** C
+F28 *** C
+F2TH *** B
+F406 *** B
+F50 *** C
+F70 *** C
+F900 *** B
+FA50 *** B
+FA6X *** B
+FA7X *** C
+G159 *** B
+G280 *** B
+G73T *** B
+GA7C *** C
+GALX *** B
+GL5T *** C
+GL7T *** C
+GLEX *** C
+GLF4 *** B
+GLF5 *** C
+GLF6 *** C
+H25B *** A
+H25C *** B
+HDJT *** A
+I114 *** C
+IL18 *** D
+IL62 *** D
+IL76 *** D
+IL86 *** D
+IL96 *** E
+J328 *** B
+JS31 *** B
+JS32 *** B
+JS41 *** B
+K35R *** D
+L101 *** D
+L188 *** C
+L410 *** B
+LJ35 *** A
+LJ60 *** A
+MD11 *** D
+MD81 *** C
+MD82 *** C
+MD83 *** C
+MD87 *** C
+MD88 *** C
+MD90 *** C
+MU2 *** A
+N262 *** B
+NOMA *** B
+P180 *** A
+P8 *** D
+PAY2 *** A
+PC12 *** B
+PC24 *** B
+RJ1H *** C
+RJ70 *** C
+RJ85 *** C
+S601 *** A
+SB20 *** C
+SC7 *** B
+SF34 *** B
+SH33 *** B
+SH36 *** B
+SU95 *** C
+SW4 *** B
+T134 *** C
+T154 *** D
+T204 *** D
+VENT *** B
+WW24 *** A
+XPGP5 *** A
+Y12 *** B
+YK40 *** C
+YK42 *** C
+YS11 *** C
+#
+# WORTH DOUBLE-CHECKING (within ~0.5 m of a class boundary - a small spec-sheet
+# revision could flip these):
+#   A140 (24.5 m, B/C line) - verified directly via Wikipedia this session, holds at C
+#   G159, GLF4 (~23.7-23.9 m, B/C line)
+#   CRJ7 (~23.25 m, B/C line)
+#   E75S (~24.0 m, B/C line)
+#   C408, F406 (~15.1-15.4 m, A/B line)
+#   C17, MD11, B764 (~51.7-51.9 m, D/E line)
+#
+# ============================================================================
+# TIER 2 (added in a follow-up pass): common GA aircraft, helicopters, and
+# current-service military types NOT in ICAO's own curated commercial/turbine
+# list above. Sourced from the full ICAO Doc 8643 designator list (2,614
+# unique designators total, pulled directly from its DataTable - it carries
+# no wingspan/WTC-is-NOT-size data, see this project's own notes) filtered
+# down to types that plausibly actually appear in an X-Plane scenery/livery
+# context. Doc 8643's ~2,150 remaining designators (obsolete prototypes,
+# gliders, ultralights, one-off homebuilts, manufacturer test codes, etc.)
+# are deliberately NOT included here - low value for a lot of research effort.
+#
+# HELICOPTERS: "wingspan" isn't a meaningful concept for a helicopter's ramp
+# footprint - these rows use maximum ROTOR DIAMETER classified against the
+# same A-F bands instead, as the closest equivalent "how much clearance does
+# this need" measurement. Tiltrotors (V22, V280) use their rotor-tip-to-
+# rotor-tip span in aircraft mode, which plays the same role as a fixed wing's
+# span for clearance purposes.
+#
+A10 *** B
+A109 *** A
+A119 *** A
+A129 *** A
+A139 *** A
+A149 *** A
+A169 *** A
+A189 *** A
+AS50 *** A
+AS55 *** A
+AS65 *** A
+B06 *** A
+B06T *** A
+B1 *** D
+B2 *** E
+B212 *** A
+B214 *** B
+B222 *** A
+B230 *** A
+B407 *** A
+B412 *** A
+B427 *** A
+B429 *** A
+B430 *** A
+B47G *** A
+B47J *** A
+B505 *** A
+B525 *** A
+BE10 *** B
+BE17 *** A
+BE18 *** A
+BE19 *** A
+BE22 *** B
+BE23 *** A
+BE24 *** A
+BE30 *** B
+BE33 *** A
+BE35 *** A
+BE36 *** A
+BE4W *** A
+BE50 *** A
+BE55 *** A
+BE56 *** A
+BE58 *** A
+BE60 *** A
+BE65 *** A
+BE70 *** A
+BE76 *** A
+BE77 *** A
+BE80 *** A
+BE88 *** A
+BE95 *** A
+BE9L *** A
+BE9T *** A
+BL8 *** A
+BS60 *** A
+BSTP *** B
+BT36 *** A
+C06T *** A
+C07T *** A
+C120 *** A
+C140 *** A
+C152 *** A
+C162 *** A
+C170 *** A
+C172 *** A
+C175 *** A
+C177 *** A
+C180 *** A
+C182 *** A
+C190 *** A
+C195 *** A
+C205 *** A
+C207 *** A
+C210 *** A
+C240 *** A
+C25M *** A
+C310 *** A
+C320 *** A
+C335 *** A
+C336 *** A
+C404 *** A
+C411 *** A
+C414 *** A
+C421 *** A
+C425 *** A
+C441 *** A
+C501 *** A
+C551 *** A
+C55B *** B
+C82S *** A
+C82T *** A
+CH7A *** A
+CH7B *** A
+DA40 *** A
+DA42 *** A
+DA62 *** A
+E350 *** A
+E530 *** A
+EC20 *** A
+EC25 *** B
+EC30 *** A
+EC35 *** A
+EC45 *** A
+EC55 *** A
+EN28 *** A
+EN48 *** A
+EUFI *** A
+F117 *** A
+F15 *** A
+F16 *** A
+F18H *** A
+F22 *** A
+GA7 *** A
+H2 *** A
+H43A *** A
+H43B *** A
+H47 *** B
+H500 *** A
+H53 *** C
+H60 *** B
+H64 *** A
+HA4T *** B
+HUCO *** A
+HUSK *** A
+J2 *** A
+J4 *** A
+J5 *** A
+K100 *** A
+K900 *** B
+KMAX *** A
+LCA *** A
+LYNX *** A
+M110 *** A
+M20T *** A
+M22 *** A
+M4 *** A
+M5 *** A
+M6 *** A
+M600 *** A
+M7 *** A
+M700 *** A
+M7T *** A
+M8 *** A
+M9 *** A
+MG29 *** A
+O1 *** A
+P28A *** A
+P63 *** A
+PA14 *** A
+PA15 *** A
+PA16 *** A
+PA17 *** A
+PA20 *** A
+PA22 *** A
+PA24 *** A
+PA31 *** A
+PA32 *** A
+PA34 *** A
+PA44 *** A
+PA46 *** A
+PAY4 *** A
+PRM1 *** A
+PTSS *** A
+R22 *** A
+R44 *** A
+R66 *** A
+RFAL *** A
+RV10 *** A
+RV12 *** A
+RV14 *** A
+RV3 *** A
+RV4 *** A
+RV7 *** A
+RV8 *** A
+RV9 *** A
+S108 *** A
+S22T *** A
+S330 *** A
+S51 *** A
+S52 *** A
+S55P *** B
+S55T *** B
+S58P *** B
+S58T *** B
+S61 *** B
+S61R *** B
+S62 *** A
+S64 *** B
+S92 *** B
+SA37 *** A
+SF50 *** A
+SGCD *** A
+SGEF *** A
+SR20 *** A
+SR22 *** A
+STAR *** B
+SU27 *** A
+SUCO *** A
+T206 *** A
+T210 *** A
+T34P *** A
+T34T *** A
+T37 *** A
+T50 *** A
+TAMP *** A
+TB21 *** A
+TB31 *** A
+TBM7 *** A
+TBM8 *** A
+TBM9 *** A
+TEX2 *** A
+TIGR *** A
+TOBA *** A
+U21 *** A
+U22 *** A
+UH1 *** A
+UH1Y *** A
+V22 *** C
+#
+# TIER 2 CONFIDENCE NOTE: GA singles/twins, Van's RV kits, and business/
+# trainer types above are high-confidence (well under any class boundary -
+# nearly all sit comfortably inside A). Helicopter rotor-diameter figures are
+# from commonly-cited spec sheets but were not individually re-verified this
+# pass the way the near-boundary Tier 1 entries were - treat B214, BSTP, H47,
+# H53, H60, HA4T, K900, S55/S58/S61/S64/S92, STAR as the ones worth a second
+# look (all sit within ~1 m of the B/C or C/D lines for their category).
+# B1's wingspan varies hugely with sweep (23.84 m swept, 41.8 m spread) - D
+# reflects the spread/unswept figure, which is what matters for a parked
+# aircraft's ramp footprint.
+
+#
+# ============================================================================
+# TIER 3 (TODO - not yet classified): every remaining unique ICAO type
+# designator from ICAO Doc 8643 that isn't in Tier 1 or Tier 2 above (2,155
+# rows, pulled directly from the same Doc 8643 DataTable used for Tier 2).
+# Mostly obsolete prototypes, gliders, ultralights, one-off homebuilts, and
+# manufacturer test/company-internal codes - low probability of actually
+# appearing in an X-Plane scenery/livery context, but kept here (rather than
+# left out of the file entirely) so the size reference has full, trackable
+# coverage of every designator ICAO has ever assigned.
+#
+# Same blank-marker convention as WED_AirportDatabase.txt's <ICAO> *** TODO
+# rows: "<CODE> ***" with nothing after the stars means "not yet
+# researched", not "resolved to no data". Fill in a class letter (A-F) in
+# place, exactly like a Tier 1/2 row, once a real wingspan (or rotor
+# diameter, for a helicopter) is confirmed for that code - don't guess.
+#
+A002 ***
+A1 ***
+A122 ***
+A178 ***
+A19 ***
+A20 ***
+A205 ***
+A21 ***
+A210 ***
+A211 ***
+A22 ***
+A223 ***
+A23 ***
+A25 ***
+A251 ***
+A27 ***
+A270 ***
+A29 ***
+A2RT ***
+A3 ***
+A31 ***
+A33 ***
+A35 ***
+A37 ***
+A4 ***
+A411 ***
+A5 ***
+A50 ***
+A500 ***
+A504 ***
+A6 ***
+A600 ***
+A660 ***
+A700 ***
+A743 ***
+A890 ***
+A9 ***
+A900 ***
+A910 ***
+AA1 ***
+AA37 ***
+AA5 ***
+AAT3 ***
+AAT4 ***
+AB11 ***
+AB15 ***
+AB18 ***
+AB95 ***
+AC10 ***
+AC11 ***
+AC31 ***
+AC33 ***
+AC4 ***
+AC50 ***
+AC52 ***
+AC56 ***
+AC5A ***
+AC68 ***
+AC6L ***
+AC72 ***
+AC80 ***
+AC95 ***
+ACAM ***
+ACAR ***
+ACED ***
+ACR2 ***
+ACRD ***
+ACRO ***
+ACSR ***
+AD20 ***
+ADEL ***
+ADVE ***
+ADVN ***
+AE45 ***
+AEA1 ***
+AERK ***
+AEST ***
+AFOX ***
+AG02 ***
+AG04 ***
+AG1 ***
+AG10 ***
+AG14 ***
+AG60 ***
+AGSH ***
+AI10 ***
+AIGT ***
+AIRD ***
+AIRL ***
+AJET ***
+AKNC ***
+AKOY ***
+AKRO ***
+ALBU ***
+ALC1 ***
+ALGR ***
+ALH ***
+ALIG ***
+ALIZ ***
+ALO2 ***
+ALO3 ***
+ALPI ***
+ALSL ***
+ALTO ***
+AM3 ***
+AMX ***
+AN2 ***
+AN22 ***
+AN3 ***
+AN38 ***
+AN70 ***
+AN8 ***
+ANDR ***
+ANGL ***
+ANKA ***
+ANSN ***
+ANST ***
+AP20 ***
+AP22 ***
+AP24 ***
+AP26 ***
+AP28 ***
+AP32 ***
+AP36 ***
+APM2 ***
+APM3 ***
+APM4 ***
+APUP ***
+AR1 ***
+AR11 ***
+AR15 ***
+AR50 ***
+AR5T ***
+AR65 ***
+AR6T ***
+ARES ***
+ARV1 ***
+ARVA ***
+ARWF ***
+AS02 ***
+AS14 ***
+AS16 ***
+AS2T ***
+AS32 ***
+AS3B ***
+AS80 ***
+ASDR ***
+ASO4 ***
+ASO5 ***
+ASOX ***
+ASTO ***
+ASTR ***
+AT1 ***
+AT2P ***
+AT3 ***
+AT3P ***
+AT3T ***
+AT44 ***
+AT5P ***
+AT5T ***
+AT6T ***
+AT8T ***
+ATAC ***
+ATIS ***
+ATL ***
+ATLA ***
+ATTL ***
+AU11 ***
+AUJ2 ***
+AUJ4 ***
+AURA ***
+AUS3 ***
+AUS4 ***
+AUS5 ***
+AUS6 ***
+AUS7 ***
+AUS9 ***
+AV68 ***
+AVAM ***
+AVID ***
+AVIN ***
+AVTR ***
+AXE ***
+B103 ***
+B105 ***
+B14A ***
+B14B ***
+B14C ***
+B150 ***
+B17 ***
+B18T ***
+B209 ***
+B21 ***
+B23 ***
+B23E ***
+B24 ***
+B25 ***
+B26 ***
+B26M ***
+B29 ***
+B305 ***
+B350 ***
+B360 ***
+B36T ***
+B47T ***
+B58T ***
+B60 ***
+B609 ***
+B60T ***
+B701 ***
+BABY ***
+BARC ***
+BASS ***
+BBAT ***
+BBIR ***
+BCA3 ***
+BCAT ***
+BCMP ***
+BD10 ***
+BD17 ***
+BD4 ***
+BD5 ***
+BD5J ***
+BD5T ***
+BDOG ***
+BE12 ***
+BE32 ***
+BEA5 ***
+BEAR ***
+BER4 ***
+BETA ***
+BEVR ***
+BF19 ***
+BFIT ***
+BILO ***
+BIPL ***
+BIRD ***
+BISC ***
+BK17 ***
+BKUT ***
+BL11 ***
+BL17 ***
+BL19 ***
+BLBU ***
+BLEN ***
+BLKS ***
+BLSA ***
+BM6 ***
+BMAN ***
+BN2P ***
+BN2T ***
+BO40 ***
+BOBC ***
+BOLT ***
+BOOM ***
+BORY ***
+BPAT ***
+BPUM ***
+BR14 ***
+BR23 ***
+BR54 ***
+BR60 ***
+BR61 ***
+BR8 ***
+BRAV ***
+BRB2 ***
+BREZ ***
+BROU ***
+BSWN ***
+BT7 ***
+BTB2 ***
+BTB3 ***
+BTUB ***
+BU20 ***
+BU31 ***
+BU33 ***
+BU81 ***
+BUC ***
+BUCA ***
+BUSH ***
+BW60 ***
+BW6T ***
+BX2 ***
+C02T ***
+C04T ***
+C1 ***
+C101 ***
+C10T ***
+C119 ***
+C123 ***
+C135 ***
+C14T ***
+C15 ***
+C150 ***
+C160 ***
+C185 ***
+C188 ***
+C2 ***
+C206 ***
+C21T ***
+C22J ***
+C270 ***
+C27J ***
+C295 ***
+C303 ***
+C306 ***
+C309 ***
+C311 ***
+C337 ***
+C340 ***
+C365 ***
+C402 ***
+C42 ***
+C46 ***
+C72R ***
+C77R ***
+C82 ***
+C82R ***
+C97 ***
+CA12 ***
+CA19 ***
+CA1P ***
+CA1T ***
+CA25 ***
+CA3 ***
+CA4 ***
+CA41 ***
+CA6 ***
+CA61 ***
+CA65 ***
+CA7P ***
+CA7T ***
+CA8 ***
+CA9 ***
+CABI ***
+CABN ***
+CAD2 ***
+CAD4 ***
+CAML ***
+CAMP ***
+CAN4 ***
+CAPL ***
+CAR ***
+CARV ***
+CASS ***
+CAT ***
+CAT1 ***
+CAT2 ***
+CAW ***
+CB1 ***
+CC11 ***
+CC19 ***
+CD2 ***
+CDC6 ***
+CDUS ***
+CDW1 ***
+CE15 ***
+CE22 ***
+CE23 ***
+CE25 ***
+CE27 ***
+CE43 ***
+CEL5 ***
+CELR ***
+CENT ***
+CFRE ***
+CG3 ***
+CGAN ***
+CH10 ***
+CH12 ***
+CH14 ***
+CH15 ***
+CH18 ***
+CH20 ***
+CH25 ***
+CH2T ***
+CH3 ***
+CH30 ***
+CH40 ***
+CH50 ***
+CH60 ***
+CH62 ***
+CH64 ***
+CH65 ***
+CH7 ***
+CH70 ***
+CH75 ***
+CH80 ***
+CHAN ***
+CHCS ***
+CHIC ***
+CHIF ***
+CHIN ***
+CHIP ***
+CHP2 ***
+CHR1 ***
+CHR4 ***
+CHSY ***
+CICA ***
+CJ1 ***
+CJ6 ***
+CKUO ***
+CL2P ***
+CL41 ***
+CL4G ***
+CLA ***
+CLB1 ***
+CLBR ***
+CLD2 ***
+CLDS ***
+CLON ***
+CMA3 ***
+CMAS ***
+CMD1 ***
+CMDE ***
+CMDT ***
+CN12 ***
+CNBR ***
+CNDR ***
+CNUK ***
+CO50 ***
+COAR ***
+COBR ***
+COL3 ***
+COL4 ***
+COLT ***
+COMU ***
+CONI ***
+COOT ***
+CORO ***
+CORR ***
+CORS ***
+CORV ***
+COUG ***
+COUR ***
+COY2 ***
+COZJ ***
+COZY ***
+CP10 ***
+CP13 ***
+CP20 ***
+CP21 ***
+CP22 ***
+CP23 ***
+CP30 ***
+CP32 ***
+CP60 ***
+CP65 ***
+CP75 ***
+CP80 ***
+CP90 ***
+CPNA ***
+CPUP ***
+CR10 ***
+CRBN ***
+CRER ***
+CRES ***
+CRIO ***
+CRUZ ***
+CT4 ***
+CTAH ***
+CTLN ***
+CUB2 ***
+CUCA ***
+CUDA ***
+CULP ***
+CULV ***
+CULX ***
+CVLP ***
+CX5 ***
+CYGT ***
+D1 ***
+D11 ***
+D139 ***
+D140 ***
+D150 ***
+D18 ***
+D201 ***
+D21 ***
+D24 ***
+D25 ***
+D250 ***
+D253 ***
+D28D ***
+D28T ***
+D31 ***
+D39 ***
+D4 ***
+D5 ***
+D5TU ***
+D6 ***
+D6CR ***
+D7 ***
+D8 ***
+DA2 ***
+DA36 ***
+DA5 ***
+DA50 ***
+DAHU ***
+DAKH ***
+DAL1 ***
+DAL4 ***
+DAL5 ***
+DART ***
+DC2 ***
+DC3 ***
+DC3S ***
+DC3T ***
+DC4 ***
+DC6 ***
+DC7 ***
+DDUC ***
+DEAG ***
+DEFI ***
+DF10 ***
+DF1M ***
+DF2 ***
+DF3 ***
+DFL6 ***
+DFLY ***
+DG15 ***
+DH2T ***
+DH3T ***
+DH4T ***
+DH60 ***
+DH80 ***
+DH82 ***
+DH83 ***
+DH84 ***
+DH85 ***
+DH87 ***
+DH88 ***
+DH89 ***
+DH90 ***
+DH94 ***
+DHA3 ***
+DHC1 ***
+DHC2 ***
+DHC3 ***
+DHC4 ***
+DIES ***
+DIMO ***
+DJIN ***
+DNGO ***
+DO27 ***
+DO28 ***
+DOCX ***
+DON ***
+DOVE ***
+DR1 ***
+DR10 ***
+DR22 ***
+DR30 ***
+DR40 ***
+DRAG ***
+DRIF ***
+DRTG ***
+DSA1 ***
+DSK ***
+DSLK ***
+DT45 ***
+DTA1 ***
+DTA2 ***
+DUB2 ***
+DUCE ***
+DUR5 ***
+DV1 ***
+DV2 ***
+DV20 ***
+DW1 ***
+DWD2 ***
+DYH2 ***
+DYH3 ***
+E121 ***
+E2 *** C
+E200 ***
+E230 ***
+E275 ***
+E2CB ***
+E300 ***
+E314 ***
+E390 ***
+E3CF ***
+E3TF ***
+E400 ***
+E45X ***
+E500 ***
+E6 ***
+E737 ***
+E767 ***
+EA40 ***
+EAEA ***
+EAGL ***
+EAGX ***
+EBOY ***
+EC6 ***
+EC75 ***
+ECHO ***
+EDGE ***
+EDGT ***
+EF2 ***
+EFAN ***
+EFOX ***
+EFUS ***
+EGL3 ***
+EGRT ***
+EH10 ***
+EL10 ***
+EL20 ***
+ELA7 ***
+ELF ***
+ELPS ***
+ELSP ***
+ELST ***
+ELTO ***
+ELTR ***
+EM10 ***
+EM11 ***
+EP9 ***
+EPER ***
+EPIC ***
+EPX1 ***
+ERAC ***
+ERCO ***
+ES11 ***
+ES13 ***
+ESCA ***
+ESCP ***
+ETAR ***
+EUPA ***
+EURT ***
+EV55 ***
+EV97 ***
+EVAN ***
+EVOP ***
+EVOT ***
+EVSS ***
+EX5T ***
+EXEC ***
+EXEJ ***
+EXNG ***
+EXPL ***
+EXPR ***
+EZFL ***
+EZFT ***
+EZHV ***
+EZKC ***
+F1 ***
+F104 ***
+F13 ***
+F14 ***
+F156 ***
+F18S *** A
+F1FV ***
+F2 ***
+F260 ***
+F26T ***
+F30 ***
+F35 ***
+F3F ***
+F4 ***
+F402 ***
+F41E ***
+F421 ***
+F5 ***
+F5SA ***
+F60 ***
+F600 ***
+F7 ***
+F8 ***
+F86 ***
+F8L ***
+F9F ***
+FA01 ***
+FA02 ***
+FA03 ***
+FA04 ***
+FA10 ***
+FA11 ***
+FA20 ***
+FA24 ***
+FA62 ***
+FA8X ***
+FAET ***
+FALC ***
+FALM ***
+FANL ***
+FANT ***
+FB1A ***
+FB1B ***
+FB5 ***
+FBA2 ***
+FC1 ***
+FD2E ***
+FDCT ***
+FDF2 ***
+FDMC ***
+FE51 ***
+FEST ***
+FFLY ***
+FG01 ***
+FGT ***
+FH11 ***
+FIBO ***
+FIKD ***
+FIKE ***
+FINC ***
+FJ10 ***
+FJR3 ***
+FK12 ***
+FK14 ***
+FK9 ***
+FL3 ***
+FL53 ***
+FL54 ***
+FL55 ***
+FLAM ***
+FLCO ***
+FLE2 ***
+FLE7 ***
+FLIZ ***
+FLSH ***
+FLSS ***
+FM25 ***
+FMGO ***
+FN33 ***
+FNKB ***
+FOOF ***
+FORT ***
+FOUG ***
+FOX ***
+FOXT ***
+FRBD ***
+FREE ***
+FREL ***
+FRNT ***
+FRON ***
+FS35 ***
+FS51 ***
+FT30 ***
+FU24 ***
+FURY ***
+FUSI ***
+FW02 ***
+FW44 ***
+FW90 ***
+FWSB ***
+FX1 ***
+G1 ***
+G109 ***
+G115 ***
+G120 ***
+G12T ***
+G140 ***
+G150 ***
+G15T ***
+G160 ***
+G164 ***
+G180 ***
+G200 ***
+G202 ***
+G21 ***
+G21M ***
+G21T ***
+G222 ***
+G2CA ***
+G2GL ***
+G2T1 ***
+G3 ***
+G44 ***
+G46 ***
+G4SG ***
+G59 ***
+G64T ***
+G70 ***
+G73 ***
+G800 ***
+G91 ***
+G96 ***
+G97 ***
+GA10 ***
+GA20 ***
+GA3C ***
+GA4C ***
+GA5C ***
+GA6C ***
+GA8 ***
+GA8C ***
+GABR ***
+GANT ***
+GAUN ***
+GAVI ***
+GAZL ***
+GB1 ***
+GBSP ***
+GC1 ***
+GDUK ***
+GEMI ***
+GENI ***
+GEPE ***
+GJ11 ***
+GLAD ***
+GLAS ***
+GLF2 ***
+GLF3 ***
+GLSP ***
+GLST ***
+GLTU ***
+GM17 ***
+GMGC ***
+GNAT ***
+GOBU ***
+GOLF ***
+GOOS ***
+GP1 ***
+GP3 ***
+GP4 ***
+GPRO ***
+GR51 ***
+GRFN ***
+GRIF ***
+GRIZ ***
+GSIS ***
+GSPN ***
+GUEP ***
+GURI ***
+GX ***
+GY10 ***
+GY20 ***
+GY30 ***
+GY80 ***
+H111 ***
+H12T ***
+H160 ***
+H202 ***
+H207 ***
+H21 ***
+H25A ***
+H269 ***
+H40 ***
+H46 ***
+H53S ***
+HA2 ***
+HA31 ***
+HAHU ***
+HANS ***
+HAR ***
+HAW3 ***
+HAWK ***
+HB21 ***
+HB23 ***
+HB3 ***
+HCAT ***
+HD34 ***
+HEAD ***
+HERN ***
+HF20 ***
+HI27 ***
+HIGH ***
+HIND ***
+HL2 ***
+HLC4 ***
+HLD4 ***
+HM38 ***
+HN70 ***
+HORN ***
+HORZ ***
+HR10 ***
+HR20 ***
+HRM9 ***
+HRNT ***
+HROC ***
+HRON ***
+HSMT ***
+HT16 ***
+HT2 ***
+HT36 ***
+HT40 ***
+HU1 ***
+HU2 ***
+HUML ***
+HUNT ***
+HURI ***
+HURK ***
+HW4P ***
+HW4T ***
+HX2 ***
+HYPR ***
+I103 ***
+I112 ***
+I115 ***
+I11B ***
+I153 ***
+I15B ***
+I16 ***
+I22 ***
+I23 ***
+I3 ***
+I66 ***
+IA46 ***
+IA58 ***
+IA63 ***
+IFUR ***
+IL14 ***
+IL28 ***
+IL38 ***
+IMPU ***
+INCQ ***
+INEC ***
+INEX ***
+INTG ***
+ION ***
+IP06 ***
+IP10 ***
+IP26 ***
+IP6A ***
+IPAN ***
+IR22 ***
+IR23 ***
+IR24 ***
+IR25 ***
+IR27 ***
+IR28 ***
+IR46 ***
+IR99 ***
+IRBS ***
+IS2 ***
+IS28 ***
+ISAT ***
+ISPT ***
+J1 ***
+J10 ***
+J177 ***
+J20 ***
+J3 ***
+J300 ***
+J400 ***
+J40E ***
+J4B2 ***
+J600 ***
+J8A ***
+J8B ***
+JAB2 ***
+JAB4 ***
+JABI ***
+JACE ***
+JAG2 ***
+JAGR ***
+JAJ5 ***
+JAJ6 ***
+JARO ***
+JAS4 ***
+JAST ***
+JB15 ***
+JC01 ***
+JC02 ***
+JCOM ***
+JCRU ***
+JD2 ***
+JDOE ***
+JE2 ***
+JFOX ***
+JH7 ***
+JK05 ***
+JL9 ***
+JN76 ***
+JPM1 ***
+JPRO ***
+JRC1 ***
+JRO ***
+JS3 ***
+JSX ***
+JT2 ***
+JU52 ***
+JUN1 ***
+JUN2 ***
+JUNR ***
+JUPI ***
+K126 ***
+K209 ***
+K226 ***
+K35E ***
+K50 ***
+K51 ***
+K8 ***
+KA25 ***
+KA26 ***
+KA27 ***
+KA50 ***
+KA52 ***
+KA62 ***
+KAAN ***
+KAK1 ***
+KAK2 ***
+KAK3 ***
+KAT3 ***
+KATB ***
+KATR ***
+KC2 ***
+KE3 ***
+KEHA ***
+KELA ***
+KELD ***
+KERO ***
+KEST ***
+KF21 ***
+KFAB ***
+KFAS ***
+KFIR ***
+KFIS ***
+KH4 ***
+KIS2 ***
+KIS4 ***
+KITH ***
+KITI ***
+KK60 ***
+KL07 ***
+KL10 ***
+KL25 ***
+KL35 ***
+KLBR ***
+KM2 ***
+KNTW ***
+KOLL ***
+KP2 ***
+KP5 ***
+KR1 ***
+KR2 ***
+KR21 ***
+KR30 ***
+KR31 ***
+KR34 ***
+KRAG ***
+KRAH ***
+KRIC ***
+KSTK ***
+KT1 ***
+KTOO ***
+KZ2 ***
+KZ3 ***
+KZ4 ***
+KZ7 ***
+KZ8 ***
+KZLA ***
+L10 ***
+L11 ***
+L11E ***
+L12 ***
+L13 ***
+L13M ***
+L13S ***
+L14 ***
+L15 ***
+L159 ***
+L18 ***
+L181 ***
+L200 ***
+L29 ***
+L29A ***
+L29B ***
+L37 ***
+L380 ***
+L39 ***
+L4 ***
+L40 ***
+L5 ***
+L59 ***
+L6 ***
+L60 ***
+L610 ***
+L70 ***
+L8 ***
+L90 ***
+LA25 ***
+LA4 ***
+LA60 ***
+LA6T ***
+LA8 ***
+LACO ***
+LAKR ***
+LAKX ***
+LAMA ***
+LANC ***
+LAR1 ***
+LARK ***
+LAST ***
+LBUG ***
+LCB ***
+LCH ***
+LCR ***
+LEG2 ***
+LEGD ***
+LESP ***
+LEV2 ***
+LEV4 ***
+LGEZ ***
+LGND ***
+LH10 ***
+LIBE ***
+LION ***
+LJ23 ***
+LJ24 ***
+LJ25 ***
+LJ28 ***
+LJ31 ***
+LJ40 ***
+LJ45 ***
+LJ55 ***
+LJ70 ***
+LJ75 ***
+LM5 ***
+LM5X ***
+LM7 ***
+LMC1 ***
+LMK1 ***
+LN27 ***
+LN3 ***
+LNC2 ***
+LNC4 ***
+LNCE ***
+LNP4 ***
+LNT4 ***
+LOCA ***
+LOVE ***
+LP1 ***
+LR2T ***
+LS2 ***
+LSTR ***
+LTNG ***
+LUL5 ***
+LUL6 ***
+LUL7 ***
+LUL8 ***
+LW20 ***
+LW40 ***
+LWIN ***
+LX32 ***
+LX34 ***
+LXR ***
+LYSA ***
+M10 ***
+M101 ***
+M106 ***
+M108 ***
+M15 ***
+M17 ***
+M18 ***
+M18T ***
+M2 ***
+M200 ***
+M20P ***
+M21 ***
+M212 ***
+M24 ***
+M26 ***
+M28 ***
+M2HK ***
+M308 ***
+M326 ***
+M339 ***
+M345 ***
+M346 ***
+M36J ***
+M404 ***
+M55 ***
+M74 ***
+MA1 ***
+MA5 ***
+MA60 ***
+MA6H ***
+MAGC ***
+MAGI ***
+MAGN ***
+MAJR ***
+MAKO ***
+MAMB ***
+MAME ***
+MAVR ***
+MB70 ***
+MB80 ***
+MC01 ***
+MC10 ***
+MC23 ***
+MC45 ***
+MC90 ***
+MCOU ***
+MCOY ***
+MCR1 ***
+MCR4 ***
+MCRR ***
+MCUL ***
+MD3 ***
+MD3R ***
+MD52 ***
+MD60 ***
+ME08 ***
+ME09 ***
+ME62 ***
+MEAD ***
+MEL2 ***
+MERK ***
+MESS ***
+METR ***
+MF17 ***
+MG15 ***
+MG17 ***
+MG19 ***
+MG21 ***
+MG23 ***
+MG25 ***
+MG31 ***
+MG44 ***
+MGIC ***
+MGNM ***
+MGUL ***
+MH20 ***
+MH46 ***
+MI10 ***
+MI14 ***
+MI2 ***
+MI24 ***
+MI26 ***
+MI28 ***
+MI34 ***
+MI38 ***
+MI4 ***
+MI6 ***
+MI8 ***
+MIDR ***
+MIMP ***
+MIMU ***
+MIR2 ***
+MIRA ***
+MITE ***
+MJ10 ***
+MJ12 ***
+MJ1H ***
+MJ2 ***
+MJ4 ***
+MJ5 ***
+MJ51 ***
+MJ53 ***
+MJ7 ***
+MJ77 ***
+MJ8 ***
+MJ80 ***
+MJ9 ***
+MJ90 ***
+MLER ***
+MM14 ***
+MM16 ***
+MM19 ***
+MM21 ***
+MM22 ***
+MM24 ***
+MMAX ***
+MMUT ***
+MNEX ***
+MOCU ***
+MOGO ***
+MOL1 ***
+MON2 ***
+MONA ***
+MONI ***
+MOR2 ***
+MOSP ***
+MOSQ ***
+MOTO ***
+MP02 ***
+MP20 ***
+MR25 ***
+MR35 ***
+MR3T ***
+MRAI ***
+MRF1 ***
+MRMD ***
+MRTN ***
+MS1 ***
+MS23 ***
+MS31 ***
+MS73 ***
+MS76 ***
+MSAI ***
+MSQ2 ***
+MT ***
+MT2 ***
+MU23 ***
+MU30 ***
+MUS2 ***
+MVN1 ***
+MVRK ***
+MX10 ***
+MX1T ***
+MX2 ***
+MX58 ***
+MX65 ***
+MX80 ***
+MXS ***
+MY12 ***
+MY13 ***
+MYA4 ***
+MYS4 ***
+N110 ***
+N120 ***
+N219 ***
+N250 ***
+N260 ***
+N3 ***
+N320 ***
+N340 ***
+N3N ***
+N5A ***
+N5B ***
+NA40 ***
+NARN ***
+NAVI ***
+NC85 ***
+ND1T ***
+NDAC ***
+NDAT ***
+NDIC ***
+NFEX ***
+NG4 ***
+NG5 ***
+NH90 ***
+NI28 ***
+NIBB ***
+NIPR ***
+NM5 ***
+NMCU ***
+NNJA ***
+NORA ***
+NORS ***
+NPOR ***
+NST6 ***
+NSTR ***
+NT10 ***
+NXT ***
+O3 ***
+OCNR ***
+OH1 ***
+OKHO ***
+OM1 ***
+OMGA ***
+OMLA ***
+OMSD ***
+ONE ***
+ONEX ***
+OPCA ***
+OR10 ***
+OR12 ***
+OSCR ***
+OVOD ***
+OZZI ***
+P06T ***
+P1 ***
+P100 ***
+P130 ***
+P136 ***
+P148 ***
+P149 ***
+P18T ***
+P19 ***
+P1HH ***
+P2 ***
+P208 ***
+P210 ***
+P212 ***
+P220 ***
+P230 ***
+P250 ***
+P25B ***
+P27 ***
+P270 ***
+P28B ***
+P28R ***
+P28S ***
+P28T ***
+P28U ***
+P3 ***
+P32R ***
+P32T ***
+P337 ***
+P38 ***
+P39 ***
+P40 ***
+P46T *** A
+P47 ***
+P4Y ***
+P50 ***
+P51 ***
+P57 ***
+P60 ***
+P61 ***
+P66P ***
+P66T ***
+P68 ***
+P68T ***
+P70 ***
+P750 ***
+P80 ***
+P82 ***
+PA11 ***
+PA12 ***
+PA18 ***
+PA23 ***
+PA25 ***
+PA27 ***
+PA30 ***
+PA36 ***
+PA38 ***
+PACE ***
+PAGO ***
+PANT ***
+PAR1 ***
+PAR4 ***
+PARL ***
+PAT4 ***
+PAUL ***
+PAV4 ***
+PAY1 ***
+PAY3 ***
+PC21 ***
+PC6P ***
+PC6T ***
+PC7 ***
+PC9 ***
+PCA2 ***
+PDIG ***
+PEGA ***
+PEGZ ***
+PELI ***
+PEMB ***
+PETL ***
+PETR ***
+PGEE ***
+PGK1 ***
+PHIL ***
+PHIX ***
+PIAE ***
+PIAT ***
+PICO ***
+PILL ***
+PINO ***
+PIPA ***
+PISI ***
+PIT4 ***
+PIVE ***
+PIVI ***
+PK11 ***
+PK15 ***
+PK18 ***
+PK21 ***
+PK23 ***
+PK25 ***
+PKAN ***
+PL1 ***
+PL12 ***
+PL2 ***
+PL4 ***
+PL9 ***
+PLUS ***
+PNR2 ***
+PNR3 ***
+PNR4 ***
+PNTH ***
+PO2 ***
+PO60 ***
+POLI ***
+PONY ***
+PP2 ***
+PP3 ***
+PPRO ***
+PRBP ***
+PRBR ***
+PRCE ***
+PREN ***
+PRET ***
+PREX ***
+PRIM ***
+PROC ***
+PROT ***
+PROW ***
+PRPR ***
+PRTS ***
+PRXT ***
+PSTM ***
+PSW4 ***
+PT22 ***
+PT70 ***
+PT80 ***
+PTMS ***
+PTS1 ***
+PTS2 ***
+PULR ***
+PULS ***
+PUMA ***
+PUP ***
+PURS ***
+PUSH ***
+PVTR ***
+PZ01 ***
+PZ02 ***
+PZ04 ***
+PZ06 ***
+PZ12 ***
+PZ3T ***
+PZ4M ***
+PZ6T ***
+Q01 ***
+Q1 ***
+Q25 ***
+Q28 ***
+Q4 ***
+Q5 ***
+Q58 ***
+Q9 ***
+QAIL ***
+QALT ***
+QIC2 ***
+QR01 ***
+QUAS ***
+QUIC ***
+R100 ***
+R109 ***
+R11 ***
+R12 ***
+R135 ***
+R185 ***
+R2 ***
+R200 ***
+R300 ***
+R4 ***
+R721 ***
+R722 ***
+R90F ***
+R90R ***
+R90T ***
+RA14 ***
+RA17 ***
+RAF2 ***
+RAID ***
+RAIL ***
+RALL ***
+RANG ***
+RARO ***
+RAV3 ***
+RAV5 ***
+RAZM ***
+RBEL ***
+RC3 ***
+RC70 ***
+RCAL ***
+RD03 ***
+RD20 ***
+RDH2 ***
+RELI ***
+RENE ***
+REV6 ***
+RF10 ***
+RF3 ***
+RF4 ***
+RF47 ***
+RF5 ***
+RF6 ***
+RF9 ***
+RGNT ***
+RISN ***
+RJ03 ***
+RK3 ***
+RK5 ***
+RLU1 ***
+RMOU ***
+RNGR ***
+RODS ***
+ROND ***
+ROSE ***
+RP1 ***
+RPUP ***
+RS12 ***
+RS18 ***
+RS20 ***
+RS21 ***
+RTA4 ***
+RUBI ***
+RV15 ***
+RV4T ***
+RV6 ***
+RVAL ***
+RVST ***
+RW19 ***
+RW20 ***
+RW22 ***
+RW26 ***
+RW3 ***
+RYSA ***
+RYST ***
+S05F ***
+S05R ***
+S1 ***
+S10 ***
+S11 ***
+S12 ***
+S122 ***
+S15S ***
+S15U ***
+S160 ***
+S200 ***
+S202 ***
+S208 ***
+S21 ***
+S211 ***
+S223 ***
+S274 ***
+S278 ***
+S285 ***
+S2P ***
+S2T ***
+S3 ***
+S355 ***
+S360 ***
+S37 ***
+S38 ***
+S39 ***
+S4 ***
+S400 ***
+S401 ***
+S434 ***
+S45 ***
+S450 ***
+S51D ***
+S522 ***
+S6 ***
+S65C ***
+S716 ***
+S76 *** A
+S900 ***
+S97 ***
+SA02 ***
+SA03 ***
+SA04 ***
+SA05 ***
+SA10 ***
+SA11 ***
+SA2 ***
+SA20 ***
+SA3 ***
+SA30 ***
+SA38 ***
+SA50 ***
+SA6 ***
+SA6E ***
+SA7 ***
+SA70 ***
+SA75 ***
+SA8T ***
+SAB2 ***
+SABA ***
+SABW ***
+SACE ***
+SACR ***
+SAFF ***
+SAH1 ***
+SAKO ***
+SALB ***
+SAM ***
+SAND ***
+SAPH ***
+SASH ***
+SASP ***
+SASY ***
+SATA ***
+SAVA ***
+SAVG ***
+SB05 ***
+SB1 ***
+SB29 ***
+SB32 ***
+SB35 ***
+SB37 ***
+SB7 ***
+SB91 ***
+SBD ***
+SBLS ***
+SBOY ***
+SBR1 ***
+SBR2 ***
+SC01 ***
+SCAM ***
+SCEP ***
+SCII ***
+SCOM ***
+SCOR ***
+SCOU ***
+SCRO ***
+SCTR ***
+SCUB ***
+SCW1 ***
+SD2 ***
+SD4 ***
+SDUS ***
+SE1 ***
+SE5A ***
+SE5R ***
+SEAT ***
+SEAW ***
+SERA ***
+SF2 ***
+SF23 ***
+SF24 ***
+SF25 ***
+SF28 ***
+SF31 ***
+SF35 ***
+SF36 ***
+SG37 ***
+SG70 ***
+SG92 ***
+SGRA ***
+SGUP ***
+SH09 ***
+SH4 ***
+SH5 ***
+SHAC ***
+SHAW ***
+SHEA ***
+SHEK ***
+SHER ***
+SHOE ***
+SHOP ***
+SHOR ***
+SHRA ***
+SHRK ***
+SHRT ***
+SIDE ***
+SIGM ***
+SILH ***
+SIRA ***
+SJ30 ***
+SK10 ***
+SK70 ***
+SKAR ***
+SKIF ***
+SKIM ***
+SKRA ***
+SKYC ***
+SKYO ***
+SKYR ***
+SL1 ***
+SL39 ***
+SL90 ***
+SLCH ***
+SLG2 ***
+SLG4 ***
+SLH4 ***
+SLK3 ***
+SLK5 ***
+SM01 ***
+SM19 ***
+SM20 ***
+SM60 ***
+SM92 ***
+SMAX ***
+SMB2 ***
+SNAD ***
+SNAP ***
+SNGY ***
+SNOS ***
+SNS2 ***
+SNS7 ***
+SNS9 ***
+SOKL ***
+SONX ***
+SORA ***
+SP20 ***
+SP33 ***
+SP55 ***
+SP6E ***
+SP7 ***
+SP91 ***
+SP95 ***
+SPA2 ***
+SPAR ***
+SPDR ***
+SPGY ***
+SPHA ***
+SPIR ***
+SPIT ***
+SPKR ***
+SPOR ***
+SPR2 ***
+SPRT ***
+SPST ***
+SPUP ***
+SQ2T ***
+SQES ***
+SR01 ***
+SRAC ***
+SRAI ***
+SRAS ***
+SRAY ***
+SREY ***
+SS2 ***
+SS2P ***
+SS2T ***
+SSAB ***
+SSC ***
+SSTL ***
+SSTM ***
+ST1 ***
+ST10 ***
+ST3 ***
+ST30 ***
+ST4 ***
+ST6 ***
+ST60 ***
+ST75 ***
+ST87 ***
+STAL ***
+STAT ***
+STCH ***
+STFF ***
+STG2 ***
+STIL ***
+STLN ***
+STOR ***
+STRA ***
+STRE ***
+STRI ***
+STRK ***
+STRM ***
+STST ***
+SU17 ***
+SU24 ***
+SU25 ***
+SU26 ***
+SU29 ***
+SU31 ***
+SU38 ***
+SU57 ***
+SU7 ***
+SU80 ***
+SUBA ***
+SURN ***
+SUSO ***
+SV4 ***
+SVNH ***
+SW18 ***
+SW2 ***
+SW3 ***
+SWAK ***
+SWAT ***
+SWFT ***
+SWIN ***
+SWOR ***
+SX30 ***
+SYCA ***
+SYMP ***
+SYNC ***
+SZ45 ***
+T1 ***
+T10 ***
+T101 ***
+T160 ***
+T18 ***
+T19 ***
+T2 ***
+T211 ***
+T22M ***
+T250 ***
+T28 ***
+T30 ***
+T33 ***
+T334 ***
+T35 ***
+T38 ***
+T4 ***
+T40 ***
+T411 ***
+T415 ***
+T419 ***
+T5 ***
+T51 ***
+T5YY ***
+T6 ***
+T7 ***
+TA15 ***
+TA16 ***
+TA20 ***
+TAGO ***
+TAIL ***
+TARO ***
+TARR ***
+TAYA ***
+TAYB ***
+TAYD ***
+TB05 ***
+TB20 ***
+TB30 ***
+TBEE ***
+TBM ***
+TBR3 ***
+TC2 ***
+TCAT ***
+TCOU ***
+TD1 ***
+TD2 ***
+TD3 ***
+TEAL ***
+TERM ***
+TERR ***
+TEXA ***
+TF19 ***
+TF21 ***
+TF22 ***
+TFOC ***
+TFUN ***
+TIAD ***
+TIJU ***
+TIPB ***
+TJET ***
+TL20 ***
+TL30 ***
+TLEG ***
+TM5 ***
+TMOT ***
+TMUS ***
+TNAV ***
+TNDR ***
+TOOT ***
+TOR ***
+TOUR ***
+TOXO ***
+TP40 ***
+TPIL ***
+TPIN ***
+TR20 ***
+TR55 ***
+TRAL ***
+TRAP ***
+TRBA ***
+TRDO ***
+TRF1 ***
+TRIM ***
+TRIS ***
+TRMA ***
+TRWN ***
+TS11 ***
+TS8 ***
+TSPT ***
+TSTN ***
+TSTR ***
+TTRS ***
+TTWO ***
+TU16 ***
+TU22 ***
+TU95 ***
+TUCA ***
+TUCR ***
+TUCT ***
+TUL3 ***
+TUTR ***
+TVL4 ***
+TVLB ***
+TWEN ***
+TWIR ***
+TWST ***
+TZRV ***
+U15 ***
+U16 ***
+U2 ***
+UBAT ***
+UF10 ***
+UF13 ***
+UFHT ***
+UH12 ***
+UL10 ***
+UL20 ***
+UL2F ***
+UL39 ***
+UL45 ***
+ULTR ***
+ULTS ***
+UM18 ***
+UNIV ***
+URRA ***
+US2 ***
+UT60 ***
+UT65 ***
+UT66 ***
+UT75 ***
+UU12 ***
+V1 ***
+V10 ***
+V221 ***
+V252 ***
+V280 ***
+V322 ***
+V351 ***
+V452 ***
+V500 ***
+VALI ***
+VAMP ***
+VANT ***
+VAUT ***
+VELO ***
+VELT ***
+VEZE ***
+VF35 ***
+VF60 ***
+VG3T ***
+VGUL ***
+VIMA ***
+VIPJ ***
+VIPR ***
+VIX ***
+VIXN ***
+VJ22 ***
+VK3P ***
+VK3T ***
+VL3 ***
+VL3T ***
+VLOT ***
+VLTT ***
+VM1 ***
+VNOM ***
+VNTR ***
+VO10 ***
+VOL2 ***
+VP2 ***
+VR20 ***
+VR7 ***
+VSON ***
+VTOR ***
+VTRA ***
+VTUR ***
+VUT1 ***
+VVIG ***
+VW10 ***
+VWIT ***
+W11 ***
+W135 ***
+W201 ***
+W3 ***
+W5BC ***
+W62T ***
+WA40 ***
+WA41 ***
+WA42 ***
+WA50 ***
+WA80 ***
+WAC9 ***
+WACA ***
+WACC ***
+WACD ***
+WACE ***
+WACF ***
+WACG ***
+WACM ***
+WACN ***
+WACO ***
+WACT ***
+WAIX ***
+WASP ***
+WB57 ***
+WBOO ***
+WCAT ***
+WDEX ***
+WESX ***
+WF4U ***
+WFOC ***
+WFUR ***
+WH1 ***
+WH4 ***
+WHAT ***
+WHIL ***
+WHIT ***
+WHK2 ***
+WICH ***
+WILT ***
+WIND ***
+WINE ***
+WIRR ***
+WISP ***
+WLBY ***
+WM2 ***
+WOPU ***
+WP40 ***
+WP47 ***
+WS22 ***
+WSP ***
+WT10 ***
+WT9 ***
+WUSH ***
+WW1 ***
+WW23 ***
+WX35 ***
+WZ10 ***
+WZER ***
+X2 ***
+X3 ***
+X47B ***
+X49 ***
+X59 ***
+XA41 ***
+XA42 ***
+XA85 ***
+XAIR ***
+XB1 ***
+XL2 ***
+XNON ***
+XNOS ***
+Y11 ***
+Y112 ***
+Y12F ***
+Y130 ***
+Y18T ***
+Y20 ***
+YA1 ***
+YAK3 ***
+YAK9 ***
+YALE ***
+YARR ***
+YAST ***
+YC12 ***
+YK11 ***
+YK12 ***
+YK18 ***
+YK28 ***
+YK30 ***
+YK50 ***
+YK52 ***
+YK53 ***
+YK54 ***
+YK55 ***
+YK58 ***
+YL15 ***
+YNHL ***
+YUKN ***
+YUNO ***
+YURO ***
+Z22 ***
+Z26 ***
+Z37P ***
+Z37T ***
+Z42 ***
+Z43 ***
+Z50 ***
+ZA6 ***
+ZEFR ***
+ZEP2 ***
+ZEPH ***
+ZERO ***
+ZIU ***
+ZULU ***

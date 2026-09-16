@@ -265,6 +265,25 @@ set (WED_SOURCES
 	src/WEDLibrary/WED_LibraryPreviewPane.h
 	src/WEDLibrary/WED_LibraryPane.cpp
 	src/WEDLibrary/WED_LibraryPane.h
+	src/WEDLivery/WED_AirlineDirectory.cpp
+	src/WEDLivery/WED_AirlineDirectory.h
+	src/WEDLivery/WED_AirportDatabase.cpp
+	src/WEDLivery/WED_AirportDatabase.h
+	src/WEDLivery/WED_FlagAssets.cpp
+	src/WEDLivery/WED_FlagAssets.h
+	src/WEDLivery/WED_FlagIndex.cpp
+	src/WEDLivery/WED_FlagIndex.h
+	src/WEDLivery/WED_FlagProjector.cpp
+	src/WEDLivery/WED_FlagProjector.h
+	src/WEDLivery/WED_IocCountryCodes.cpp
+	src/WEDLivery/WED_IocCountryCodes.h
+	src/WEDLivery/WED_LiveryData.h
+	src/WEDLivery/WED_MandatoryHeader.cpp
+	src/WEDLivery/WED_MandatoryHeader.h
+	src/WEDLivery/WED_LiveryPane.cpp
+	src/WEDLivery/WED_LiveryPane.h
+	src/WEDLivery/WED_LiveryThumbnailCache.cpp
+	src/WEDLivery/WED_LiveryThumbnailCache.h
 	src/WEDMap/WED_Colors.cpp
 	src/WEDMap/WED_Colors.h
 	src/WEDMap/WED_CreateEdgeTool.cpp
@@ -690,6 +709,7 @@ set(WED_RESOURCE_FILES
 	${CMAKE_SOURCE_DIR}/src/WEDResources/parking_spots/ClassD.png
 	${CMAKE_SOURCE_DIR}/src/WEDResources/parking_spots/ClassE.png
 	${CMAKE_SOURCE_DIR}/src/WEDResources/parking_spots/ClassF.png
+	${CMAKE_SOURCE_DIR}/src/WEDResources/livery_selected.png
 	${CMAKE_SOURCE_DIR}/src/WEDResources/icons/navmap_airport.png
 	${CMAKE_SOURCE_DIR}/src/WEDResources/icons/navmap_seaport.png
 	${CMAKE_SOURCE_DIR}/src/WEDResources/ArrowHeadRoadS.png
@@ -746,6 +766,7 @@ target_include_directories(WED PRIVATE
 	src/WEDFileCache
 	src/WEDImportExport
 	src/WEDLibrary
+	src/WEDLivery
 	src/WEDMap
 	src/WEDNetwork
 	src/WEDProperties
@@ -785,6 +806,26 @@ if (WIN32)
 		crypt32
 		wldap32
 	    )
+
+	# Loose data files WED reads from disk next to its own .exe at runtime
+	# (see WED_AirportDatabase.h) rather than compiling them in via WED.rc - so
+	# they can be updated by replacing this one file, independent of a WED
+	# rebuild. Mirrors what mac_copy_bundle_files() does for the Mac bundle's
+	# Resources folder below.
+	add_custom_command(
+		TARGET WED POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy
+			"${CMAKE_SOURCE_DIR}/src/WEDLivery/WED_AirportDatabase.txt"
+			"$<TARGET_FILE_DIR:WED>/WED_AirportDatabase.txt"
+		COMMENT "Copying WED_AirportDatabase.txt next to WED.exe"
+	)
+	add_custom_command(
+		TARGET WED POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy
+			"${CMAKE_SOURCE_DIR}/src/WEDLivery/WED_AirlineDirectory.txt"
+			"$<TARGET_FILE_DIR:WED>/WED_AirlineDirectory.txt"
+		COMMENT "Copying WED_AirlineDirectory.txt next to WED.exe"
+	)
 elseif (APPLE)
 	target_link_libraries(WED PRIVATE
 		${CARBON_FRAMEWORK}
