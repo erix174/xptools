@@ -53,6 +53,28 @@
 #define WED_MANDATORYHEADER_H
 
 #include <istream>
+#include <string>
+
+// Directory holding this family's loose .txt data files, WITH a trailing
+// separator - prepend a bare filename to it.
+//
+// This is not the same directory on every platform, which is why it exists as a
+// function instead of being open-coded at each call site the way it used to be:
+//
+//   Windows / Linux : beside the executable, which is what
+//                     FILE_get_dir_name(GetApplicationPath()) already gives.
+//   macOS           : INSIDE the bundle, at WED.app/Contents/Resources/. On Mac
+//                     GetApplicationPath() returns the BUNDLE path, so
+//                     FILE_get_dir_name() of it lands next to WED.app rather
+//                     than in it - and data files sitting beside a .app do not
+//                     survive a user dragging the bundle somewhere. Putting them
+//                     in Contents/Resources is the only placement that travels
+//                     with the application.
+//
+// Getting this wrong is silent: the loaders simply report LoadFailed() and the
+// Liveries tab comes up empty, which is exactly how these files went undeployed
+// on Mac and Linux for as long as they did.
+std::string	WedDataFileDir(void);
 
 // Reads and consumes exactly the first two lines of `f` (CRLF-tolerant).
 // Returns true only if they are exactly "I" then "1 WED Aviation Database" -

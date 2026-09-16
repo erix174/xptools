@@ -22,9 +22,25 @@
  */
 
 #include "WED_MandatoryHeader.h"
+#include "PlatformUtils.h"
+#include "FileUtils.h"
 #include <string>
 
 using std::string;
+
+string	WedDataFileDir(void)
+{
+#if APL
+	// GetApplicationPath() is the BUNDLE path on Mac (.../WED.app), not the
+	// executable - so this appends into the bundle rather than taking a dirname
+	// off it. See the header for why beside-the-bundle is not an option.
+	return GetApplicationPath() + DIR_STR "Contents" DIR_STR "Resources" DIR_STR;
+#else
+	// Windows and Linux both return the executable's own path, so its directory
+	// is where the build drops these files.
+	return FILE_get_dir_name(GetApplicationPath());
+#endif
+}
 
 bool	CheckWedMandatoryHeader(std::istream & f)
 {

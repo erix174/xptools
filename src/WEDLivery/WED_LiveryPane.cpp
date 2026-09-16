@@ -36,6 +36,7 @@
 #include "WED_Messages.h"
 #include "WED_ToolUtils.h"		// WED_GetSelect, WED_GetParentAirport
 #include "WED_EnumSystem.h"		// ramp_operation_*, width_A..width_F
+#include "WED_MandatoryHeader.h"	// WedDataFileDir() - where the loose .txt data files live
 #include "PlatformUtils.h"		// DIR_STR, GetApplicationPath()
 #include "FileUtils.h"			// FILE_get_dir_name()
 #include "WED_Globals.h"		// gPromptLiveriesOnRampSelect
@@ -491,7 +492,7 @@ namespace
 			return wed_Icao_Placeholder;
 
 		if (!db.IsLoaded() && !db.LoadFailed())
-			db.EnsureLoaded(FILE_get_dir_name(GetApplicationPath()) + "WED_AirportDatabase.txt");
+			db.EnsureLoaded(WedDataFileDir() + "WED_AirportDatabase.txt");
 
 		if (!db.IsLoaded())
 			return wed_Icao_IndexUnavailable;
@@ -515,7 +516,7 @@ namespace
 		if (icao.empty()) return false;
 
 		if (!db.IsLoaded() && !db.LoadFailed())
-			db.EnsureLoaded(FILE_get_dir_name(GetApplicationPath()) + "WED_AirportDatabase.txt");
+			db.EnsureLoaded(WedDataFileDir() + "WED_AirportDatabase.txt");
 
 		return db.IsLoaded() && db.IsCommercial(icao);
 	}
@@ -549,7 +550,7 @@ namespace
 		if (!primary_ramp) return rows;
 
 		if (!directory.IsLoaded() && !directory.LoadFailed())
-			directory.EnsureLoaded(FILE_get_dir_name(GetApplicationPath()) + "WED_AirlineDirectory.txt");
+			directory.EnsureLoaded(WedDataFileDir() + "WED_AirlineDirectory.txt");
 
 		vector<string> manual, direct_hit;
 		string airport_country;
@@ -1905,7 +1906,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 					// this project just hasn't researched yet - a misleading "available"
 					// promise when the checklist won't actually show anything for it).
 					if (!mAirportDb.IsLoaded() && !mAirportDb.LoadFailed())
-						mAirportDb.EnsureLoaded(FILE_get_dir_name(GetApplicationPath()) + "WED_AirportDatabase.txt");
+						mAirportDb.EnsureLoaded(WedDataFileDir() + "WED_AirportDatabase.txt");
 					vector<string> direct_hit = GetRecommendedAirlineCodes(mAirportDb, icao);
 
 					if (!direct_hit.empty())

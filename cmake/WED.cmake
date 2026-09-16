@@ -278,6 +278,8 @@ set (WED_SOURCES
 	src/WEDLivery/WED_IocCountryCodes.cpp
 	src/WEDLivery/WED_IocCountryCodes.h
 	src/WEDLivery/WED_LiveryData.h
+	src/WEDLivery/WED_LiveryIndex.cpp
+	src/WEDLivery/WED_LiveryIndex.h
 	src/WEDLivery/WED_MandatoryHeader.cpp
 	src/WEDLivery/WED_MandatoryHeader.h
 	src/WEDLivery/WED_LiveryPane.cpp
@@ -807,25 +809,8 @@ if (WIN32)
 		wldap32
 	    )
 
-	# Loose data files WED reads from disk next to its own .exe at runtime
-	# (see WED_AirportDatabase.h) rather than compiling them in via WED.rc - so
-	# they can be updated by replacing this one file, independent of a WED
-	# rebuild. Mirrors what mac_copy_bundle_files() does for the Mac bundle's
-	# Resources folder below.
-	add_custom_command(
-		TARGET WED POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy
-			"${CMAKE_SOURCE_DIR}/src/WEDLivery/WED_AirportDatabase.txt"
-			"$<TARGET_FILE_DIR:WED>/WED_AirportDatabase.txt"
-		COMMENT "Copying WED_AirportDatabase.txt next to WED.exe"
-	)
-	add_custom_command(
-		TARGET WED POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy
-			"${CMAKE_SOURCE_DIR}/src/WEDLivery/WED_AirlineDirectory.txt"
-			"$<TARGET_FILE_DIR:WED>/WED_AirlineDirectory.txt"
-		COMMENT "Copying WED_AirlineDirectory.txt next to WED.exe"
-	)
+	# Loose data files - see WED_DATA_FILES below, deployed for every platform
+	# after this if/elseif block.
 elseif (APPLE)
 	target_link_libraries(WED PRIVATE
 		${CARBON_FRAMEWORK}
@@ -884,4 +869,42 @@ elseif (LINUX)
 
 	target_link_libraries(WED PRIVATE fltk::fltk egl::egl)
 	target_link_options(WED PRIVATE -rdynamic)
+endif()
+
+# ---------------------------------------------------------------------------
+# Loose .txt data files (WED_AirportDatabase.txt and friends). WED reads these
+# from disk at runtime rather than compiling them in via WED.rc, so a data
+# correction ships by replacing one file instead of rebuilding WED.
+#
+# Deployed for ALL THREE platforms from one list. They used to be copied only in
+# the WIN32 branch, with a comment claiming it mirrored mac_copy_bundle_files() -
+# it did not, because WED_RESOURCE_FILES (which the Mac and Linux branches
+# deploy) never contained them. The result was that on Mac and Linux every
+# loader in this family silently reported LoadFailed() and the Liveries tab came
+# up empty.
+#
+# The destination differs per platform and must stay in step with
+# WedDataFileDir() in src/WEDLivery/WED_MandatoryHeader.cpp, which is what the
+# loaders actually use to find them:
+#   Windows / Linux : beside the executable
+#   macOS           : inside the bundle, at WED.app/Contents/Resources
+set(WED_DATA_FILES
+	"${CMAKE_SOURCE_DIR}/src/WEDLivery/WED_AirportDatabase.txt"
+	"${CMAKE_SOURCE_DIR}/src/WEDLivery/WED_AirlineDirectory.txt"
+	"${CMAKE_SOURCE_DIR}/src/WEDLivery/WED_StaticAircraftIndex.txt"
+)
+
+if (APPLE)
+	mac_copy_bundle_files(WED Resources "${WED_DATA_FILES}")
+else()
+	foreach(data_file ${WED_DATA_FILES})
+		get_filename_component(data_name "${data_file}" NAME)
+		add_custom_command(
+			TARGET WED POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy
+				"${data_file}"
+				"$<TARGET_FILE_DIR:WED>/${data_name}"
+			COMMENT "Copying ${data_name} next to the WED executable"
+		)
+	endforeach()
 endif()
