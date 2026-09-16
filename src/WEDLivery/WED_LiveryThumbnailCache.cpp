@@ -115,14 +115,20 @@ const WED_LiveryThumbnail * WED_LiveryThumbnailCache::GetThumbnail(WED_ResourceM
 	if (it != mCache.end())
 		return &it->second;
 
+	if (mFailed.count(obj_vpath))
+		return nullptr;		// already tried this one - see mFailed's comment
+
 	if (mCache.size() >= kMaxCachedThumbnails)
 		return nullptr;
 
 	const XObj8 * o = nullptr;
 	if (!res_mgr || !res_mgr->GetObj(obj_vpath, o, 0) || !o)
 	{
+		// Logged ONCE per path - mFailed short-circuits every later attempt, so
+		// this stops being a per-frame log write and a per-frame file open.
 		LOG_MSG("E/LiveryThumb GetObj FAILED for %s (res_mgr=%p)\n", obj_vpath.c_str(), (void *) res_mgr);
 		LOG_FLUSH();
+		mFailed.insert(obj_vpath);
 		return nullptr;
 	}
 
@@ -152,7 +158,11 @@ const WED_LiveryThumbnail * WED_LiveryThumbnailCache::GetThumbnail(WED_ResourceM
 	// rendered nothing at all into the texture (came out solid black) for exactly
 	// this reason. glPushAttrib(GL_SCISSOR_BIT) saves both the enable flag and the
 	// rect in one shot; glPopAttrib() below restores them afterward.
-	glPushAttrib(GL_SCISSOR_BIT);
+	// GL_LIGHTING_BIT and GL_COLOR_BUFFER_BIT join the scissor state here because
+	// the render below sets a light, a light model with an ambient of 2.0, and its
+	// own clear colour - all of which are GLOBAL. Left behind, anything later in
+	// the frame that enables lighting inherits this pane's ambient and washes out.
+	glPushAttrib(GL_SCISSOR_BIT | GL_LIGHTING_BIT | GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glDisable(GL_SCISSOR_TEST);
 
 	GLuint tex = 0;

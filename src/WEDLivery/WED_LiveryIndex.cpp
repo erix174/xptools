@@ -26,6 +26,7 @@
 #include "WED_MandatoryHeader.h"
 #include "WED_PackageMgr.h"
 #include "PlatformUtils.h"
+#include "MemFileUtils.h"		// MF_GetFileType, for the X-Plane root check
 
 #include <fstream>
 #include <algorithm>
@@ -249,17 +250,68 @@ string	WED_LiveryDisplayName(const string & airline_name, const string & note)
 	return airline_name + " (" + n + ")";
 }
 
+// Is `root` really the top of an X-Plane installation?
+//
+// The folder NAME is deliberately never consulted. Installs get renamed, and a
+// nested copy - "X-Plane 12/X-Plane 12/" - would satisfy a name test while being
+// the wrong directory entirely. What identifies the anchor is that the three
+// things which only ever exist at the top level are siblings of each other: the
+// application itself, Resources/ and Custom Scenery/.
+//
+// WED_PackageMgr::SetXPlaneFolder() already requires the latter two. This adds
+// the application on top, for the one case that needs the certainty: we are
+// about to descend into Resources/default scenery/sim objects/ and read a file.
+// Being merely probably-right there yields a silent empty index, which is
+// exactly the failure this feature exists to avoid.
+static bool IsXPlaneRoot(const string & root)
+{
+	if (root.empty()) return false;
+
+	const char * kApps[] = {
+#if IBM
+		"X-Plane.exe",
+#elif APL
+		"X-Plane.app",
+#else
+		"X-Plane-x86_64", "X-Plane",
+#endif
+	};
+
+	bool found_app = false;
+	for (size_t i = 0; i < sizeof(kApps) / sizeof(kApps[0]); ++i)
+	{
+		// mf_CheckType, not mf_File: the Mac "application" is a bundle, i.e. a
+		// directory, while the Windows and Linux ones are ordinary files.
+		if (MF_GetFileType((root + DIR_STR + kApps[i]).c_str(), mf_CheckType) != mf_BadFile)
+		{
+			found_app = true;
+			break;
+		}
+	}
+	if (!found_app) return false;
+
+	if (MF_GetFileType((root + DIR_STR "Resources").c_str(), mf_CheckType) != mf_Directory)
+		return false;
+	if (MF_GetFileType((root + DIR_STR "Custom Scenery").c_str(), mf_CheckType) != mf_Directory)
+		return false;
+
+	return true;
+}
+
 string	WED_LiveryIndexDefaultPath(void)
 {
 	if (gPackageMgr == NULL) return string();
 
 	string root;
 	if (!gPackageMgr->GetXPlaneFolder(root)) return string();	// nothing selected yet
-	if (root.empty()) return string();
 
-	// SetXPlaneFolder() already refused any root without "Resources/default
-	// scenery", so this is guaranteed to be a real directory whenever
-	// HasSystemFolder() is true - no need to re-validate the prefix here.
+	if (!IsXPlaneRoot(root))
+	{
+		LOG_MSG("E/LiveryIndex '%s' is not an X-Plane root - need the application, "
+				"Resources and Custom Scenery side by side.\n", root.c_str());
+		return string();
+	}
+
 	return root + DIR_STR "Resources" DIR_STR "default scenery" DIR_STR
 				  "sim objects" DIR_STR "apt_aircraft" DIR_STR "livery_index.txt";
 }

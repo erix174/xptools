@@ -253,8 +253,42 @@ bool	WED_ResourceMgr::GetObjRelative(const string& obj_path, const string& paren
 	return true;
 }
 
+bool	WED_ResourceMgr::GetObjAbsolute(const string& abspath, XObj8 const *& obj)
+{
+	// Loads an .obj by its REAL path instead of by a library virtual path.
+	//
+	// GetObj() below can only resolve vpaths - names that some library.txt
+	// EXPORTed. X-Plane's static aircraft are published that way, but only into
+	// buckets keyed by (operation type, size class, airline), which carry no
+	// aircraft type and no livery, so a specific livery has no vpath to be found
+	// under. The livery index names those files by their real path instead, and
+	// this is how they get loaded.
+	//
+	// Cached in the same mObj map as vpath loads. The two key spaces cannot
+	// collide: a vpath always starts "lib/", an absolute path never does.
+	if(abspath.empty()) return false;
+
+	auto i = mObj.find(abspath);
+	if(i != mObj.end() && !i->second.empty())
+	{
+		obj = i->second[0];
+		return true;
+	}
+
+	XObj8 * new_obj = LoadObj(abspath);
+	if(!new_obj) return false;
+
+	mObj[abspath].push_back(new_obj);
+	obj = new_obj;
+	return true;
+}
+
 bool	WED_ResourceMgr::GetObj(const string& vpath, XObj8 const *& obj, int variant)
 {
+	// Length guard first: this indexes three characters from the end, and paths
+	// now reach here from data files rather than only from the library's own
+	// table, so a short or empty one is no longer impossible.
+	if(vpath.size() < 4) return false;
 	if(toupper(vpath[vpath.size()-3]) != 'O') return false;   // save time by not trying to load .agp's
 
 //printf("GetObj %s' V=%d\n", path.c_str(), variant);

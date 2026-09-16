@@ -550,7 +550,32 @@ namespace
 		if (!primary_ramp) return rows;
 
 		if (!directory.IsLoaded() && !directory.LoadFailed())
-			directory.EnsureLoaded(WedDataFileDir() + "WED_AirlineDirectory.txt");
+		{
+			const string dir_path = WedDataFileDir() + "WED_AirlineDirectory.txt";
+			if (!directory.EnsureLoaded(dir_path))
+			{
+				// Say so, once. Without the directory the tab still works, but
+				// airlines render as bare ICAO codes and the "Popular Airlines" and
+				// "Same Country" sections vanish outright - a degraded result that
+				// looks exactly like a normal, short list. Silently handing that to
+				// an author is worse than one alert they dismiss.
+				//
+				// Once per SESSION, not per failure: this sits on the path Draw()
+				// takes, and the alert is modal, so it would otherwise reopen the
+				// instant it was dismissed.
+				static bool s_warned = false;
+				if (!s_warned)
+				{
+					s_warned = true;
+					string msg = "WED could not load its airline database:\n\n  ";
+					msg += dir_path;
+					msg += "\n\nThe Liveries tab still works, but airlines will show as "
+						   "codes without names, and the region-based recommendations "
+						   "will be missing.\n\nReinstalling WED restores the file.";
+					DoUserAlert(msg.c_str());
+				}
+			}
+		}
 
 		vector<string> manual, direct_hit;
 		string airport_country;

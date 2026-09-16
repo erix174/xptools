@@ -59,3 +59,128 @@ heavy/A359/A359_Korean.obj ***
 heavy/A359/A359_Luftwaffe.obj ***
 heavy/A359/A359_Singapore.obj ***
 heavy/A359/A359_Thai.obj ***
+
+
+# ---- OCR pass, 2026-09-16 - NOT YET EYEBALLED ------------------------------
+# Read off the textures by easyocr, then repaired against each country's
+# registration format. Only rows the FILENAME had nothing for are here;
+# where a filename carried a registration it was kept, because filenames come
+# from Laminar's own naming and beat OCR competing with painted titles.
+# Lines marked REVIEW failed the format check and are probably misread text.
+# Delete or correct a row rather than trusting it - several are livery words
+# (BRASIL, DELTA) that happen to fit a registration shape.
+
+fighter/EUFI/EUFI_RAF.obj *** HSIHI
+fighter/F15/F15EX_cft_usaf.obj *** DORIC
+fighter/F15/F15EX_usaf.obj *** DORIC
+fighter/F4/F4_static.obj *** IOWSS
+heavy/A359/A359_iberojet.obj *** ECNBO
+heavy/A35K/A35K_AirCaraibes.obj *** FHMIL
+heavy/A35K/A35K_BritishAirways.obj *** GXWBG
+heavy/A35K/A35K_CathayPacific.obj *** BLXD
+heavy/A35K/A35K_Ethiopian.obj *** ETBAW
+heavy/A35K/A35K_Etihad.obj *** A6XWG
+heavy/A35K/A35K_Factory.obj *** FWMIL
+heavy/A35K/A35K_Frenchbee.obj *** FHMIX
+heavy/A35K/A35K_JapanAirlines.obj *** JA06WJ
+heavy/A35K/A35K_Philippines.obj *** RPC3510
+heavy/A35K/A35K_Qatar.obj *** A7ANS
+heavy/A35K/A35K_Starlux.obj *** B58551
+heavy/A35K/A35K_VirginAtlantic.obj *** GVTEA
+heavy/B744_CPA/B744_CPA_static.obj *** DOTAD
+heavy/B744_UAL/B744_UAL_static.obj *** OOOO   # REVIEW
+heavy/B772_AAL/B772_AAL_static.obj *** NSOIPGMA   # REVIEW
+heavy/B772_BAW/B772_BAW_static.obj *** IIOON
+heavy/B772_DAL/B772_DAL_static.obj *** DELTA
+heavy/DC10_AIO/DC10_AIO_static.obj *** FORCE
+heavy/DC10_FDX/DC10_FDX_static.obj *** FEDEX
+heavy/DC10_white/DC10_white_static.obj *** NDCIOX   # REVIEW
+helo/H60/SH60_Seahawk_static.obj *** IIIZI
+helo/S76/S76_static.obj *** N7ER
+helo/S76_coastguard/S76_coastguard_static.obj *** SEJRM
+jet/A320_AAL/A320_AAL_static.obj *** N604AW
+jet/A320_ACA/A320_ACA_static.obj *** FEEEN
+jet/A320_AFR/A320_AFR_static.obj *** FGKXC
+jet/A320_ASA/A320_ASA_static.obj *** N835VA
+jet/A320_AZU/A320_AZU_static.obj *** BRASIL
+jet/A320_BAW/A320_BAW_static.obj *** GEUYS
+jet/A320_CCA/A320_CCA_static.obj *** B6608
+jet/A320_CSN/A320_CSN_static.obj *** B6908
+jet/A320_DAL/A320_DAL_static.obj *** DELTA
+jet/A320_DLH/A320_DLH_static.obj *** DALZC
+jet/A320_EZY/A320_EZY_static.obj *** OEIZU
+jet/A320_IGO/A320_IGO_static.obj *** LNDIG
+jet/A320_LAN/A320_LAN_static.obj *** CCBAR
+jet/A320_QLK/A320_QLK_static.obj *** VHVQS
+jet/A320_QTR/A320_QTR_static.obj *** A7AHH
+jet/A320_UAL/A320_UAL_static.obj *** N880UA
+jet/A320_VLG/A320_VLG_static.obj *** ECMBF
+jet/B722_CJT/B722_CJT_static.obj *** CARGOJED   # REVIEW
+jet/B722_FDX/B722_FDX_static.obj *** FEDEX
+jet/B738_AAL/B738_AAL_static.obj *** N816NN
+jet/B738_ASA/B738_ASA_static.obj *** N563AS
+jet/B738_CCA/B738_CCA_static.obj *** B1766
+jet/B738_CXA/B738_CXA_static.obj *** B5792
+jet/B738_DAL/B738_DAL_static.obj *** N3753
+jet/B738_JYH_Blue/738_9Air_Blue.obj *** B1719
+jet/B738_JYH_Canaloupe/738_9Air_Cantaloupe.obj *** B1715
+jet/B738_JYH_Cyan/738_9Air_Cyan.obj *** B1551
+jet/B738_JYH_DarkGreen/738_9Air_DarkGreen.obj *** B6992
+jet/B738_JYH_Grape/738_9Air_Grape.obj *** B1716
+jet/B738_JYH_KellyGreen/738_9Air_KellyGreen.obj *** B6990
+jet/B738_JYH_Purple/738_9Air_Purple.obj *** B6991
+jet/B738_JYH_Red/738_9Air_Red.obj *** B220S
+jet/B738_JYH_Wine/738_9Air_Wine.obj *** B208K
+jet/B738_JYH_Yellow/738_9Air_Yellow.obj *** B1473
+jet/B738_KLM/B738_KLM_static.obj *** PHBXH
+jet/B738_QFA/B738_QFA_static.obj *** VHXZE
+jet/B738_SWA/B738_SWA_static.obj *** N85292
+jet/B738_TLM/B738_TLM_static.obj *** HSLUP
+jet/B763_ANA/B763_ANA_static.obj *** HLAINC   # REVIEW
+jet/B763_DAL/B763_DAL_static.obj *** DELTA
+jet/B763_FDX/B763_FDX_static.obj *** 4LLZN   # REVIEW
+jet/B763_JAL/B763_JAL_static.obj *** JAPAN   # REVIEW
+jet/B763_UAL/B763_UAL_static.obj *** VNSLSN   # REVIEW
+jet/CRJ1_AFR/CRJ100_Air_France.obj *** BRITAI
+jet/CRJ1_AFR/CRJ1_AFR_static.obj *** BRITAI
+jet/CRJ1_AUA/CRJ100_Austrian_Arrows.obj *** OELRH
+jet/CRJ1_AUA/CRJ1_AUA_static.obj *** OELRH
+jet/CRJ2_DAL/CRJ2_DAL_static.obj *** DELTA
+jet/E55P/E55P_EJA.obj *** N403QS
+jet/E55P/E55P_LXJ.obj *** XAIBE
+jet/E55P/E55P_WUP.obj *** N652UP
+jet/E55P/E55P_XSR.obj *** N359AS
+jet/GLF6/GLF6_DCS.obj *** DAWWW
+jet/GLF6/GLF6_GLF.obj *** N6966D
+jet/GLF6/GLF6_LXJ.obj *** XADZA
+jet/J328_AIO/J328_AIO_static.obj *** N3220U
+jet/J328_RUS/Dornier_328_jet_Cirrus_Airlines.obj *** DBAGQ
+jet/J328_RUS/J328_RUS_static.obj *** DBAGQ
+jet/J328_WLC/Dornier_328_jet_Welcome_Air.obj *** OELJR
+jet/J328_WLC/J328_WLC_static.obj *** OELJR
+jet/MD80_AZA/MD80_AZA_static.obj *** BILEJI
+jet/MD80_AZA/MD80_Alitalia.obj *** BILEJI
+jet/MD80_DAL/MD80_DAL_static.obj *** DETTA
+jet/MD80_DAL/MD80_Delta.obj *** DETTA
+jet/SF50_blue/SF50_blue_static.obj *** N163MV
+jet/SF50_gold/SF50_gold_static.obj *** N163MV
+prop/BE58/BE58_static.obj *** N45XS
+prop/C172/C172_static.obj *** N172SP
+prop/C172_olive/C172_olive_static.obj *** ETOEB
+prop/C172_skyhawk/C172_skyhawk_static.obj *** N172SP
+prop/C172_waves/C172_waves_static.obj *** N172SP
+prop/C172_white/C172_white_static.obj *** N172SP
+turboprop/AT45_FDX/AT45_FDX_static.obj *** FEDEX
+turboprop/AT45_FDX/ATR42-500_FedEx.obj *** FEDEX
+turboprop/AT72_EGF/AT72_EGF_static.obj *** N980AE
+turboprop/AT72_EGF/ATR72-500_American_Eagle.obj *** N980AE
+turboprop/BE9L/BE9L_static.obj *** N43XS
+turboprop/BE9L_white/BE9L_white_static.obj *** DXOGJ
+turboprop/D328_LPV/D328_LPV_static.obj *** OELKF
+turboprop/D328_LPV/Dornier_328_prop_Air_Alps.obj *** OELKF
+turboprop/E2/E2_Hawkeye_static.obj *** NAVYE   # REVIEW
+turboprop/P180/P180_avanti_white.obj *** ISERG
+turboprop/P180/P180_static.obj *** ISERG
+turboprop/P180_Ferrari/P180_avanti_ferrari.obj *** IFXRB
+turboprop/P180_Ferrari/P180_ferrari_static.obj *** IFXRB
+turboprop/PC12/PC12_US_Army.obj *** EIZOB

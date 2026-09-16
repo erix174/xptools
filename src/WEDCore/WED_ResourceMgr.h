@@ -281,6 +281,12 @@ public:
 
 			void	WritePol(const string& abspath, const pol_info_t& out_info); // side note: shouldn't this be in_info?
 			bool	GetObj(const string& path, XObj8 const *& obj, int variant = 0);
+
+			// Loads an .obj by real filesystem path rather than by library vpath.
+			// Needed because X-Plane publishes static aircraft only under bucket
+			// vpaths keyed by (operation type, size class, airline) - a specific
+			// livery is not addressable as a vpath at all. See the .cpp.
+			bool	GetObjAbsolute(const string& abspath, XObj8 const *& obj);
 			bool	GetObjRelative(const string& obj_path, const string& parent_path, XObj8 const *& obj);
 			bool	GetAGP(const string& path, agp_t const *& info);
 			bool	GetRoad(const string& path, const road_info_t *& out_info);

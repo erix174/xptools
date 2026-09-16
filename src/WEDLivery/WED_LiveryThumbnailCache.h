@@ -96,6 +96,19 @@ public:
 private:
 
 	std::map<std::string, WED_LiveryThumbnail>	mCache;
+
+	// Paths that already failed to load or render. Without this a card whose
+	// object is missing re-opens the file on EVERY frame - and each attempt also
+	// costs a log write and flush. On Linux it is worse still: a failed open runs
+	// FILE_case_correct(), which does an opendir plus a linear readdir for every
+	// component of the path, so one broken livery turns into a directory walk per
+	// frame, forever.
+	//
+	// Purely a performance memo, so it is dropped by DiscardAll() along with
+	// everything else - switching tabs or changing the X-Plane folder gives a
+	// genuinely missing file a fresh chance rather than blacklisting it for the
+	// session.
+	std::set<std::string>						mFailed;
 };
 
 #endif /* WED_LIVERYTHUMBNAILCACHE_H */
