@@ -175,6 +175,7 @@ private:
 	int					RowForY(int bounds[4], int y) const;
 	void				ToggleCode(const std::string& icao);
 	void				AbortSizeDrag(void);	// rolls back an unfinished slider drag; no-op if none
+	int					CountRampsWithCode(const std::string & icao) const;	// for the tri-state checkbox
 
 	IResolver *					mResolver;
 	WED_Archive *				mArchive;

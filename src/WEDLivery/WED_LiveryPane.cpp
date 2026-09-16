@@ -1404,6 +1404,17 @@ int		WED_LiveryPane::ScrollWheel(int x, int y, int dist, int axis)
 
 // Rolls back an in-flight size-slider drag, if there is one. Safe to call when
 // there isn't - that is the point, so callers don't have to know.
+// How many of the selected ramps carry `icao`. The caller turns this into the
+// checkbox's three states: none of them, all of them, or somewhere in between.
+int		WED_LiveryPane::CountRampsWithCode(const string & icao) const
+{
+	int n = 0;
+	for (size_t i = 0; i < mSelectedRamps.size(); ++i)
+		if (ParseCodes(mSelectedRamps[i]->GetAirlines()).count(icao))
+			++n;
+	return n;
+}
+
 void	WED_LiveryPane::AbortSizeDrag(void)
 {
 	if (mDragHandle < 0) return;
@@ -1418,14 +1429,24 @@ void	WED_LiveryPane::ToggleCode(const string & icao)
 {
 	if (mSelectedRamps.empty()) return;
 
-	set<string> first_codes = ParseCodes(mSelectedRamps[0]->GetAirlines());
-	bool was_set = first_codes.count(icao) != 0;
+	// The checkbox is tri-state across a multi-selection, and the transition rule
+	// is what keeps it safe: only a box that is solid for EVERY selected ramp
+	// clears. Mixed and empty both fill. So a click can never remove a code the
+	// user was not shown as set - which is what the old "read ramp 0, write all"
+	// version did, silently deleting airlines from ramps whose box was drawn
+	// unchecked the whole time.
+	//
+	// Consequence, and it is the intended one: clicking a mixed box UNIFIES the
+	// selection. That can rewrite hundreds of ramps at once, which is why it all
+	// happens inside a single command - one Ctrl+Z puts every one of them back.
+	const int n_with = CountRampsWithCode(icao);
+	const bool clear_all = (n_with == (int) mSelectedRamps.size());
 
 	mArchive->StartCommand("Set Ramp Start Airlines");
 	for (size_t i = 0; i < mSelectedRamps.size(); ++i)
 	{
 		set<string> codes = ParseCodes(mSelectedRamps[i]->GetAirlines());
-		if (was_set)	codes.erase(icao);
+		if (clear_all)	codes.erase(icao);
 		else			codes.insert(icao);
 		mSelectedRamps[i]->SetAirlines(WED_RampPosition::CorrectAirlinesString(CodesToString(codes)));
 	}
@@ -2872,7 +2893,18 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		{
 			vector<WED_LiveryDisplayRow> rows = BuildCurrentDisplayRows(mSelectedRamps[0], mSortDescending,
 												gShowLiveryRecommendation != 0, mAirportDb, mCurrentAirportIcao, mSearchQuery, mAirlineDirectory, mPopularAirlinesShuffleCache);
-			set<string> checked = ParseCodes(mSelectedRamps[0]->GetAirlines());
+			// How many of the selected ramps carry each code, computed ONCE per draw.
+			// Asking per row would be O(rows x ramps) every frame - a few hundred
+			// ramps against a few hundred rows is tens of thousands of string
+			// parses, per frame, for a checkbox.
+			map<string,int> code_counts;
+			for (size_t i = 0; i < mSelectedRamps.size(); ++i)
+			{
+				set<string> c = ParseCodes(mSelectedRamps[i]->GetAirlines());
+				for (set<string>::const_iterator j = c.begin(); j != c.end(); ++j)
+					++code_counts[*j];
+			}
+			const int n_ramps = (int) mSelectedRamps.size();
 			float top = ContentTop(b);
 
 			// Re-clamp every Draw() against the CURRENT row count, not just when the
@@ -2935,7 +2967,15 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 				// wed_Row_Airline - indented a bit further right than the section
 				// headers/dividers above, so the checkbox rows visually read as
 				// nested "under" their header rather than lining up flush with them.
-				bool is_checked = checked.count(row.icao) != 0;
+				// Tri-state. A dash rather than a tick or a question mark: it is what
+				// macOS, Windows and HTML's own indeterminate checkbox all use, so it
+				// reads as "mixed" without needing a legend. With one ramp selected
+				// n_ramps is 1, so "mixed" can never occur and this collapses to the
+				// ordinary two-state box.
+				map<string,int>::const_iterator cc = code_counts.find(row.icao);
+				const int  n_with     = (cc == code_counts.end()) ? 0 : cc->second;
+				const bool is_checked = (n_with == n_ramps);
+				const bool is_mixed   = (n_with > 0 && n_with < n_ramps);
 
 				const float kRowIndent = 14;
 				float box  = line_h * 0.7f;
@@ -2970,6 +3010,17 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 						glVertex2f(bx0 + box - 2, by0 + 2);
 						glVertex2f(bx0 + box - 2, by0 + box - 2);
 						glVertex2f(bx0 + 2,       by0 + box - 2);
+					glEnd();
+				}
+				else if (is_mixed)
+				{
+					float mid = by0 + box * 0.5f;
+					float th  = (std::max)(1.0f, box * 0.14f);
+					glBegin(GL_QUADS);
+						glVertex2f(bx0 + 3,       mid - th);
+						glVertex2f(bx0 + box - 3, mid - th);
+						glVertex2f(bx0 + box - 3, mid + th);
+						glVertex2f(bx0 + 3,       mid + th);
 					glEnd();
 				}
 
