@@ -51,6 +51,13 @@ public:
 			// AddPane. Additive: panes default to enabled.
 			void			SetPaneEnabled(GUI_Pane * who, bool enabled);
 
+			// Index of an added pane, or of the tab with this exact title; -1 if
+			// there is no such tab. Both exist so callers can stop hardcoding the
+			// position a pane happened to be added at - a literal index is silently
+			// wrong the moment a tab is inserted ahead of it, and nothing catches it.
+			int				GetTabForPane(GUI_Pane * who) const;
+			int				GetTabForTitle(const char * title) const;
+
 	virtual	void			ReceiveMessage(
 									GUI_Broadcaster *		inSrc,
 									intptr_t				inMsg,

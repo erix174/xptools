@@ -76,6 +76,20 @@
 // on Mac and Linux for as long as they did.
 std::string	WedDataFileDir(void);
 
+// Why a loader in this family failed, so the message shown to the user can be
+// true. "Not found" for a file that is sitting right there, merely with a
+// damaged header, sends people looking for the wrong thing.
+enum WedDataFileError {
+	wed_data_ok = 0,
+	wed_data_no_file,		// could not be opened - missing, or no permission
+	wed_data_bad_header,	// opened, but the mandatory two-line stamp is wrong
+	wed_data_no_rows		// opened and stamped, but not one usable row parsed
+};
+
+// One sentence describing `err`, suitable for putting in front of a user. The
+// caller supplies the path; this supplies the diagnosis.
+const char *	WedDataFileErrorText(WedDataFileError err);
+
 // Reads and consumes exactly the first two lines of `f` (CRLF-tolerant).
 // Returns true only if they are exactly "I" then "1 WED Aviation Database" -
 // false for anything else, including a file with fewer than two lines. On a

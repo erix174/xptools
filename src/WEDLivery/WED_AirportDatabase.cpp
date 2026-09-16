@@ -30,6 +30,7 @@ using std::string;
 using std::vector;
 
 WED_AirportDatabase::WED_AirportDatabase() :
+	mLoadError(wed_data_ok),
 	mLoadAttempted(false),
 	mLoaded(false)
 {
@@ -43,8 +44,8 @@ bool	WED_AirportDatabase::EnsureLoaded(const string & db_path)
 	mLoadAttempted = true;
 
 	std::ifstream f(db_path.c_str());
-	if (!f) return false;
-	if (!CheckWedMandatoryHeader(f)) return false;		// missing/altered stamp - untrusted file, refuse it outright
+	if (!f)                          { mLoadError = wed_data_no_file;   return false; }
+	if (!CheckWedMandatoryHeader(f)) { mLoadError = wed_data_bad_header; return false; }		// missing/altered stamp - untrusted file, refuse it outright
 
 	mTable.clear();
 

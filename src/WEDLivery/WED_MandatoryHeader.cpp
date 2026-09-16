@@ -42,6 +42,16 @@ string	WedDataFileDir(void)
 #endif
 }
 
+const char *	WedDataFileErrorText(WedDataFileError err)
+{
+	switch (err) {
+	case wed_data_no_file:		return "the file is missing or could not be opened";
+	case wed_data_bad_header:	return "the file is present but its header is not a WED data file - it may have been edited or replaced";
+	case wed_data_no_rows:		return "the file loaded but contained no usable rows";
+	default:					return "";
+	}
+}
+
 bool	CheckWedMandatoryHeader(std::istream & f)
 {
 	string line1;

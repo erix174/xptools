@@ -56,6 +56,7 @@
 #ifndef WED_AIRPORTDATABASE_H
 #define WED_AIRPORTDATABASE_H
 
+#include "WED_MandatoryHeader.h"
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -72,6 +73,10 @@ public:
 
 	bool				IsLoaded(void) const { return mLoaded; }
 	bool				LoadFailed(void) const { return mLoadAttempted && !mLoaded; }
+
+	// Why the last attempt failed - so a damaged file is not reported as a
+	// missing one. See WedDataFileErrorText() in WED_MandatoryHeader.h.
+	WedDataFileError	LoadError(void) const { return mLoadError; }
 
 	// True iff icao is in the database at all - i.e. an airport OurAirports
 	// considers to have scheduled commercial service, UNLESS this specific
@@ -106,6 +111,7 @@ private:
 		bool						na_confirmed;	// true only for an explicit "<NA>" row
 	};
 
+	WedDataFileError						mLoadError;
 	bool									mLoadAttempted;
 	bool									mLoaded;
 	std::unordered_map<std::string, Entry>	mTable;

@@ -36,6 +36,7 @@
 #include "WED_Messages.h"
 #include "WED_ToolUtils.h"		// WED_GetSelect, WED_GetParentAirport
 #include "WED_EnumSystem.h"		// ramp_operation_*, width_A..width_F
+#include "WED_LiveryIndex.h"		// WED_LiveryIndexDefaultPath()
 #include "WED_MandatoryHeader.h"	// WedDataFileDir() - where the loose .txt data files live
 #include "PlatformUtils.h"		// DIR_STR, GetApplicationPath()
 #include "FileUtils.h"			// FILE_get_dir_name()
@@ -86,11 +87,12 @@ namespace
 	const int kWidthOrder[6]       = { width_A, width_B, width_C, width_D, width_E, width_F };
 	const char * kWidthLabels[6]   = { "A", "B", "C", "D", "E", "F" };
 
-	// GUI_TabPane has no by-name pane lookup - tabs are purely positional
-	// (whatever order WED_DocumentWindow.cpp's AddPane() calls happen in).
-	// Keep these in sync with that file if its tab order ever changes.
-	const int kSelectionTabIndex = 0;	// "Selection" - added first
-	const int kLiveryTabIndex    = 5;	// "Static+Liveries" - this pane
+	// Tab titles, not tab indices. The positions these panes were added at used to
+	// be hardcoded here (0 and 5), which is silently wrong the moment anyone
+	// inserts a tab ahead of them - nothing catches it, the auto-switch just lands
+	// on the wrong pane. GUI_TabPane::GetTabForPane()/GetTabForTitle() resolve them
+	// at the point of use instead. See WED_DocumentWindow.cpp's AddPane() calls.
+	const char * kSelectionTabTitle = "Selection";
 
 	int WidthEnumToIndex(int enum_val)
 	{
@@ -567,7 +569,9 @@ namespace
 				if (!s_warned)
 				{
 					s_warned = true;
-					string msg = "WED could not load its airline database:\n\n  ";
+					string msg = "WED could not load its airline database - ";
+					msg += WedDataFileErrorText(directory.LoadError());
+					msg += ":\n\n  ";
 					msg += dir_path;
 					msg += "\n\nThe Liveries tab still works, but airlines will show as "
 						   "codes without names, and the region-based recommendations "
@@ -1034,10 +1038,14 @@ void	WED_LiveryPane::RebuildSelection(void)
 	// until selection is non-empty again.
 	if (mSelectedRamps.empty())
 	{
-		if (mHostTabs && !mAutoSwitchedAwayOnEmpty && mHostTabs->GetTab() == kLiveryTabIndex)
+		if (mHostTabs && !mAutoSwitchedAwayOnEmpty && mHostTabs->GetTab() == mHostTabs->GetTabForPane(this))
 		{
-			mHostTabs->SetTab(kSelectionTabIndex);
-			mAutoSwitchedAwayOnEmpty = true;
+			int sel_tab = mHostTabs->GetTabForTitle(kSelectionTabTitle);
+			if (sel_tab >= 0)
+			{
+				mHostTabs->SetTab(sel_tab);
+				mAutoSwitchedAwayOnEmpty = true;
+			}
 		}
 		mLastAutoSwitchedInRamps.clear();		// selection's gone - a later re-selection counts as "new" again
 	}
@@ -1060,7 +1068,8 @@ void	WED_LiveryPane::RebuildSelection(void)
 			mLastAutoSwitchedInRamps.clear();
 		else if (gPromptLiveriesOnRampSelect && mHostTabs && mSelectedRamps != mLastAutoSwitchedInRamps)
 		{
-			mHostTabs->SetTab(kLiveryTabIndex);
+			int my_tab = mHostTabs->GetTabForPane(this);
+			if (my_tab >= 0) mHostTabs->SetTab(my_tab);
 			mLastAutoSwitchedInRamps = mSelectedRamps;
 		}
 	}
@@ -1993,7 +2002,12 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 				}
 				else if (r == wed_Icao_IndexUnavailable)
 				{
-					info_text = "WED_AirportDatabase.txt not found - can't look up country.";
+					// Say WHICH way it failed. A file that is present but whose
+					// header was edited used to report as "not found", sending
+					// people to look for a file sitting in front of them.
+					info_text = string("WED_AirportDatabase.txt: ") +
+								WedDataFileErrorText(mAirportDb.LoadError()) +
+								" - can't look up country.";
 					warn = true;
 				}
 				else
@@ -2592,6 +2606,25 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 				int last_keep  = (std::min)(n_cards - 1, last_visible + kMargin);
 				for (int ki = first_keep; ki <= last_keep; ++ki)
 					keep_alive_vpaths.insert(mPreviewObjVpaths[ki]);
+			}
+
+			// Throw away every cached picture when the user points WED at a
+			// different X-Plane installation. The cache is keyed by path, so stale
+			// entries cannot show the WRONG aircraft - but they can never be hit
+			// again either, and at ~1.1 MB each that is up to 36 MB of GPU memory
+			// held for a folder nobody is looking at any more.
+			//
+			// Detected by watching the resolved index path rather than by
+			// listening for msg_SystemFolderChanged: this pane already listens to
+			// the archive, and the path is derived from the root, so a new root is
+			// a new path. One string compare per draw, no extra plumbing.
+			{
+				string livery_index_path = WED_LiveryIndexDefaultPath();
+				if (livery_index_path != mLiveryIndexPath)
+				{
+					mLiveryIndexPath = livery_index_path;
+					mThumbCache.DiscardAll();
+				}
 			}
 
 			WED_ResourceMgr * res_mgr = WED_GetResourceMgr(mResolver);

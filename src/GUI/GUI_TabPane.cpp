@@ -97,13 +97,41 @@ void			GUI_TabPane::AddPane(GUI_Pane * who, const char * title)
 
 void			GUI_TabPane::SetPaneEnabled(GUI_Pane * who, bool enabled)
 {
+	int n = GetTabForPane(who);
+	if (n >= 0) mTabs->SetItemEnabled(n, enabled);
+}
+
+int				GUI_TabPane::GetTabForPane(GUI_Pane * who) const
+{
 	int n = mChangeView->CountChildren();
 	for (int i = 0; i < n; ++i)
 		if (mChangeView->GetNthChild(i) == who)
-		{
-			mTabs->SetItemEnabled(i, enabled);
-			return;
-		}
+			return i;
+	return -1;
+}
+
+int				GUI_TabPane::GetTabForTitle(const char * title) const
+{
+	if (title == NULL) return -1;
+
+	// AddPane() stores the titles as one newline-joined descriptor on the tab
+	// control, so this walks that string rather than a separate list.
+	string desc;
+	mTabs->GetDescriptor(desc);
+
+	string want(title);
+	int index = 0;
+	string::size_type pos = 0;
+	while (pos <= desc.size())
+	{
+		string::size_type nl = desc.find('\n', pos);
+		string one = desc.substr(pos, nl == string::npos ? string::npos : nl - pos);
+		if (one == want) return index;
+		if (nl == string::npos) break;
+		pos = nl + 1;
+		++index;
+	}
+	return -1;
 }
 
 void	GUI_TabPane::ReceiveMessage(

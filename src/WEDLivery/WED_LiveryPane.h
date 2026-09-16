@@ -297,6 +297,7 @@ private:
 
 	// ---- livery preview cards (framework/scaffolding only) ----
 	WED_LiveryThumbnailCache	mThumbCache;
+	std::string					mLiveryIndexPath;	// last resolved path; a change means a new X-Plane root
 	std::vector<std::string>	mPreviewObjVpaths;	// populated once in the constructor
 
 	// Click-and-drag scrolling of the content area ("grab and pull", same feel as a

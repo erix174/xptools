@@ -75,6 +75,7 @@
 #ifndef WED_AIRLINEDIRECTORY_H
 #define WED_AIRLINEDIRECTORY_H
 
+#include "WED_MandatoryHeader.h"
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -101,6 +102,10 @@ public:
 	bool				IsLoaded(void) const { return mLoaded; }
 	bool				LoadFailed(void) const { return mLoadAttempted && !mLoaded; }
 
+	// Why the last attempt failed - so a damaged file is not reported as a
+	// missing one. See WedDataFileErrorText() in WED_MandatoryHeader.h.
+	WedDataFileError	LoadError(void) const { return mLoadError; }
+
 	// Exact-match lookup, case-insensitive. False (out_entry untouched) if code
 	// isn't in the database at all.
 	bool				Lookup(const std::string & code, WED_AirlineDirectoryEntry & out_entry) const;
@@ -125,6 +130,7 @@ public:
 
 private:
 
+	WedDataFileError						mLoadError;
 	bool									mLoadAttempted;
 	bool									mLoaded;
 	std::vector<WED_AirlineDirectoryEntry>	mEntries;
