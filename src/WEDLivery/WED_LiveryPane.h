@@ -174,6 +174,7 @@ private:
 	// ---- airline checklist ----
 	int					RowForY(int bounds[4], int y) const;
 	void				ToggleCode(const std::string& icao);
+	void				AbortSizeDrag(void);	// rolls back an unfinished slider drag; no-op if none
 
 	IResolver *					mResolver;
 	WED_Archive *				mArchive;

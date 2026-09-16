@@ -83,8 +83,20 @@ WED_LiveryIndex::WED_LiveryIndex() :
 
 bool	WED_LiveryIndex::EnsureLoaded(const string & index_path)
 {
+	if (index_path != mLoadedPath)
+	{
+		// Different file than the one we hold - almost always because the user
+		// pointed WED at another X-Plane install. Drop everything and start over.
+		mLoadedPath    = index_path;
+		mLoadAttempted = false;
+		mLoaded        = false;
+		mEntries.clear();
+		mByAirline.clear();
+		mByKey.clear();
+	}
+
 	if (mLoaded) return true;
-	if (mLoadAttempted) return false;	// tried once this session and failed - don't retry every Draw()
+	if (mLoadAttempted) return false;	// already tried THIS path and failed - don't re-stat every Draw()
 
 	mLoadAttempted = true;
 

@@ -22,17 +22,13 @@
  */
 
 #include "WED_FlagIndex.h"
+#include "WED_FlagAssets.h"	// WED_FlagAssetRoot()
+#include "PlatformUtils.h"	// DIR_STR
 #include <cctype>
 #include <fstream>
 
 using std::string;
 
-// !!! MUST FIX BEFORE OPENING THE LIVERY-PICKER PR !!!
-// See WED_FlagAssets.cpp for why this is a temporary hardcoded dev-machine
-// path rather than going through WED's real resource pipeline yet. Currently
-// pointed at the xptools-livery worktree for local dev only - not portable.
-static const char * kFlagAssetRoot =
-	"C:\\Users\\Eric\\Desktop\\Laminar Misc Project\\WED\\xptools-livery\\src\\WEDLivery\\flags\\";
 
 static bool FileExists(const string & path)
 {
@@ -42,8 +38,8 @@ static bool FileExists(const string & path)
 
 string	WED_FlagSourcePathForCountry(const string & ioc_code)
 {
-	string root(kFlagAssetRoot);
-	string fallback = root + "ioc_source\\_fallback_white.png";
+	string root(WED_FlagAssetRoot());
+	string fallback = root + "ioc_source" DIR_STR "_fallback_white.png";
 
 	// Defensive: only ever build a path out of exactly 3 upper-case letters -
 	// ioc_code always comes from NormalizeCountryToIoc()/IcaoPrefixIocOverride(),
@@ -58,7 +54,7 @@ string	WED_FlagSourcePathForCountry(const string & ioc_code)
 		code += (char) std::toupper((unsigned char) *c);
 	}
 
-	string candidate = root + "ioc_source\\" + code + ".png";
+	string candidate = root + "ioc_source" DIR_STR + code + ".png";
 	if (FileExists(candidate)) return candidate;
 
 	return fallback;

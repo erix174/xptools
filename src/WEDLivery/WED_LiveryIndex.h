@@ -98,8 +98,15 @@ public:
 
 						WED_LiveryIndex();
 
-	// Loads exactly once per instance; later calls are no-ops, including after a
-	// failure, so a missing file doesn't re-stat on every Draw().
+	// Loads the index at index_path, and remembers WHICH path it loaded.
+	//
+	// The result is "good for this path": calling it again with the same path is a
+	// no-op, including after a failure, so a missing file doesn't re-stat on every
+	// Draw(). Calling it with a DIFFERENT path throws the cache away and loads
+	// again. That is what makes this survive the user changing their X-Plane
+	// folder (WED_StartWindow's wed_ChangeSystem, which can happen at any time) -
+	// the path is derived from the root, so a new root is a new path, and a plain
+	// one-shot flag would have left the index dead until WED restarted.
 	bool				EnsureLoaded(const std::string & index_path);
 
 	bool				IsLoaded(void) const { return mLoaded; }
@@ -159,6 +166,7 @@ private:
 	std::unordered_map<std::string, std::vector<const WED_LiveryIndexEntry *> >	mByAirline;
 	std::unordered_map<std::string, const WED_LiveryIndexEntry *>			mByKey;
 
+	std::string			mLoadedPath;	// what mLoaded/mLoadAttempted refer to
 	bool				mLoadAttempted;
 	bool				mLoaded;
 };

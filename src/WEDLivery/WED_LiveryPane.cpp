@@ -841,6 +841,15 @@ WED_LiveryPane::~WED_LiveryPane()
 // time this tab (and thus Draw()) becomes visible again.
 void	WED_LiveryPane::Hide(void)
 {
+	// A size-slider drag opens its command in MouseDown and closes it in MouseUp,
+	// so the command is live across everything in between - and Hide() IS
+	// reachable in between, via the tab switch that SetTab broadcasts. Leaving it
+	// open would strand the archive: the NEXT StartCommand anywhere in WED trips
+	// the undo manager's "a command is already open" assert, with no clue that a
+	// hidden tab caused it. Abort rather than commit - a drag the user never
+	// finished should not land in the undo stack.
+	AbortSizeDrag();
+
 	GUI_Pane::Hide();
 	mThumbCache.DiscardAll();
 	for (map<string, WED_LiveryThumbnail>::iterator i = mRawFlagTex.begin(); i != mRawFlagTex.end(); ++i)
@@ -1391,6 +1400,18 @@ int		WED_LiveryPane::ScrollWheel(int x, int y, int dist, int axis)
 
 	Refresh();
 	return 1;
+}
+
+// Rolls back an in-flight size-slider drag, if there is one. Safe to call when
+// there isn't - that is the point, so callers don't have to know.
+void	WED_LiveryPane::AbortSizeDrag(void)
+{
+	if (mDragHandle < 0) return;
+
+	mArchive->AbortCommand();
+	mDragHandle = -1;
+	mDragAnchorIndex = -1;
+	mDragCurrentIndex = -1;
 }
 
 void	WED_LiveryPane::ToggleCode(const string & icao)

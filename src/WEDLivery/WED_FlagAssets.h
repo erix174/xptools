@@ -58,6 +58,24 @@
 #include <vector>
 #include <stdint.h>
 
+// Directory holding the shipped flag artwork, WITH a trailing separator:
+// 206 country PNGs under ioc_source/, plus the three fixed UV layers and
+// uv_nodes.csv under uv_fixed/.
+//
+// These ride along next to WED as loose files, exactly like the .txt data files
+// (see WedDataFileDir() in WED_MandatoryHeader.h), rather than being embedded
+// through WED.rc / the Mac bundle / objcopy. That was a deliberate choice for
+// ~210 small files: the loose form deploys with three lines of CMake instead of
+// 210 resource entries per platform, and lets the artwork be corrected by
+// replacing files rather than rebuilding WED. The trade is that they can be
+// deleted by a user; every loader here already treats a missing file as a
+// silent no-banner, which is the right behaviour for decoration.
+//
+// ONE definition, used by both WED_FlagAssets.cpp and WED_FlagIndex.cpp. It
+// replaced two copies of a hardcoded absolute path into one developer's home
+// directory - do not reintroduce a literal path here.
+std::string	WED_FlagAssetRoot(void);
+
 struct WED_UvNode
 {
 	int		row, column;

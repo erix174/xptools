@@ -893,9 +893,30 @@ set(WED_DATA_FILES
 	"${CMAKE_SOURCE_DIR}/src/WEDLivery/WED_AirlineDirectory.txt"
 )
 
+# The flag artwork (206 country PNGs plus the fixed UV layers and uv_nodes.csv)
+# ships as a loose directory tree next to the data files, resolved at runtime by
+# WED_FlagAssetRoot() in src/WEDLivery/WED_FlagAssets.cpp. Copying a directory is
+# three lines here versus ~210 per-platform resource entries, and it lets the
+# artwork be corrected by replacing files instead of rebuilding WED.
+set(WED_FLAG_ASSET_DIR "${CMAKE_SOURCE_DIR}/src/WEDLivery/flags")
+
 if (APPLE)
 	mac_copy_bundle_files(WED Resources "${WED_DATA_FILES}")
+	add_custom_command(
+		TARGET WED POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_directory
+			"${WED_FLAG_ASSET_DIR}"
+			"$<TARGET_BUNDLE_CONTENT_DIR:WED>/Resources/flags"
+		COMMENT "Copying flag artwork into the WED bundle"
+	)
 else()
+	add_custom_command(
+		TARGET WED POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_directory
+			"${WED_FLAG_ASSET_DIR}"
+			"$<TARGET_FILE_DIR:WED>/flags"
+		COMMENT "Copying flag artwork next to the WED executable"
+	)
 	foreach(data_file ${WED_DATA_FILES})
 		get_filename_component(data_name "${data_file}" NAME)
 		add_custom_command(

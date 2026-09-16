@@ -74,9 +74,43 @@ bool WED_LiveryThumbnailCache::IsCached(const string & obj_vpath) const
 	return mCache.find(obj_vpath) != mCache.end();
 }
 
+// True when this GL context can do render-to-texture at all.
+//
+// On Windows and Linux the FBO entry points are GLEW function POINTERS. A driver
+// without the extension leaves them NULL, and calling one is an immediate crash -
+// it never reaches glCheckFramebufferStatus, so the completeness check below is
+// no protection whatsoever. This is not theoretical: remote desktop sessions,
+// virtual machines and software rasterisers all show up without it.
+//
+// Latched on first use. The answer cannot change without a new GL context, and a
+// new context means a new pane and a new cache.
+static bool FBOAvailable(void)
+{
+	static int s_state = -1;			// -1 unknown, 0 no, 1 yes
+	if (s_state >= 0) return s_state != 0;
+
+#if APL
+	// Mac links the ARB entry points directly out of the system GL framework;
+	// there is no pointer to be null.
+	s_state = 1;
+#else
+	s_state = (glGenFramebuffers  != NULL && glBindFramebuffer        != NULL &&
+			   glGenRenderbuffers != NULL && glFramebufferTexture2D   != NULL &&
+			   glCheckFramebufferStatus != NULL) ? 1 : 0;
+	if (!s_state)
+		LOG_MSG("E/LiveryThumb no framebuffer-object support in this GL context - preview cards disabled.\n");
+#endif
+	return s_state != 0;
+}
+
 const WED_LiveryThumbnail * WED_LiveryThumbnailCache::GetThumbnail(WED_ResourceMgr * res_mgr, ITexMgr * tex_mgr,
 	GUI_GraphState * g, const string & obj_vpath)
 {
+	// Checked before the cache lookup is even worth doing: without FBOs nothing
+	// will ever land in the cache, and the caller already handles a null return by
+	// drawing the card without a picture.
+	if (!FBOAvailable()) return nullptr;
+
 	auto it = mCache.find(obj_vpath);
 	if (it != mCache.end())
 		return &it->second;

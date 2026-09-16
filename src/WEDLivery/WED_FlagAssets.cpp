@@ -26,23 +26,16 @@
 
 #include <fstream>
 #include <sstream>
+#include "WED_MandatoryHeader.h"	// WedDataFileDir()
+#include "PlatformUtils.h"		// DIR_STR
 
 using std::string;
 using std::vector;
 
-// !!! MUST FIX BEFORE OPENING THE LIVERY-PICKER PR !!!
-// TEMPORARY dev-machine path, NOT the final asset location, and NOT portable
-// to any other machine, worktree, or CI runner. WED's real resource pipeline
-// embeds shipped files into WED.rc (Windows) / the app bundle (Mac) /
-// objcopy'd symbols (Linux) - see src/GUI/GUI_Resources.cpp and the
-// WED_RESOURCE_FILES list in cmake/WED.cmake. Wiring these ~210 files (206
-// country flags + 3 fixed layers + the CSV) into that pipeline is real
-// follow-up work, deliberately deferred so this first pass is buildable and
-// testable today - but it CANNOT ship like this. Both this and
-// WED_FlagIndex.cpp share the same root; currently pointed at the
-// xptools-livery worktree for local dev only.
-static const char * kFlagAssetRoot =
-	"C:\\Users\\Eric\\Desktop\\Laminar Misc Project\\WED\\xptools-livery\\src\\WEDLivery\\flags\\";
+string	WED_FlagAssetRoot(void)
+{
+	return WedDataFileDir() + "flags" DIR_STR;
+}
 
 bool	WED_LoadPngTopDownARGB(const string & path, vector<uint32_t> & out, int & out_w, int & out_h)
 {
@@ -158,26 +151,26 @@ bool	WED_FlagAssets::EnsureLoaded(void)
 
 	mLoadAttempted = true;
 
-	string root(kFlagAssetRoot);
+	string root(WED_FlagAssetRoot());
 	bool ok = true;
 	bool step;
 
-	step = LoadFixedSizePng(root + "uv_fixed\\flag_pole_overlay.png", mPole, kMasterWidth, kMasterHeight);
-	LOG_MSG("I/Flag pole overlay load: %s (path=%s)\n", step ? "OK" : "FAILED", (root + "uv_fixed\\flag_pole_overlay.png").c_str());
+	step = LoadFixedSizePng(root + "uv_fixed" DIR_STR "flag_pole_overlay.png", mPole, kMasterWidth, kMasterHeight);
+	LOG_MSG("I/Flag pole overlay load: %s (path=%s)\n", step ? "OK" : "FAILED", (root + "uv_fixed" DIR_STR "flag_pole_overlay.png").c_str());
 	LOG_FLUSH();
 	ok = ok && step;
 
-	step = LoadFixedSizePng(root + "uv_fixed\\flag_ink_overlay.png", mInk, kMasterWidth, kMasterHeight);
+	step = LoadFixedSizePng(root + "uv_fixed" DIR_STR "flag_ink_overlay.png", mInk, kMasterWidth, kMasterHeight);
 	LOG_MSG("I/Flag ink overlay load: %s\n", step ? "OK" : "FAILED");
 	LOG_FLUSH();
 	ok = ok && step;
 
-	step = LoadFixedSizePng(root + "uv_fixed\\flag_mask.png", mMaskPng, kMasterWidth, kMasterHeight);
+	step = LoadFixedSizePng(root + "uv_fixed" DIR_STR "flag_mask.png", mMaskPng, kMasterWidth, kMasterHeight);
 	LOG_MSG("I/Flag mask load: %s\n", step ? "OK" : "FAILED");
 	LOG_FLUSH();
 	ok = ok && step;
 
-	step = LoadNodesCsv(root + "uv_fixed\\uv_nodes.csv", mNodes, mRows, mColumns);
+	step = LoadNodesCsv(root + "uv_fixed" DIR_STR "uv_nodes.csv", mNodes, mRows, mColumns);
 	LOG_MSG("I/Flag uv_nodes.csv load: %s (rows=%d cols=%d nodes=%d)\n", step ? "OK" : "FAILED", mRows, mColumns, (int) mNodes.size());
 	LOG_FLUSH();
 	ok = ok && step;

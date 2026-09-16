@@ -179,7 +179,15 @@ string	WED_RampPosition::CorrectAirlinesString(const string &a)
 
 void	WED_RampPosition::SetAirlines(const string &a)
 {
-	airlines = a;
+	// Normalize HERE, not only on export. apt.dat is case-insensitive about
+	// airline codes and files in the wild carry "AAL DAL", but everything that
+	// compares against this string - the Liveries tab's checkboxes, the
+	// recommendation rows, WED_AirlineDirectory lookups - works in lower case.
+	// Storing what we were handed meant an uppercase import rendered every
+	// checkbox unchecked for a ramp that demonstrably had those airlines, and
+	// the first click then wrote the code a second time in lower case
+	// ("aal dal aal"), which round-tripped straight back out to apt.dat.
+	airlines = CorrectAirlinesString(a);
 }
 
 string  WED_RampPosition::GetAirlines() const
