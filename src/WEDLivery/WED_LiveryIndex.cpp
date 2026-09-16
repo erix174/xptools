@@ -34,7 +34,7 @@ using std::string;
 using std::vector;
 
 // The note that means "this livery has no annotation" - written out rather than
-// left blank so a row always has six fields and an empty cell always means
+// left blank so a row always has seven fields and an empty cell always means
 // missing data.
 static const char * kDefaultNote = "Default";
 
@@ -98,7 +98,7 @@ bool	WED_LiveryIndex::EnsureLoaded(const string & index_path)
 	mByAirline.clear();
 	mByKey.clear();
 
-	// Rows are parsed best-effort: anything that doesn't have six fields, or is
+	// Rows are parsed best-effort: anything that doesn't have seven fields, or is
 	// missing the two that identify it, is skipped. A malformed row must never
 	// prevent every OTHER row from loading - same policy as WED_AirportDatabase.
 	vector<string> cells;
@@ -114,15 +114,17 @@ bool	WED_LiveryIndex::EnsureLoaded(const string & index_path)
 		if (line[p0] == '#') continue;			// comment
 
 		SplitOnStars(line, cells);
-		if (cells.size() < 6) continue;			// not a data row
+		if (cells.size() < 7) continue;			// not a data row
 
 		WED_LiveryIndexEntry e;
 		e.type        = ToUpper(cells[0]);
-		e.airline     = ToUpper(cells[1]);
-		e.reg         = ToUpper(cells[2]);
-		e.reg_country = ToUpper(cells[3]);
-		e.note        = cells[4];				// free text - case preserved for display
-		e.obj_path    = cells[5];
+		string cls    = ToUpper(cells[1]);
+		e.size_class  = (cls.size() == 1 && cls[0] >= 'A' && cls[0] <= 'F') ? cls[0] : 0;
+		e.airline     = ToUpper(cells[2]);
+		e.reg         = ToUpper(cells[3]);
+		e.reg_country = ToUpper(cells[4]);
+		e.note        = cells[5];				// free text - case preserved for display
+		e.obj_path    = cells[6];
 
 		// "????" is the generator's TODO marker, not a value. A row still
 		// carrying one is unfinished data; skip it rather than surfacing a
@@ -159,6 +161,38 @@ const vector<const WED_LiveryIndexEntry *> *
 	std::unordered_map<string, vector<const WED_LiveryIndexEntry *> >::const_iterator i =
 		mByAirline.find(ToUpper(airline_code));
 	return i == mByAirline.end() ? NULL : &i->second;
+}
+
+void	WED_LiveryIndex::GetForAirlineAndClass(const string & airline_code,
+											   char size_class,
+											   vector<const WED_LiveryIndexEntry *> & out) const
+{
+	out.clear();
+	const vector<const WED_LiveryIndexEntry *> * all = GetForAirline(airline_code);
+	if (!all) return;
+	for (size_t i = 0; i < all->size(); ++i)
+	{
+		// An unknown class (0 - the data file had "?" there) is treated as not
+		// fitting anything specific. Better to leave such a row out of a sized
+		// query than to guess and put an A380 on a class-B stand.
+		if (size_class != 0 && (*all)[i]->size_class != size_class) continue;
+		out.push_back((*all)[i]);
+	}
+}
+
+WED_LiveryIndex::Availability
+		WED_LiveryIndex::GetAvailability(const string & airline_code,
+										 char size_class,
+										 bool known_airline) const
+{
+	vector<const WED_LiveryIndexEntry *> hits;
+	GetForAirlineAndClass(airline_code, size_class, hits);
+	if (!hits.empty()) return livery_Hit;
+
+	// Nothing that fits. If the code is a real airline this is simply a gap in
+	// X-Plane's asset set - the author can still pick it. Only a code that
+	// nothing anywhere recognises is an error.
+	return known_airline ? livery_Ignore : livery_Faulty;
 }
 
 void	WED_LiveryIndex::GetForAirlineAndType(const string & airline_code,

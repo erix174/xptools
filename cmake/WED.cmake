@@ -891,7 +891,6 @@ endif()
 set(WED_DATA_FILES
 	"${CMAKE_SOURCE_DIR}/src/WEDLivery/WED_AirportDatabase.txt"
 	"${CMAKE_SOURCE_DIR}/src/WEDLivery/WED_AirlineDirectory.txt"
-	"${CMAKE_SOURCE_DIR}/src/WEDLivery/WED_StaticAircraftIndex.txt"
 )
 
 if (APPLE)

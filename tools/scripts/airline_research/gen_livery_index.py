@@ -64,14 +64,26 @@ def ioc_for_reg(reg):
 
 # --------------------------------------------------------------- livery note
 # Controlled vocabulary, same spirit as the index's VARIANT column.
+# NOTE is FREE TEXT, deliberately not a closed enum. WED renders anything other
+# than "Default" in parentheses after the airline name - "United (Retro)",
+# "Air China (Pink Peony)", "Hainan Airlines (Mixue)" - so making a caption more
+# specific is a one-word edit to this column and needs no code change. The rules
+# below only seed a first guess from the folder name; a human is expected to
+# replace "Peony" with "Pink Peony" and so on.
 NOTE_RULES = [
-    (r"legacy|retro|heritage|old",            "Retro"),
-    (r"star.?alliance|oneworld|skyteam",      "Alliance"),
-    (r"modern|current|new",                   "Default"),
-    (r"vip|_mil|government",                  "Government"),
-    (r"peony|peacock|mixue|salmon|special|"
-     r"livery|paint|anniversar|world.?cup",   "Special"),
-    (r"white|blank|generic|house",            "Unpainted"),
+    (r"legacy|retro|heritage",     "Retro"),
+    (r"star.?alliance",            "Star Alliance"),
+    (r"oneworld",                  "OneWorld"),
+    (r"skyteam",                   "SkyTeam"),
+    (r"modern|current|_new",       "Default"),
+    (r"vip|_mil|government",     "Government"),
+    (r"peony",                     "Peony"),
+    (r"peacock",                   "Peacock"),
+    (r"mixue",                     "Mixue"),
+    (r"panda",                     "Panda"),
+    (r"salmon",                    "Salmon"),
+    (r"white|blank|generic|house", "Unpainted"),
+    (r"fiction",                   "Fictional"),
 ]
 
 def note_for(folder, fname):
@@ -97,8 +109,48 @@ for lib in ("sim objects", "airport scenery"):
         if vpath.startswith("lib/airport/aircraft/"):
             exports[real.replace("\\", "/")].append(vpath)
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from gen_aircraft_index import TYPE_ALIAS, sizes_raw, airlines, AIRLINE_REMAP   # reuse the same tables
+WEDL = "C:/Users/Eric/Desktop/Laminar Misc Project/WED/xptools-livery/src/WEDLivery"
+
+def _load_rows(path, ncol):
+    out = []
+    for l in open(path, encoding="utf-8", errors="replace"):
+        l = l.rstrip()
+        if l.startswith("#") or "***" not in l: continue
+        q = [x.strip() for x in l.split("***")]
+        if len(q) >= ncol: out.append(q)
+    return out
+
+# type -> wingspan class. A key present with a BLANK value is a deliberate
+# "not yet researched" marker (see that file's own header), so sizes_raw says
+# whether a designator exists at all and `sizes` only holds real classes.
+sizes_raw = {r[0]: r[1] for r in _load_rows(os.path.join(WEDL, "WED_AircraftSizeReference.txt"), 2)}
+sizes     = {k: v for k, v in sizes_raw.items() if v.strip()}
+
+# code -> (name, IOC country, fleet size)
+airlines = {}
+for r in _load_rows(os.path.join(WEDL, "WED_AirlineDirectory.txt"), 5):
+    airlines.setdefault(r[0], (r[1], r[2], r[4]))
+
+# Asset filename stem -> ICAO type designator, for the assets whose own name is
+# not one. Everything else resolves from the folder or filename directly.
+TYPE_ALIAS = {
+    "ask_21": "AS21", "ventus_3": "VENT", "Cessna_172": "C172",
+    "KingAirC90B": "BE9L", "747United": "B744",
+    "FA_18E": "F18S",        # F/A-18E Super Hornet - F18H is the legacy Hornet
+    "PA28":   "P28A",        # the ICAO code for the PA-28 family
+    "Osprey_GP5": "XPGP5",   # homebuilt, no ICAO designator exists
+    "MD80":   "MD82",
+}
+
+# (type, folder token, suffix) -> the real ICAO code of the operating subsidiary.
+# A subsidiary is a DIFFERENT AIRLINE, not a livery of its parent - each of these
+# has its own row in WED_AirlineDirectory.txt.
+AIRLINE_REMAP = {
+    ("B738", "RYR", "EI"): "RYR",   # Ryanair DAC - the Irish parent itself
+    ("B738", "RYR", "G"):  "RUK",   # Ryanair UK
+    ("B738", "RYR", "SP"): "RYS",   # Buzz
+    ("B738", "RYR", "9H"): "MAY",   # Malta Air
+}
 
 # An ambiguous nationality prefix (B- is shared by mainland China, Taiwan, Hong
 # Kong and Macau) is resolved by asking WED_AirlineDirectory.txt what country the
@@ -114,6 +166,17 @@ def disambiguate(prefix, ioc, airline):
         return ioc, False
     op_country = airlines[airline][1]
     return (op_country, True) if op_country in allowed else (ioc, False)
+
+# Registrations read off the textures by hand - see the file's own header. These
+# win over anything derived from a filename, and an EMPTY value there is a
+# positive "inspected, no tail number painted" finding, not a gap.
+OVERRIDES = {}
+_ovr = os.path.join(os.path.dirname(os.path.abspath(__file__)), "livery_reg_overrides.txt")
+if os.path.exists(_ovr):
+    for l in open(_ovr, encoding="utf-8"):
+        if l.startswith("#") or "***" not in l: continue
+        k, _, v = l.partition("***")
+        OVERRIDES[k.strip()] = v.strip()
 
 rows, flagged = [], []
 for dp, _dn, fn in os.walk(ROOT):
@@ -138,8 +201,7 @@ for dp, _dn, fn in os.walk(ROOT):
         toks = folder.split("_")
         # Folders named <TYPE>_<PARENT>_<AOC> are separate operating companies,
         # not liveries of the parent - each has its own ICAO code and its own row
-        # in WED_AirlineDirectory.txt. Must match gen_aircraft_index.py's
-        # AIRLINE_REMAP exactly or the two files won't join.
+        # in WED_AirlineDirectory.txt - see AIRLINE_REMAP above.
         remap = AIRLINE_REMAP.get((toks[0].upper(),
                                    toks[1].upper() if len(toks) > 1 else "",
                                    toks[2] if len(toks) > 2 else ""))
@@ -153,6 +215,12 @@ for dp, _dn, fn in os.walk(ROOT):
                 if m: airline = m.group(1).upper(); break
         if airline is None:
             cats = {v.split("/")[3] for v in exports.get(full, []) if v.count("/") > 3}
+            if not cats:
+                # Orphan: on disk but library.txt never exports it, so there is no
+                # vpath to read a category off. The apt_aircraft/<category>/ folder
+                # says the same thing.
+                cats = {{"fighter": "military", "helo": "general_aviation",
+                         "prop": "general_aviation"}.get(rel.split("/")[0], "airliners")}
             for c, pseudo in (("military", "XPMI"), ("gliders", "XPGL"),
                               ("general_aviation", "XPGA"), ("GA", "XPGA"),
                               ("corporate_biz", "XPBZ")):
@@ -162,6 +230,8 @@ for dp, _dn, fn in os.walk(ROOT):
 
         m = REG.search(f)
         reg = m.group(1) if m else ""
+        if rel in OVERRIDES:
+            reg = OVERRIDES[rel]
         ioc, confident, prefix = ioc_for_reg(reg) if reg else ("", True, "")
         if reg and not confident and airline:
             ioc, confident = disambiguate(prefix, ioc, airline)
@@ -171,10 +241,11 @@ for dp, _dn, fn in os.walk(ROOT):
 
         if typ is None or airline is None or (reg and not confident) or ioc == "???":
             flagged.append((full, typ, airline, reg, ioc))
-        rows.append((typ or "????", airline or "????", reg, ioc, note, rel))
+        cls = sizes.get(typ, "?") if typ else "?"
+        rows.append((typ or "????", cls, airline or "????", reg, ioc, note, rel))
 
 # --------------------------------------------------------------- emit
-rows.sort(key=lambda r: (r[0], r[1], r[5]))
+rows.sort(key=lambda r: (r[0], r[2], r[6]))
 with open(OUT, "w", encoding="utf-8", newline="\n") as o:
     o.write("I\n1 WED Aviation Database\n")
     o.write("""# X-Plane Static Livery Index
@@ -199,10 +270,13 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
 # from here on it is edited by hand. Re-running the generator is a
 # diff-review, never a blind overwrite.
 #
-# FORMAT: <TYPE> *** <AIRLINE> *** <REG> *** <REG COUNTRY> *** <NOTE> *** <path>
-#   TYPE        ICAO type designator (B738, A21N, ...). See WED's
-#               WED_AircraftSizeReference.txt for the wingspan class per type -
-#               deliberately NOT repeated here, so the two can't disagree.
+# FORMAT: <TYPE> *** <CLASS> *** <AIRLINE> *** <REG> *** <REG COUNTRY> *** <NOTE> *** <path>
+#   TYPE        ICAO type designator (B738, A21N, ...).
+#   CLASS       ICAO wingspan class A-F - which ramp size this aircraft needs.
+#               Carried HERE rather than in a separate type->class file on
+#               purpose: at this data volume a second file buys nothing and
+#               costs a hard dependency, where one changed designator stalls
+#               both files at once. One row, all the facts about one livery.
 #   AIRLINE     ICAO airline code, or a reserved XP-prefixed pseudo code for
 #               non-airline assets (military, GA, generic/unpainted).
 #   REG         Registration WITHOUT the dash, as it appears in the filename.
@@ -217,13 +291,18 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
 # ============================================================================
 
 """)
+    # Column-pad so the file is scannable by eye. Safe because the parser
+    # tokenizes on "***" rather than matching a fixed " *** " separator, so the
+    # extra spaces cost nothing - same convention as WED_AirportDatabase.cpp.
+    widths = [max(len(r[i]) for r in rows) for i in range(len(rows[0]) - 1)]
     for r in rows:
-        o.write(" *** ".join(r) + "\n")
+        cells = [r[i].ljust(widths[i]) for i in range(len(widths))] + [r[-1]]
+        o.write(" *** ".join(cells) + "\n")
 
 print(f"rows written          : {len(rows)}")
 print(f"rows needing a human  : {len(flagged)}")
-print(f"note distribution     : {dict(collections.Counter(r[4] for r in rows))}")
-print(f"with registration     : {sum(1 for r in rows if r[2])}")
+print(f"note distribution     : {dict(collections.Counter(r[5] for r in rows))}")
+print(f"with registration     : {sum(1 for r in rows if r[3])}")
 print(f"\nwrote {OUT}")
 for x in flagged[:15]: print("   flag:", x)
 if len(flagged) > 15: print(f"   ... +{len(flagged)-15} more")

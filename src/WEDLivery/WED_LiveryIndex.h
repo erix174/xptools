@@ -27,10 +27,16 @@
 	Reads livery_index.txt, the catalogue of every static-aircraft livery that
 	ships with X-Plane. One row per livery:
 
-		<TYPE> *** <AIRLINE> *** <REG> *** <REG COUNTRY> *** <NOTE> *** <path>
+		<TYPE> *** <CLASS> *** <AIRLINE> *** <REG> *** <REG COUNTRY> *** <NOTE> *** <path>
 
-		B738 *** UAL *** N78540 *** USA *** Retro   *** jet/B738_UAL_Legacy/...
-		B738 *** UAL *** N79521 *** USA *** Default *** jet/B738_UAL_Modern/...
+		B738 *** C *** UAL *** N78540 *** USA *** Retro   *** jet/B738_UAL_Legacy/...
+		B738 *** C *** UAL *** N79521 *** USA *** Default *** jet/B738_UAL_Modern/...
+
+	CLASS is the ICAO wingspan class A-F - which ramp size the aircraft needs. It
+	is carried per row rather than in a separate type-to-class file on purpose: at
+	this data volume a second file buys nothing and costs a hard dependency, where
+	one changed type designator stalls both files at once. One row holds every
+	fact about one livery.
 
 	THIS FILE LIVES ON THE X-PLANE SIDE, not in WED:
 
@@ -79,6 +85,7 @@
 // One livery. `obj_path` is relative to apt_aircraft/, exactly as stored.
 struct WED_LiveryIndexEntry {
 	std::string		type;			// ICAO type designator, e.g. "B738"
+	char			size_class;		// ICAO wingspan class 'A'..'F', or 0 if unknown
 	std::string		airline;		// ICAO airline code, or an XP-prefixed pseudo code
 	std::string		reg;			// registration without the dash; may be empty
 	std::string		reg_country;	// IOC 3-letter code; empty when reg is empty
@@ -108,12 +115,43 @@ public:
 											 const std::string & type,
 											 std::vector<const WED_LiveryIndexEntry *> & out) const;
 
+	// Liveries this airline has that fit a stand of the given ICAO size class.
+	// Pass 0 for size_class to mean "any size". This is the query the preview
+	// cards actually make - an airline having SOME model is not the same as it
+	// having one that fits THIS stand.
+	void				GetForAirlineAndClass(const std::string & airline_code,
+											  char size_class,
+											  std::vector<const WED_LiveryIndexEntry *> & out) const;
+
 	// Resolves a stable key of the form <TYPE>_<AIRLINE>_<NOTE> - the same string
 	// apt.dat will eventually store per ramp. NULL if no such livery.
 	const WED_LiveryIndexEntry *
 						Lookup(const std::string & key) const;
 
 	size_t				Count(void) const { return mEntries.size(); }
+
+	// Whether WED can show anything for an airline the user picked.
+	//
+	// NEVER PERSIST THIS. The .wed document stores only the airline code the
+	// author chose; availability is recomputed from the index on every load. That
+	// is the whole mechanism behind "a model ships later and the selection just
+	// lights up" - caching it would go stale on exactly the day it matters, and
+	// would need a data migration to unstick.
+	enum Availability {
+		livery_Hit,		// the index has a model for this airline (and size) - render it
+		livery_Ignore,	// a real airline, but nothing modelled yet. The author may
+						// still select it: X-Plane skips what it cannot load, and the
+						// day a model ships this silently becomes livery_Hit.
+		livery_Faulty	// the code matches nothing at all - not in the index and not
+						// in WED_AirlineDirectory either. Bad data, not a gap.
+	};
+
+	// `known_airline` is what WED_AirlineDirectory says about the code - pass true
+	// when the directory has a row for it. Splitting it out keeps this class from
+	// depending on the directory just to tell "not modelled yet" from "typo".
+	Availability		GetAvailability(const std::string & airline_code,
+										char size_class,
+										bool known_airline) const;
 
 private:
 

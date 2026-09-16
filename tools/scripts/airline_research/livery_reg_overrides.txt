@@ -1,0 +1,61 @@
+# Registrations read off the livery textures, keyed by the .obj path relative to
+# apt_aircraft/. These are facts the FILENAME does not carry - older assets were
+# named without a registration, so the only place the tail number exists is
+# painted on the texture itself.
+#
+# gen_livery_index.py merges this file over its own filename-derived guesses, so
+# hand-read values survive regeneration. Add rows here, never edit
+# livery_index.txt directly for a registration.
+#
+# FORMAT: <path under apt_aircraft/> *** <REGISTRATION>
+#   Registration is written WITHOUT the dash, matching the filename convention
+#   used by the assets that do carry one (N78540, not N7-8540).
+#   A row with an empty registration is a POSITIVE finding: the texture was
+#   inspected and this livery genuinely has no tail number painted on it. That
+#   is different from a livery simply not being listed here yet.
+
+# ---- A359 (read 2026-09-16) -------------------------------------------------
+heavy/A359/A359_Aeroflot.obj *** RA73151
+heavy/A359/A359_AirChina.obj *** B307A
+heavy/A359/A359_AirIndia.obj *** VTJRI
+heavy/A359/A359_AirMauritius.obj *** 3BNBQ
+heavy/A359/A359_Asiana.obj *** HL8079
+heavy/A359/A359_CathayPacific.obj *** BLQF
+heavy/A359/A359_ChinaAirlines.obj *** B18915
+heavy/A359/A359_ChinaEastern.obj *** B305X
+heavy/A359/A359_ChinaSouthern.obj *** B30A9
+heavy/A359/A359_Delta.obj *** N530DN
+heavy/A359/A359_Edelweiss.obj *** HBIHA
+heavy/A359/A359_EgyptAir.obj *** SUGGE
+heavy/A359/A359_Emirates.obj *** A6EXF
+heavy/A359/A359_Ethiopian.obj *** ETAVC
+heavy/A359/A359_Factory.obj *** FWWCF
+heavy/A359/A359_Fiji.obj *** DQFAM
+heavy/A359/A359_Finnair.obj *** OHLWT
+heavy/A359/A359_Frenchbee.obj *** FHREU
+heavy/A359/A359_HainanAirlines.obj *** B305A
+heavy/A359/A359_ITA.obj *** EIIFA
+heavy/A359/A359_Iberia.obj *** ECNIS
+heavy/A359/A359_Iberojet.obj *** ECNBO
+heavy/A359/A359_JapanAirlines.obj *** JA10XJ
+heavy/A359/A359_K5Aviation.obj *** DAKAY
+heavy/A359/A359_Korean_Modern.obj *** HL8746
+heavy/A359/A359_Lufthansa.obj *** DAIXB
+heavy/A359/A359_Malaysia.obj *** 9MMAB
+heavy/A359/A359_Philippines.obj *** RPC3501
+heavy/A359/A359_Qatar.obj *** A7ALM
+heavy/A359/A359_SAS.obj *** SERSD
+heavy/A359/A359_Sichuan_Panda.obj *** B32G2
+heavy/A359/A359_Starlux.obj *** B58502
+heavy/A359/A359_Swiss.obj *** HBIFB
+heavy/A359/A359_Turkish.obj *** TCLHG
+heavy/A359/A359_Vietnam.obj *** VNA894
+heavy/A359/A359_World2Fly.obj *** ECNTB
+
+# Inspected, no registration painted on the fuselage:
+heavy/A359/A359_AirCaraibes.obj ***
+heavy/A359/A359_AirFrance.obj ***
+heavy/A359/A359_Korean.obj ***
+heavy/A359/A359_Luftwaffe.obj ***
+heavy/A359/A359_Singapore.obj ***
+heavy/A359/A359_Thai.obj ***
