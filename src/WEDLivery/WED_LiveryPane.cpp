@@ -123,7 +123,22 @@ namespace
 	// clickable/checkable (see RowForY() callers) - the others are purely
 	// structural, used to lay out the "Show Recommendation" split (a section
 	// header, a blank gap row, and a divider line row - see BuildDisplayRows()).
-	enum WED_LiveryRowKind { wed_Row_Airline, wed_Row_Header, wed_Row_Gap, wed_Row_Divider };
+	// wed_Row_Note is an explanatory line under a section header that came out
+	// empty - "no operator matches ...". It exists so an empty section can still
+	// SAY something. Previously a section with no rows dropped its header too, so
+	// "not researched", "filtered out by the search box" and "the airline
+	// directory failed to load" were all indistinguishable from each other and
+	// from the section simply not existing.
+	enum WED_LiveryRowKind { wed_Row_Airline, wed_Row_Header, wed_Row_Gap, wed_Row_Divider, wed_Row_Note };
+
+	// What AppendAirlineSection() did, so the caller can tell an empty tier apart
+	// from a missing one.
+	enum WED_SectionResult {
+		sect_HasRows,		// rows were appended
+		sect_NoData,		// nothing to show in this tier at all - emitted nothing
+		sect_AllShownAbove,	// every code here already appeared in a higher tier - emitted nothing
+		sect_FilteredOut	// had rows, the search box removed them all - emitted a header + note
+	};
 	struct WED_LiveryDisplayRow
 	{
 		WED_LiveryRowKind	kind;
@@ -202,7 +217,7 @@ namespace
 	// pair before this section's own header, exactly like the old fixed two-section layout did
 	// between "Recommended" and "All Results". Returns true if it appended anything (i.e. the
 	// caller's "emitted a section yet" flag should become/stay true).
-	bool AppendAirlineSection(const string & label, const vector<string> & codes_upper,
+	WED_SectionResult AppendAirlineSection(const string & label, const vector<string> & codes_upper,
 								const WED_AirlineDirectory & directory, bool sort_descending,
 								const string & query_lower, set<string> & seen, bool leading_divider,
 								vector<WED_LiveryDisplayRow> & out, bool preserve_order = false)
@@ -229,6 +244,11 @@ namespace
 		if (!preserve_order)
 			SortAirlineRows(section, sort_descending);
 
+		// Snapshot BEFORE the search filter runs. The difference between "this tier
+		// had nothing" and "this tier had things and you filtered them away" is the
+		// whole point of the return value, and it is only visible here.
+		const bool had_rows_before_search = !section.empty();
+
 		if (!query_lower.empty())
 		{
 			vector<WED_LiveryDisplayRow> filtered;
@@ -238,7 +258,33 @@ namespace
 			section.swap(filtered);
 		}
 
-		if (section.empty()) return false;
+		if (section.empty())
+		{
+			// Deliberately silent when the tier was empty to begin with, or when
+			// everything in it already appeared higher up: an empty "Popular
+			// Airlines" header on every airport whose airlines were all already
+			// listed under "Recommended" would be pure noise. Only a section the
+			// SEARCH emptied gets to explain itself, because there the user did
+			// something and deserves to know it had an effect here.
+			if (!had_rows_before_search)
+				return codes_upper.empty() ? sect_NoData : sect_AllShownAbove;
+
+			if (leading_divider)
+			{
+				WED_LiveryDisplayRow gap;	gap.kind = wed_Row_Gap;		out.push_back(gap);
+				WED_LiveryDisplayRow div;	div.kind = wed_Row_Divider;	out.push_back(div);
+			}
+			WED_LiveryDisplayRow header;
+			header.kind = wed_Row_Header;
+			header.header_text = label;
+			out.push_back(header);
+
+			WED_LiveryDisplayRow note;
+			note.kind = wed_Row_Note;
+			note.header_text = "nothing here matches \"" + query_lower + "\"";
+			out.push_back(note);
+			return sect_FilteredOut;
+		}
 
 		if (leading_divider)
 		{
@@ -253,7 +299,7 @@ namespace
 
 		WED_LiveryDisplayRow gap2; gap2.kind = wed_Row_Gap; out.push_back(gap2);
 		out.insert(out.end(), section.begin(), section.end());
-		return true;
+		return sect_HasRows;
 	}
 
 	// "Popular Airlines" tier: up to 10 display slots drawn from the 30 largest fleets in
@@ -417,15 +463,15 @@ namespace
 		set<string> seen;
 		bool any = false;
 
-		any |= AppendAirlineSection("Manual Recommendations", manual_codes_upper, directory,
+		any |= sect_HasRows == AppendAirlineSection("Manual Recommendations", manual_codes_upper, directory,
 										sort_descending, query_lower, seen, any, out);
 
-		any |= AppendAirlineSection("Recommended", direct_hit_codes_upper, directory,
+		any |= sect_HasRows == AppendAirlineSection("Recommended", direct_hit_codes_upper, directory,
 										sort_descending, query_lower, seen, any, out);
 
 		vector<string> popular_codes = GetPopularAirlinesCodes(directory, airport_country_ioc, airport_icao,
 																	checked_lower, popular_cache);
-		any |= AppendAirlineSection("Popular Airlines", popular_codes, directory,
+		any |= sect_HasRows == AppendAirlineSection("Popular Airlines", popular_codes, directory,
 										sort_descending, query_lower, seen, any, out, /*preserve_order=*/true);
 
 		vector<string> same_country_codes;
@@ -436,7 +482,7 @@ namespace
 			for (size_t i = 0; i < matches.size(); ++i)
 				same_country_codes.push_back(matches[i]->code);
 		}
-		any |= AppendAirlineSection("Same Country", same_country_codes, directory,
+		any |= sect_HasRows == AppendAirlineSection("Same Country", same_country_codes, directory,
 										sort_descending, query_lower, seen, any, out);
 
 		// Tier 5 draws from all_rows (already category-filtered and search-filtered above, per
@@ -596,6 +642,29 @@ namespace
 							manual, direct_hit, airport_country, current_icao, checked_lower, popular_cache,
 							search_query, directory, rows);
 		return rows;
+	}
+
+	// Truncates `text` with a trailing ellipsis so it fits within max_w pixels.
+	// Single line, unlike WrapText below - for one-line explanatory notes, where
+	// the property panel can be dragged narrow enough to push text outside the
+	// border. Backs off a character at a time; the ellipsis is always the last
+	// thing inside the limit.
+	string ElideToWidth(int font, const string & text, float max_w)
+	{
+		if (max_w <= 0) return string();
+
+		float w = GUI_MeasureRange(font, text.c_str(), text.c_str() + text.size());
+		if (w <= max_w) return text;
+
+		string out(text);
+		while (!out.empty())
+		{
+			out.erase(out.size() - 1);
+			string candidate = out + "...";
+			if (GUI_MeasureRange(font, candidate.c_str(), candidate.c_str() + candidate.size()) <= max_w)
+				return candidate;
+		}
+		return string();
 	}
 
 	// Greedy word-wrap: splits `text` into lines that each fit within max_w
@@ -855,13 +924,26 @@ WED_LiveryPane::WED_LiveryPane(
 
 WED_LiveryPane::~WED_LiveryPane()
 {
+	// Release through Hide(), which is the context-safe path: it is called on tab
+	// switch, while the window's GL context is still current and guaranteed valid.
+	// Deleting textures directly from a destructor runs at document-window
+	// teardown, where the context may already be gone - a silent no-op on every
+	// driver we ship against, but undefined by the spec, and free to avoid.
+	//
+	// Hide() clears both containers, so anything it released cannot be released
+	// twice by the sweep below; that sweep only exists for a texture created
+	// after the last Hide().
+	Hide();
+
 	if (mFlagTexId != 0)
+	{
 		glDeleteTextures(1, &mFlagTexId);
-	// mThumbCache discards its own textures in its own destructor. Raw (unmasked)
-	// flag icon textures are this pane's own map, so free them here the same way.
+		mFlagTexId = 0;
+	}
 	for (map<string, WED_LiveryThumbnail>::iterator i = mRawFlagTex.begin(); i != mRawFlagTex.end(); ++i)
 		if (i->second.tex != 0)
 			glDeleteTextures(1, &i->second.tex);
+	mRawFlagTex.clear();
 }
 
 // Called by GUI_TabPane when the user switches to a different property tab (see
@@ -3015,6 +3097,21 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 				if (row.kind == wed_Row_Gap)
 					continue;
 
+				if (row.kind == wed_Row_Note)
+				{
+					// Indented past the section header and dimmed - it is an
+					// explanation, not a selectable entry. Elided against the row's
+					// own width so a narrow property panel cannot push it outside
+					// the border (same GUI_MeasureRange approach the card captions
+					// use, no new machinery).
+					float note_col[4] = { 0.62f, 0.62f, 0.64f, 1.0f };
+					float note_x = b[0] + pad + 14;
+					string note = ElideToWidth(font_UI_Basic, row.header_text, (float) b[2] - pad - note_x);
+					GUI_FontDraw(state, font_UI_Basic, note_col, note_x,
+									row_bot + (row_h - line_h) * 0.5f, note.c_str());
+					continue;
+				}
+
 				if (row.kind == wed_Row_Divider)
 				{
 					// Near-full-width, centered.
@@ -3115,7 +3212,26 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 
 			if (rows.empty())
 			{
-				GUI_FontDraw(state, font_UI_Basic, row_col, b[0] + pad, top - line_h, "No placeholder liveries tagged for this operation type yet.");
+				// Name the actual reason. One fixed sentence about operation types
+				// used to be shown for every empty list, including one the user had
+				// just emptied by typing in the search box - which reads as a bug in
+				// the tool rather than as an answer.
+				string why;
+				if (!mAirlineDirectory.IsLoaded())
+					why = "Airline database unavailable - see the warning shown at startup.";
+				else if (!mSearchQuery.empty())
+					why = "No operator matches \"" + mSearchQuery + "\".";
+				else if (cur_op_enum == ramp_operation_None)
+					why = "Set a ramp operation type above to see operators.";
+				else
+					why = "No operators are tagged for this operation type yet.";
+
+				// Drawn BELOW the card strip, not at ContentTop - that is where the
+				// cards themselves start, so this text used to be painted on top of
+				// card one.
+				float msg_y = top + mScrollOffset - cards_h - line_h;
+				string msg = ElideToWidth(font_UI_Basic, why, (float) b[2] - pad - (b[0] + pad));
+				GUI_FontDraw(state, font_UI_Basic, row_col, b[0] + pad, msg_y, msg.c_str());
 			}
 
 			// Thin scrollbar affordance, drawn only once there's actually more to see

@@ -58,6 +58,18 @@ bool	CheckWedMandatoryHeader(std::istream & f)
 	if (!std::getline(f, line1)) return false;
 	if (!line1.empty() && line1.back() == '\r') line1.pop_back();
 
+	// Strip a UTF-8 byte-order mark. These are plain ASCII files, but anyone who
+	// opens one in Notepad and saves gets "\xEF\xBB\xBFI" on line 1, and without
+	// this the stamp fails and WED refuses the entire file. Rejecting a data file
+	// because an editor added three invisible bytes is not a useful diagnosis.
+	if (line1.size() >= 3 &&
+		(unsigned char) line1[0] == 0xEF &&
+		(unsigned char) line1[1] == 0xBB &&
+		(unsigned char) line1[2] == 0xBF)
+	{
+		line1.erase(0, 3);
+	}
+
 	string line2;
 	if (!std::getline(f, line2)) return false;
 	if (!line2.empty() && line2.back() == '\r') line2.pop_back();

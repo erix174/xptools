@@ -76,6 +76,11 @@ void		GUI_TabControl::SetDescriptor(const string& inDesc)
 	}
 
 	mWidths.resize(mItems.size());
+	// resize() only default-fills NEW elements, so any enabled/disabled flag
+	// already set survives a later SetDescriptor - against a list that may have
+	// been renumbered by it. Harmless today because GUI_TabPane::AddPane() calls
+	// this for every pane before anything calls SetItemEnabled(), but a caller who
+	// re-titles tabs at runtime would inherit stale flags by position.
 	mEnabled.resize(mItems.size(), true);
 	for (int n = 0; n < mItems.size(); ++n)
 	{

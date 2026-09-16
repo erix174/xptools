@@ -65,8 +65,14 @@ bool	WED_AirlineDirectory::EnsureLoaded(const string & db_path)
 	if (!f)                          { mLoadError = wed_data_no_file;   return false; }
 	if (!CheckWedMandatoryHeader(f)) { mLoadError = wed_data_bad_header; return false; }		// missing/altered stamp - untrusted file, refuse it outright
 
+	// Every container, not just the two the parse loop fills. mByCountry and
+	// mSortedByFleet are derived below; leaving them populated here is harmless
+	// only because mLoadAttempted makes this function single-shot today, and that
+	// is exactly the kind of assumption a later reload path would break silently.
 	mEntries.clear();
 	mByCode.clear();
+	mByCountry.clear();
+	mSortedByFleet.clear();
 
 	// Format (see WED_AirlineDirectory.h for the full description, including
 	// what the CODE column's 3/4/5-char length means):
