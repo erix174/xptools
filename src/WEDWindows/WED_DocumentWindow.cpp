@@ -32,6 +32,7 @@
 #include "WED_TCEPane.h"
 #include "WED_LibraryPane.h"
 #include "WED_LibraryPreviewPane.h"
+#include "WED_LiveryPane.h"
 #include "WED_MapPreviewPane.h"
 #include "WED_MapPreviewWindow.h"
 #include "WED_PropertyHelper.h"
@@ -230,6 +231,16 @@ WED_DocumentWindow::WED_DocumentWindow(
 
 	WED_PropertyPane * prop_pane5 = new WED_PropertyPane(prop_tabs->GetPaneOwner(), inDocument, sel_t, sel_w,inDocument->GetArchive(), propPane_Selection, 0);
 	prop_tabs->AddPane(prop_pane5, "3D+Objects");
+
+	// ---------------- Liveries (ramp start operation type / size / airlines) ---------------
+
+	WED_LiveryPane * livery_pane = new WED_LiveryPane(inDocument, inDocument->GetArchive(), prop_tabs);
+	prop_tabs->AddPane(livery_pane, "Static+Liveries");
+	// The constructor already tried to sync eligibility, but at that point the pane
+	// wasn't findable in the tab strip yet (AddPane hadn't run), so it silently no-op'd.
+	// Re-sync now that it's actually registered - matters when reopening a document
+	// that had a ramp start selected when it was last saved.
+	livery_pane->RebuildSelection();
 
 	// ---------------- Exclusions ------------------
 

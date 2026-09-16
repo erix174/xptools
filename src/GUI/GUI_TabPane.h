@@ -47,6 +47,10 @@ public:
 
 			void			AddPane(GUI_Pane * who, const char * title);
 
+			// Grey out (and refuse to switch to) the tab for a pane already added via
+			// AddPane. Additive: panes default to enabled.
+			void			SetPaneEnabled(GUI_Pane * who, bool enabled);
+
 	virtual	void			ReceiveMessage(
 									GUI_Broadcaster *		inSrc,
 									intptr_t				inMsg,

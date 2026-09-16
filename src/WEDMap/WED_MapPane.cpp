@@ -93,6 +93,7 @@ enum //Must be kept in sync with TabPane
     tab_ATC,
     tab_Lights,
     tab_3D,
+    tab_Liveries,
     tab_Exclusions,
     tab_Texture
 };
@@ -900,6 +901,28 @@ void		WED_MapPane::SetTabFilterMode(int mode)
 		unhide_persistent(hide_list, WED_ForestPlacement::sClass);
 		unhide_persistent(hide_list, WED_ObjPlacement::sClass);
 		unhide_persistent(hide_list, WED_TruckParkingLocation::sClass);
+	}
+	else if(mode == tab_Liveries)
+	{
+		// Ramp-start-only mode: everything else stays visible as reference (locked,
+		// not selectable/editable) so the pavement layout is still visible while
+		// placing/adjusting ramp starts, but only WED_RampPosition can be picked,
+		// dragged, rotated, deleted, or duplicated. Reuses the same green
+		// aircraft-footprint indicator as the Taxi+Routes/ATC mode.
+		title = "Static Liveries Mode";
+
+		lock_list.push_back(WED_DrapedOrthophoto::sClass);
+		lock_list.push_back(WED_FacadePlacement::sClass);
+		lock_list.push_back(WED_ObjPlacement::sClass);
+		lock_list.push_back(WED_PolygonPlacement::sClass);
+		lock_list.push_back(WED_Runway::sClass);
+		lock_list.push_back(WED_Taxiway::sClass);
+		lock_list.push_back(k_show_taxiline_chain);
+		lock_list.push_back(WED_LinePlacement::sClass);
+
+		mATCLayer->SetVisible(true);
+		unhide_persistent(hide_list, lock_list);
+		unhide_persistent(hide_list, WED_RampPosition::sClass);
 	}
 	else if(mode == tab_Exclusions)
 	{

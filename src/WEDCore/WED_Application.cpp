@@ -43,7 +43,13 @@
 #include <FL/Fl_Tooltip.H>
 #endif
 
-static int settings_bounds[4] = { 0, 0, 512, 384};
+static int settings_bounds[4] = { 0, 0, 620, 434};	// +50px height / +108px width over the original
+													// 512x384, for the "When Selecting Ramp Start"
+													// section - everything else keeps its old x/y
+													// coordinates, so this just adds empty room
+													// above and to the right of it (the extra width
+													// specifically so "Prompt Up Static Liveries Tab"
+													// has room to not run off the window edge)
 
 enum { kMsg_Close = WED_PRIVATE_MSG_BASE };
 
@@ -160,6 +166,11 @@ void WED_Settings::ReceiveMessage(
 			gOrthoExport = ((GUI_Button *) inParam)->GetValue();
 			this->TakeFocus();
 	}
+	else if(inMsg == (intptr_t) &gPromptLiveriesOnRampSelect)
+	{
+			gPromptLiveriesOnRampSelect = ((GUI_Button *) inParam)->GetValue();
+			this->TakeFocus();
+	}
 	else if (inMsg == kMsg_Close)
 	{
 		this->TakeFocus();
@@ -177,13 +188,41 @@ WED_Settings::WED_Settings(GUI_Commander * cmdr) : GUI_Window("WED Preferences",
 	packer->SetBounds(settings_bounds);
 	packer->SetBkgkndImage("about.png");
 
-	RadioButton(220, 350 , this, &gIsFeet, "Length Units", "Meters", "Feet");
-	RadioButton(220, 300 , this, &gInfoDMS, "Info Bar\nCoordinates", "DD.DDDDD", "DD MM SS");
-
 	int k_yes[4] = { 0, 1, 1, 3 };
 	int k_no[4]  = { 0, 2, 1, 3 };
 
 	float * white = WED_Color_RGBA(wed_Table_Text);
+
+	// Row geometry computed first so the two-line label can be vertically
+	// centered on the checkbox's own row instead of just guessed - same
+	// "h" scale RadioButton() uses above/below its shared boundary line,
+	// applied here around a single row's center instead.
+	int liveries_chk_y0 = 380;
+	int liveries_chk_h  = GUI_GetImageResourceHeight("check_buttons.png")/3;
+	int liveries_row_cy = liveries_chk_y0 + liveries_chk_h/2;
+	int liveries_lbl_h  = GUI_GetImageResourceHeight("check_buttons.png") * 0.4;
+
+	GUI_Label * liveries_label = new GUI_Label();
+	liveries_label->SetBounds(220,liveries_row_cy-liveries_lbl_h,330,liveries_row_cy+liveries_lbl_h);
+	liveries_label->SetColors(white);
+	liveries_label->SetDescriptor("When Selecting\nRamp Start");
+	liveries_label->SetParent(this);
+	liveries_label->Show();
+
+	// Off by default: selecting a ramp start (or a selection that's ENTIRELY
+	// ramp starts) auto-switches the property panel to Static Liveries once
+	// per new ramp-start selection - see WED_LiveryPane::RebuildSelection().
+	GUI_Button * liveries_btn = new GUI_Button("check_buttons.png",btn_Check,k_no, k_no, k_yes, k_yes);
+	liveries_btn->SetBounds(340,liveries_chk_y0,610,liveries_chk_y0+liveries_chk_h);
+	liveries_btn->Show();
+	liveries_btn->SetDescriptor("Prompt Up Static Liveries Tab");
+	liveries_btn->SetParent(this);
+	liveries_btn->AddListener(this);
+	liveries_btn->SetValue(gPromptLiveriesOnRampSelect);
+	liveries_btn->SetMsg((intptr_t) &gPromptLiveriesOnRampSelect, (intptr_t) liveries_btn);
+
+	RadioButton(220, 350 , this, &gIsFeet, "Length Units", "Meters", "Feet");
+	RadioButton(220, 300 , this, &gInfoDMS, "Info Bar\nCoordinates", "DD.DDDDD", "DD MM SS");
 
 	GUI_Button * moderator_btn = new GUI_Button("check_buttons.png",btn_Check,k_no, k_no, k_yes, k_yes);
 	moderator_btn->SetBounds(340,255,510,255+GUI_GetImageResourceHeight("check_buttons.png")/3);

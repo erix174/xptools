@@ -95,6 +95,17 @@ void			GUI_TabPane::AddPane(GUI_Pane * who, const char * title)
 	mTabs->SetDescriptor(desc);
 }
 
+void			GUI_TabPane::SetPaneEnabled(GUI_Pane * who, bool enabled)
+{
+	int n = mChangeView->CountChildren();
+	for (int i = 0; i < n; ++i)
+		if (mChangeView->GetNthChild(i) == who)
+		{
+			mTabs->SetItemEnabled(i, enabled);
+			return;
+		}
+}
+
 void	GUI_TabPane::ReceiveMessage(
 							GUI_Broadcaster *		inSrc,
 							intptr_t				inMsg,

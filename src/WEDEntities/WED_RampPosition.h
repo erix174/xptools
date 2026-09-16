@@ -25,6 +25,7 @@
 #define WED_RAMPPOSITION_H
 
 #include "WED_GISPoint_Heading.h"
+#include "WED_XMLReader.h"
 
 struct	AptGate_t;
 
@@ -37,12 +38,14 @@ public:
 	void	SetType(int		ramp_type);
 	void	SetEquipment(const set<int>&	et);
 	void	SetWidth(int		width);
+	void	SetWidthMin(int	width_min);
 	void	SetRampOperationType(int ait);
 	void	SetAirlines(const string& airlines);
 
 	string  GetAirlines() const;
 	int		GetType() const;
 	int		GetWidth() const;
+	int		GetWidthMin() const;
 	void	GetTips(Point2 c[4]) const;              // nose, tail, both wing tips. Takes heading, siize and offset(type=misc) into account
 	void	GetEquipment(set<int>& out_eq) const;
 	int		GetRampOperationType() const;
@@ -54,13 +57,24 @@ public:
 
 	virtual const char *	HumanReadableType(void) const { return "Ramp Start"; }
 
+	// Pre-migration documents only ever wrote a single "width" letter - no
+	// "width_min" attribute existed. StartElement() notices this per-object as
+	// each <ramp_start> is parsed; EndElement() then backfills width_min from
+	// the legacy value once it's known. See WED_RampPosition.cpp for the
+	// team-agreed mapping.
+	virtual void	StartElement(WED_XMLReader * reader, const XML_Char * name, const XML_Char ** atts);
+	virtual void	EndElement(void);
+
 private:
 
 	WED_PropIntEnum			ramp_type;
 	WED_PropIntEnumBitfield	equip_type;
 	WED_PropIntEnum			width;
+	WED_PropIntEnum			width_min;
 	WED_PropIntEnum			ramp_op_type;
 	WED_PropStringText		airlines;
+
+	bool					mLegacyWidthOnly;	// true while parsing an XML element that had no width_min attribute
 
 };
 

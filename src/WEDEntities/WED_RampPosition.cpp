@@ -32,9 +32,14 @@ TRIVIAL_COPY(WED_RampPosition, WED_GISPoint_Heading)
 WED_RampPosition::WED_RampPosition(WED_Archive * a, int i) : WED_GISPoint_Heading(a,i),
 	ramp_type	(this,PROP_Name("Ramp Start Type",     XML_Name("ramp_start","type"   )), ATCRampType, atc_Ramp_Misc),
 	equip_type	(this,PROP_Name("Equipment Type",      XML_Name("ramp_start","traffic")), ATCTrafficType, 0),
-	width		(this,PROP_Name("Size",                XML_Name("ramp_start","width")), ATCIcaoWidth, width_C),
-	ramp_op_type(this,PROP_Name("Ramp Operation Type", XML_Name("ramp_start","ramp_op_type")), RampOperationType, ramp_operation_None),
-	airlines	(this,PROP_Name("Airlines",            XML_Name("ramp_start","airlines")),"")
+	// Size / Ramp Operation Type / Airlines are edited on the dedicated "Liveries" tab now (WED_LiveryPane) -
+	// the leading "." hides them from the generic property grid (see WED_PropertyTable::RecalculateColumns).
+	// XML tag names are unchanged, so old documents still round-trip.
+	width		(this,PROP_Name(".Size",                XML_Name("ramp_start","width")), ATCIcaoWidth, width_C),
+	width_min	(this,PROP_Name(".Size Min",             XML_Name("ramp_start","width_min")), ATCIcaoWidth, width_A),
+	ramp_op_type(this,PROP_Name(".Ramp Operation Type", XML_Name("ramp_start","ramp_op_type")), RampOperationType, ramp_operation_None),
+	airlines	(this,PROP_Name(".Airlines",            XML_Name("ramp_start","airlines")),""),
+	mLegacyWidthOnly(false)
 {
 }
 
@@ -97,6 +102,42 @@ void	WED_RampPosition::SetWidth(int		w)
 	width = w;
 }
 
+void	WED_RampPosition::SetWidthMin(int		w)
+{
+	width_min = w;
+}
+
+void	WED_RampPosition::StartElement(WED_XMLReader * reader, const XML_Char * name, const XML_Char ** atts)
+{
+	if (strcmp(name, "ramp_start") == 0)
+		mLegacyWidthOnly = (get_att("width_min", atts) == NULL);
+
+	WED_GISPoint_Heading::StartElement(reader, name, atts);
+}
+
+void	WED_RampPosition::EndElement(void)
+{
+	if (mLegacyWidthOnly)
+	{
+		// Pre-migration files only ever had a single "width" letter - no notion
+		// of a range. Team-agreed mapping onto [min,max]: the two extreme
+		// classes stay single-width on purpose ("they're there for a reason"),
+		// everything else widens by exactly one class below:
+		//   A->A   B->[A,B]   C->[B,C]   D->[C,D]   E->[D,E]   F->F
+		static const int kOrder[6]     = { width_A, width_B, width_C, width_D, width_E, width_F };
+		static const int kLegacyMin[6] = { width_A, width_A, width_B, width_C, width_D, width_F };
+
+		int idx = 2;	// unknown/corrupt width falls back to C, same as elsewhere in this file
+		for (int i = 0; i < 6; ++i)
+			if (kOrder[i] == width.value) { idx = i; break; }
+
+		width_min = kLegacyMin[idx];
+		mLegacyWidthOnly = false;
+	}
+
+	WED_GISPoint_Heading::EndElement();
+}
+
 void	WED_RampPosition::SetRampOperationType(int ait)
 {
 	ramp_op_type = ait;
@@ -149,6 +190,11 @@ string  WED_RampPosition::GetAirlines() const
 int	WED_RampPosition::GetWidth() const
 {
 	return width.value;
+}
+
+int	WED_RampPosition::GetWidthMin() const
+{
+	return width_min.value;
 }
 
 void WED_RampPosition::GetTips(Point2 c[4]) const
