@@ -1,6 +1,6 @@
 # Static aircraft at ramp stands — the short version
 
-For Jim K. 2026-09-16. Targets WED 2.8.0 / a matching X-Plane.
+For Jim K. 2026-09-17. Targets WED 2.8.0 / a matching X-Plane.
 
 **This is the 5-minute version.** The full specification is
 `WED_LiveryFormatSpec.md` — it is long on purpose, written to be handed to an
@@ -11,23 +11,31 @@ assistant, and you should not need to read it to answer the questions below.
 ## The ask, in one paragraph
 
 WED is gaining a UI where a scenery author says which airlines park at a stand,
-which ICAO size classes may spawn there and in what proportion, and — rarely —
-which specific aircraft types to exclude. That needs somewhere to live in
-apt.dat. We propose **two** new rows, `1312` and `1313`, both written at the stand they
-describe. **`1301` is not modified and
-not deprecated.** A reader that ignores every new row behaves exactly as today.
+and which ICAO size classes may spawn there and in what proportion. That second
+half needs somewhere to live in apt.dat. We propose **one** new row, `1313`,
+written at the stand it describes: six integers, a relative weight per wingspan
+class A–F. **`1301` is not modified and not deprecated.** A reader that ignores
+the new row behaves exactly as today.
+
+There is a second ask, and it is not an apt.dat change: **one reserved value in
+the livery index** (§4 below). Between them they replace everything the earlier
+two-row draft was trying to do.
 
 ---
 
 ## What we need from you
 
-### 1. Row codes — 10 minutes
+### 1. A row code — 10 minutes
 
-We used `1312` and `1313`. **Any two numbers work**; we need yours before we
-write the importer. This is the only one blocking us.
+We used `1313`. **Any unused number works**; we need yours before we write the
+importer. This is the only one blocking us.
 
-It was four rows until we measured the two that carried shared-policy names and
-found the sharing cost more than it saved - see spec §8.2. Two codes back.
+It was four rows, then two, now one. The grouping machinery went when we measured
+what it actually shared and found it was six integers (spec §8.2). The
+refinement row went when we measured how often an operator has more than one
+aircraft at a given size class: **15 of 168 pairs in the shipped library**, and
+90% of operators have assets at exactly one class anyway (spec §8.6). Each time
+the measurement said the mechanism was bigger than the thing it managed.
 
 ### 2. Do we bump the apt.dat version — your call, no wrong answer
 
@@ -70,9 +78,17 @@ No DSF, no objects, airport data only.
 
 Sixteen stands in a line at a fictional **ZZLI** (flat western Kansas), each
 demonstrating exactly one thing and **named so you can read it off the ground**:
-`01-CONTROL`, `04-ALL-ZERO`, `08-WHITELIST`, and so on. Stands 01–10 are what WED
+`01-CONTROL`, `04-ALL-ZERO`, `05-CLASS-F`, and so on. Stands 01–10 are what WED
 will emit; 11–15 are deliberately broken and must all end up behaving identically
 to `01-CONTROL`.
+
+> **The package predates draft 7 and six of its stands are stale.** `07-EXCLUDE`,
+> `08-WHITELIST`, `09-MIXED-SIGILS`, `10-PLUS-WINS`, `14-BAD-REFINE` and
+> `16-EXCL-NO-WEIGHTS` all exercise the `1312` refinement row that draft 7
+> deleted — ignore them, and note that their `1312` rows are now simply an
+> unknown row code, which is itself a valid test of "ignore what you don't
+> recognise". The other ten stands are current. We will regenerate the package
+> once you give us a row code, since every `1313` in it has to change anyway.
 
 `docs/livery_sample/README.md` has a table of every stand and its expected
 result, so you can check an implementation against it line by line.
@@ -96,10 +112,10 @@ One behaviour change, and it is the part worth your attention:
 
 ```
 1.  pick a CLASS      weighted by the six integers in 1313
-2.  pick an AIRLINE   uniformly among those in 1301 having a NON-EXCLUDED
-                      livery in that class
-3.  pick a LIVERY     uniformly among that airline's non-excluded liveries in
-                      that class, honouring EXPORT_RATIO
+2.  pick an AIRLINE   uniformly among those in 1301 that HAVE a livery in
+                      that class  (not merely "have one somewhere")
+3.  pick a LIVERY     uniformly among that airline's liveries in that class,
+                      skipping any marked Obsolete, honouring EXPORT_RATIO
 ```
 
 **Class first, and the order is the whole point.** Do it as one flat weighted
@@ -109,9 +125,32 @@ overwhelmingly 737s. The author's intent gets silently overridden by how much
 art happens to exist. Same bias one level down, which is why airline is its own
 stage.
 
+**Stage 2 must ask about *this* class, not about the operator in general.**
+United's only class-E aircraft in the library is a 747-400 they retired in 2017.
+Ask "does United have a livery?" and they get drawn at class E, find nothing, and
+the stand parks nothing 14% of the time. Ask "at class E?" and they are simply
+absent there while still parking at D. It is one line of difference and it is the
+single easiest thing to get wrong.
+
 **Gate all of this on `1313` being present.** No `1313` row → today's behaviour,
 untouched. Otherwise you change the look of all 20,108 airports that have ramp
 starts, none of whose authors asked for it.
+
+### The second ask: one reserved value in the index
+
+`Obsolete` in the index's NOTE column means **never spawn this livery** — not at
+stage 2, not at stage 3. One string comparison when you load the index.
+
+It exists because the object must stay on disk. Twelve liveries in the shipped
+library are old assets superseded by newer ones for the same real aircraft, and
+both are exported, so those aircraft currently spawn at double the rate of their
+neighbours. Deleting the old export fixes that and breaks every scenery pack
+referencing it by hard path. A note fixes it and breaks nothing.
+
+The same mechanism retires an airframe: an operator who no longer flies a type
+stops parking one everywhere at once, with no apt.dat edit anywhere. That is
+what earlier drafts were spending a whole second row code on, one stand at a
+time.
 
 ### The one thing we want you *not* to do
 
@@ -127,9 +166,14 @@ because the airline has no models — because it has none *in that class*.
 
 **We absorb that, entirely on the WED side**, and in two places rather than one:
 
-- **While the author edits** — a live readout of how often each stand parks
-  nothing, updated on every change, showing the delta at the moment of the click
-  (`empty 3% → 31%` when an airline is deselected). An empty stand is invisible
+- **While the author edits** — an always-visible sentence saying what the stand
+  will actually do, recomputed on every change:
+
+  > *This ramp will spawn Emirates aircraft, size D-E, 70% of the time.*
+
+  The percentage is occupancy, so "70%" **is** the empty-stand number, stated
+  where an author cannot miss it, and the delta shows at the moment of the click
+  (`empty 3% → 31%` when an operator is deselected). An empty stand is invisible
   in the sim; this is what makes it visible before the file is ever written.
 - **At export** — weights pointing at a class none of the listed airlines can
   fill is a hard error, not a dismissible warning, with one-click repair offered
@@ -148,8 +192,8 @@ actually meant to leave empty.
 |---|---|
 | `livery_index.txt` — 298 liveries with type, class, operator, registration, country, livery note | **exists**, generated + hand-maintained |
 | The format spec | **this document set** |
-| WED reads the index, previews real aircraft | built, being wired now |
-| WED reads/writes `1312`/`1313` | blocked on your row codes |
+| WED reads the index, previews real aircraft | index loader written; first consumer wired this week |
+| WED reads/writes `1313` | blocked on your row code |
 | Validator + one-click fill | designed, sized against real data |
 
 The index is the piece you may not have expected. `library.txt` buckets objects
@@ -178,11 +222,14 @@ By-product of building the index, offered as data rather than complaint:
 
 ---
 
-## If you only remember four things
+## If you only remember five things
 
 1. `1301` is untouched and authoritative. Everything new is additive and
    discardable.
-2. The new rows must **soft-fail** — a bad one is dropped, never fails the file.
-   This is the opposite of the rest of `AptIO.cpp` and it is deliberate.
-3. Selection is **three stages, class first**, gated on `1313` existing.
-4. We need **row codes** from you. Everything else can proceed without you.
+2. The new row must **soft-fail** — a bad one is dropped whole, never fails the
+   file. This is the opposite of the rest of `AptIO.cpp` and it is deliberate.
+3. Selection is **three stages, class first**, gated on `1313` existing — and
+   stage 2 asks about the class drawn, not about the operator in general.
+4. `Obsolete` in the index NOTE column means never spawn. One comparison, and it
+   is what lets us leave `library.txt` alone.
+5. We need **one row code** from you. Everything else can proceed without you.

@@ -1,8 +1,24 @@
-# Sample apt.dat — rows 1312/1313 to play with
+# Sample apt.dat — row 1313 to play with
 
 Two droppable scenery packages demonstrating the format proposed in
-`WED_LiveryFormatSpec.md` (draft 6). Sixteen stands in a row, each demonstrating
-exactly one thing, named so you can see which is which from the ground.
+`WED_LiveryFormatSpec.md`. Sixteen stands in a row, each demonstrating exactly
+one thing, named so you can see which is which from the ground.
+
+> **This package was built against draft 6 and has not been regenerated.**
+> Draft 7 deleted the `1312` refinement row entirely (spec §8.6), so six stands
+> here demonstrate something the format no longer has: `07-EXCLUDE`,
+> `08-WHITELIST`, `09-MIXED-SIGILS`, `10-PLUS-WINS`, `14-BAD-REFINE` and
+> `16-EXCL-NO-WEIGHTS`. Their rows below are wrong about draft 7 and are kept
+> only so the load evidence in `docs/livery_evidence/` still describes a real
+> file.
+>
+> The remaining ten stands are current and complete: they cover every rule draft
+> 7 defines. Regeneration waits on Jim's row code, because every `1313` in the
+> package changes when that number does — doing it before then means doing it
+> twice.
+>
+> What a regenerated package needs that this one lacks: a stand carrying **two
+> `1313` rows**, to exercise R24's first-wins rule.
 
 ```
 ZZZ_livery_format_sample/           the real thing, with the new rows
