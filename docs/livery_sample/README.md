@@ -37,9 +37,30 @@ starts are confirmed only as far as "they did not stop the airport loading". If
 you start from a gate instead, the picker should list all seventeen by name —
 that is the check we have not run.
 
-**WED 2.7.x cannot open this file.** It will say `Illegal unknown record (Line N)`
-and import nothing. That is expected, it is the unsolved half described in §7.3,
-and it is a WED problem rather than a sim one.
+**WED cannot open this file — including ours.** It stops at line 13, the first
+`1310`, with `Illegal unknown record (Line 13)`, and imports nothing. That is
+expected: reading the new rows is phase 4 on our side, gated on the row-code
+decision. It is the unsolved half described in §7.3, and it is a WED problem
+rather than a sim one.
+
+To open the sample in **any** WED, use `ZZLI_stripped_for_old_WED.apt.dat` in
+this folder — the same 17 stands with rows 1310-1314 removed. That file is also
+a working demonstration of §7.3 option 1: Gateway serving an old client a
+stripped apt.dat. Nothing is lost but refinements the old client could not have
+used.
+
+### A mistake worth not repeating: apt.dat has no comments
+
+The first version of this package was commented for readability. **apt.dat has no
+comment syntax** — not `#`, not anything — and WED refused the file at the first
+comment line, eight lines before reaching any row this proposal defines. Zero
+lines begin with `#` in the 12.3-million-line Global Airports apt.dat; the format
+simply does not have the concept.
+
+X-Plane loaded the commented file **without complaint**, which is why the mistake
+survived a successful sim test. That is §7.2 working as documented — the sim
+ignores what it does not recognise, comments included — and a good reminder that
+a silent sim load does not mean a well-formed file. It is now **R19**.
 
 ## What each stand demonstrates
 
