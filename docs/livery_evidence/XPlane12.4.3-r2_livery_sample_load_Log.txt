@@ -1,0 +1,52 @@
+Evidence: the docs/livery_sample/ package loaded by a SECOND X-Plane build.
+Captured 2026-09-16. Extends the 12.4.4 tolerance test to the release lane.
+
+BUILD
+Log.txt for X-Plane 12.4.3-r2-15ff1e4d (build 124311 Intel 64-bit, Vulkan d50c1d1e582274be2ba7099464743271b8900da8)
+
+SCENERY PACK PICKED UP
+162: 23 Custom Scenery/ZZZ_livery_format_sample/
+
+FLIGHT INITIALISED AT THE SAMPLE AIRPORT
+600:0:05:14.351 I/FLT: Init dat_p0 type:'runway_start' apt:ZZLI rwy:09 final_distance:0.000000nm tow_type:none tow_plane: 
+630:0:05:14.351 I/SCN: Loading sim objects for airport ZZLI
+
+EVERY APT DIAGNOSTIC IN THE WHOLE RUN (28 lines)
+-- none of them names ZZLI, our file, or rows 1310-1314 --
+192:0:00:00.000 W/APT: Unknown key 'altimeter_setting' for '[H] Uniklinik Frankfurt a.M.' in Global Scenery/Global Airports/Earth nav data/apt.dat on line 434191.
+193:0:00:00.000 E/APT: The airport ETOU (Wiesbaden Erbenheim AAF) has lost some controllers due to bad frequencies.  Each controller needs at least one frequency in the range of 118.00 to 136.990 mhz.
+194:0:00:00.000 E/APT: The airport ETHB (Bueckeburg AB) has lost some controllers due to bad frequencies.  Each controller needs at least one frequency in the range of 118.00 to 136.990 mhz.
+195:0:00:00.000 E/APT: The airport EEEI (Ämari AB) has lost some controllers due to bad frequencies.  Each controller needs at least one frequency in the range of 118.00 to 136.990 mhz.
+196:0:00:00.000 E/APT: The airport EBCV (Chievres Air Base) has lost some controllers due to bad frequencies.  Each controller needs at least one frequency in the range of 118.00 to 136.990 mhz.
+197:0:00:00.000 E/APT: The airport EHLW (Leeuwarden) has lost some controllers due to bad frequencies.  Each controller needs at least one frequency in the range of 118.00 to 136.990 mhz.
+199:0:00:00.000 E/APT: The airport KPSM (PORTSMOUTH INTL AT PEASE) has lost some controllers due to bad frequencies.  Each controller needs at least one frequency in the range of 118.00 to 136.990 mhz.
+200:0:00:00.000 E/APT: The airport KAGC (Allegheny Co) has lost some controllers due to bad frequencies.  Each controller needs at least one frequency in the range of 118.00 to 136.990 mhz.
+202:0:00:00.000 E/APT: The airport KTRI (Tri Cities Rgnl Tn Va) has lost some controllers due to bad frequencies.  Each controller needs at least one frequency in the range of 118.00 to 136.990 mhz.
+203:0:00:00.000 E/APT: The airport LIED (Decimomannu) has lost some controllers due to bad frequencies.  Each controller needs at least one frequency in the range of 118.00 to 136.990 mhz.
+204:0:00:00.000 E/APT: The airport LERT (Cadiz Rota) has lost some controllers due to bad frequencies.  Each controller needs at least one frequency in the range of 118.00 to 136.990 mhz.
+205:0:00:00.000 W/APT: Unknown key 'altimeter_setting' for 'Washington Dulles Intl' in Global Scenery/Global Airports/Earth nav data/apt.dat on line 6737874.
+206:0:00:00.000 E/APT: The airport XLT0003 (Cukurova) has lost some controllers due to bad frequencies.  Each controller needs at least one frequency in the range of 118.00 to 136.990 mhz.
+207:0:00:00.000 E/APT: The airport KAFW (Fort Worth Alliance) has lost some controllers due to bad frequencies.  Each controller needs at least one frequency in the range of 118.00 to 136.990 mhz.
+208:0:00:00.000 E/APT: The airport LCPH (Pafos Intl) has lost some controllers due to bad frequencies.  Each controller needs at least one frequency in the range of 118.00 to 136.990 mhz.
+209:0:00:00.000 E/APT: The airport RJOP ([H] Komatsushima AB) has lost some controllers due to bad frequencies.  Each controller needs at least one frequency in the range of 118.00 to 136.990 mhz.
+210:0:00:00.000 E/APT: The airport RCKH (Kaohsiung Intl) has lost some controllers due to bad frequencies.  Each controller needs at least one frequency in the range of 118.00 to 136.990 mhz.
+211:0:00:00.000 E/APT: The airport RCFN (Taitung Fongnian) has lost some controllers due to bad frequencies.  Each controller needs at least one frequency in the range of 118.00 to 136.990 mhz.
+212:0:00:00.000 E/APT: The airport OEMA (Prince Mohammad bin Abdulaziz) has lost some controllers due to bad frequencies.  Each controller needs at least one frequency in the range of 118.00 to 136.990 mhz.
+213:0:00:00.000 E/APT: The airport OEDF (King Fahd Intl) has lost some controllers due to bad frequencies.  Each controller needs at least one frequency in the range of 118.00 to 136.990 mhz.
+214:0:00:00.000 W/APT: WARNING: airport Hubbard (ID TA49) overrides code 25TX but it has already been overridden by Chennault Airfield (ID XK00BR)
+215:0:00:00.000 W/APT: WARNING: airport Standard Field (ID 1M6) overrides code 5KY4 but it has already been overridden by Muhlenberg Co (ID M21)
+216:0:00:00.000 W/APT: WARNING: airport Stony Creek (ID XY000M) overrides code AU999 but it has already been overridden by Bunurong Field (ID XY000G)
+217:0:00:00.000 W/APT: WARNING: airport Washington Island (ID XK2P2) overrides code WI47 but it has already been overridden by Timberline (ID XKWI47)
+218:0:00:00.000 W/APT: WARNING: airport [H] Cape Decision C. G. (ID PACE) overrides code CDE but it has already been overridden by Caledonia (ID XMP0008)
+219:0:00:00.000 W/APT: WARNING: airport [H] Grace Hospital Emergency Medical (ID 5NC3) overrides code BQ1 but it has already been overridden by Gilliam-McConnell (ID XK002J)
+220:0:00:00.000 W/APT: WARNING: airport [H] Mays (ID OH71) overrides code 6CM but it has already been overridden by Chapman Memorial Field (ID 00I)
+221:0:00:00.000 W/APT: WARNING: airport [X] Stockton Muni (ID SN07) overrides code 07S but it has already been overridden by Beaumont Hotel (ID 7K9)
+
+CONTROL: the parser DOES report unrecognised content, with file and line.
+It reported an unknown METADATA KEY in Global Airports, and said nothing
+about our four unknown ROW CODES or the deliberate 1314 row:
+192:0:00:00.000 W/APT: Unknown key 'altimeter_setting' for '[H] Uniklinik Frankfurt a.M.' in Global Scenery/Global Airports/Earth nav data/apt.dat on line 434191.
+205:0:00:00.000 W/APT: Unknown key 'altimeter_setting' for 'Washington Dulles Intl' in Global Scenery/Global Airports/Earth nav data/apt.dat on line 6737874.
+
+SCENERY PACKAGE LOAD FAILURES
+(none)

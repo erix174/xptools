@@ -29,9 +29,14 @@ importer. This is the only one blocking us.
 ### 2. Do we bump the apt.dat version — your call, no wrong answer
 
 We assumed a bump was forced. **It is not.** We tested it rather than asking
-you: X-Plane 12.4.4 ignores unknown row codes *and* accepts a version number
-that does not exist. So the new rows can ship in a `1200` file and every
-existing sim keeps working. Evidence: `docs/livery_evidence/`.
+you, on two builds — 12.4.4 in the beta lane and 12.4.3-r2 in the release lane.
+Both ignore unknown row codes *and* accept a version number that does not exist.
+So the new rows can ship in a `1200` file and every existing sim keeps working.
+
+The sample package (below) is the proof you can repeat in five minutes: it is a
+`1200` file carrying all four new rows, it starts a flight, and the sim says
+nothing — in a run where it *did* complain about an unknown metadata key
+elsewhere. Evidence: `docs/livery_evidence/`.
 
 So a bump is now a question about *signalling*, not compatibility. Our
 recommendation: **don't bump.** It buys nothing and costs the Gateway a
@@ -52,6 +57,33 @@ Three ways out: Gateway strips the new rows for old clients; a 2.7.x patch that
 skips unknown rows; or accept that 2.8-era scenery needs 2.8-era WED. We lean
 to the third with the first as a safety net, but it is a Gateway policy call and
 we are not making it for you.
+
+---
+
+## Something to play with first
+
+`docs/livery_sample/ZZZ_livery_format_sample/` — copy it into `Custom Scenery/`.
+No DSF, no objects, airport data only.
+
+Seventeen stands in a line at a fictional **ZZLI** (flat western Kansas), each
+demonstrating exactly one thing and **named so you can read it off the ground**:
+`01-CONTROL`, `04-ALL-ZERO`, `14-DANGLING-REF`, and so on. Stands 01–10 are what
+WED will emit; 11–16 are deliberately broken and must all end up behaving
+identically to `01-CONTROL`; 17 is well-formed but self-contradictory.
+
+`docs/livery_sample/README.md` has a table of every stand and its expected
+result, so you can check an implementation against it line by line.
+
+Two stands are worth looking at before anything else:
+
+- **`05-CLASS-F`** asks for class F. **No F-class livery exists anywhere in the
+  library**, so it is permanently empty — a data gap, not a format error.
+- **`06-UNFILLABLE`** lists only BAW and asks for class D. BAW has liveries at C
+  and E and **none at D**. This is the 17.2% case, live. WED will refuse to
+  export it.
+
+It already runs: we loaded it in 12.4.3-r2 and started a flight there, with no
+complaint from the sim.
 
 ---
 

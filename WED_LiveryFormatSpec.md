@@ -629,11 +629,51 @@ reading `1301` and ignoring the rest — exactly the degradation the format is
 built around. A version bump becomes a choice about signalling intent rather than
 a compatibility requirement.
 
-**What this does NOT establish.** We tested **one current build**. Whether X-Plane
-11, or an early 12, is equally tolerant is unknown, and that tolerance may have
-been added at some point. If Gateway has to serve builds older than 12.4, that
-needs checking against whichever is the real floor — a question about release
-support policy more than about the format.
+### 7.2b Repeated on a second build, with the real sample file
+
+The test above used four minimal synthetic packages. The sample package in
+`docs/livery_sample/` — seventeen stands, all four new row codes, a deliberate
+`1314`, and every malformed vector from §5.2 — was then loaded by a **different
+build in the release lane: X-Plane 12.4.3-r2 (build 124311)**. Log:
+`docs/livery_evidence/XPlane12.4.3-r2_livery_sample_load_Log.txt`.
+
+```
+I/FLT: Init dat_p0 type:'runway_start' apt:ZZLI rwy:09 ...
+I/SCN: Loading sim objects for airport ZZLI
+```
+
+A flight started at the airport. Across the entire run there were 28 `APT`
+diagnostics and **not one names ZZLI, our file, or any row we added.** All 28 are
+pre-existing Global Airports issues — bad ATC frequencies and duplicate airport
+codes.
+
+The control is stronger here than in 7.2, because it is in the same run rather
+than a separate package: X-Plane reported
+
+```
+W/APT: Unknown key 'altimeter_setting' for 'Washington Dulles Intl' in
+       Global Scenery/Global Airports/Earth nav data/apt.dat on line 6737874.
+```
+
+So in **this very run** the parser found an unrecognised *metadata key*
+objectionable enough to name, with file and line — and said nothing about four
+unrecognised *row codes* plus a `1314` that does not exist. The silence is
+demonstrably the parser's judgement, not the parser being asleep.
+
+**What this does NOT establish.** Two builds, both 12.4.x
+(124406 in the beta lane, 124311 in the release lane). Whether X-Plane 11, or an
+early 12, is equally tolerant is still unknown, and that tolerance may have been
+added at some point. If Gateway has to serve builds older than 12.4, that needs
+checking against whichever is the real floor — a question about release support
+policy more than about the format.
+
+Also not established: that the seventeen ramp starts appear correctly in the gate
+picker. The flight above was started from the runway, so rows `1300`/`1301` are
+confirmed only as far as "they did not prevent the airport loading". The
+`Loading sim objects for airport ZZLI` line is followed by 97 ms of preloading in
+a package that contains no DSF and no objects of its own, which is consistent
+with static aircraft spawning at those stands — but that is circumstantial and is
+not claimed as proof.
 
 ### 7.3 The half that is not solved: an old WED
 

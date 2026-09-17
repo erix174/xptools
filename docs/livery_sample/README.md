@@ -26,6 +26,17 @@ seventeen stands park aircraft from `1301` exactly as they do now. That is
 §7.2 of the spec, and this file lets you confirm it on your own machine instead of
 taking our word for it.
 
+**Verified, not assumed.** This package was loaded by X-Plane **12.4.3-r2 (build
+124311)** and a flight started at ZZLI. Across the whole run the sim produced 28
+`APT` diagnostics and **none of them names ZZLI, this file, or any row here** — in
+a run where it *did* name an unknown metadata key in Global Airports, with file
+and line. Log: `docs/livery_evidence/XPlane12.4.3-r2_livery_sample_load_Log.txt`.
+
+One honest gap: that flight was started from the runway, so the seventeen ramp
+starts are confirmed only as far as "they did not stop the airport loading". If
+you start from a gate instead, the picker should list all seventeen by name —
+that is the check we have not run.
+
 **WED 2.7.x cannot open this file.** It will say `Illegal unknown record (Line N)`
 and import nothing. That is expected, it is the unsolved half described in §7.3,
 and it is a WED problem rather than a sim one.
