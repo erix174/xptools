@@ -1,9 +1,14 @@
 # apt.dat: per-stand fleet and livery data — proposed format
 
 For Jim K. — the X-Plane side of WED's ramp livery picker.
-Draft 2, 2026-09-16. Targets WED 2.8.0.
+Draft 3, 2026-09-16. Targets WED 2.8.0.
 
-Draft 2 adds the tolerance test result (the sim ignores the new rows - measured, not
+Draft 3 makes the biggest change so far: **selection happens in three stages, class
+first**, and `1313` carries six explicit integer weights rather than a list. That is a
+change in ordering, not only in data - see "Selection" below for why flattening it lets
+the size of the asset library override the author.
+
+Draft 2 added the tolerance test result (the sim ignores the new rows - measured, not
 assumed), the half of compatibility that is not solved (an older WED cannot open these
 files at all), the constraints a writer must hold to, and a note on which X-Plane build
 an index describes.
@@ -118,7 +123,7 @@ cannot be undone by tooling.
 1310  <policy>  <airline> [<airline> …]        define a policy's airline set
 1311  <policy>                                 a stand uses this policy
 1312  <policy>  -<airline>:<type> […]          exclusions
-1313  <policy>  <class>=<weight> […]           ICAO class weights, relative integers
+1313  <policy>  <wA> <wB> <wC> <wD> <wE> <wF>   class weights, always six integers
 ```
 
 `1302` is taken (metadata), so `1310`–`1313` are the first free block. Final numbers
@@ -130,7 +135,7 @@ are yours to assign.
 # airport block; definitions are valid anywhere within it
 1310 g_a3f91c  ual dal baw aal afr klm dlh
 1312 g_a3f91c  -dal:B772 -baw:A35K
-1313 g_a3f91c  C=3 E=1
+1313 g_a3f91c  0 0 3 0 1 0
 
 1300 51.157304 -0.171800 347.5 gate heavy|jets Gate 42
 1301 E airline ual dal baw aal afr klm dlh
@@ -149,19 +154,83 @@ The policy name `-` means "this stand only". Same syntax, no definition, no refe
 1300 51.147042 -0.174540 -128.8 gate heavy Cargo 1
 1301 E cargo fdx ups
 1312 - -fdx:B763
-1313 - E=1
+1313 -  0 0 0 0 1 0
 ```
 
 The inline form is a strict subset of the referenced form, so a writer can emit only
 inline rows and add grouping later with no reader change.
 
-### Weights
+### Class weights — `1313`
 
-Relative integers, not percentages: `C=3 E=1` means C three times as often as C+E's
-total of four. No sum-to-100 rule, no float rounding, no validation pass. A class
-absent from the list is **not** weight zero — it falls back to `1301`'s single letter,
-so a model in a class the author never mentioned still spawns. `C=0` is an explicit
-ban and is how an author says "never D here", which is a case they have asked for.
+**Always six values, A through F, in that order.** Not a list of the classes the author
+mentioned:
+
+```
+1313 g_a3f91c  0 1 1 8 0 0
+                A B C D E F     ->  D 80%, B and C 10% each, nothing else
+```
+
+- **No `1313` row** means today's behaviour: the `1301` letter and whatever the sim
+  currently does with it.
+- **A `1313` row is the whole truth.** Six numbers, nothing implied.
+- **All zero** is legal and means no static aircraft spawns here — the same thing
+  `ramp_operation_none` says today.
+
+Writing all six rather than only the non-zero ones removes an entire class of ambiguity
+("is an absent class zero, or unspecified?"), gives the row a fixed shape that is easy
+to validate and hard to tamper with, and costs 12 characters. Across every policy in the
+global apt.dat that is about 175 KB.
+
+**Relative integers, not decimals.** `0 1 1 8 0 0` is the same distribution as
+`0 0.1 0.1 0.8 0 0`, and the editor shows the author percentages either way — but the
+file must not contain a decimal point. WED calls `setlocale(LC_ALL, "C")` only inside
+`#if LIN` (`WED_AppMain.cpp:231`), and that single call is the only thing standing
+between FLTK and a comma decimal separator in everything `sscanf` reads and every `%f`
+written. Integers remove the hazard rather than depending on that call. They also need
+no sum-to-one validation, and adding or removing a class does not force the other five
+to be recomputed.
+
+---
+
+## Selection: three stages, in this order
+
+This is the part that matters most for the sim side, and it is a change in *ordering*,
+not just in data.
+
+```
+1.  pick a CLASS      weighted by the six values in 1313
+2.  pick an AIRLINE   uniformly among those in 1301 that have a livery in that class
+3.  pick a LIVERY     uniformly among that airline's liveries in that class,
+                      minus 1312's exclusions, honouring EXPORT_RATIO if present
+```
+
+If a stage has no candidates, nothing parks at that stand this time.
+
+### Why the order is the whole point
+
+Flattening this into one weighted draw over every eligible livery would let the **size of
+the asset library decide the outcome**. B738 ships 120 liveries and A359 ships 42; an
+author who sets two classes to equal probability would still get overwhelmingly 737s.
+The author's intent would be silently overridden by how much art happens to exist.
+
+The same bias repeats one level down, which is why airline is its own stage: in class C
+with `ual` (3 liveries) and `baw` (1), drawing uniformly over liveries gives United 75%.
+Listing two airlines means "both park here", not "United three times as often".
+
+**Each stage is decided by whoever should decide it.** Class is the author's, via `1313`.
+Airline is the author's, via `1301`. Only the last stage — which of United's 737s — is
+the library's, and that is exactly where `EXPORT_RATIO` already expresses Laminar's own
+"this fictional livery is rare".
+
+It also leaves room to weight airlines later (`1310` could carry `ual=3 baw=1`) without
+restructuring anything.
+
+### What this replaces
+
+Today a stand set to class F gets a cascading step-down — roughly 75% F, and of the
+remainder 75% E, and so on. It has no floor, cannot be pinned to a single class, and
+offers no control over proportions. An author who wants "this apron is Bs" has no way to
+say it. `1313` says it in six numbers.
 
 ---
 
@@ -177,12 +246,18 @@ ban and is how an author says "never D here", which is a case they have asked fo
    "must precede use" — that is broken by moving two lines, and the reader already
    buffers one airport at a time. This pins the blast radius of any corruption at one
    airport.
-4. **Soft-fail, always.** A malformed or dangling row is discarded and the stand falls
+4. **A `1313` row is complete.** The six values are the entire class distribution; there
+   is no "unspecified" state and no fallback to the `1301` letter. A stand with no
+   `1313` row keeps today's behaviour. This differs from `1312`, which is subtractive
+   and open-ended on purpose - class is a closed vocabulary of six that the author sees
+   in full, while aircraft types are open-ended and an author cannot take a position on
+   one that does not exist yet.
+5. **Soft-fail, always.** A malformed or dangling row is discarded and the stand falls
    back to `1301`. It must never fail the file. Note this differs from the rest of
    `AptIO.cpp`, where a bad row sets `ok = "Illegal …"` and aborts the whole load
    (`AptIO.cpp:1208`, `:1217`) — for these rows that behaviour would let one
    hand-edited exclusion make an apt.dat unopenable.
-5. **Grouping is re-derived, never trusted.** WED copies a referenced policy into each
+6. **Grouping is re-derived, never trusted.** WED copies a referenced policy into each
    stand on import and re-groups by content hash on export, so a hand-forged grouping is
    silently corrected by one round-trip. Policy names are content-derived
    (`g_a3f91c`), which also keeps definitions stable in diffs when their content has
