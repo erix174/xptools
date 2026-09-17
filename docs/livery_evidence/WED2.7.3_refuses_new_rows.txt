@@ -1,0 +1,16 @@
+Evidence: WED refuses an apt.dat containing rows 1310-1313.
+Captured 2026-09-16 from a WED built at this branch (2.7.3-r1, MSC 1944).
+This is spec section 7.3, measured rather than inferred from the source.
+
+Unable to read apt.dat file
+'D:\SteamLibrary\steamapps\common\X-Plane 12\Custom Scenery\ZZZ_livery_format_sample\Earth nav data\apt.dat':
+Illegal unknown record (Line 13)
+
+Line 13 of that file is:
+1310 g_a3f91c  ual dal baw aal afr
+
+The same X-Plane install loads the same file silently (see the 12.4.3-r2 log
+alongside this one). Sim tolerant, editor not - which is the whole of 7.3.
+
+Earlier run, before the comment lines were removed, failed at line 14 - a
+comment, not a proposed row. apt.dat has no comment syntax; see R19.

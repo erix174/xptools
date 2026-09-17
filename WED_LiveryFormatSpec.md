@@ -691,17 +691,26 @@ not claimed as proof.
 ### 7.3 The half that is not solved: an old WED
 
 The same test applied to WED's own reader gives the opposite answer, and this is
-the part still needing a decision.
-
-A 2.7.x WED opening an apt.dat containing `1310`–`1313` falls through
-`AptIO.cpp:1188-1209` to `ok = "Illegal unknown record"`, and
-`WED_AptIE.cpp:1162-1167` turns that into
+the part still needing a decision. **Measured, not inferred** — we opened the
+sample package in a WED built from this very branch:
 
 ```
-Unable to read apt.dat file '<path>': Illegal unknown record (Line N)
+Unable to read apt.dat file
+'D:\...\Custom Scenery\ZZZ_livery_format_sample\Earth nav datapt.dat':
+Illegal unknown record (Line 13)
 ```
 
-and imports **nothing**. Not a degraded airport — no airport.
+Line 13 is the file's first `1310`. WED imports **nothing** — not a degraded
+airport, no airport.
+
+The path is `AptIO.cpp:1188-1209` falling through to
+`ok = "Illegal unknown record"`, which `WED_AptIE.cpp:1162-1167` turns into the
+message above.
+
+Note *which* WED that was: the one carrying all of this feature's work. Refusing
+the file is not a property of old builds — it is every WED that has not yet
+implemented these row codes, which today is all of them. That is why the decision
+below is about distribution rather than about waiting for a release.
 
 | | opening 2.8-era scenery |
 |---|---|

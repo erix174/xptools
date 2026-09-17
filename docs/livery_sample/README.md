@@ -43,8 +43,11 @@ expected: reading the new rows is phase 4 on our side, gated on the row-code
 decision. It is the unsolved half described in §7.3, and it is a WED problem
 rather than a sim one.
 
-To open the sample in **any** WED, use `ZZLI_stripped_for_old_WED.apt.dat` in
-this folder — the same 17 stands with rows 1310-1314 removed. That file is also
+To open the sample in **any** WED, use the companion package
+**`ZZZ_livery_format_sample_stripped/`** — drop it into `Custom Scenery/` exactly
+like the other one and it appears in WED's package list. Same 17 stands, rows
+1310-1314 removed. (The same content is also here as a loose file,
+`ZZLI_stripped_for_old_WED.apt.dat`, if you would rather import it directly.) That file is also
 a working demonstration of §7.3 option 1: Gateway serving an old client a
 stripped apt.dat. Nothing is lost but refinements the old client could not have
 used.
