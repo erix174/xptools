@@ -50,7 +50,28 @@ public:
 	void	GetEquipment(set<int>& out_eq) const;
 	int		GetRampOperationType() const;
 	
+	// ---- per-class spawn weights (apt.dat row 1313) ----
+	// Six relative integers, A..F. Stored as one space-separated string for the
+	// same reason `airlines` is: it IS the apt.dat payload, and the field next
+	// door already works this way.
+	//
+	// The encoding also carries a distinction the format requires and six
+	// separate integer properties could not express. An EMPTY string means "this
+	// stand has no 1313 row", which keeps today's step-down behaviour (R17);
+	// "0 0 0 0 0 0" means the author deliberately said nothing parks here (§4.2).
+	// Six int properties defaulting to zero would make those the same value.
+	//
+	// GetClassWeights returns false for absent AND for malformed, which is R5's
+	// drop-the-row-whole rule expressed in one place.
+	bool	GetClassWeights(int out_w[6]) const;
+	void	SetClassWeights(const int w[6]);
+	void	ClearClassWeights(void);
+
 	static string CorrectAirlinesString(const string &a);
+	// Normalises to six integers separated by single spaces, or returns "" if the
+	// input is not exactly six values in 0..1000 (R11). Never throws, never
+	// partially accepts.
+	static string CorrectWeightsString(const string &w);
 
 	void	Import(const AptGate_t& x, void (* print_func)(void *, const char *, ...), void * ref);
 	void	Export(		 AptGate_t& x) const;
@@ -73,6 +94,7 @@ private:
 	WED_PropIntEnum			width_min;
 	WED_PropIntEnum			ramp_op_type;
 	WED_PropStringText		airlines;
+	WED_PropStringText		class_weights;	// "" = no 1313 row; see GetClassWeights()
 
 	bool					mLegacyWidthOnly;	// true while parsing an XML element that had no width_min attribute
 

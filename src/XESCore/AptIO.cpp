@@ -788,6 +788,77 @@ string	ReadAptFileMem(const char * inBegin, const char * inEnd, AptVector& outAp
 				}
 			}
 			break;
+		case apt_startup_loc_weights:
+			// 1313 w w w w w w - six relative spawn weights, classes A..F.
+			//
+			// NO version gate, unlike 1301 above. X-Plane ignores both unknown
+			// rows and unrecognised version numbers (measured, spec section 7.2),
+			// so these can live in a 1200 file and old sims keep working off 1301
+			// alone - which is the degradation the whole format is built around.
+			// Gating here would only stop WED reading files the sim is happy with.
+			//
+			// Every failure below is silent and non-fatal (R4). This row is a
+			// refinement of a stand that is already fully described without it,
+			// and one bad weight vector must never make an apt.dat unopenable.
+			{
+				if(outApts.empty() || outApts.back().gates.empty())
+					break;						// R20: nothing to attach to - discard
+
+				AptGate_t & tmp_gate = outApts.back().gates.back();
+
+				// R24: the FIRST row on a stand wins. Not merged, not overwritten,
+				// and not compared for plausibility - two conflicting answers mean
+				// only the author knows which was meant, and a reader that quietly
+				// picks the better-looking one turns their mistake into nobody's.
+				// Note 1301 rejects a repeat outright; R4 forbids that here, so
+				// first-wins is the only rule satisfying both.
+				if(!tmp_gate.class_weights.empty())
+					break;
+
+				// Read the tokens as STRINGS, not with 'i'. FormatScan's integer
+				// conversion is atoi, which happily reads "1.5" as 1 and "-5" as
+				// -5 - both of which the spec requires us to reject (V10, V12).
+				// Eight targets, so a seventh weight shows up as a count of 8
+				// rather than being silently ignored.
+				string tok[8];
+				int got = TextScanner_FormatScan(s, "TTTTTTTT",
+								&tok[0], &tok[1], &tok[2], &tok[3],
+								&tok[4], &tok[5], &tok[6], &tok[7]);
+
+				// R5: exactly six values, or nothing at all - never partially
+				// applied. tok[0] is the row code, so seven tokens is right and
+				// anything else is malformed. All-zero is a legal, meaningful
+				// value, which is precisely why a truncated row must not be read
+				// as zeros: that would silently empty the stand instead of
+				// falling back to today's behaviour.
+				if(got != 7)
+					break;
+
+				vector<int> w;
+				w.reserve(6);
+				for(int i = 1; i <= 6; ++i)
+				{
+					const string & t = tok[i];
+					if(t.empty() || t.size() > 4) { w.clear(); break; }
+
+					int acc = 0;
+					bool digits_only = true;
+					for(size_t c = 0; c < t.size(); ++c)
+					{
+						if(t[c] < '0' || t[c] > '9') { digits_only = false; break; }
+						acc = acc * 10 + (t[c] - '0');
+					}
+					// Neither '-' nor '.' is a digit, so this one test rejects
+					// both the negative and the decimal cases without either
+					// needing to be named.
+					if(!digits_only || acc > 1000) { w.clear(); break; }	// R11
+					w.push_back(acc);
+				}
+
+				if(w.size() == 6)
+					tmp_gate.class_weights.swap(w);
+			}
+			break;
 		case apt_meta_data:
 			{
 				int tokens = TextScanner_FormatScan(s,"i|",
@@ -1206,7 +1277,27 @@ string	ReadAptFileMem(const char * inBegin, const char * inEnd, AptVector& outAp
 					outApts.back().atc.back().atc_type -= apt_freq_awos_1k-apt_freq_awos;    // adjust new style codes to internally use "old" types - to match the enum definitions
 				}
 			} else
-				ok = "Illegal unknown record";
+			{
+				// An unrecognised row code is IGNORED, not an error.
+				//
+				// This used to be `ok = "Illegal unknown record"`, which aborts
+				// the entire file - so a single row code WED had not been taught
+				// meant importing nothing at all, not a degraded airport. That is
+				// the defect recorded in section 7.3 of WED_LiveryFormatSpec.md:
+				// a WED built from the branch that DEFINES row 1313 still refused
+				// its own sample package, at the first new row, because the
+				// sample also carried rows from an earlier draft.
+				//
+				// X-Plane has always behaved this way - measured on two builds,
+				// section 7.2 - and matching it means no row code added after
+				// this release can ever make this version refuse a file again.
+				//
+				// The cost, accepted deliberately: a mistyped row code in a
+				// hand-edited file is now skipped in silence rather than
+				// reported. AptIO has no non-fatal diagnostic channel to report
+				// it through, and adding one means changing a parser shared with
+				// MeshTool, DSF2Text and RenderFarm.
+			}
 			break;
 		}
 		TextScanner_Next(s);
@@ -1306,6 +1397,11 @@ bool	WriteAptFileProcs(int (* fprintf)(void * fi, const char * fmt, ...), void *
 
 	bool has_atc = (version >= 1000);
 	bool has_atc2 = (version >= 1050);
+	// Row 1313 rides in a 1200 file - the sim ignores rows it does not know, so
+	// no version bump is needed for compatibility (spec §7.2, and §9 recommends
+	// against one). The gate exists so an export deliberately aimed at an older
+	// X-Plane still writes 1301 alone.
+	bool has_class_weights = (version >= 1200);
 	bool has_atc3 = (version >= 1100);
 
 	for (AptVector::const_iterator apt = inApts.begin(); apt != inApts.end(); ++apt)
@@ -1474,8 +1570,26 @@ bool	WriteAptFileProcs(int (* fprintf)(void * fi, const char * fmt, ...), void *
 					{
 						fprintf(fi,"%s", gate->airlines.c_str());
 					}
-				
+
 					fputs(CRLF, (FILE *) fi);//Row is over
+					//---------------------------------------------------------
+
+					//--1313 per-class spawn weights---------------------------
+					//Ex: 1313 0 0 0 3 7 0   <- 30% class D, 70% class E
+					//
+					// Gated separately from has_atc2, and higher: an export
+					// aimed at an older X-Plane writes 1301 only, which is how
+					// that sim still gets a usable file. An empty vector means
+					// the stand has no weights and the row is simply absent -
+					// which is not the same as writing six zeros, and the two
+					// must not be confused here of all places (R17 vs §4.2).
+					if(has_class_weights && gate->class_weights.size() == 6)
+					{
+						fprintf(fi, "%d", apt_startup_loc_weights);
+						for(int i = 0; i < 6; ++i)
+							fprintf(fi, " %d", gate->class_weights[i]);
+						fputs(CRLF, (FILE *) fi);
+					}
 					//---------------------------------------------------------
 				}
 			}

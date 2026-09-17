@@ -143,8 +143,14 @@ private:
 	struct Coverage {
 		bool	index_ready;		// false => index missing/unreadable. MUST be shown as
 									//   such and never as "0%" - see spec §4.5 and §6.4.
+		std::string	index_version;	// what the numbers were resolved against (§4.5)
 		int		stands;				// stands examined
 		int		stands_empty;		// ...of which park nothing, over their own range
+		// Set when the single selected stand carries a 1313 row. Then p_occupied
+		// is the real §4.5 quantity - 1 - P(empty), weighted by the author's own
+		// class distribution - rather than the flat-range approximation.
+		bool	weighted;
+		float	p_occupied;			// 0..1, only meaningful when `weighted`
 		// Single-stand detail. Meaningless (and not drawn) when stands != 1.
 		int		classes_in_range;
 		int		classes_filled;

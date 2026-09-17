@@ -97,6 +97,11 @@ enum {
 
 	apt_startup_loc_new	= 1300,			// 1300 lat lon heading misc|gate|tie_down|hangar traffic name
 	apt_startup_loc_extended = 1301,	// 1301 size opertaions_type airline_list
+	// 1313 w w w w w w - per-class spawn weights, six relative integers A..F.
+	// PROPOSED, not allocated: Jim K. has not assigned a code yet, and changing
+	// this one line is the whole of adopting whatever he picks. See section 9 of
+	// WED_LiveryFormatSpec.md.
+	apt_startup_loc_weights = 1313,
 	apt_meta_data = 1302,				// 1302 <key> <value>
 
 	apt_truck_parking	= 1400,			// 1400 lat lon heading type cars name
@@ -483,6 +488,11 @@ struct	AptGate_t {
 	string		name;
 	int			ramp_op_type;     // ramp operations type
 	string		airlines;
+	// Row 1313: six relative spawn weights, classes A..F. EMPTY means the stand
+	// carried no such row, which is NOT the same as all-zero - absent keeps
+	// today's step-down behaviour (R17), all-zero means the author said nothing
+	// parks here (spec §4.2).
+	vector<int>	class_weights;
 };
 typedef vector<AptGate_t>		AptGateVector;
 

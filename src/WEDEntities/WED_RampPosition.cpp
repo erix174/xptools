@@ -39,6 +39,7 @@ WED_RampPosition::WED_RampPosition(WED_Archive * a, int i) : WED_GISPoint_Headin
 	width_min	(this,PROP_Name(".Size Min",             XML_Name("ramp_start","width_min")), ATCIcaoWidth, width_A),
 	ramp_op_type(this,PROP_Name(".Ramp Operation Type", XML_Name("ramp_start","ramp_op_type")), RampOperationType, ramp_operation_None),
 	airlines	(this,PROP_Name(".Airlines",            XML_Name("ramp_start","airlines")),""),
+	class_weights(this,PROP_Name(".Class Weights",      XML_Name("ramp_start","weights")),""),
 	mLegacyWidthOnly(false)
 {
 }
@@ -73,6 +74,19 @@ void	WED_RampPosition::Import(const AptGate_t& x, void (* print_func)(void *, co
 		width = width_E;			// was "ramp_type = width_E" - a size assigned to the TYPE
 	}
 
+	// Weights arrive already validated by AptIO - it enforces exactly six values
+	// in range and drops the row whole otherwise (R5), so an empty vector here
+	// means either "no 1313 row" or "one that did not parse", which R5 makes the
+	// same thing on purpose.
+	if (x.class_weights.size() == 6)
+	{
+		int w[6];
+		for (int i = 0; i < 6; ++i) w[i] = x.class_weights[i];
+		SetClassWeights(w);
+	}
+	else
+		ClearClassWeights();
+
 	// apt.dat carries ONE size letter per ramp start (row 1301's first field), so
 	// an imported stand is a single class, not a range - min and max are equal.
 	// Without this, width_min keeps its property default of width_A and every
@@ -93,6 +107,27 @@ void	WED_RampPosition::Export(		 AptGate_t& x) const
 	x.width = ENUM_Export(width.value);
 	x.ramp_op_type = ENUM_Export(ramp_op_type.value);
 	x.airlines = WED_RampPosition::CorrectAirlinesString(airlines.value);
+
+	x.class_weights.clear();
+	int w[6];
+	if (GetClassWeights(w))
+	{
+		x.class_weights.assign(w, w + 6);
+
+		// R23: once weights exist, 1301's size letter is a DERIVED field. It is
+		// set to the highest class carrying a non-zero weight, and nothing reads
+		// it for selection any more - it survives for the two consumers that
+		// cannot see 1313, an old sim (which step-downs from it, so it should
+		// start at the largest class the author allows) and WED's own map view,
+		// which sizes the stand icon from it.
+		//
+		// Written here rather than back onto the entity on purpose: the export
+		// struct is a snapshot, and silently rewriting the author's property
+		// during a save is a different and worse thing than emitting a corrected
+		// value.
+		for (int i = 5; i >= 0; --i)
+			if (w[i] > 0) { x.width = i; break; }
+	}
 }
 
 void	WED_RampPosition::SetType(int	rt)
@@ -223,6 +258,83 @@ void	WED_RampPosition::SetAirlines(const string &a)
 	// the first click then wrote the code a second time in lower case
 	// ("aal dal aal"), which round-tripped straight back out to apt.dat.
 	airlines = CorrectAirlinesString(a);
+}
+
+// ---------------------------------------------------------------------------
+// per-class spawn weights (apt.dat row 1313)
+// ---------------------------------------------------------------------------
+
+// R5 and R11 in one function: exactly six values, each 0..1000, or nothing.
+//
+// There is deliberately no partial acceptance. A weight vector means "here is
+// the whole distribution", so keeping five of six numbers changes what the
+// survivors mean - and because all-zero is legal and means "nothing parks here",
+// a truncated row read as zeros would silently empty the stand instead of
+// falling back to today's behaviour. Returning "" puts it back to R17's floor,
+// which is the one place soft-fail has to be explicit about what it falls back
+// TO rather than merely that it fell back.
+string	WED_RampPosition::CorrectWeightsString(const string &w)
+{
+	int    v[6];
+	size_t n = 0;
+	size_t i = 0;
+
+	while (i < w.size())
+	{
+		while (i < w.size() && isspace((unsigned char) w[i])) ++i;
+		if (i >= w.size()) break;
+
+		if (n >= 6) return string();				// a seventh value - drop whole
+
+		size_t start = i;
+		int    acc   = 0;
+		while (i < w.size() && isdigit((unsigned char) w[i]))
+		{
+			acc = acc * 10 + (w[i] - '0');
+			if (acc > 1000) return string();		// R11 ceiling, and it also caps overflow
+			++i;
+		}
+
+		// Anything that is not a run of digits - a sign, a decimal point, a
+		// stray letter - makes the row malformed. Note this is what rejects
+		// "-5" and "1.5" without either needing a special case: the '-' and the
+		// '.' simply are not digits, so the token does not end at whitespace.
+		if (i == start) return string();
+		if (i < w.size() && !isspace((unsigned char) w[i])) return string();
+
+		v[n++] = acc;
+	}
+
+	if (n != 6) return string();					// five, or none, or seven
+
+	char buf[64];
+	snprintf(buf, sizeof(buf), "%d %d %d %d %d %d", v[0], v[1], v[2], v[3], v[4], v[5]);
+	return string(buf);
+}
+
+bool	WED_RampPosition::GetClassWeights(int out_w[6]) const
+{
+	const string s = CorrectWeightsString(class_weights.value);
+	if (s.empty()) return false;
+
+	// Re-scanning the normalised form rather than the raw one: it is known to be
+	// six plain integers, so this cannot fail in a way the caller has to handle.
+	int n = sscanf(s.c_str(), "%d %d %d %d %d %d",
+				   &out_w[0], &out_w[1], &out_w[2], &out_w[3], &out_w[4], &out_w[5]);
+	return n == 6;
+}
+
+void	WED_RampPosition::SetClassWeights(const int w[6])
+{
+	char buf[64];
+	snprintf(buf, sizeof(buf), "%d %d %d %d %d %d", w[0], w[1], w[2], w[3], w[4], w[5]);
+	class_weights = CorrectWeightsString(buf);
+}
+
+void	WED_RampPosition::ClearClassWeights(void)
+{
+	// Back to "no 1313 row on this stand", which is NOT the same as all-zero.
+	class_weights = string();
 }
 
 string  WED_RampPosition::GetAirlines() const

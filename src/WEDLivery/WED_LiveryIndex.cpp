@@ -30,6 +30,7 @@
 
 #include <fstream>
 #include <algorithm>
+#include <cstring>			// strncmp / strlen, for the header stamps
 
 using std::string;
 using std::vector;
@@ -38,6 +39,14 @@ using std::vector;
 // left blank so a row always has seven fields and an empty cell always means
 // missing data.
 static const char * kDefaultNote = "Default";
+
+// The ONE reserved value in an otherwise free-text, open-vocabulary column. It
+// means "never spawn this livery" (spec R25, §6.6) and it is the only note any
+// reader interprets rather than displays. Everything else in this column is a
+// caption - Peony, Mixue, Peacock, Retro - and a reader that starts validating
+// the column against a list silently deletes exactly the variants it exists to
+// carry. Compared case-sensitively, as the generator writes it.
+static const char * kObsoleteNote = "Obsolete";
 
 static string ToUpper(const string & s)
 {
@@ -77,6 +86,7 @@ static void SplitOnStars(const string & line, vector<string> & out)
 }
 
 WED_LiveryIndex::WED_LiveryIndex() :
+	mUsable(0),
 	mLoadAttempted(false),
 	mLoaded(false)
 {
@@ -94,6 +104,7 @@ bool	WED_LiveryIndex::EnsureLoaded(const string & index_path)
 		mEntries.clear();
 		mByAirline.clear();
 		mByKey.clear();
+		ForgetHeader();
 	}
 
 	if (mLoaded) return true;
@@ -110,6 +121,7 @@ bool	WED_LiveryIndex::EnsureLoaded(const string & index_path)
 	mEntries.clear();
 	mByAirline.clear();
 	mByKey.clear();
+	ForgetHeader();
 
 	// Rows are parsed best-effort: anything that doesn't have seven fields, or is
 	// missing the two that identify it, is skipped. A malformed row must never
@@ -124,7 +136,12 @@ bool	WED_LiveryIndex::EnsureLoaded(const string & index_path)
 
 		size_t p0 = line.find_first_not_of(" \t");
 		if (p0 == string::npos) continue;		// blank
-		if (line[p0] == '#') continue;			// comment
+		// Comments are skipped, but the four the generator writes at the top are
+		// not decoration - they say which install this index describes. §6.4 of
+		// the format spec calls an index/install mismatch the most likely way to
+		// waste a day on this feature, because its only symptom is previews
+		// quietly never appearing. Read them on the way past.
+		if (line[p0] == '#') { NoteHeaderLine(line.c_str() + p0); continue; }
 
 		SplitOnStars(line, cells);
 		if (cells.size() < 7) continue;			// not a data row
@@ -154,9 +171,23 @@ bool	WED_LiveryIndex::EnsureLoaded(const string & index_path)
 	// entries by value, so pointers taken during the parse loop would dangle on
 	// the next reallocation.
 	mEntries.swap(parsed);
+	mUsable = 0;
 	for (size_t i = 0; i < mEntries.size(); ++i)
 	{
 		const WED_LiveryIndexEntry * e = &mEntries[i];
+
+		// R25: a livery marked Obsolete must never be chosen - not at stage 2,
+		// not at stage 3, not in any count of what an operator can fill. The
+		// cleanest way to mean "as if the row were absent" is to keep it out of
+		// the lookup tables entirely: every accessor built on them inherits the
+		// rule without knowing about it, and none of them can forget it.
+		//
+		// It stays in mEntries so the count is still answerable. "298 rows, 286
+		// usable" is a diagnostic; a file that is silently shorter than its own
+		// header claims is not.
+		if (e->note == kObsoleteNote) continue;
+		++mUsable;
+
 		mByAirline[e->airline].push_back(e);
 		// First writer wins on a duplicate key. Duplicates shouldn't exist, but
 		// the resource library does ship byte-identical assets under two paths,
@@ -225,6 +256,66 @@ const WED_LiveryIndexEntry * WED_LiveryIndex::Lookup(const string & key) const
 {
 	std::unordered_map<string, const WED_LiveryIndexEntry *>::const_iterator i = mByKey.find(key);
 	return i == mByKey.end() ? NULL : i->second;
+}
+
+void	WED_LiveryIndex::ForgetHeader(void)
+{
+	mSchema.clear();
+	mDataStamp.clear();
+	mSourceBuild.clear();
+}
+
+// Reads one comment line, looking only for the stamps the generator emits:
+//
+//     # schema 1
+//     # data 20260916-r1
+//     # source X-Plane 12.4.3-r2-15ff1e4d
+//     # assets 298 liveries under apt_aircraft/
+//
+// `assets` is deliberately NOT stored. It is the generator's own count, and
+// reporting it over the rows actually parsed would state a number that disagrees
+// with what every query can see - mEntries.size() is the truth, and a file whose
+// header disagrees with its body is exactly the case worth being able to notice.
+//
+// An index carrying none of these is not an error: it reads as unversioned,
+// which is itself the signal. Every index this generator has produced carries
+// them, so one that does not came from somewhere else.
+void	WED_LiveryIndex::NoteHeaderLine(const char * line)
+{
+	const char * p = line;
+	while (*p == '#' || *p == ' ' || *p == '\t') ++p;
+
+	struct Field { const char * key; string * out; };
+	const Field kFields[] = {
+		{ "schema ", &mSchema },
+		{ "data ",   &mDataStamp },
+		{ "source ", &mSourceBuild },
+	};
+
+	for (size_t i = 0; i < sizeof(kFields)/sizeof(kFields[0]); ++i)
+	{
+		size_t n = strlen(kFields[i].key);
+		if (strncmp(p, kFields[i].key, n) != 0) continue;
+		if (!kFields[i].out->empty()) return;	// first wins; a later one is someone's prose
+		string v(p + n);
+		while (!v.empty() && (v[v.size()-1] == ' ' || v[v.size()-1] == '\t')) v.erase(v.size()-1);
+		*kFields[i].out = v;
+		return;
+	}
+}
+
+// One line for the readout, which MUST name what it resolved against (spec
+// §4.5). A probability computed from a stale index is worse than no probability,
+// because it looks authoritative.
+string	WED_LiveryIndex::DescribeVersion(void) const
+{
+	if (!mLoaded) return "not loaded";
+	if (mSourceBuild.empty() && mDataStamp.empty()) return "unversioned index";
+
+	string r = mSourceBuild;
+	if (!mDataStamp.empty())
+		r += (r.empty() ? string() : string(", ")) + "data " + mDataStamp;
+	return r;
 }
 
 string	WED_MakeLiveryKey(const string & type, const string & airline, const string & note)

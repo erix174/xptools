@@ -135,7 +135,21 @@ public:
 	const WED_LiveryIndexEntry *
 						Lookup(const std::string & key) const;
 
+	// Count() is every row parsed; UsableCount() excludes the ones marked
+	// Obsolete, which are held but never indexed (R25). They differ exactly when
+	// the library has assets it ships but no longer wants chosen, so reporting
+	// both is how "298 rows, 286 usable" stays answerable instead of the file
+	// silently appearing shorter than its own header claims.
 	size_t				Count(void) const { return mEntries.size(); }
+	size_t				UsableCount(void) const { return mUsable; }
+
+	// The stamps from the index's own header, empty when it carried none. See
+	// DescribeVersion() - the readout has to say which install its numbers came
+	// from, because §6.4's install mismatch has no other symptom.
+	const std::string &	Schema(void) const      { return mSchema; }
+	const std::string &	DataStamp(void) const   { return mDataStamp; }
+	const std::string &	SourceBuild(void) const { return mSourceBuild; }
+	std::string			DescribeVersion(void) const;
 
 	// Whether WED can show anything for an airline the user picked.
 	//
@@ -161,6 +175,12 @@ public:
 										bool known_airline) const;
 
 private:
+
+	void				NoteHeaderLine(const char * line);	// one '#' line, on the way past
+	void				ForgetHeader(void);
+
+	std::string			mSchema, mDataStamp, mSourceBuild;
+	size_t				mUsable;			// mEntries minus the Obsolete rows
 
 	std::vector<WED_LiveryIndexEntry>										mEntries;
 	std::unordered_map<std::string, std::vector<const WED_LiveryIndexEntry *> >	mByAirline;

@@ -1202,6 +1202,8 @@ void	WED_LiveryPane::RecomputeCoverage(void)
 
 	Coverage c;
 	c.index_ready       = false;
+	c.weighted          = false;
+	c.p_occupied        = 0.0f;
 	c.stands            = (int) mSelectedRamps.size();
 	c.stands_empty      = 0;
 	c.classes_in_range  = 0;
@@ -1224,10 +1226,12 @@ void	WED_LiveryPane::RecomputeCoverage(void)
 	// Leaving index_ready false makes Draw() say so instead of printing a zero.
 	if (!mLiveryIndex.IsLoaded())
 	{
+		c.index_version = mLiveryIndex.DescribeVersion();
 		mCoverage = c;
 		return;
 	}
-	c.index_ready = true;
+	c.index_ready   = true;
+	c.index_version = mLiveryIndex.DescribeVersion();
 
 	for (size_t i = 0; i < mSelectedRamps.size(); ++i)
 	{
@@ -1259,6 +1263,45 @@ void	WED_LiveryPane::RecomputeCoverage(void)
 		}
 
 		if (filled_classes == 0) ++c.stands_empty;
+
+		// With a 1313 row the flat range stops being the question. The author
+		// has said how often each class is drawn, so the quantity that matters
+		// is the one §4.5 specifies: how much of that distribution lands on a
+		// class no listed operator can fill. Everything above stays as the
+		// fallback for a stand with no weights, which R17 keeps on today's
+		// behaviour.
+		int wts[6];
+		if (mSelectedRamps.size() == 1 && ramp->GetClassWeights(wts))
+		{
+			int total = 0;
+			for (int k = 0; k < 6; ++k) total += wts[k];
+
+			if (total > 0)
+			{
+				int fillable = 0;
+				for (int k = 0; k < 6; ++k)
+				{
+					if (wts[k] == 0) continue;
+					char size_class = (char) ('A' + k);
+					for (set<string>::const_iterator it = codes.begin(); it != codes.end(); ++it)
+					{
+						vector<const WED_LiveryIndexEntry *> hits;
+						mLiveryIndex.GetForAirlineAndClass(*it, size_class, hits);
+						if (!hits.empty()) { fillable += wts[k]; break; }
+					}
+				}
+				c.weighted   = true;
+				c.p_occupied = (float) fillable / (float) total;
+			}
+			else
+			{
+				// All six zero is legal and deliberate: the author said nothing
+				// parks here. That is NOT the same as an unfillable stand, and
+				// the readout must not accuse them of a mistake.
+				c.weighted   = true;
+				c.p_occupied = 0.0f;
+			}
+		}
 
 		if (mSelectedRamps.size() == 1)
 		{
@@ -2644,6 +2687,31 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 				head_col = col_warn;
 				snprintf(detail, sizeof(detail), "Tick an operator below. Size range is %s.", range);
 			}
+			else if (mCoverage.weighted)
+			{
+				// The §4.5 sentence. The percentage is OCCUPANCY - how often the
+				// stand has an aircraft at all - not "the chance of this
+				// operator", which on a single-operator stand is always 100% and
+				// carries no information.
+				const int pct = (int) (mCoverage.p_occupied * 100.0f + 0.5f);
+				if (pct == 0)
+				{
+					snprintf(head, sizeof(head), "This stand will not spawn any static aircraft");
+					head_col = col_muted;
+					snprintf(detail, sizeof(detail),
+						"Its class weights are all zero, or point only at sizes none of the %d listed operators can fill.",
+						mCoverage.airlines_listed);
+				}
+				else
+				{
+					snprintf(head, sizeof(head),
+						"This stand will spawn aircraft %d%% of the time", pct);
+					head_col = (pct >= 95) ? col_good : col_warn;
+					snprintf(detail, sizeof(detail),
+						"Weighted across %s, from %d of %d listed operators. Empty the other %d%%.",
+						range, mCoverage.airlines_eligible, mCoverage.airlines_listed, 100 - pct);
+				}
+			}
 			else if (mCoverage.stands_empty > 0)
 			{
 				snprintf(head,   sizeof(head),   "This stand parks nothing");
@@ -2674,6 +2742,16 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			snprintf(head,   sizeof(head),   "All %d selected stands can be filled", mCoverage.stands);
 			head_col = col_good;
 			snprintf(detail, sizeof(detail), "Each stand measured against its own size range and operator list.");
+		}
+
+		// §4.5: the readout MUST name what it resolved against. Appended rather
+		// than given its own line, because on a correctly generated index it is
+		// reassurance, and on one carrying no stamps at all it is the only
+		// warning §6.4's silent mismatch will ever produce.
+		if (mCoverage.index_ready && !mCoverage.index_version.empty())
+		{
+			size_t used = strlen(detail);
+			snprintf(detail + used, sizeof(detail) - used, "   [%s]", mCoverage.index_version.c_str());
 		}
 
 		GUI_FontDraw(state, font_UI_Basic, head_col,  b[0] + pad, cov_top - line_h * 0.9f, head);
