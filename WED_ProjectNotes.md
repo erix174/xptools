@@ -102,7 +102,9 @@ Country codes are **IOC, not ISO** — Hong Kong `HKG`, Taiwan `TPE`, Macau `MAC
 This is the part that is expensive to rediscover.
 
 **Where they are:** `Resources/default scenery/sim objects/apt_aircraft/<category>/<folder>/`,
-376 `.obj` files. Each livery is its **own complete .obj** (A320_BAW is 9.4 MB, 135,972
+298 `.obj` files in 12.4.3-r2, 376 in the 12.4.4-pnl5 beta — the count is
+install-specific, which is why the index records the build it was read from.
+Each livery is its **own complete .obj** (A320_BAW is 9.4 MB, 135,972
 vertices) — there is no shared-mesh/texture-swap scheme. A future move to glTF may
 change that; the index is designed to survive it.
 

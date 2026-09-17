@@ -17,7 +17,7 @@ multi-select checkboxes, the size-range slider, the off-screen thumbnail rendere
 flag pipeline, and three shipped data files. Audited end to end, swept for portability,
 two heap-corruption bugs and one old-Mac crash fixed.
 
-**Built but never run.** `WED_LiveryIndex` — 376 liveries, loader, availability
+**Built but never run.** `WED_LiveryIndex` — 298 liveries, loader, availability
 tri-state, real-path object loading — has **zero callers**. Everything about it is
 verified by reading, not by running.
 
@@ -47,7 +47,18 @@ So the spec goes before the code, even though the code is more obviously "progre
 
 ## Phase 0 — Unblock Jim  *(DONE 2026-09-16)*
 
-`WED_LiveryFormatSpec.md`, now at draft 3, with `docs/livery_evidence/` alongside it.
+Two documents now, deliberately split, with `docs/livery_evidence/` alongside them:
+
+- **`WED_LiveryFormat_Brief.md`** — for Jim. The three decisions he owns, a
+  recommendation on each, and the one behaviour we are asking the sim not to add.
+  ~140 lines, and nothing in it requires reading the other one.
+- **`WED_LiveryFormatSpec.md`** — draft 5, the implementation manual, written to
+  be handed to an assistant: numbered normative rules, ABNF, reader pseudocode,
+  22 conformance vectors, and the index's guarantees.
+
+The split exists because the two readers need opposite things. A decision-maker
+needs the three questions isolated from 700 lines of grammar; an implementer needs
+the grammar and cannot act on prose.
 
 Two things changed while writing it, both because they were tested rather than assumed:
 
@@ -81,7 +92,7 @@ Detail is in the plan file; the short version is: expose the asset root, add a
 range-aware index query, build the card list in `RebuildSelection()`, delete
 `kCardCount` and the placeholder picker, re-key `mSelectedCards`.
 
-**Verify on the B738** — 120 of the 376 liveries, and it covers every hard case at
+**Verify on the B738** — 120 of the 298 liveries, and it covers every hard case at
 once: `UAL` Legacy/Modern, `JYH`'s eleven colours, `CCA`'s five Peony tail numbers,
 `RYR`'s four separate AOCs.
 
@@ -212,6 +223,18 @@ around.** 114 registrations came from an OCR pass at 69% raw accuracy and are ma
 `BRASIL`) is still in there. Edit
 `tools/scripts/airline_research/livery_reg_overrides.txt`, never the generated index.
 Must be clean before ship.
+
+**Six rows the generator cannot name, and should not try to.** `jet/B752/` ships
+`757PW`, `757PW_winglet`, `757RR`, `757RR_winglet` — four genuinely different
+airframes (engine type, winglets) — and `fighter/F15/` ships `F15EX` and
+`F15EX_cft`. The variant is in the *filename*, but these folders are bare
+`<TYPE>/` with no airline token, so the folder-driven variant rule finds nothing
+and all six land on note `Default`. Deriving it from the filename instead would
+have to distinguish a variant from an airline name and a registration
+(`757_Delta_N654DL.obj`), which is a heuristic that would misfire across the
+other 292 rows to fix six. **Hand-edit the note column.** This is the residue of
+the same class of bug as the "Default" fallback regression — see §6.3 of the
+spec, where it is disclosed rather than hidden.
 
 **Third-party pack scanning.** `livery_index.txt` is currently found at one fixed path,
 which means a third-party livery pack cannot contribute to it — the pack would be
