@@ -53,6 +53,7 @@
 #include "GUI_Commander.h"
 #include "WED_AirportDatabase.h"
 #include "WED_AirlineDirectory.h"
+#include "WED_LiveryIndex.h"
 #include "WED_LiveryThumbnailCache.h"
 #include <vector>
 #include <string>
@@ -117,14 +118,45 @@ private:
 	float				HeaderHeight(void) const;
 	float				FilterRowHeight(void) const;
 	float				SliderHeight(void) const;
+	float				CoverageHeight(void) const;
 	float				ListToolbarHeight(void) const;
 	float				GapHeight(void) const;
 	void				AirportInfoYRange(int bounds[4], float & top, float & bot) const;
 	void				HeaderYRange(int bounds[4], float & top, float & bot) const;
 	void				FilterYRange(int bounds[4], float & top, float & bot) const;
 	void				SliderYRange(int bounds[4], float & top, float & bot) const;
+	void				CoverageYRange(int bounds[4], float & top, float & bot) const;
 	void				ListToolbarYRange(int bounds[4], float & top, float & bot) const;
 	float				ContentTop(int bounds[4]) const;		// top Y of the airline checklist
+
+	// ---- coverage readout (WED_LiveryFormatSpec.md §4.5) ----
+	// The pre-`1313` form of the P(empty) readout. The spec's weighted version
+	// needs class weights, which no entity carries yet (roadmap phase 4) - but the
+	// defect those weights would expose is already measurable from data WED has
+	// today: a stand whose listed operators have no model in ANY class of its own
+	// size range parks nothing, every time, with no symptom in the sim. That is
+	// the 17.2% case, and this is what makes it visible before it is written.
+	//
+	// When phase 4 lands, the same per-class terms get weighted by `1313` instead
+	// of treated as a flat range, and this becomes a probability. The shape of the
+	// computation does not change.
+	struct Coverage {
+		bool	index_ready;		// false => index missing/unreadable. MUST be shown as
+									//   such and never as "0%" - see spec §4.5 and §6.4.
+		int		stands;				// stands examined
+		int		stands_empty;		// ...of which park nothing, over their own range
+		// Single-stand detail. Meaningless (and not drawn) when stands != 1.
+		int		classes_in_range;
+		int		classes_filled;
+		int		airlines_listed;
+		int		airlines_eligible;	// at least one model somewhere in the range
+		char	lo_class, hi_class;	// 'A'..'F'
+	};
+	void				RecomputeCoverage(void);
+	// Cheap because the index is already resident; still not something to run per
+	// frame at CDG (326 stands x 6 classes x n airlines), hence the dirty flag.
+	Coverage					mCoverage;
+	bool						mCoverageDirty;
 
 	// ---- livery preview cards (framework/scaffolding only - see WED_LiveryThumbnailCache.h) ----
 	// The cards are the FIRST ROWS of the same scrolled content as the airline
@@ -279,6 +311,13 @@ private:
 	// WED_LiveryData.h's ~26 hardcoded placeholder entries. See
 	// WED_AirlineDirectory.h.
 	WED_AirlineDirectory		mAirlineDirectory;
+
+	// The shipped static-aircraft index (livery_index.txt, inside the selected
+	// X-Plane folder - NOT next to WED.exe like the two above). This is the first
+	// consumer the class has ever had; see the appendix of WED_LiveryFormatSpec.md.
+	// Loaded lazily and re-loaded whenever the resolved path changes, which is how
+	// it survives the user switching X-Plane folders mid-session.
+	WED_LiveryIndex				mLiveryIndex;
 
 	// ---- country flag banner (WED_FlagProjector / WED_FlagAssets) ----
 	// Re-projected only when the displayed country actually changes (this is

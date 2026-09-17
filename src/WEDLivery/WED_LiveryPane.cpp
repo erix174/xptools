@@ -874,8 +874,17 @@ WED_LiveryPane::WED_LiveryPane(
 	mContentDragStartY(-1),		// declared later in the header (after mCachedStatusLines) -
 	mContentDragStartOffset(0),	// listed here anyway so all the "simple scalar" inits stay together
 	mHoverCard(-1),
-	mTrackCard(-1)
+	mTrackCard(-1),
+	mCoverageDirty(true)
 {
+	// Zeroed rather than left indeterminate: Draw() reads mCoverage before the
+	// first RecomputeCoverage() can run if a frame lands before any selection
+	// change, and index_ready == false makes that frame say "index not loaded"
+	// instead of printing garbage counts.
+	memset(&mCoverage, 0, sizeof(mCoverage));
+	mCoverage.lo_class = 'A';
+	mCoverage.hi_class = 'F';
+
 	// Seeds the "Popular Airlines" weighted shuffle (see GetPopularAirlinesCodes()) once
 	// per WED run, not once per pane/document - a static guard rather than reseeding
 	// every time a new document window is opened, which would just make same-second opens
@@ -1111,6 +1120,11 @@ void	WED_LiveryPane::RebuildSelection(void)
 	ISelection * sel = WED_GetSelect(mResolver);
 	if (sel) sel->IterateSelectionOr(CollectRamps, &mSelectedRamps);
 
+	// Unconditional, not gated on (mSelectedRamps != old_selection): the same set
+	// of ramps can come back with different airlines or a different size range
+	// after an undo, a property-grid edit, or a change made on another tab.
+	mCoverageDirty = true;
+
 	// A genuinely different ramp selection (different ramp, or a different airport
 	// entirely) means the checklist content just changed out from under whatever
 	// scroll position was left over from before - snap back to the top rather than
@@ -1166,6 +1180,101 @@ void	WED_LiveryPane::RebuildSelection(void)
 }
 
 // ---------------------------------------------------------------------------------------------
+// coverage readout  (WED_LiveryFormatSpec.md §4.5)
+// ---------------------------------------------------------------------------------------------
+
+// "Can the operators listed on this stand actually fill it?"
+//
+// A stand is counted EMPTY when no listed operator has a model in any class of
+// the stand's own size range. In the sim that stand parks nothing, every time,
+// and produces no log line and no error - an empty gate is indistinguishable
+// from a gate that did not happen to get an aircraft this time. Spec §4.5
+// measures 7,604 of 44,242 stands (17.2%) in that state across the real global
+// apt.dat, at 42% of airports, and notes the cause is almost never "this
+// operator has no models" but "none in THIS class".
+//
+// The index is consulted per (airline, class) rather than per airline: an
+// operator having SOME model is not the same as having one that fits here, and
+// conflating the two is precisely the mistake that makes the 17.2% invisible.
+void	WED_LiveryPane::RecomputeCoverage(void)
+{
+	mCoverageDirty = false;
+
+	Coverage c;
+	c.index_ready       = false;
+	c.stands            = (int) mSelectedRamps.size();
+	c.stands_empty      = 0;
+	c.classes_in_range  = 0;
+	c.classes_filled    = 0;
+	c.airlines_listed   = 0;
+	c.airlines_eligible = 0;
+	c.lo_class          = 'A';
+	c.hi_class          = 'F';
+
+	// EnsureLoaded() is a no-op for a path it has already tried, success or
+	// failure, so this is safe to call as often as the readout is refreshed - and
+	// it re-loads by itself if the user has since pointed WED at a different
+	// X-Plane folder, because the path is derived from the root.
+	const string index_path = WED_LiveryIndexDefaultPath();
+	if (!index_path.empty())
+		mLiveryIndex.EnsureLoaded(index_path);
+
+	// A missing or unreadable index MUST NOT read as "nothing fits" - see spec
+	// §6.4, where an index/install mismatch is called out as failing silently.
+	// Leaving index_ready false makes Draw() say so instead of printing a zero.
+	if (!mLiveryIndex.IsLoaded())
+	{
+		mCoverage = c;
+		return;
+	}
+	c.index_ready = true;
+
+	for (size_t i = 0; i < mSelectedRamps.size(); ++i)
+	{
+		WED_RampPosition * ramp = mSelectedRamps[i];
+
+		int lo = WidthEnumToIndex(ramp->GetWidthMin());
+		int hi = WidthEnumToIndex(ramp->GetWidth());
+		if (lo > hi) std::swap(lo, hi);		// defensive; the slider cannot produce it
+
+		set<string> codes = ParseCodes(ramp->GetAirlines());
+
+		int  filled_classes  = 0;
+		set<string> eligible;
+		for (int k = lo; k <= hi; ++k)
+		{
+			char size_class = (char) ('A' + k);
+			bool any_here = false;
+			for (set<string>::const_iterator it = codes.begin(); it != codes.end(); ++it)
+			{
+				vector<const WED_LiveryIndexEntry *> hits;
+				mLiveryIndex.GetForAirlineAndClass(*it, size_class, hits);
+				if (!hits.empty())
+				{
+					any_here = true;
+					eligible.insert(*it);
+				}
+			}
+			if (any_here) ++filled_classes;
+		}
+
+		if (filled_classes == 0) ++c.stands_empty;
+
+		if (mSelectedRamps.size() == 1)
+		{
+			c.classes_in_range  = hi - lo + 1;
+			c.classes_filled    = filled_classes;
+			c.airlines_listed   = (int) codes.size();
+			c.airlines_eligible = (int) eligible.size();
+			c.lo_class          = (char) ('A' + lo);
+			c.hi_class          = (char) ('A' + hi);
+		}
+	}
+
+	mCoverage = c;
+}
+
+// ---------------------------------------------------------------------------------------------
 // layout
 // ---------------------------------------------------------------------------------------------
 
@@ -1208,6 +1317,15 @@ float	WED_LiveryPane::SliderHeight(void) const
 	return GUI_GetLineHeight(font_UI_Basic) * 3 + 16;
 }
 
+float	WED_LiveryPane::CoverageHeight(void) const
+{
+	// Two lines: the headline, and one line of detail. Fixed rather than
+	// content-derived so the sections below it never shift as the numbers change -
+	// a readout that moves the airline list every time you tick a checkbox is
+	// worse than no readout.
+	return GUI_GetLineHeight(font_UI_Basic) * 2 + 10;
+}
+
 float	WED_LiveryPane::ListToolbarHeight(void) const
 {
 	return GUI_GetLineHeight(font_UI_Basic) + 8;
@@ -1248,11 +1366,19 @@ void	WED_LiveryPane::SliderYRange(int bounds[4], float & top, float & bot) const
 	bot = top - SliderHeight();
 }
 
-void	WED_LiveryPane::ListToolbarYRange(int bounds[4], float & top, float & bot) const
+void	WED_LiveryPane::CoverageYRange(int bounds[4], float & top, float & bot) const
 {
 	float stop, sbot;
 	SliderYRange(bounds, stop, sbot);
 	top = sbot - GapHeight();
+	bot = top - CoverageHeight();
+}
+
+void	WED_LiveryPane::ListToolbarYRange(int bounds[4], float & top, float & bot) const
+{
+	float ctop, cbot;
+	CoverageYRange(bounds, ctop, cbot);
+	top = cbot - GapHeight();
 	bot = top - ListToolbarHeight();
 }
 
@@ -1412,6 +1538,7 @@ void	WED_LiveryPane::SetRampOpFilter(int wed_ramp_op_enum)
 		mSelectedRamps[i]->SetRampOperationType(wed_ramp_op_enum);
 	mArchive->CommitCommand();
 
+	mCoverageDirty = true;
 	Refresh();
 }
 
@@ -1482,6 +1609,10 @@ void	WED_LiveryPane::ApplyDragRange(void)
 		mSelectedRamps[i]->SetWidthMin(IndexToWidthEnum(lo));
 		mSelectedRamps[i]->SetWidth(IndexToWidthEnum(hi));
 	}
+
+	// Live during the drag, not just on mouse-up: watching the covered-class
+	// count fall as you narrow the range is the whole point of the readout.
+	mCoverageDirty = true;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1584,6 +1715,9 @@ void	WED_LiveryPane::ToggleCode(const string & icao)
 	}
 	mArchive->CommitCommand();
 
+	// This is the edit the readout exists for: ticking an operator off is the
+	// cheapest way to empty a stand without noticing.
+	mCoverageDirty = true;
 	Refresh();
 }
 
@@ -2446,6 +2580,106 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		DrawGrabberDashes(max_x, track_y, handle_r);
 	}
 
+	// --- coverage readout (WED_LiveryFormatSpec.md §4.5) ---
+	// Sits directly under the size slider because those are its two inputs: the
+	// operators ticked below, measured against the size range set above. An edit
+	// to either updates this line on the same frame.
+	{
+		float cov_top, cov_bot;
+		CoverageYRange(b, cov_top, cov_bot);
+
+		if (mCoverageDirty) RecomputeCoverage();
+
+		// zone background, matching the slider's so the two read as one stack
+		state->SetState(0,0,0,0,0,0,0);
+		glColor4f(0.14f, 0.14f, 0.14f, 1.0f);
+		glBegin(GL_QUADS);
+			glVertex2f((float) b[0] + 1, cov_bot);
+			glVertex2f((float) b[2] - 1, cov_bot);
+			glVertex2f((float) b[2] - 1, cov_top);
+			glVertex2f((float) b[0] + 1, cov_top);
+		glEnd();
+		glColor4f(0.40f, 0.40f, 0.40f, 1.0f);
+		glBegin(GL_LINE_LOOP);
+			glVertex2f((float) b[0] + 1, cov_bot);
+			glVertex2f((float) b[2] - 1, cov_bot);
+			glVertex2f((float) b[2] - 1, cov_top);
+			glVertex2f((float) b[0] + 1, cov_top);
+		glEnd();
+
+		float col_warn[4]  = { 1.00f, 0.45f, 0.35f, 1.0f };	// a stand that parks nothing
+		float col_good[4]  = { 0.55f, 0.85f, 0.55f, 1.0f };
+		float col_muted[4] = { 0.62f, 0.62f, 0.62f, 1.0f };
+
+		char head[256]; char detail[256];
+		float * head_col = col_muted;
+
+		head[0] = 0; detail[0] = 0;
+
+		if (mSelectedRamps.empty())
+		{
+			snprintf(head,   sizeof(head),   "Coverage");
+			snprintf(detail, sizeof(detail), "Select a ramp start to see what can park on it.");
+		}
+		else if (!mCoverage.index_ready)
+		{
+			// Explicitly NOT "0 operators" - spec §6.4 calls out a missing or
+			// mismatched index as the failure that costs a day precisely because
+			// its only symptom is things quietly not appearing. A readout that
+			// printed a confident zero here would be worse than none at all.
+			snprintf(head,   sizeof(head),   "Coverage unavailable - livery index not loaded");
+			snprintf(detail, sizeof(detail), "Looked for livery_index.txt under the selected X-Plane folder.");
+		}
+		else if (mCoverage.stands == 1)
+		{
+			char range[8];
+			if (mCoverage.lo_class == mCoverage.hi_class)
+				snprintf(range, sizeof(range), "%c", mCoverage.lo_class);
+			else
+				snprintf(range, sizeof(range), "%c-%c", mCoverage.lo_class, mCoverage.hi_class);
+
+			if (mCoverage.airlines_listed == 0)
+			{
+				snprintf(head,   sizeof(head),   "This stand parks nothing - no operators listed");
+				head_col = col_warn;
+				snprintf(detail, sizeof(detail), "Tick an operator below. Size range is %s.", range);
+			}
+			else if (mCoverage.stands_empty > 0)
+			{
+				snprintf(head,   sizeof(head),   "This stand parks nothing");
+				head_col = col_warn;
+				snprintf(detail, sizeof(detail),
+					"None of the %d listed operators has a model at size %s. Widen the range, or list an operator that flies one.",
+					mCoverage.airlines_listed, range);
+			}
+			else
+			{
+				snprintf(head,   sizeof(head),   "Parks aircraft from %d of %d listed operators",
+					mCoverage.airlines_eligible, mCoverage.airlines_listed);
+				head_col = col_good;
+				snprintf(detail, sizeof(detail), "%d of %d sizes in %s can be filled.",
+					mCoverage.classes_filled, mCoverage.classes_in_range, range);
+			}
+		}
+		else if (mCoverage.stands_empty > 0)
+		{
+			// The bulk case, which is the one spec §4.5 says has no eyes on it.
+			snprintf(head,   sizeof(head),   "%d of %d selected stands park nothing",
+				mCoverage.stands_empty, mCoverage.stands);
+			head_col = col_warn;
+			snprintf(detail, sizeof(detail), "Each stand measured against its own size range and operator list.");
+		}
+		else
+		{
+			snprintf(head,   sizeof(head),   "All %d selected stands can be filled", mCoverage.stands);
+			head_col = col_good;
+			snprintf(detail, sizeof(detail), "Each stand measured against its own size range and operator list.");
+		}
+
+		GUI_FontDraw(state, font_UI_Basic, head_col,  b[0] + pad, cov_top - line_h * 0.9f, head);
+		GUI_FontDraw(state, font_UI_Basic, col_muted, b[0] + pad, cov_top - line_h * 1.9f, detail);
+	}
+
 	// --- airline list workspace: toolbar row (Show Recommendation + Sort) boxed
 	// together with the checklist below it, so they read as one panel ---
 	if (!mSelectedRamps.empty())
@@ -2730,6 +2964,10 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 				{
 					mLiveryIndexPath = livery_index_path;
 					mThumbCache.DiscardAll();
+					// A different X-Plane folder is a different set of shipped
+					// liveries, so every coverage number just went stale.
+					// RecomputeCoverage() re-loads the index by itself.
+					mCoverageDirty = true;
 				}
 			}
 
