@@ -1,6 +1,6 @@
 # apt.dat rows 1312-1313: per-stand fleet and livery data
 
-**Specification and implementation manual.** Draft 5, 2026-09-16. Targets WED 2.8.0.
+**Specification and implementation manual.** Draft 6, 2026-09-17. Targets WED 2.8.0.
 For the X-Plane side of WED's ramp livery picker.
 
 ---
@@ -32,6 +32,27 @@ MUST / MUST NOT / SHOULD / MAY are used in the RFC 2119 sense. Every normative
 statement carries an `R`-number so an implementation can be checked against a
 list rather than against prose. Line references of the form `AptIO.cpp:1208` are
 into the WED/xptools tree at branch `feature/ramp-livery-picker`.
+
+### What changed since draft 5
+
+- **§4.5 gains a `P(empty)` readout**, which is the substantive addition. The
+  17.2% empty-stand figure previously had one answer — a hard export error — and
+  that answer arrives only at the end, cannot distinguish an intentional empty
+  stand from a mistaken one, and has no eyes on it during the bulk fill that is
+  the only thing which would ever produce those stands. A continuous readout, a
+  delta shown at the moment of the edit, and an airport-level rollup after a fill
+  address all three. It also makes R21/R22's open-versus-closed sets visible
+  rather than merely specified.
+- **§9 gains a fourth open question**: duplicate `1312`/`1313` on one stand is
+  currently a silent overwrite, where `1301` rejects a repeat outright.
+- **Conformance vectors corrected.** Eight vectors in §5 — V1, V2, V8–V12, V15 —
+  still carried the placeholder field of the grouped design dropped in draft 5,
+  which made them malformed under draft 5's own grammar. The §4.2 example and the
+  §2 weight production had the same residue. §5 is the section handed to an
+  implementer as tests; it is now consistent with §2.
+- **The appendix no longer overstates the WED side.** It claimed WED reads the
+  livery index; the class has no consumer. Corrected, and split into what runs
+  and what has only been read through.
 
 ### What changed since draft 4
 
@@ -221,7 +242,9 @@ inclusion      = "+" airline ":" actype   ; closed set: ONLY this (R21)
 ; ---- lexical -----------------------------------------------------------
 airline        = 3*5(ALPHA / DIGIT)  ; R10
 actype         = 2*5(ALPHA / DIGIT)  ; R10
-weight         = 1*4DIGIT            ; 0..1000, R11
+weight         = 1*4DIGIT            ; value MUST be 0..1000 (R11); a
+                                     ;   syntactically valid 1001..9999 is
+                                     ;   out of range - drop the row (R5, V11)
 SP             = %x20
 ```
 
@@ -531,7 +554,7 @@ correct outcome, not an error — see §4.5.
 **Stage 2 MUST apply the exclusions too (R18).** Filtering stage 2 on "has any
 livery in this class" while filtering stage 3 on "…that is not excluded" lets an
 exclusion silently empty a stand. Concretely, in the sample package: BAW's only
-C-class livery is the A320, so a policy excluding `-baw:A320` makes BAW a valid
+C-class livery is the A320, so a refinement excluding `-baw:A320` makes BAW a valid
 stage-2 candidate with zero stage-3 options. Every time BAW is drawn, the stand
 parks nothing. The author wrote "don't park BAW's A320 here" and got "sometimes
 park nothing here", which is not the same sentence.
@@ -547,8 +570,8 @@ Always six values, A through F, in that order — not a list of the classes the
 author happened to mention.
 
 ```
-1313 g_a3f91c  0 1 1 8 0 0
-                A B C D E F     ->  D 80%, B and C 10% each, nothing else
+1313 0 1 1 8 0 0
+     A B C D E F     ->  D 80%, B and C 10% each, nothing else
 ```
 
 | state | meaning |
@@ -560,7 +583,7 @@ author happened to mention.
 Writing all six rather than only the non-zero ones removes the "is an absent
 class zero, or unspecified?" ambiguity entirely, gives the row a fixed shape that
 is cheap to validate and hard to tamper with, and costs 12 characters — about
-175 KB across every policy in the global apt.dat.
+175 KB across every weighted stand in the global apt.dat.
 
 **Relative integers, never decimals.** `0 1 1 8 0 0` is the same distribution as
 `0 0.1 0.1 0.8 0 0`, and the editor shows the author percentages either way — but
@@ -630,10 +653,103 @@ substituting something smaller.
 
 > **WED absorbs this.** Weights pointing at a class none of the listed airlines
 > can fill is a hard export error — not a dismissible warning — with one-click
-> repair offered at the point of failure. **The sim SHOULD NOT add a fallback.**
-> An empty stand is the correct reading of what the author wrote, and
+> repair offered at the point of failure, **and, before that, a continuous
+> readout of P(empty) while the author edits.** **The sim SHOULD NOT add a
+> fallback.** An empty stand is the correct reading of what the author wrote, and
 > re-introducing a step-down takes back the expressiveness this change exists to
 > provide.
+
+#### Where the 17.2% actually comes from, and what answers it
+
+The figure is **not** a property of the format, and it is not a hazard of hand
+authoring. R17 makes that precise: a stand with no `1313` keeps today's
+behaviour, so **importing an existing apt.dat creates no weights and therefore no
+empty stands.** The 17.2% is conditional — "*if* every stand's weights were set to
+the class it already declares" — and the only thing that would do that at scale is
+**WED's own one-click fill**, which is specified as a bulk operation the author
+accepts wholesale, across up to 326 stands at a single airport.
+
+So the exposure is concentrated exactly where no human is inspecting individual
+stands. That splits the answer in two, and both halves are required:
+
+| path | answer |
+|---|---|
+| an author editing one stand | **live per-stand readout**, updated on every change |
+| bulk fill across an airport | **airport-level rollup**, presented at the moment the fill completes |
+
+A rollup reads: *"47 stands filled. 12 will be empty more than half the time, 8
+always."* Without it, 42% of commercially served airports acquire the defect
+silently and in one click.
+
+#### What to display, and what not to
+
+All four levels are computable from `1301`, `1313`, `1312` and the index. They are
+not equally worth showing:
+
+| value | how | show it? |
+|---|---|---|
+| P(class) | `1313` normalised | low value — the author just wrote it |
+| **P(empty)** | `Σ_c P(c) · [no airline eligible at c]` | **first-class. Not buried in a detail view** |
+| P(airline) | `Σ_c P(c) · [eligible] / n_eligible(c)` | yes — this is where a ban's cost shows |
+| P(one livery) | `P(airline, c) · 1/\|eligible\|` or `EXPORT_RATIO` | **de-emphasise** |
+
+`P(empty)` earns the top slot because it is **the only quantity in this design
+that is invisible in the sim.** A gate with no aircraft looks exactly like a gate
+that did not happen to get one this time; it produces no log line, no error, and
+no bug report — only a vague sense that airports got emptier. Turning that into a
+number is the whole reason the readout exists.
+
+`P(one livery)` is de-emphasised deliberately. §4.3 assigns stage 3 to the
+**library**, not the author — `EXPORT_RATIO` is where Laminar expresses "this
+fictional livery is rare". Surfacing those fractions prominently invites authors
+to tune the one stage that is not theirs.
+
+**Show the delta, not just the level.** The author's question is never "what is
+the number" but "what did I just do". At the moment of the click:
+
+```
+Deselect United:     empty  3% → 31%
+```
+
+This is what makes an over-aggressive ban self-evident, and it needs no memory of
+the previous value.
+
+#### Two properties of the readout worth stating
+
+**It makes `+` versus `-` visible.** R21/R22 are the most abstract rules here —
+two sigils, three precedence rules, every conflict resolved silently. The readout
+renders the distinction directly:
+
+```
+United      30%   open — new UAL types will join automatically
+Emirates    10%   closed — A388 only
+```
+
+An author **sees** open and closed sets instead of reading a rule about them,
+which is also the best available defence against implementations diverging on
+R21/R22 without anyone noticing.
+
+**It is computed against the author's install, and must say so.** Per §6.4 the
+index is install-specific and a mismatch fails silently. A probability readout
+turns that silent failure into *confident wrong numbers*, which is worse. The
+readout MUST name the index version it resolved against, and **MUST distinguish
+"0%" from "index not loaded"** rather than rendering both as a blank or a zero.
+
+Note the direction of drift, which is favourable and is the late-binding argument
+of §8.3 made visible: as the library grows, **P(empty) falls monotonically** — a
+class nothing could fill becomes fillable. P(airline) and P(one livery) are *not*
+stable, and are not meant to be: shipping an airline's first model at some class
+adds them to the stage-2 pool there and reduces every other airline's share from
+`1/n` to `1/(n+1)`. That is the format working, not drifting.
+
+#### What the readout does not fix
+
+It narrows the exposure; it does not remove it. Hand-edited apt.dat and
+third-party writers bypass WED entirely, and nothing in the file distinguishes an
+intentional empty stand from a mistaken one (see point 2 below). What it buys is
+that **the WED path is legible throughout rather than only adjudicated at export**
+— which is what makes the "no fallback in the sim" position defensible rather than
+merely asserted.
 
 **2. Three stages means three ways to find no candidate**, and from outside they
 look identical: all-zero weights (intentional), no listed airline has that class
@@ -667,8 +783,8 @@ whatever the current step-down does with it.
 
 | # | input | expected |
 |---|---|---|
-| V1 | `1313 - 0 0 10 0 0 0` on a stand | class C always; stages 2–3 then run |
-| V2 | `1313 - 0 0 0 0 0 0` | nothing parks. **Legal**, not an error (R5) |
+| V1 | `1313 0 0 10 0 0 0` on a stand | class C always; stages 2–3 then run |
+| V2 | `1313 0 0 0 0 0 0` | nothing parks. **Legal**, not an error (R5) |
 | V5 | `1312 -fdx:B763` with no `1313` on the stand | exclusion recorded, but **today's behaviour** still applies (R17) — exclusions alone do not activate three-stage selection |
 | V6 | `1313 1000 0 0 0 0 0` | legal; 1000 is the ceiling (R11) |
 | V23 | `1312 +uae:A388` | Emirates contributes **only** the A388, at every class. Every other airline on `1301` is unaffected (R21) |
@@ -687,16 +803,16 @@ refinements of a selection that only exists once `1313` is present.
 
 | # | input | expected |
 |---|---|---|
-| V8 | `1313 - 0 0 10 0 0` (five weights) | drop weights **whole**; stand falls back to today's behaviour (R5). MUST NOT be read as `0 0 10 0 0 0` |
-| V9 | `1313 - 0 0 10 0 0 0 0` (seven) | drop weights whole (R5) |
-| V10 | `1313 - 0 0 -5 0 0 0` | drop weights whole (R11, R5) |
-| V11 | `1313 - 0 0 9999 0 0 0` | drop weights whole (R11, R5) |
-| V12 | `1313 - 0 0 1.5 0 0 0` | drop weights whole — no decimal point is legal (§4.2) |
-| V15 | `1312 - -fdx:B763 garbage -ups:B752` | drop `garbage` only; both valid exclusions survive (§3 pass 3) |
+| V8 | `1313 0 0 10 0 0` (five weights) | drop weights **whole**; stand falls back to today's behaviour (R5). MUST NOT be read as `0 0 10 0 0 0` |
+| V9 | `1313 0 0 10 0 0 0 0` (seven) | drop weights whole (R5) |
+| V10 | `1313 0 0 -5 0 0 0` | drop weights whole (R11, R5) |
+| V11 | `1313 0 0 9999 0 0 0` | drop weights whole (R11, R5) |
+| V12 | `1313 0 0 1.5 0 0 0` | drop weights whole — no decimal point is legal (§4.2) |
+| V15 | `1312 -fdx:B763 garbage -ups:B752` | drop `garbage` only; both valid exclusions survive (§3 pass 3) |
 | V16 | `1312` with no refinements after it | drop the row (R4) |
 | V18 | a `1314` row | ignored (R15) |
 | V19 | an embedded tab inside an airline list | writer defect (R9); reader treats it as a field separator, which may yield an unparseable token — drop that token, keep the row |
-| V20 | file at version `1200` containing all four rows | loads; new rows apply (§7.2 — no version gate) |
+| V20 | file at version `1200` containing both new rows | loads; new rows apply (§7.2 — no version gate) |
 
 ### 5.3 The two that must never happen
 
@@ -903,10 +1019,18 @@ a compatibility requirement.
 ### 7.2b Repeated on a second build, with the real sample file
 
 The test above used four minimal synthetic packages. The sample package in
-`docs/livery_sample/` — seventeen stands, all four new row codes, a deliberate
-`1314`, and every malformed vector from §5.2 — was then loaded by a **different
-build in the release lane: X-Plane 12.4.3-r2 (build 124311)**. Log:
+`docs/livery_sample/` — seventeen stands, all four row codes the format then
+defined, a deliberate `1314`, and every malformed vector from §5.2 — was then
+loaded by a **different build in the release lane: X-Plane 12.4.3-r2 (build
+124311)**. Log:
 `docs/livery_evidence/XPlane12.4.3-r2_livery_sample_load_Log.txt`.
+
+> **The sample in the repo is no longer the one described here.** It was
+> regenerated for the inline-only shape of §8.2 and now carries sixteen stands
+> and two new row codes, plus the same deliberate `1314`. The evidence is
+> unaffected: the run below proved X-Plane ignores unrecognised row codes, and
+> the regenerated sample exercises a strict subset of the codes that run
+> contained. Re-running it would weaken the test, not strengthen it.
 
 ```
 I/FLT: Init dat_p0 type:'runway_start' apt:ZZLI rwy:09 ...
@@ -1117,20 +1241,51 @@ Fixed on our side; R9 exists so it is not reintroduced in another field.
    generates which version for whom? This needs Jim and the release manager. It
    has no answer today and it is the only part of this with no technical
    solution.
+4. **What a duplicate `1312`/`1313` on one stand means.** §3 assigns
+   (`current_stand.weights = [w×6]`), so a second row silently overwrites the
+   first. `1301` does the opposite and rejects a repeat outright
+   (`AptIO.cpp:743`), which makes the new rows the lenient ones by accident
+   rather than by decision. Recommended: at most one of each per stand, second
+   and later occurrences discarded per R4 — cheap to state, cheap to implement,
+   and it keeps a misbound row from looking like valid data. Needs a vector in
+   §5.2 either way; there is none today.
 
 ---
 
 ## Appendix — what is already built on the WED side
 
-So the shape above is not speculative:
+So the shape above is not speculative. **Stated at the level it has actually been
+verified**, because the distinction matters to anyone estimating the remaining
+work:
+
+**Shipped and running:**
 
 - **`livery_index.txt`** — 298 shipped static-aircraft liveries, each with ICAO
   type, wingspan class, operator, registration, country of registration and a
   free-text livery note. Generated from `library.txt` plus the asset tree, then
   maintained by hand.
-- **WED reads it**, resolves an author's airline selection against it, and renders
-  off-screen previews of the actual aircraft.
-- **WED distinguishes** "this airline has a model", "real airline, nothing
-  modelled yet" and "unknown code" — and never persists which. It is recomputed on
-  every load, so a model shipped later simply starts appearing. Same principle as
-  D in §8.3: never persist what can be recomputed.
+- **The Liveries tab** — airline selection with tri-state multi-select, the size
+  range control, the flag pipeline, and the airport recommendation list. These
+  read `WED_AirlineDirectory.txt` and `WED_AirportDatabase.txt`, both of which are
+  loaded and queried on every selection change.
+- **Round-tripping of `1301`** — size letter, operation type and airline list are
+  edited on the tab and survive import and export through the existing path.
+
+**Written, audited, but never executed:**
+
+- **`WED_LiveryIndex`** — the loader, the (airline, class) query used by stage 2,
+  the availability tri-state and real-path object loading are all implemented and
+  read through, but the class **has no consumer**. Nothing in WED instantiates it;
+  the only call into its header is `WED_LiveryIndexDefaultPath()`, used as a cache
+  key for discarding thumbnails when the X-Plane root changes
+  (`WED_LiveryPane.cpp:2728`). The preview strip still renders placeholder objects
+  picked from the library with literal captions (`PickPlaceholderObjectVpaths()`,
+  `:835`).
+
+Everything the index is claimed to do above is therefore verified **by reading,
+not by running.** The first consumer will be the probability readout of §4.5,
+which is what turns "this file parses" into "these numbers are right".
+
+The design principle the index exists to serve is unaffected, and is the same one
+as D in §8.3: availability is **recomputed on every load and never persisted**, so
+a model shipped later simply starts appearing.

@@ -125,9 +125,20 @@ apt.dat: naively migrating every stand to its own declared class would empty
 **7,604 of 44,242 stands (17.2%)**, at **42% of airports**. Almost never
 because the airline has no models — because it has none *in that class*.
 
-**We absorb that, entirely on the WED side**: weights pointing at a class none
-of the listed airlines can fill is a hard export error, not a dismissible
-warning, with one-click repair offered at the point of failure.
+**We absorb that, entirely on the WED side**, and in two places rather than one:
+
+- **While the author edits** — a live readout of how often each stand parks
+  nothing, updated on every change, showing the delta at the moment of the click
+  (`empty 3% → 31%` when an airline is deselected). An empty stand is invisible
+  in the sim; this is what makes it visible before the file is ever written.
+- **At export** — weights pointing at a class none of the listed airlines can
+  fill is a hard error, not a dismissible warning, with one-click repair offered
+  at the point of failure.
+
+The readout matters more than the error, because a file's stands are usually
+filled in bulk across a whole airport rather than one at a time, and an error at
+the end of that has nothing useful to say about which of 300 stands the author
+actually meant to leave empty.
 
 ---
 

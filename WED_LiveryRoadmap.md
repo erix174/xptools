@@ -32,8 +32,10 @@ Airline"`, `"USA"`. Nothing on those cards relates to the ramp being edited. The
 rest of the tab — airline checkboxes, recommendations, size range, flags — is
 real.
 
-**Designed, not built.** The apt.dat format: `1301` untouched, named policies with
-per-stand refinement, content-hash grouping, subtractive storage.
+**Designed, not built.** The apt.dat format: `1301` untouched, two additive rows written
+inline at each stand — `1312` refinements and `1313` class weights — subtractive
+storage, no grouping and no names. Draft 5 dropped the named-policy machinery it had
+carried since draft 1; see spec §8.2 for the measurement that killed it.
 
 **Not started, and not ours.** The X-Plane side. Jim K. cannot begin without a written
 format from us.
@@ -107,6 +109,29 @@ range-aware index query, build the card list in `RebuildSelection()`, delete
 once: `UAL` Legacy/Modern, `JYH`'s eleven colours, `CCA`'s five Peony tail numbers,
 `RYR`'s four separate AOCs.
 
+### The coverage readout belongs here, not in phase 5
+
+Spec §4.5 specifies a `P(empty)` readout. Its weighted form needs `1313`, so it waits
+for phase 4 — but **the part that catches the actual defect does not**, and building it
+here costs almost nothing extra.
+
+The range-aware index query this phase adds already answers "which of this stand's
+airlines can fill class *c*". Run it across the stand's existing `width_min..width`
+range and you get, from data WED has **today**, the same signal the 17.2% measures:
+*no listed airline can fill any class in this stand's declared range.* No weights
+required. Show it per stand as coverage ("4 of 6 airlines, classes C-E"), and it
+upgrades to a probability in phase 4 by weighting the same per-class terms with `1313`
+instead of treating the range uniformly.
+
+Two reasons to do it now rather than defer the whole thing:
+
+- **It gives `WED_LiveryIndex` a second consumer with a visible symptom.** The preview
+  strip alone fails quietly when the index is stale or missing - §6.4's exact
+  complaint. A number that reads *index not loaded* does not.
+- **It lands the display vocabulary before the numbers get interesting.** Deciding what
+  "empty" means on screen is cheaper against coverage than against a weighted
+  distribution and a bulk rollup at the same time.
+
 ---
 
 ## Phase 2 — Build on the other two platforms  *(do not defer this)*
@@ -160,23 +185,28 @@ provisional, or it waits for phase 4 to give it somewhere to write.
 Only after the format is agreed in writing. Touches `src/XESCore/AptIO.cpp` and
 `AptGate_t`, which are shared with the wider scenery toolchain.
 
-Shape: `AptGate_t` gains an exclusion list and a weight list. Import copies a
-referenced policy into each stand — WED models no "policy" object at all. Export
-re-groups stands by content hash and emits definitions with content-derived names
-(`g_a3f91c`, not `g1`, so a definition whose content did not change does not churn in
-Julian's diffs). Old export targets write `1301` only, which is how an old X-Plane
-still gets a usable file.
+Shape: `AptGate_t` gains a refinement list and a six-element weight list, and
+`WED_RampPosition` gains the matching properties. Import and export are both
+straightforward now that the format is inline — the rows read and write at the stand,
+bound to the preceding `1300` (R20), with nothing to resolve and no shared object to
+keep in sync. Old export targets write `1301` only, which is how an old X-Plane still
+gets a usable file.
+
+Two things the reader must get right, both of which are cheap here and expensive
+later: soft-fail per R4/R5 — a bad row never fails the file, and a bad `1313` is
+dropped **whole**, never partially applied — and a rule for a duplicate `1312`/`1313`
+on one stand, which the spec's §3 currently leaves as a silent overwrite.
 
 This is also where `width_min` finally survives export.
 
 ---
 
-## Phase 5 — One-click fill, and the validator that must ship with it
+## Phase 5 — One-click fill, the readout, and the validator
 
-**These two are one feature, not two.** Class-first selection gives an author the power
-to say "only D spawns here", and with it the power to say it about a class none of their
-airlines can fill. Nothing degrades that gracefully any more - the stand is simply empty,
-every time, with no symptom except an empty apron.
+**These three are one feature, not three.** Class-first selection gives an author the
+power to say "only D spawns here", and with it the power to say it about a class none of
+their airlines can fill. Nothing degrades that gracefully any more - the stand is simply
+empty, every time, with no symptom except an empty apron.
 
 ### The scale, measured
 
@@ -211,6 +241,25 @@ one stand in six and touches nearly half of all commercially served airports.
    affected stands at a single one (CDG), a per-stand fix is not a fix. Design it as
    "apply to selection" / "apply to airport" from day one - retrofitting bulk onto a
    single-stand action is how this ends up unusable at exactly the airports that matter.
+4. **A live `P(empty)` readout, and an airport-level rollup after every bulk fill.**
+   Spec §4.5. The validator is a gate at the end; the readout is the thing that stops
+   an author reaching it. It answers the question the file format structurally cannot:
+   §4.5 point 2 notes that "intentionally empty", "no airline has this class" and
+   "everything is excluded" are indistinguishable from outside - but a person looking
+   at *"this stand is empty 31% of the time"* can tell which one they meant.
+
+   **The rollup is the half that is easy to skip and must not be.** Per-stand numbers
+   have no eyes on them during a 326-stand fill that the author accepts wholesale, and
+   that fill is the only mechanism in the product that would ever produce the 7,604
+   stands above - R17 means import produces none. So the fill must end with
+   *"47 stands filled. 12 will be empty more than half the time, 8 always."*
+
+   Display rules, all from §4.5: `P(empty)` is first-class and not buried;
+   de-emphasise per-livery odds, which are the library's business (§4.3), not the
+   author's; show the **delta** at the moment of the click (`empty 3% → 31%`), since
+   the author's question is "what did I just do", not "what is the number"; and name
+   the index version the numbers were resolved against, distinguishing `0%` from
+   *index not loaded* (§6.4).
 
 ### Quantity is a design input here, not an afterthought
 
@@ -227,9 +276,10 @@ wholesale.
 
 Two consequences worth designing for up front:
 
-- It produces uniform data across a whole airport, which is the best possible input for
-  content-hash grouping. CDG's 326 airline stands should collapse to a handful of
-  policies.
+- It produces uniform data across a whole airport — which, now that the format is
+  inline, buys nothing at write time and everything at review time. CDG's 326 stands
+  will each carry their own two rows; what makes that readable in a diff is that they
+  are *identical* two rows, not that they were collapsed into one definition.
 - **Record which strategy version filled an airport.** Storing the expanded result is
   correct — an author accepted a specific recommendation and changing it later behind
   their back is worse — but without a version stamp nobody can answer "should this
