@@ -61,9 +61,10 @@ One behaviour change, and it is the part worth your attention:
 
 ```
 1.  pick a CLASS      weighted by the six integers in 1313
-2.  pick an AIRLINE   uniformly among those in 1301 having a livery in that class
-3.  pick a LIVERY     uniformly among that airline's liveries in that class,
-                      minus 1312's exclusions, honouring EXPORT_RATIO
+2.  pick an AIRLINE   uniformly among those in 1301 having a NON-EXCLUDED
+                      livery in that class
+3.  pick a LIVERY     uniformly among that airline's non-excluded liveries in
+                      that class, honouring EXPORT_RATIO
 ```
 
 **Class first, and the order is the whole point.** Do it as one flat weighted

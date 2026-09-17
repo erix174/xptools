@@ -112,6 +112,9 @@ correctly.
   hand-forged grouping is silently corrected by one round-trip.
 - **R17** — Three-stage selection (§4) applies **only** to stands carrying a `1313`
   row. A stand without one MUST keep today's behaviour, unchanged.
+- **R18** — Stage 2 and stage 3 MUST apply the same exclusion filter. An airline
+  whose every livery in the drawn class is excluded is not a stage-2 candidate.
+  See §4.1 — getting this wrong lets a `1312` row silently empty a stand.
 
 ---
 
@@ -242,18 +245,33 @@ class := weighted_choice(A..F, weights = stand.weights)
          if every weight is zero -> nothing parks here, stop        # §4.2
 
 airlines_in_class := [ a for a in stand.airlines            # from 1301
-                         if index has any livery for (a, class) ]
+                         if eligible(a, class) is non-empty ]
 if airlines_in_class is empty -> nothing parks here, stop
 airline := uniform_choice(airlines_in_class)
 
-liveries := [ L for L in index.liveries(airline, class)
-                if (airline, L.type) not in stand.exclusions ]
-if liveries is empty -> nothing parks here, stop
-livery := weighted_choice(liveries, weights = EXPORT_RATIO or uniform)
+liveries := eligible(airline, class)
+livery   := weighted_choice(liveries, weights = EXPORT_RATIO or uniform)
+
+where
+  eligible(a, class) = [ L for L in index.liveries(a, class)
+                           if (a, L.type) not in stand.exclusions ]
 ```
 
 If a stage has no candidates, nothing parks at that stand this time. That is a
 correct outcome, not an error — see §4.5.
+
+**Stage 2 MUST apply the exclusions too (R18).** Filtering stage 2 on "has any
+livery in this class" while filtering stage 3 on "…that is not excluded" lets an
+exclusion silently empty a stand. Concretely, in the sample package: BAW's only
+C-class livery is the A320, so a policy excluding `-baw:A320` makes BAW a valid
+stage-2 candidate with zero stage-3 options. Every time BAW is drawn, the stand
+parks nothing. The author wrote "don't park BAW's A320 here" and got "sometimes
+park nothing here", which is not the same sentence.
+
+Writing it as one `eligible()` used by both stages makes the two impossible to
+drift apart. This was found by building the sample in `docs/livery_sample/` and
+tracing stand `07-POLICY-A` by hand; drafts 1–4 had the flattened form and the
+bug.
 
 ### 4.2 Weights
 
