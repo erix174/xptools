@@ -80,7 +80,6 @@ def ioc_for_reg(reg):
     return "???", False, ""
 
 # --------------------------------------------------------------- livery note
-# Controlled vocabulary, same spirit as the index's VARIANT column.
 # NOTE is FREE TEXT, deliberately not a closed enum. WED renders anything other
 # than "Default" in parentheses after the airline name - "United (Retro)",
 # "Air China (Pink Peony)", "Hainan Airlines (Mixue)" - so making a caption more
@@ -361,7 +360,15 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
 #               Empty is legal - older assets simply have no registration.
 #   REG COUNTRY IOC 3-letter code of the country of registration. Empty when
 #               REG is empty.
-#   NOTE        Default | Retro | Special | Alliance | Government | Unpainted
+#   NOTE        FREE TEXT, an OPEN vocabulary - not an enum. "Default" means "no
+#               annotation"; anything else is rendered in parentheses after the
+#               operator name ("United (Retro)", "Air China (Pink Peony)"). The
+#               generator only normalises spellings it recognises and keeps
+#               everything else as the asset spelled it, so refining a caption is
+#               a one-word edit here and needs no code change. Do NOT build a
+#               reader that validates this column against a list: the shipped
+#               data already carries Peony, Peacock, Panda, Mixue and Fictional,
+#               and the variants worth having are the ones nobody enumerated.
 #   path        Relative to apt_aircraft/.
 #
 # "????" in any column means the bootstrap could not determine it and a human
