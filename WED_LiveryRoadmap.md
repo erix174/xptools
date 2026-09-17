@@ -123,6 +123,27 @@ The longer this waits, the more code sits on top of an unverified assumption.
 
 ---
 
+## Phase 2.5 — The `+` whitelist, and the lock icon that shows it
+
+Format side landed as R21 (spec §2 grammar, §4.1, vectors V23-V26): `+air:type`
+closes an airline's set to exactly the listed types, `-air:type` leaves it open.
+**The UI for it is not built**, and this is the pair Eric deferred as "items 1 and
+2" on 2026-09-16.
+
+- **Item 1 — how an author says it.** The airline checklist today is a two-state
+  tick. A closed set needs a third state: "this airline, but only these types".
+  Needs a per-airline type list to pick from, which is exactly what the tray in
+  phase 3 shows — so these two should be designed together, not separately.
+- **Item 2 — how an author sees it.** Eric asked for a small **lock icon** reusing
+  the `+`/`-` sigil design: a locked row reads "only this one type". The lock is
+  the right metaphor because the semantics really are a freeze — and unlike the
+  freezing that ruled out candidates A and B, this one is opt-in and local, which
+  is worth conveying rather than hiding.
+
+**Do not ship `+` in the writer before this UI exists.** An author who cannot see
+that a set is closed cannot tell why a stand stopped spawning the aircraft it used
+to, and a closed set is exactly the kind of state that goes stale silently.
+
 ## Phase 3 — The tray  *(commit B)*
 
 Animation via `GUI_Timer`, nested wheel scrolling, overlay draw and hit-test priority.

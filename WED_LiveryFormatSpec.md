@@ -81,6 +81,31 @@ into the WED/xptools tree at branch `feature/ramp-livery-picker`.
   reference to a name not defined in the same block is dangling: discard per R4.
 - **R8** — The policy name `-` means "this stand only". It MUST NOT be treated as
   a definable or referenceable name.
+- **R21** — **A `+` refinement closes that airline's set; `-` leaves it open.**
+  For one airline, if any `+airline:type` is present, that airline contributes
+  **only** the listed types, at every class. If only `-` entries are present, the
+  airline contributes everything the index has for it **except** those types.
+
+  Subtraction alone cannot express a closed set, and the workaround is worse than
+  no answer. "Only the A380 parks at this pier" becomes "exclude every other type
+  this airline operates" — a list with **no upper bound**, which also **goes
+  stale**: a type added to the library next year is not in it, so it starts
+  parking at the A380-only pier on its own. That is the mirror image of the defect
+  that ruled out candidates A and B in §8.1 — those freeze and cannot let new
+  models in; open-only subtraction cannot keep them out.
+
+  `+` makes freezing **opt-in and local**. The author who writes it is asking for
+  exactly one type, so freezing is the correct reading rather than a compromise.
+
+  Mixing `+` and `-` for the **same** airline is a writer error (R10-class). A
+  reader takes `+` as authoritative and ignores `-` for that airline; do not
+  attempt to subtract from a closed set.
+
+  A `+` set is closed **across classes too**, which falls out of the definition
+  and is intended: `+uae:A388` at a stand weighted for class E means Emirates
+  contributes nothing at E, because their E-class aircraft is the 777. R18 then
+  removes them from the stage-2 pool rather than drawing them and finding nothing.
+
 - **R20** — **Per-stand rows attach to the most recent `1300`, and MUST follow it.**
   That is `1311`, and `1312`/`1313` written in the inline `-` form. R6's
   free placement applies to *policy definitions* only — a definition has a name to
@@ -159,10 +184,12 @@ correctly.
 ; ---- the four new rows -------------------------------------------------
 airlines-row   = %s"1310" 1*SP policy 1*(1*SP airline) *SP
 reference-row  = %s"1311" 1*SP policy-ref *SP
-exclusion-row  = %s"1312" 1*SP policy 1*(1*SP exclusion) *SP
+refine-row     = %s"1312" 1*SP policy 1*(1*SP refinement) *SP
 weights-row    = %s"1313" 1*SP policy 6(1*SP weight) *SP
 
-exclusion      = "-" airline ":" actype
+refinement     = exclusion / inclusion
+exclusion      = "-" airline ":" actype   ; open set:   everything BUT this
+inclusion      = "+" airline ":" actype   ; closed set: ONLY this (R21)
 
 ; ---- lexical -----------------------------------------------------------
 policy         = generated-name / inline-marker
@@ -535,8 +562,12 @@ liveries := eligible(airline, class)
 livery   := weighted_choice(liveries, weights = EXPORT_RATIO or uniform)
 
 where
-  eligible(a, class) = [ L for L in index.liveries(a, class)
-                           if (a, L.type) not in stand.exclusions ]
+  eligible(a, class):
+      allow = { t for ("+", a2, t) in stand.refinements if a2 == a }
+      if allow is non-empty:                       # CLOSED set for this airline
+          return [ L for L in index.liveries(a, class) if L.type in allow ]
+      deny  = { t for ("-", a2, t) in stand.refinements if a2 == a }
+      return [ L for L in index.liveries(a, class) if L.type not in deny ]
 ```
 
 If a stage has no candidates, nothing parks at that stand this time. That is a
@@ -687,6 +718,10 @@ whatever the current step-down does with it.
 | V5 | `1312 - -fdx:B763` with no `1313` on the stand | exclusion recorded, but **today's behaviour** still applies (R17) — exclusions alone do not activate three-stage selection |
 | V6 | `1313 g_x 1000 0 0 0 0 0` | legal; 1000 is the ceiling (R11) |
 | V7 | stand with `1311` and its own inline `1313` | inline wins for weights, policy supplies the rest (§3 pass 2) |
+| V23 | `1312 -  +uae:A388` | Emirates contributes **only** the A388, at every class. Every other airline on `1301` is unaffected (R21) |
+| V24 | `1312 -  +uae:A388 -uae:B772` | writer error. `+` is authoritative; the `-` is ignored, not subtracted from the closed set (R21) |
+| V25 | `1312 -  +uae:A388 -dal:B772` | independent per airline: Emirates closed to A388, Delta open minus the 777 |
+| V26 | `1312 -  +uae:A388` on a stand weighted class E only | Emirates is **not** a stage-2 candidate — A388 is class F, they have nothing at E (R18 + R21) |
 
 V5 is the case most likely to be got wrong. Exclusions are subtractive
 refinements of a selection that only exists once `1313` is present.
