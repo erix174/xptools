@@ -1,3 +1,4 @@
+import os
 """
 One-shot merge of WED_CommercialAirports.txt (ICAO -> ISO_COUNTRY, last
 column) and WED_AirlineDatabase.txt (ICAO -> researched airline codes) into
@@ -15,7 +16,8 @@ Run from anywhere; paths below are absolute to this repo checkout.
 """
 import sys
 
-WEDLIVERY = r"C:\Users\Eric\Desktop\Laminar Misc Project\WED\xptools-livery\src\WEDLivery"
+from wed_paths import wed_livery_dir
+WEDLIVERY = wed_livery_dir()
 COMMERCIAL = WEDLIVERY + r"\WED_CommercialAirports.txt"
 AIRLINES = WEDLIVERY + r"\WED_AirlineDatabase.txt"
 OUT = WEDLIVERY + r"\WED_AirportDatabase.txt"

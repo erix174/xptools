@@ -1,3 +1,4 @@
+import os
 """
 One-time fix for WED_AirlineDirectory.txt's duplicate-ICAO-code rows,
 based on a web-research pass (4 parallel batches) verifying which name
@@ -18,7 +19,8 @@ Usage: python fix_directory_duplicates.py
 """
 import re
 
-PATH = r"C:\Users\Eric\Desktop\Laminar Misc Project\WED\xptools-livery\src\WEDLivery\WED_AirlineDirectory.txt"
+from wed_paths import wed_livery_dir
+PATH = os.path.join(wed_livery_dir(), "WED_AirlineDirectory.txt")
 
 # code -> exact name string of the row to DELETE
 DELETE = {

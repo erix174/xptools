@@ -1,3 +1,4 @@
+import os
 """
 Adds a Pax/Cargo service-type column to WED_AirlineDirectory.txt, changing
 its format from
@@ -25,7 +26,8 @@ Usage: python add_service_type_column.py
 """
 import re
 
-PATH = r"C:\Users\Eric\Desktop\Laminar Misc Project\WED\xptools-livery\src\WEDLivery\WED_AirlineDirectory.txt"
+from wed_paths import wed_livery_dir
+PATH = os.path.join(wed_livery_dir(), "WED_AirlineDirectory.txt")
 
 # Rows to re-add (were deleted as "duplicate" before this column existed;
 # each is a real all-cargo division of the airline that already owns the

@@ -6,9 +6,11 @@
 # a diff-review, never a blind overwrite.
 import os, re, sys, collections
 
-XP    = r"D:\X-Plane 12"
-ROOT  = os.path.join(XP, "Resources", "default scenery", "sim objects", "apt_aircraft")
-SCEN  = os.path.join(XP, "Resources", "default scenery")
+from wed_paths import xplane_root, apt_aircraft, default_scenery, wed_livery_dir
+
+XP    = xplane_root()          # argv[1] or $XPLANE_ROOT; validated, never guessed
+ROOT  = apt_aircraft(XP)
+SCEN  = default_scenery(XP)
 OUT   = os.path.join(os.path.dirname(os.path.abspath(__file__)), "livery_index.txt")
 
 # --------------------------------------------------------------- IOC country by
@@ -109,7 +111,7 @@ for lib in ("sim objects", "airport scenery"):
         if vpath.startswith("lib/airport/aircraft/"):
             exports[real.replace("\\", "/")].append(vpath)
 
-WEDL = "C:/Users/Eric/Desktop/Laminar Misc Project/WED/xptools-livery/src/WEDLivery"
+WEDL = wed_livery_dir()        # derived from this script's own location
 
 def _load_rows(path, ncol):
     out = []
