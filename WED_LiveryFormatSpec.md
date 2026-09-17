@@ -185,10 +185,15 @@ ban and is how an author says "never D here", which is a case they have asked fo
 
 ---
 
-## Version and unknown rows — tested, answered
+## Version and unknown rows — tested on a real build, not assumed
 
-We said we would answer this rather than ask you to. Result below; the reasoning matters
-because **WED and the sim behave differently**, and we had assumed they matched.
+We said we would answer this rather than ask you to, so we did: the format below was
+written into real scenery packages and loaded by a real X-Plane. **The sim ignores
+both the new rows and an unrecognised version number.** Evidence is the full log,
+kept at `docs/livery_evidence/XPlane12.4.4_apt_dat_tolerance_Log.txt`.
+
+The reasoning matters because **WED and the sim behave differently**, and we had
+assumed they matched. They do not, and the difference cuts both ways.
 
 ### The test
 
@@ -230,6 +235,43 @@ gated at version 1050 (`:738`), which is what led us to assume the sim gated too
 reading `1301` and ignoring the rest — exactly the degradation the format is built
 around. A version bump becomes a choice about signalling intent, not a compatibility
 requirement, and the Gateway two-version problem largely disappears.
+
+### The other half: an old WED cannot open these files
+
+The same test, applied to WED's own reader by inspection, gives the opposite answer —
+and this is the part that still needs a decision.
+
+A 2.7.x WED opening an apt.dat containing `1310`-`1313` falls through
+`AptIO.cpp:1188-1209` to `ok = "Illegal unknown record"`, and
+`WED_AptIE.cpp:1162-1167` turns that into
+
+```
+Unable to read apt.dat file '<path>': Illegal unknown record (Line N)
+```
+
+and imports **nothing**. Not a degraded airport — no airport.
+
+So for a user still on X-Plane 12.2.x who downloads Gateway scenery written in the new
+format:
+
+| | behaviour |
+|---|---|
+| **X-Plane 12.2.x** | fine. Ignores the new rows, parks aircraft from `1301` exactly as today. |
+| **WED 2.7.x** | refuses to open the file, with a message naming the line. |
+
+The sim side is genuinely solved. The editor side is not: an author on an older WED
+cannot open scenery that a newer WED submitted. Three ways out, none of them ours to
+choose alone:
+
+1. Gateway serves an old client an apt.dat with the new rows stripped — it can, since
+   `1301` alone is complete and authoritative by design.
+2. A 2.7.x patch that skips unknown row codes instead of failing. Small change, but it
+   needs a release, and it only helps people who take it.
+3. Accept it: editing 2.8-era scenery requires 2.8-era WED.
+
+Worth noting the populations differ in size and in updatability. Sim users are many and
+update on their own schedule; WED authors are far fewer and already track releases
+closely. That argues for (3) with (1) as a safety net, but it is a Gateway policy call.
 
 ### What this does NOT establish
 
