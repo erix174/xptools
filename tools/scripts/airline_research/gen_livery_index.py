@@ -5,6 +5,21 @@
 # cell it could not determine so a human can fill it in. Re-running it should be
 # a diff-review, never a blind overwrite.
 import os, re, sys, collections
+import datetime as _dt
+
+
+def xplane_build(root):
+    """Version string of the install this index describes, or 'unknown'."""
+    log = os.path.join(root, "Log.txt")
+    if os.path.exists(log):
+        try:
+            with open(log, encoding="utf-8", errors="replace") as f:
+                m = re.search(r"X-Plane (\d+\.\d+[\w.-]*)", f.readline())
+                if m:
+                    return m.group(1)
+        except Exception:
+            pass
+    return "unknown"
 
 from wed_paths import xplane_root, apt_aircraft, default_scenery, wed_livery_dir
 
@@ -249,7 +264,27 @@ for dp, _dn, fn in os.walk(ROOT):
 # --------------------------------------------------------------- emit
 rows.sort(key=lambda r: (r[0], r[2], r[6]))
 with open(OUT, "w", encoding="utf-8", newline="\n") as o:
+    # TWO versions, deliberately separate.
+    #
+    #   schema - how many columns there are and what they mean. A reader keys its
+    #            parsing off this, so it only moves when the layout moves.
+    #   data   - which day's content this is, as <YYYYMMDD>-r<n>. A human keys
+    #            "do I need to update this" off it.
+    #
+    # Folding them into one would force a reader to write `if (date >= 20260916)`,
+    # which is wrong both ways: the layout can change twice in a day, or not
+    # change for a year.
+    #
+    # `source` records WHICH install this describes, because the index is
+    # install-specific and a mismatch fails SILENTLY - cards with no picture and
+    # one line in the log, nothing saying "this index is for another build".
+    # This machine alone has 12.4.4-pnl5 with 376 static aircraft and 12.4.3-r2
+    # with 298.
     o.write("I\n1 WED Aviation Database\n")
+    o.write("# schema 1\n")
+    o.write("# data %s-r1\n" % _dt.date.today().strftime("%Y%m%d"))
+    o.write("# source X-Plane %s\n" % xplane_build(XP))
+    o.write("# assets %d liveries under apt_aircraft/\n#\n" % len(rows))
     o.write("""# X-Plane Static Livery Index
 # ============================================================================
 # WHAT THIS FILE IS: the authoritative catalogue of every static-aircraft

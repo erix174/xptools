@@ -1,5 +1,10 @@
 I
 1 WED Aviation Database
+# schema 1
+# data 20260916-r1
+# source X-Plane 12.4.3-r2-15ff1e4d
+# assets 298 liveries under apt_aircraft/
+#
 # X-Plane Static Livery Index
 # ============================================================================
 # WHAT THIS FILE IS: the authoritative catalogue of every static-aircraft

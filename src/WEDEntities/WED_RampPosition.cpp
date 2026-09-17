@@ -162,11 +162,29 @@ static bool two_adjacent_spaces(char lhs, char rhs)
 	return (lhs == rhs) && (lhs == ' ');
 }
 
+// Longest airline list observed in the global apt.dat is 27 codes, about 110
+// characters. This is a defensive ceiling, not a design limit - it exists so a
+// hand-authored document cannot put an unbounded string into a row that other
+// tools have to read.
+static const size_t kMaxAirlinesChars = 1024;
+
 string	WED_RampPosition::CorrectAirlinesString(const string &a)
 {
 	string cleaned_airlines_str;
 	std::transform(a.begin(), a.end(), back_inserter(cleaned_airlines_str), [](unsigned char c) {return tolower(c);} );
-	
+
+	// Fold EVERY kind of whitespace to a plain space before anything else.
+	//
+	// This string is written into apt.dat with a bare fprintf("%s") followed by
+	// the row terminator (AptIO.cpp:1475). Only ' ' was ever collapsed below, so
+	// an embedded newline survived the whole pipeline and appeared in the
+	// exported file as a row of its own - a content injection that reaches
+	// anything consuming that apt.dat, Gateway included. A tab or a carriage
+	// return would equally have corrupted the row's field structure.
+	for (size_t i = 0; i < cleaned_airlines_str.size(); ++i)
+		if (isspace((unsigned char) cleaned_airlines_str[i]))
+			cleaned_airlines_str[i] = ' ';
+
 	//Thanks Plamen for this concise trim http://stackoverflow.com/a/22711818
 	//Ben says: except - the stack overflow answer is WRONG - missing a check for
 	//the empty string case.
@@ -180,7 +198,16 @@ string	WED_RampPosition::CorrectAirlinesString(const string &a)
 		cleaned_airlines_str.erase(cleaned_airlines_str.length()-1);
 	}
 	
-	cleaned_airlines_str.erase(std::unique(cleaned_airlines_str.begin(), cleaned_airlines_str.end(), two_adjacent_spaces), cleaned_airlines_str.end());   
+	cleaned_airlines_str.erase(std::unique(cleaned_airlines_str.begin(), cleaned_airlines_str.end(), two_adjacent_spaces), cleaned_airlines_str.end());
+
+	// Bound the result, cutting at a token boundary so truncation can never
+	// invent a code that was never written.
+	if (cleaned_airlines_str.size() > kMaxAirlinesChars)
+	{
+		cleaned_airlines_str.resize(kMaxAirlinesChars);
+		size_t last = cleaned_airlines_str.find_last_of(' ');
+		cleaned_airlines_str.erase(last == string::npos ? 0 : last);
+	}
 
 	return cleaned_airlines_str;
 }
