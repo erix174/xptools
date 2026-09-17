@@ -56,9 +56,17 @@ used.
 
 The first version of this package was commented for readability. **apt.dat has no
 comment syntax** — not `#`, not anything — and WED refused the file at the first
-comment line, eight lines before reaching any row this proposal defines. Zero
-lines begin with `#` in the 12.3-million-line Global Airports apt.dat; the format
-simply does not have the concept.
+comment line, four lines before reaching any row this proposal defines. Zero lines
+begin with `#` in the 12.3-million-line Global Airports apt.dat; the format simply
+does not have the concept.
+
+The mechanism is quieter than "the reader rejects `#`". `TextScanner_FormatScan`
+converts a line's first token with `atoi()`, and `atoi("#")` returns **0** while
+the function still reports having read one token — so the caller's skip guard
+never fires and the line is processed as **record code 0**, which falls through to
+`Illegal unknown record`. **Blank lines are fine**, by the same code read the other
+way: they tokenize to nothing, the guard fires, and they are skipped. Use them
+freely.
 
 X-Plane loaded the commented file **without complaint**, which is why the mistake
 survived a successful sim test. That is §7.2 working as documented — the sim

@@ -112,17 +112,28 @@ correctly.
   and not the other.
 - **R14** — A writer MUST NOT emit weights pointing exclusively at classes that no
   listed airline can fill. WED treats this as a hard export error (§4.5).
-- **R19** — **apt.dat has no comment syntax. A writer MUST NOT emit comment lines.**
-  There is no `#` form, no `//` form, and nothing else. `AptIO.cpp:1209` turns any
-  line whose first token is not a known record code into `Illegal unknown record`,
-  which fails the **entire file**. Confirmed against the shipped data: **zero**
-  lines begin with `#` in the 12,351,496-line Global Airports apt.dat.
+- **R19** - **apt.dat has no comment syntax. A writer MUST NOT emit comment lines.**
+  There is no `#` form, no `//` form, and nothing else. Confirmed against the
+  shipped data: **zero** lines begin with `#` in the 12,351,496-line Global
+  Airports apt.dat.
 
-  Stated as a rule because we got it wrong ourselves. The first sample package
-  was commented for readability, and WED refused it at the first comment line —
-  eight lines before it ever reached a row this proposal defines. X-Plane loaded
-  the same file without complaint, which is consistent with §7.2 (it ignores
-  anything it does not recognise, comments included) and is exactly why the
+  The mechanism is worth knowing, because it is not "the reader rejects `#`" - it
+  is quieter than that. `TextScanner_FormatScan(s, "i", &rec_code)` tokenizes the
+  line and converts the first token with `atoi()` (`MemFileUtils.cpp:769-800`).
+  `atoi("#")` returns **0**, and the function still returns 1 because it counted a
+  token. So the caller's `if (FormatScan(...) != 1) { skip }` guard
+  (`AptIO.cpp:346`) never fires, the line is processed as **record code 0**, and 0
+  falls through to `default:` - `ok = "Illegal unknown record"`, which fails the
+  entire file (`AptIO.cpp:1209`).
+
+  **Blank lines are safe**, by the same code read the other way: a blank line
+  yields zero tokens, `FormatScan` returns 0, and the guard does skip it. A writer
+  may use blank lines freely to separate sections, and every example here does.
+
+  Stated as a rule because we got it wrong ourselves. The first sample package was
+  commented for readability; WED refused it at the first comment line, four lines
+  before it reached a row this proposal defines. X-Plane loaded the same file
+  without complaint, which is consistent with section 7.2 and is exactly why the
   mistake survived a successful sim test. Anything explanatory belongs in a
   companion file, which is where the sample's now lives.
 
