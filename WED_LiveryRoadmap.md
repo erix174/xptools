@@ -18,8 +18,19 @@ flag pipeline, and three shipped data files. Audited end to end, swept for porta
 two heap-corruption bugs and one old-Mac crash fixed.
 
 **Built but never run.** `WED_LiveryIndex` — 298 liveries, loader, availability
-tri-state, real-path object loading — has **zero callers**. Everything about it is
-verified by reading, not by running.
+tri-state, real-path object loading — has **no consumer**. To be exact, since
+"zero callers" was overstated: `WED_LiveryIndexDefaultPath()` has exactly one
+caller, at `WED_LiveryPane.cpp:2717`, and it uses only the resolved *path*, as a
+cache key for discarding thumbnails when the X-Plane root changes. Nothing loads
+the file or queries it. Everything about the index is verified by reading, not by
+running.
+
+Which is what the preview strip still shows: `PickPlaceholderObjectVpaths()`
+(`WED_LiveryPane.cpp:835`) grabs the first four `res_Object` vpaths anywhere in
+the library, captioned with the literal strings `"ICAO"`, `"Placeholder
+Airline"`, `"USA"`. Nothing on those cards relates to the ramp being edited. The
+rest of the tab — airline checkboxes, recommendations, size range, flags — is
+real.
 
 **Designed, not built.** The apt.dat format: `1301` untouched, named policies with
 per-stand refinement, content-hash grouping, subtractive storage.
