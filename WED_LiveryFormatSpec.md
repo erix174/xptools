@@ -60,7 +60,22 @@ into the WED/xptools tree at branch `feature/ramp-livery-picker`.
   defined here is an additive refinement of the stand `1301` already describes.
 - **R2** — A reader that discards every `1312` and `1313` row MUST produce exactly
   today's behaviour. This is the floor, and it MUST be unreachable from any input.
-- **R3** — On any conflict between `1301` and a refinement row, `1301` wins.
+- **R3** — **The airline list on `1301` is the only one.** It is not repeated
+  anywhere, so it cannot disagree with anything. Selection reads it directly.
+- **R23** — **`1301`'s size letter is derived from `1313`, not the other way round.**
+  A writer MUST set it to the **highest class carrying a non-zero weight**. WED
+  treats a mismatch as auto-fixable rather than as an author decision: `1301 A`
+  next to `1313 0 0 0 0 9 1` is corrected to `F`.
+
+  The letter is a **slave field, and carries no intent**. When `1313` is present,
+  nothing consults the letter to choose a class — the weights are the whole truth
+  (R5). It survives for two consumers that cannot read `1313`: an old sim, which
+  step-downs from it and so should start from the largest class the author allows,
+  and WED's map view, which sizes the stand icon from it.
+
+  This is the one place where a value in `1301` follows the new rows instead of
+  leading them, and it is safe precisely because no reader uses it for selection
+  once `1313` exists.
 - **R4** — A malformed or unparseable `1312`/`1313` row MUST be
   discarded, and MUST NOT fail the file, the airport, or the stand. **This is the
   opposite of the rest of `AptIO.cpp`**, where a bad row sets `ok = "Illegal …"`
@@ -72,6 +87,25 @@ into the WED/xptools tree at branch `feature/ramp-livery-picker`.
   a legal and meaningful value (§4.2), so a truncated row parsed as zeros would
   silently empty the stand — the one place where soft-fail must be explicit about
   what it falls back *to*.
+- **R22** — **`-airline` with no type removes that airline from the stand entirely.**
+  `-etd` and `-etd:A332` are both legal and mean different things: the first bans
+  Etihad here outright, the second bans one of their aircraft.
+
+  Without it the only way to say "not this operator" is to list every type they
+  currently fly — a list with **no upper bound** that also **goes stale**, since a
+  type added next year is not in it and starts parking here by itself. That is the
+  same defect that made `+` necessary (R21); this is its other half, and leaving it
+  out meant the format could say "only this one" but not "none of these".
+
+  A bare `-airline` **outranks every other refinement for that airline**, including
+  a `+`. There is no reading of "only their A380, and also none of their aircraft"
+  worth supporting, so the reader takes the ban and does not try to reconcile.
+
+  Note what this is **not** for. An exclusion does not need a class qualifier,
+  because an aircraft type only ever appears in its own class: `-dlh:B744` already
+  affects class E only, since a 747-400 **is** class E. Per-class scoping was
+  considered and dropped for that reason — naming the type already names the class.
+
 - **R21** — **A `+` refinement closes that airline's set; `-` leaves it open.**
   For one airline, if any `+airline:type` is present, that airline contributes
   **only** the listed types, at every class. If only `-` entries are present, the
@@ -121,6 +155,21 @@ correctly.
 - **R11** — Weights are non-negative integers in `0..1000`.
 - **R14** — A writer MUST NOT emit weights pointing exclusively at classes that no
   listed airline can fill. WED treats this as a hard export error (§4.5).
+
+  **Two situations look identical here and must not be treated alike**, which the
+  “Emirates A380 gate” case makes concrete: the library ships **no class-F livery
+  at all** today, so an author building that gate writes a weight nothing can
+  currently satisfy.
+
+  | the class is unfillable because… | verdict |
+  |---|---|
+  | the listed airlines have liveries at other classes but none here | **error.** The weights are wrong and one click fixes them |
+  | **no asset exists at that class anywhere in the library** | **warning.** The author is ahead of the art, and late binding is the whole design |
+
+  Blocking the second would make it impossible to author for an aircraft that is
+  coming, which is exactly the capability §8.3 argues the format exists to
+  preserve. The validator therefore asks "can these airlines fill it?" only after
+  establishing that **something** could.
 - **R19** - **apt.dat has no comment syntax. A writer MUST NOT emit comment lines.**
   There is no `#` form, no `//` form, and nothing else. Confirmed against the
   shipped data: **zero** lines begin with `#` in the 12,351,496-line Global
@@ -166,7 +215,7 @@ refine-row     = %s"1312" 1*(1*SP refinement) *SP
 weights-row    = %s"1313" 6(1*SP weight) *SP
 
 refinement     = exclusion / inclusion
-exclusion      = "-" airline ":" actype   ; open set:   everything BUT this
+exclusion      = "-" airline [":" actype] ; one type, or the WHOLE airline (R22)
 inclusion      = "+" airline ":" actype   ; closed set: ONLY this (R21)
 
 ; ---- lexical -----------------------------------------------------------
@@ -467,10 +516,12 @@ livery   := weighted_choice(liveries, weights = EXPORT_RATIO or uniform)
 
 where
   eligible(a, class):
+      if ("-", a, NONE) in stand.refinements:      # "-a" with no type: whole airline
+          return []                                #   R22, and it outranks everything
       allow = { t for ("+", a2, t) in stand.refinements if a2 == a }
       if allow is non-empty:                       # CLOSED set for this airline
           return [ L for L in index.liveries(a, class) if L.type in allow ]
-      deny  = { t for ("-", a2, t) in stand.refinements if a2 == a }
+      deny  = { t for ("-", a2, t) in stand.refinements if a2 == a and t is not NONE }
       return [ L for L in index.liveries(a, class) if L.type not in deny ]
 ```
 
@@ -623,6 +674,10 @@ whatever the current step-down does with it.
 | V23 | `1312 +uae:A388` | Emirates contributes **only** the A388, at every class. Every other airline on `1301` is unaffected (R21) |
 | V24 | `1312 +uae:A388 -uae:B772` | writer error. `+` is authoritative; the `-` is ignored, not subtracted from the closed set (R21) |
 | V25 | `1312 +uae:A388 -dal:B772` | independent per airline: Emirates closed to A388, Delta open minus the 777 |
+| V27 | `1312 -etd` | Etihad contributes nothing at any class. Other airlines untouched (R22) |
+| V28 | `1312 -etd -etd:A332` | the bare ban wins; the type entry is redundant, not additive (R22) |
+| V29 | `1312 -uae +uae:A388` | the bare ban wins. No attempt to reconcile "only this" with "none of these" (R22) |
+| V30 | `1301 A airline dal` with `1313 0 0 0 0 9 1` | reader: selection uses the weights, the letter is not consulted. Writer/WED: correct the letter to `F` (R23) |
 | V26 | `1312 +uae:A388` on a stand weighted class E only | Emirates is **not** a stage-2 candidate — A388 is class F, they have nothing at E (R18 + R21) |
 
 V5 is the case most likely to be got wrong. Exclusions are subtractive
