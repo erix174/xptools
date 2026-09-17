@@ -13,7 +13,8 @@ assistant, and you should not need to read it to answer the questions below.
 WED is gaining a UI where a scenery author says which airlines park at a stand,
 which ICAO size classes may spawn there and in what proportion, and — rarely —
 which specific aircraft types to exclude. That needs somewhere to live in
-apt.dat. We propose four new rows, `1310`–`1313`. **`1301` is not modified and
+apt.dat. We propose **two** new rows, `1312` and `1313`, both written at the stand they
+describe. **`1301` is not modified and
 not deprecated.** A reader that ignores every new row behaves exactly as today.
 
 ---
@@ -22,9 +23,11 @@ not deprecated.** A reader that ignores every new row behaves exactly as today.
 
 ### 1. Row codes — 10 minutes
 
-We used `1310`, `1311`, `1312`, `1313`. `1302` was taken, so `1310` was the
-first free block. **Any four numbers work**; we need yours before we write the
-importer. This is the only one blocking us.
+We used `1312` and `1313`. **Any two numbers work**; we need yours before we
+write the importer. This is the only one blocking us.
+
+It was four rows until we measured the two that carried shared-policy names and
+found the sharing cost more than it saved - see spec §8.2. Two codes back.
 
 ### 2. Do we bump the apt.dat version — your call, no wrong answer
 
@@ -34,7 +37,7 @@ Both ignore unknown row codes *and* accept a version number that does not exist.
 So the new rows can ship in a `1200` file and every existing sim keeps working.
 
 The sample package (below) is the proof you can repeat in five minutes: it is a
-`1200` file carrying all four new rows, it starts a flight, and the sim says
+`1200` file carrying the new rows, it starts a flight, and the sim says
 nothing — in a run where it *did* complain about an unknown metadata key
 elsewhere. Evidence: `docs/livery_evidence/`.
 
@@ -65,11 +68,11 @@ we are not making it for you.
 `docs/livery_sample/ZZZ_livery_format_sample/` — copy it into `Custom Scenery/`.
 No DSF, no objects, airport data only.
 
-Seventeen stands in a line at a fictional **ZZLI** (flat western Kansas), each
+Sixteen stands in a line at a fictional **ZZLI** (flat western Kansas), each
 demonstrating exactly one thing and **named so you can read it off the ground**:
-`01-CONTROL`, `04-ALL-ZERO`, `14-DANGLING-REF`, and so on. Stands 01–10 are what
-WED will emit; 11–16 are deliberately broken and must all end up behaving
-identically to `01-CONTROL`; 17 is well-formed but self-contradictory.
+`01-CONTROL`, `04-ALL-ZERO`, `08-WHITELIST`, and so on. Stands 01–10 are what WED
+will emit; 11–15 are deliberately broken and must all end up behaving identically
+to `01-CONTROL`.
 
 `docs/livery_sample/README.md` has a table of every stand and its expected
 result, so you can check an implementation against it line by line.
@@ -135,7 +138,7 @@ warning, with one-click repair offered at the point of failure.
 | `livery_index.txt` — 298 liveries with type, class, operator, registration, country, livery note | **exists**, generated + hand-maintained |
 | The format spec | **this document set** |
 | WED reads the index, previews real aircraft | built, being wired now |
-| WED reads/writes `1310`–`1313` | blocked on your row codes |
+| WED reads/writes `1312`/`1313` | blocked on your row codes |
 | Validator + one-click fill | designed, sized against real data |
 
 The index is the piece you may not have expected. `library.txt` buckets objects

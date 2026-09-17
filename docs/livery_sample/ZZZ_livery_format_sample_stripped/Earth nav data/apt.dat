@@ -1,5 +1,5 @@
 I
-1200 Stripped copy - rows 1310-1314 removed - see docs/livery_sample/README.md
+1200 Stripped copy - rows 1312-1314 removed - see README.md
 
 1    3280 0 0 ZZLI Livery Format Sample
 1302 city Livery Format Sample
@@ -22,26 +22,24 @@ I
 1301 F airline dal ual baw
 1300  38.90000000 -101.00651717 000.0 gate heavy|jets 06-UNFILLABLE
 1301 D airline baw
-1300  38.90000000 -101.00542060 000.0 gate heavy|jets 07-POLICY-A
-1301 E airline ual dal baw aal afr
-1300  38.90000000 -101.00432403 000.0 gate heavy|jets 08-POLICY-B
-1301 E airline ual dal baw aal afr
-1300  38.90000000 -101.00322747 000.0 gate jets 09-FORWARD-REF
-1301 C airline dal ual
-1300  38.90000000 -101.00213090 000.0 gate jets 10-EXCLUDE
+1300  38.90000000 -101.00542060 000.0 gate jets 07-EXCLUDE
 1301 C airline dal
+1300  38.90000000 -101.00432403 000.0 gate heavy|jets 08-WHITELIST
+1301 E airline dal ual aal baw
+1300  38.90000000 -101.00322747 000.0 gate heavy|jets 09-MIXED-SIGILS
+1301 E airline dal ual aal baw
+1300  38.90000000 -101.00213090 000.0 gate heavy|jets 10-PLUS-WINS
+1301 E airline dal ual
 1300  38.90000000 -101.00103433 000.0 gate jets 11-BAD-5-WEIGHTS
 1301 C airline dal ual
 1300  38.90000000 -100.99993776 000.0 gate jets 12-BAD-DECIMAL
 1301 C airline dal ual
 1300  38.90000000 -100.99884120 000.0 gate jets 13-BAD-NEGATIVE
 1301 C airline dal ual
-1300  38.90000000 -100.99774463 000.0 gate jets 14-DANGLING-REF
+1300  38.90000000 -100.99774463 000.0 gate jets 14-BAD-REFINE
 1301 C airline dal ual
-1300  38.90000000 -100.99664806 000.0 gate jets 15-MIXED-EXCL
+1300  38.90000000 -100.99664806 000.0 gate jets 15-UNKNOWN-ROW
 1301 C airline dal ual
-1300  38.90000000 -100.99555150 000.0 gate jets 16-UNKNOWN-ROW
+1300  38.90000000 -100.99555150 000.0 gate jets 16-EXCL-NO-WEIGHTS
 1301 C airline dal ual
-1300  38.90000000 -100.99445493 000.0 gate jets 17-1301-WINS
-1301 C airline dal
 99

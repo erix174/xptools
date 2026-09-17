@@ -1,4 +1,4 @@
-# apt.dat rows 1310–1313: per-stand fleet and livery data
+# apt.dat rows 1312-1313: per-stand fleet and livery data
 
 **Specification and implementation manual.** Draft 5, 2026-09-16. Targets WED 2.8.0.
 For the X-Plane side of WED's ramp livery picker.
@@ -58,10 +58,10 @@ into the WED/xptools tree at branch `feature/ramp-livery-picker`.
 
 - **R1** — `1301` MUST NOT be modified, reinterpreted or deprecated. Every row
   defined here is an additive refinement of the stand `1301` already describes.
-- **R2** — A reader that discards every `1310`–`1313` row MUST produce exactly
+- **R2** — A reader that discards every `1312` and `1313` row MUST produce exactly
   today's behaviour. This is the floor, and it MUST be unreachable from any input.
 - **R3** — On any conflict between `1301` and a refinement row, `1301` wins.
-- **R4** — A malformed, dangling or unparseable `1310`–`1313` row MUST be
+- **R4** — A malformed or unparseable `1312`/`1313` row MUST be
   discarded, and MUST NOT fail the file, the airport, or the stand. **This is the
   opposite of the rest of `AptIO.cpp`**, where a bad row sets `ok = "Illegal …"`
   and aborts the whole load (`AptIO.cpp:1208`, `:1217`). These rows are
@@ -72,15 +72,6 @@ into the WED/xptools tree at branch `feature/ramp-livery-picker`.
   a legal and meaningful value (§4.2), so a truncated row parsed as zeros would
   silently empty the stand — the one place where soft-fail must be explicit about
   what it falls back *to*.
-- **R6** — Policy definitions are scoped to their airport block and are valid
-  **anywhere within it**, before or after use. They MUST NOT be required to
-  precede their reference. A precede-rule is broken by moving two lines, and the
-  reader already buffers one airport at a time (`AptIO.cpp:354`), so it buys
-  nothing. This also pins the blast radius of any corruption at one airport.
-- **R7** — A policy name MUST NOT resolve across airport-block boundaries. A
-  reference to a name not defined in the same block is dangling: discard per R4.
-- **R8** — The policy name `-` means "this stand only". It MUST NOT be treated as
-  a definable or referenceable name.
 - **R21** — **A `+` refinement closes that airline's set; `-` leaves it open.**
   For one airline, if any `+airline:type` is present, that airline contributes
   **only** the listed types, at every class. If only `-` entries are present, the
@@ -107,9 +98,8 @@ into the WED/xptools tree at branch `feature/ramp-livery-picker`.
   removes them from the stage-2 pool rather than drawing them and finding nothing.
 
 - **R20** — **Per-stand rows attach to the most recent `1300`, and MUST follow it.**
-  That is `1311`, and `1312`/`1313` written in the inline `-` form. R6's
-  free placement applies to *policy definitions* only — a definition has a name to
-  bind to, while a per-stand row has nothing but its position. A stand row
+  Both `1312` and `1313` bind by position and nothing else — there is no name to
+  bind to, which is the whole point of the inline-only shape. A refinement row
   appearing before any `1300` in the block has no stand to attach to: discard it
   per R4.
 
@@ -129,12 +119,6 @@ correctly.
   `[A-Z0-9]{3,5}`. Anything else is dropped by the writer, not emitted for the
   reader to police.
 - **R11** — Weights are non-negative integers in `0..1000`.
-- **R12** — Policy names are generated from a content hash, never author-supplied.
-  There is no free-text field in any of these rows.
-- **R13** — `1301`'s airline list MUST equal the union of the referenced policy's
-  airlines. Writer-enforced; the reader trusts `1301` (R3). The redundancy is
-  deliberate — it is the only cross-check that catches a file edited in one place
-  and not the other.
 - **R14** — A writer MUST NOT emit weights pointing exclusively at classes that no
   listed airline can fill. WED treats this as a hard export error (§4.5).
 - **R19** - **apt.dat has no comment syntax. A writer MUST NOT emit comment lines.**
@@ -166,10 +150,6 @@ correctly.
 
 - **R15** — Unknown row codes, and unknown extra fields within a known row, MUST be
   ignored rather than rejected.
-- **R16** — Grouping is a storage detail, never semantics. A reader copies a
-  referenced policy into the stand and MUST NOT expose policy identity to
-  anything downstream. WED re-derives grouping by content hash on export, so a
-  hand-forged grouping is silently corrected by one round-trip.
 - **R17** — Three-stage selection (§4) applies **only** to stands carrying a `1313`
   row. A stand without one MUST keep today's behaviour, unchanged.
 - **R18** — Stage 2 and stage 3 MUST apply the same exclusion filter. An airline
@@ -181,22 +161,15 @@ correctly.
 ## 2. Grammar
 
 ```abnf
-; ---- the four new rows -------------------------------------------------
-airlines-row   = %s"1310" 1*SP policy 1*(1*SP airline) *SP
-reference-row  = %s"1311" 1*SP policy-ref *SP
-refine-row     = %s"1312" 1*SP policy 1*(1*SP refinement) *SP
-weights-row    = %s"1313" 1*SP policy 6(1*SP weight) *SP
+; ---- the two new rows --------------------------------------------------
+refine-row     = %s"1312" 1*(1*SP refinement) *SP
+weights-row    = %s"1313" 6(1*SP weight) *SP
 
 refinement     = exclusion / inclusion
 exclusion      = "-" airline ":" actype   ; open set:   everything BUT this
 inclusion      = "+" airline ":" actype   ; closed set: ONLY this (R21)
 
 ; ---- lexical -----------------------------------------------------------
-policy         = generated-name / inline-marker
-policy-ref     = generated-name
-generated-name = %s"g_" 6HEXDIG      ; content hash, writer-generated (R12)
-inline-marker  = "-"                 ; "this stand only" (R8)
-
 airline        = 3*5(ALPHA / DIGIT)  ; R10
 actype         = 2*5(ALPHA / DIGIT)  ; R10
 weight         = 1*4DIGIT            ; 0..1000, R11
@@ -205,51 +178,36 @@ SP             = %x20
 
 Parser notes:
 
-- `1310` with a policy and **zero** airlines is malformed; discard per R4. It is
-  not "a policy with no airlines".
+- Both rows attach to the most recent `1300` and carry no name, no reference and
+  no shared state. **Everything about a stand is written at the stand** (see
+  §8.2 for the measurement that settled this).
 - `1313` takes **exactly six** weights. Five or seven is malformed; discard whole
   per R5. Do not pad and do not truncate.
-- The policy field is always the first token after the row code; everything after
-  it is payload. That resolves the only apparent ambiguity — a leading `-` as the
-  inline marker versus a leading `-` on an exclusion — without lookahead.
 - `-fdx:B763` is one token. Whitespace anywhere inside it is malformed.
+- A leading `-` is never ambiguous: every token after the row code is a
+  refinement, and each one begins with its own `+` or `-`.
 
 ### Rows in context
 
 ```
-# airport block; definitions valid anywhere within it (R6)
-1310 g_a3f91c  ual dal baw aal afr klm dlh
-1312 g_a3f91c  -dal:B772 -baw:A35K
-1313 g_a3f91c  0 0 3 0 1 0
-
 1300 51.157304 -0.171800 347.5 gate heavy|jets Gate 42
 1301 E airline ual dal baw aal afr klm dlh
-1311 g_a3f91c
+1312 -dal:B772 -baw:A35K
+1313 0 0 3 0 1 0
 
-1300 51.157035 -0.172179 347.3 gate heavy|jets Gate 43
-1301 E airline ual dal baw aal afr klm dlh
-1311 g_a3f91c
-```
-
-A stand that shares nothing writes the same rows inline under the name `-`:
-
-```
 1300 51.147042 -0.174540 -128.8 gate heavy Cargo 1
 1301 E cargo fdx ups
-1312 - -fdx:B763
-1313 -  0 0 0 0 1 0
+1312 -fdx:B763
+1313 0 0 0 0 1 0
 ```
 
-The inline form is a strict subset of the referenced form, so a writer can emit
-only inline rows and add grouping later with **no reader change**. WED will do
-exactly that.
+Two stands, nothing shared, nothing to resolve. A stand that wants none of this
+writes neither row and keeps today's behaviour.
 
----
-
-### 2.4 A complete worked example — one airport, every feature
+### 2.4 A complete worked example - one airport, every feature
 
 Everything above in one airport block. **This is the reference scenario**: if an
-implementation reproduces the resolution table below, it has all of §1–§4 right.
+implementation reproduces the resolution table below, it has all of §1-§4 right.
 
 `KXYZ` is fictional, the airlines are real, and every outcome in the table was
 computed against the shipped index (`20260916-r1`, X-Plane 12.4.3-r2) rather than
@@ -261,64 +219,62 @@ asserted.
 1302 country USA
 100 45.00 26 0 0.25 0 2 1 16L 47.46300000 -122.30800000 0 0 2 0 0 0 34R 47.43100000 -122.30800000 0 0 2 0 0 0
 
-1310 g_7c1e02  dal ual aal baw uae
-1312 g_7c1e02  -ual:B744
-1313 g_7c1e02  0 0 0 3 7 0
-
-1310 g_2f8a41  dal ual aal afr dlh klm swa aca
-1312 g_2f8a41  -dal:MD82
-1313 g_2f8a41  0 0 10 0 0 0
-
 1300 47.44310000 -122.30120000 090.0 gate heavy|jets A1
 1301 E airline dal ual aal baw uae
-1311 g_7c1e02
+1312 -ual:B744
+1313 0 0 0 3 7 0
 
 1300 47.44240000 -122.30120000 090.0 gate heavy|jets A2
 1301 E airline dal ual aal baw uae
-1311 g_7c1e02
+1312 -ual:B744
+1313 0 0 0 3 7 0
 
 1300 47.44170000 -122.30120000 090.0 gate jets B1
 1301 C airline dal ual aal afr dlh klm swa aca
-1311 g_2f8a41
+1312 -dal:MD82
+1313 0 0 10 0 0 0
 
 1300 47.44100000 -122.30120000 090.0 gate jets B2
 1301 C airline dal ual aal afr dlh klm swa aca
-1311 g_2f8a41
-1313 -  0 2 8 0 0 0
+1312 -dal:MD82
+1313 0 2 8 0 0 0
 
 1300 47.44030000 -122.30120000 090.0 gate turboprops|jets R1
 1301 B airline dal afr
-1313 -  0 10 0 0 0 0
+1313 0 10 0 0 0 0
 
 1300 47.43960000 -122.30120000 090.0 gate heavy|jets CGO1
 1301 D cargo fdx ups
-1312 -  -fdx:DC10
-1313 -  0 0 0 10 0 0
+1312 -fdx:DC10
+1313 0 0 0 10 0 0
 
 1300 47.43890000 -122.30120000 090.0 tie_down props GA1
 1301 A general_aviation
 
-1300 47.43820000 -122.30120000 090.0 gate jets T1
-1301 C airline cca ana jal sia qfa
-1311 g_9b04de
+1300 47.43820000 -122.30120000 090.0 gate jets F1
+1301 F airline uae
+1312 +uae:A388
+1313 0 0 0 0 0 10
 
-1310 g_9b04de  cca ana jal sia qfa
-1313 g_9b04de  0 0 9 1 0 0
+1300 47.43750000 -122.30120000 090.0 gate jets T1
+1301 C airline cca ana jal sia qfa
+1313 0 0 9 1 0 0
 99
 ```
 
 #### What each stand demonstrates
 
-| stand | feature | rows |
-|---|---|---|
-| `A1`, `A2` | **shared policy** — two stands, one definition. The 83% case | `1311` |
-| `A1`, `A2` | **exclusion that changes the airline pool** (see R18 below) | `1312` |
-| `B1` | shared policy, second group | `1311` |
-| `B2` | **policy reference plus an inline override** — takes the group's airlines and exclusion, replaces its weights | `1311` + inline `1313` |
-| `R1` | **inline only**, no group, no definition | `1313 -` |
-| `CGO1` | **inline exclusion and weights**, cargo op type | `1312 -`, `1313 -` |
-| `GA1` | **no new rows at all** — today's behaviour, untouched (R17) | — |
-| `T1` | **forward reference** — its policy is defined after it (R6) | `1311` |
+| stand | feature |
+|---|---|
+| `A1`, `A2` | two stands with **identical** refinements, written out at each. No name, no reference, no resolution step |
+| `A1`, `A2` | an **exclusion that changes the airline pool** (see R18 below) |
+| `B1` | exclusion plus a single-class weight |
+| `B2` | same airlines and exclusion as `B1`, **different weights** — the edit that used to mean "leave the group" is now just a different number |
+| `R1` | weights only, no exclusion |
+| `CGO1` | exclusion plus weights, cargo op type |
+| `GA1` | **no new rows at all** — today's behaviour, untouched (R17) |
+| `F1` | **`+` closed set** (R21) — only the A380, and nothing that ships later |
+| `T1` | weights spanning two classes, no exclusion |
 
 #### What actually spawns
 
@@ -334,11 +290,14 @@ Computed, not asserted:
 | `R1` | B 100% | 2 airlines — `CRJ1`, `CRJ2` |
 | `CGO1` | D 100% | 2 airlines — `B752`, `B763` |
 | `GA1` | — | today's step-down from `A` |
+| `F1` | F 100% | nothing **today** — the library ships no F-class livery yet. The day an Emirates A380 ships, this stand starts working with no apt.dat edit |
 | `T1` | C 90% | 5 airlines — `A320`, `B738` |
 | | D 10% | 2 airlines — `B763` |
 
-No weighted class anywhere resolves to nothing. That is the property a writer must
-guarantee (R14) and the one WED will enforce as a hard export error.
+`F1` is the one intentional empty, and it is the difference between the two kinds
+of emptiness §4.5 cares about: the author asked for something real that does not
+exist yet, and late binding will fill it in. A weight pointing at a class **none
+of the listed airlines can ever fill** is the error case, and R14 forbids it.
 
 #### The number that shows why R18 exists
 
@@ -347,7 +306,7 @@ livery** — they have `B752` and `B763` at D and nothing else at E.
 
 | | class E candidates | stand parks nothing |
 |---|---|---|
-| **With R18** — stage 2 applies exclusions | **4** (UAL not a candidate) | **0%** |
+| **With R18** — stage 2 applies refinements | **4** (UAL not a candidate) | **0%** |
 | Without — stage 2 ignores them | 5 (UAL picked, then empty) | **14%** |
 
 Fourteen percent of the time, on a stand whose author did nothing wrong, from one
@@ -357,35 +316,29 @@ surgical, which is the whole point.
 
 #### Things this example is careful about
 
-- **`1301` lists exactly the policy's airlines** on every referencing stand (R13).
-  The duplication is the only cross-check against a file edited in one place.
+- **Every stand stands alone.** `A1` and `A2` repeat two identical rows and that is
+  fine: it costs about 40 bytes, and §8.2 measures the alternative as both larger
+  and more complex.
 - **Exclusions leave something behind.** `-dal:MD82` is safe because Delta also has
   `A320` and `B738` at C. `-ual:B744` is safe only because R18 handles it.
 - **`GA1` carries no new rows.** An airport does not have to adopt this format
   stand-by-stand, and a mixed file is normal.
-- **No class F anywhere.** The library ships zero F-class liveries, so any weight
-  on F is dead. Class A is GA and military only — no real airline has an A-class
-  livery, which is why `GA1` is `general_aviation` rather than an airline stand.
+- **Class A is GA and military only** — no real airline has an A-class livery,
+  which is why `GA1` is `general_aviation` rather than an airline stand.
 - **No comments.** apt.dat has no comment syntax (R19); the annotation lives here.
 
 ### 2.5 One stand, line by line
 
-Stand `A1` from §2.4, pulled apart. It is the densest stand in the example — it
-touches every row this proposal defines, plus the two it does not change.
+Stand `A1` from §2.4, pulled apart. Four lines, and two of them already exist.
 
 ```
 1300 47.44310000 -122.30120000 090.0 gate heavy|jets A1
 1301 E airline dal ual aal baw uae
-1311 g_7c1e02
+1312 -ual:B744
+1313 0 0 0 3 7 0
 ```
 
-…pointing at a definition elsewhere in the same airport block:
-
-```
-1310 g_7c1e02  dal ual aal baw uae
-1312 g_7c1e02  -ual:B744
-1313 g_7c1e02  0 0 0 3 7 0
-```
+That is the whole stand. There is nothing elsewhere in the file to look up.
 
 #### The two rows that already exist, and are not touched
 
@@ -408,61 +361,42 @@ touches every row this proposal defines, plus the two it does not change.
  row code
 ```
 
-**Everything below is additive. Delete all of it and this stand behaves exactly
-as it does today** (R2). That is the property the whole design is built on.
+**Everything below is additive. Delete both new rows and this stand behaves
+exactly as it does today** (R2). That is the property the whole design is built on.
 
-#### The one row added to the stand
+#### The two rows added
 
 ```
-1311  g_7c1e02
+1312  -ual:B744
  |    |
- |    policy name. Content-derived by the writer, never author-supplied (R12).
- |    Scoped to this airport block; valid wherever in it the definition sits (R6).
- row code: "this stand uses that policy"
-```
-
-#### The definition it points at
-
-```
-1310  g_7c1e02  dal ual aal baw uae
-                |
-                MUST equal 1301's list on every stand that references this
-                policy (R13). The duplication is deliberate - it is the only
-                cross-check that catches a file edited in one place and not
-                the other. On any disagreement, 1301 wins (R3).
+ |    one token per refinement, space separated. Each begins with its own sigil:
+ |       "-" open set   - everything this airline has, MINUS this type
+ |       "+" closed set - ONLY this type, and nothing added later (R21)
+ row code
 ```
 
 ```
-1312  g_7c1e02  -ual:B744
-                |
-                "-<airline>:<type>" - do not park United's 747-400 here.
-                Subtractive and open-ended: the author removes what they do not
-                want, and never has to enumerate what they do. A type that
-                ships next year is included automatically.
-```
+1313  0  0  0  3  7  0
+      A  B  C  D  E  F
+               |  |
+               |  70% of arrivals are E-class
+               30% are D-class
 
-```
-1313  g_7c1e02  0  0  0  3  7  0
-                A  B  C  D  E  F
-                         |  |
-                         |  70% of arrivals are E-class
-                         30% are D-class
-
-                Always six integers, in class order, no exceptions (R5).
-                Relative, not percentages - "3 and 7" is the same as "30 and 70".
-                Integers only: a decimal point would be at the mercy of the
-                user's locale (§4.2).
+      Always six integers, in class order, no exceptions (R5).
+      Relative, not percentages - "3 and 7" is the same as "30 and 70".
+      Integers only: a decimal point would be at the mercy of the user's
+      locale (see 4.2).
 ```
 
 #### What the sim does with it, in order
 
 ```
 1. class   := weighted draw over 0 0 0 3 7 0        -> D 30%, E 70%
-2. airline := uniform over those in 1301 that have a NON-EXCLUDED livery
+2. airline := uniform over those in 1301 that have an ELIGIBLE livery
               in the class drawn (R18)
                  at E: dal, aal, baw, uae            <- ual is NOT here
                  at D: dal, ual                      <- ual IS here
-3. livery  := uniform over that airline's liveries in that class,
+3. livery  := uniform over that airline's eligible liveries in that class,
               honouring EXPORT_RATIO if library.txt sets one
 ```
 
@@ -471,74 +405,44 @@ E-class aircraft, so United simply stops being a candidate **at E** — while
 remaining one at D, where they have the 757 and 767. One line, and the effect is
 surgical rather than blunt.
 
-Had stage 2 ignored exclusions, United would still be drawn at E, find nothing,
-and the stand would park **nothing 14% of the time** (§2.4). The author wrote
-"no 747s at this gate"; they did not write "and sometimes nothing at all".
+Had stage 2 ignored refinements, United would still be drawn at E, find nothing,
+and the stand would park **nothing 14% of the time** (§2.4).
 
 #### What this looks like in a Gateway diff
 
-Three properties matter to whoever reviews these:
-
-1. **Policy names are content hashes, so they are stable.** A definition whose
-   content did not change keeps its name and does not appear in the diff. Names
-   like `g1`, `g2` would renumber whenever an unrelated group was added, turning
-   a one-stand edit into a whole-file churn.
-2. **Grouping is re-derived, never trusted** (R16). WED copies the policy into
-   each stand on import and re-groups by content hash on export. A hand-forged or
-   inconsistent grouping is silently normalised by one round-trip, so the diff
-   reflects what the author meant rather than how they typed it.
-3. **An author changing one stand produces one stand's worth of diff.** If the
-   change makes the stand differ from its group, it leaves the group and gets
-   inline rows; if it makes two groups identical, they merge. Either way the
-   airline list on `1301` still reads correctly on its own, so a reviewer can see
-   what parks there without resolving anything.
+1. **A stand is a contiguous run of lines.** Reviewing what parks somewhere means
+   reading two to four consecutive rows, never resolving a name against a
+   definition elsewhere in the block.
+2. **An edit to one stand touches only that stand.** There is no shared object to
+   change underneath other stands, and no name that changes when content changes.
+3. **`1301` still reads correctly on its own**, so a reviewer who ignores the new
+   rows entirely still sees which airlines an author assigned.
 
 ## 3. Reader algorithm
 
-Per airport block. The reader already buffers one airport at a time
-(`AptIO.cpp:354`), which is what makes R6 implementable as one pass plus a
-resolve step.
+One pass. There is nothing to resolve, because nothing refers to anything.
 
 ```
-PASS 1 — accumulate, do not resolve
-  for each row in the airport block:
-    1310 name a…   -> policy[name].airlines   = [a…]       (malformed: skip row)
-    1312 name e…   -> policy[name].exclusions = [e…]       (malformed: skip row)
-    1313 name w×6  -> policy[name].weights    = [w×6]      (malformed: skip WHOLE, R5)
-    1311 name      -> stand.policy_ref        = name
-    1312 "-"  e…   -> stand.exclusions        = [e…]       (inline form)
-    1313 "-"  w×6  -> stand.weights           = [w×6]      (inline form)
+for each row in the airport block:
+    1300 …          -> begin a new stand; it becomes "current"
+    1301 …          -> size letter, op type, airline list  (existing behaviour)
+    1312 r…         -> current_stand.refinements = [r…]    (R20: needs a current stand)
+    1313 w×6        -> current_stand.weights     = [w×6]
 
-PASS 2 — resolve, after the block is complete (R6)
-  for each stand:
-    if stand.policy_ref is set:
-      if policy[stand.policy_ref] does not exist:
-        discard the reference                  # dangling, R4 + R7
-      else:
-        COPY policy fields into the stand for each field not already set inline
-        # copy, never reference (R16). Policy identity ends here.
-    # the stand now carries:
-    #   airlines   — from 1301, authoritative (R3)
-    #   exclusions — possibly empty
-    #   weights    — possibly absent
-
-PASS 3 — validate, discarding only what is bad
-  if stand.weights present and length != 6:      drop weights entirely   (R5)
-  if any weight outside 0..1000:                 drop weights entirely   (R5)
-  if an exclusion does not match the grammar:    drop THAT exclusion only
+then, per stand:
+    if weights present and length != 6:      drop weights entirely   (R5)
+    if any weight outside 0..1000:           drop weights entirely   (R5)
+    if a refinement does not match the grammar:  drop THAT refinement only
 ```
 
-The asymmetry in pass 3 is intentional, and it is the one place the two row types
-are treated differently. An exclusion means "also remove this" — dropping one bad
-exclusion leaves the rest meaningful and independent. A weight vector means "here
-is the whole distribution" — dropping one element changes what the other five
-mean.
+The asymmetry in the last two lines is intentional, and it is the one place the
+two rows are treated differently. A refinement means "also apply this" — dropping
+one bad token leaves the rest meaningful and independent. A weight vector means
+"here is the whole distribution" — dropping one element changes what the other
+five mean.
 
-Inline rows win over copied ones (pass 2) so that a stand can refine a shared
-policy without leaving the group. WED does not currently emit that combination,
-but the reader should not forbid it.
-
----
+A stand with no `1312` and no `1313` is not a special case to detect. It simply
+has no refinements and no weights, and R17 keeps it on today's behaviour.
 
 ## 4. Selection algorithm
 
@@ -633,8 +537,9 @@ times as often".
 United's 737s — belongs to the library, and that is exactly where `EXPORT_RATIO`
 already expresses Laminar's own "this fictional livery is rare".
 
-It also leaves room to weight airlines later (`1310` could carry `ual=3 baw=1`)
-without restructuring anything.
+It also leaves room to weight airlines later - `1301` already carries the list,
+so a future row could carry per-airline weights alongside it - without
+restructuring anything here.
 
 ### 4.4 Stage 3 and duplicate assets
 
@@ -713,15 +618,12 @@ whatever the current step-down does with it.
 |---|---|---|
 | V1 | `1313 - 0 0 10 0 0 0` on a stand | class C always; stages 2–3 then run |
 | V2 | `1313 - 0 0 0 0 0 0` | nothing parks. **Legal**, not an error (R5) |
-| V3 | `1310`/`1312`/`1313` defined **after** the `1311` that uses them | resolves normally (R6) |
-| V4 | two stands referencing one policy | both resolve; policy identity not observable downstream (R16) |
-| V5 | `1312 - -fdx:B763` with no `1313` on the stand | exclusion recorded, but **today's behaviour** still applies (R17) — exclusions alone do not activate three-stage selection |
-| V6 | `1313 g_x 1000 0 0 0 0 0` | legal; 1000 is the ceiling (R11) |
-| V7 | stand with `1311` and its own inline `1313` | inline wins for weights, policy supplies the rest (§3 pass 2) |
-| V23 | `1312 -  +uae:A388` | Emirates contributes **only** the A388, at every class. Every other airline on `1301` is unaffected (R21) |
-| V24 | `1312 -  +uae:A388 -uae:B772` | writer error. `+` is authoritative; the `-` is ignored, not subtracted from the closed set (R21) |
-| V25 | `1312 -  +uae:A388 -dal:B772` | independent per airline: Emirates closed to A388, Delta open minus the 777 |
-| V26 | `1312 -  +uae:A388` on a stand weighted class E only | Emirates is **not** a stage-2 candidate — A388 is class F, they have nothing at E (R18 + R21) |
+| V5 | `1312 -fdx:B763` with no `1313` on the stand | exclusion recorded, but **today's behaviour** still applies (R17) — exclusions alone do not activate three-stage selection |
+| V6 | `1313 1000 0 0 0 0 0` | legal; 1000 is the ceiling (R11) |
+| V23 | `1312 +uae:A388` | Emirates contributes **only** the A388, at every class. Every other airline on `1301` is unaffected (R21) |
+| V24 | `1312 +uae:A388 -uae:B772` | writer error. `+` is authoritative; the `-` is ignored, not subtracted from the closed set (R21) |
+| V25 | `1312 +uae:A388 -dal:B772` | independent per airline: Emirates closed to A388, Delta open minus the 777 |
+| V26 | `1312 +uae:A388` on a stand weighted class E only | Emirates is **not** a stage-2 candidate — A388 is class F, they have nothing at E (R18 + R21) |
 
 V5 is the case most likely to be got wrong. Exclusions are subtractive
 refinements of a selection that only exists once `1313` is present.
@@ -735,11 +637,8 @@ refinements of a selection that only exists once `1313` is present.
 | V10 | `1313 - 0 0 -5 0 0 0` | drop weights whole (R11, R5) |
 | V11 | `1313 - 0 0 9999 0 0 0` | drop weights whole (R11, R5) |
 | V12 | `1313 - 0 0 1.5 0 0 0` | drop weights whole — no decimal point is legal (§4.2) |
-| V13 | `1311 g_nosuch` | drop the reference; stand keeps `1301` (R4, R7) |
-| V14 | `1311 g_x` where `g_x` is defined in a **different** airport block | dangling; drop (R7) |
 | V15 | `1312 - -fdx:B763 garbage -ups:B752` | drop `garbage` only; both valid exclusions survive (§3 pass 3) |
-| V16 | `1310 g_x` with no airlines | drop the row (R4) |
-| V17 | `1301` lists `ual dal`, policy lists `ual dal baw` | `1301` wins; `baw` never spawns (R3, R13) |
+| V16 | `1312` with no refinements after it | drop the row (R4) |
 | V18 | a `1314` row | ignored (R15) |
 | V19 | an embedded tab inside an airline list | writer defect (R9); reader treats it as a field separator, which may yield an unparseable token — drop that token, keep the row |
 | V20 | file at version `1200` containing all four rows | loads; new rows apply (§7.2 — no version gate) |
@@ -1004,7 +903,9 @@ Unable to read apt.dat file
 Illegal unknown record (Line 13)
 ```
 
-Line 13 is the file's first `1310`. WED imports **nothing** — not a degraded
+Line 13 was that file's first new row. (The sample has since been regenerated
+for the inline-only shape of §8.2, so its line numbers have moved; the observation
+stands as recorded.) WED imports **nothing** — not a degraded
 airport, no airport.
 
 The path is `AptIO.cpp:1188-1209` falling through to
@@ -1052,14 +953,52 @@ not a migration, it is a permanent loss.
 The same argument kills them for third-party livery packs: a pack would be
 invisible to every airport already authored, which removes any reason to make one.
 
-### 8.2 Why C alone was rejected, and what survives of it
+### 8.2 Why C was rejected outright, sharing and all
 
-C solves a real problem — the 83% sharing figure is not theoretical, and a hub
-author editing one terminal should not touch eighty stands. But C still stores the
-resolved result, so it inherits the freezing problem in full.
+C solves a real problem on paper. **83%** of stands share their airline list with
+four or more stands at the same airport, **53%** with sixteen or more; a hub author
+editing one terminal should not touch eighty stands. C also still stores the
+resolved result, so it inherits the freezing problem in full — that alone rules it
+out.
 
-What survives is its *sharing* mechanism, which is orthogonal to what is stored.
-The proposal here is **C's structure carrying D's content**.
+Drafts 1–5 of this document kept C's *sharing mechanism* and put D's content
+inside it: named policies, defined once and referenced per stand. **That was
+wrong, and it was wrong because we carried the 83% figure across without
+re-measuring it against D's much smaller payload.**
+
+Sharing pays in proportion to the size of the thing shared. Under C a stand's
+payload was a resolved cross-product — large, and worth naming once. Under D a
+stand's payload is **six integers**. Measured against the real global apt.dat
+(380 MB, 42,275 stands carrying airlines, 3,910 airports):
+
+| | what it costs |
+|---|---|
+| **inline only** — `1312`/`1313` written at each stand | **0.85 MB** |
+| grouped, definition carries the airline list | 1.31 MB |
+| grouped, definition carries only weights and refinements | 0.92 MB |
+
+**Grouping is larger, not smaller** — every variant of it. A reference row costs
+roughly what the six integers cost, so you pay the per-stand price anyway and add
+the definitions on top. The break-even is a group of **more than 6.8 stands**, and
+the mean group is 4.7.
+
+Size was never the deciding factor and is not now — a megabyte on a 380 MB file
+decides nothing. What matters is that grouping bought **no measurable benefit** for
+its real cost in reader complexity: a resolve pass, block scoping, dangling
+references, an inline-vs-referenced special case, and a redundant airline list kept
+in sync by a writer-enforced invariant. Six normative rules existed only to hold
+that machinery up. They are gone.
+
+The diff argument fell too. Grouping was supposed to make a shared edit one line
+instead of eighty, but names were content-derived precisely so that unrelated
+insertions would not renumber everything. Those two properties are incompatible:
+change a policy's content and its hash changes, so the definition **and every
+reference to it** change — eighty-one lines instead of eighty. Content-addressed
+names make edits more churn, not less.
+
+What survives from C is nothing structural. The lesson it leaves is the one above:
+a compression scheme has to be measured against the payload it will actually
+compress, not the payload that motivated it.
 
 ### 8.3 Why D won
 
@@ -1112,8 +1051,10 @@ Fixed on our side; R9 exists so it is not reintroduced in another field.
 
 ## 9. Open questions
 
-1. **Row code allocation.** `1310`–`1313` are proposals. Any four work. This is
-   the only item blocking WED-side implementation.
+1. **Row code allocation.** `1312` and `1313` are proposals. **Two codes, not
+   four** - dropping the grouping machinery (§8.2) gave back the two that carried
+   policy names. Any two work. This is the only item blocking WED-side
+   implementation.
 2. **Version policy.** §7.2 removes the compatibility argument for a bump, so this
    is now a question about signalling intent. Our recommendation: no bump.
 3. **A process decision that is not one person's**: §7.3. If a bump happens, new
