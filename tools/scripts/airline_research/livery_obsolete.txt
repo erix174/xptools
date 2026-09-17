@@ -1,0 +1,71 @@
+# Liveries that must NOT spawn, keyed by the .obj path relative to apt_aircraft/.
+#
+# A row here sets that livery's NOTE to "Obsolete" in the generated index, which
+# takes it out of the spawn pool at every stage of selection and out of WED's
+# preview cards. The .obj itself is NOT touched and library.txt is NOT touched:
+# the asset stays on disk and keeps resolving, so scenery that references it by a
+# hard path still loads. That is the whole point - deleting the export would fix
+# the spawn problem and break the legacy airports at the same time.
+#
+# gen_livery_index.py merges this file over its own filename-derived notes, so a
+# mark survives regeneration. Add rows here, never edit livery_index.txt directly
+# for obsolescence - a regeneration would wipe it.
+#
+# FORMAT: <path under apt_aircraft/> *** <reason>
+#   The reason is free text and is for the human reading the diff, not for any
+#   parser. Say what supersedes this asset, or why the type no longer flies.
+#
+# BEFORE ADDING A ROW, READ THE BLAST RADIUS. A mark here is global and has no
+# per-stand undo: the livery stops existing at every airport in the world at
+# once. gen_livery_index.py prints, for every mark, how many (airline, class)
+# pairs it would leave with no asset at all - and a pair with no asset is a stand
+# that silently parks nothing. Marking B752 would empty TWENTY pairs; the 757 is
+# still in daily service and must never appear here. Run the generator and read
+# that number before committing a row.
+#
+# ============================================================================
+# Superseded assets: an old and a new object for the SAME real aircraft are both
+# exported, so that aircraft draws twice the spawn probability of its neighbours
+# (spec sections 4.4 and 8.4). The "_static.obj" member is the older generation.
+#
+# These twelve empty ZERO (airline, class) pairs - every one of them has its
+# replacement sitting right next to it.
+# ============================================================================
+
+jet/CRJ1_AFR/CRJ1_AFR_static.obj       *** superseded by CRJ100_Air_France.obj
+jet/CRJ1_AUA/CRJ1_AUA_static.obj       *** superseded by CRJ100_Austrian_Arrows.obj
+jet/J328_RUS/J328_RUS_static.obj       *** superseded by Dornier_328_jet_Cirrus_Airlines.obj
+jet/J328_WLC/J328_WLC_static.obj       *** superseded by Dornier_328_jet_Welcome_Air.obj
+jet/MD80_AZA/MD80_AZA_static.obj       *** superseded by MD80_Alitalia.obj
+jet/MD80_DAL/MD80_DAL_static.obj       *** superseded by MD80_Delta.obj
+jet/MD80_SAS/MD80_SAS_static.obj       *** superseded by MD80_Scandinavian.obj
+turboprop/AT45_DLA/AT45_DLA_static.obj *** superseded by ATR42-500_Air_Dolomiti.obj
+turboprop/AT45_FDX/AT45_FDX_static.obj *** superseded by ATR42-500_FedEx.obj
+turboprop/AT72_DLH/AT72_DLH_static.obj *** superseded by ATR72-500_Lufthansa_Regional.obj
+turboprop/AT72_EGF/AT72_EGF_static.obj *** superseded by ATR72-500_American_Eagle.obj
+turboprop/D328_LPV/D328_LPV_static.obj *** superseded by Dornier_328_prop_Air_Alps.obj
+
+# ============================================================================
+# Retired airframes: the operator no longer flies the type at all, so a stand
+# listing them should not park one. UNLIKE the block above, these DO empty
+# (airline, class) pairs - a retired type is often the operator's only asset at
+# its class, and emptying the pair is the correct answer, not a mistake. Check
+# the number the generator prints and make sure you meant it.
+#
+# Deliberately empty. The obvious candidates are real but each needs a decision
+# that is not ours to make in passing:
+#   B744  - CPA, UAL and VIR all retired the 747 years ago. Marking all three
+#           would empty CPA/E, UAL/E and VIR/E, which is the truth, but it also
+#           silently empties every class-E stand that lists only those carriers.
+#   MD82  - AZA and SAS would go empty at class C.
+# Decide these one at a time, with the blast radius in front of you.
+# ============================================================================
+
+# ============================================================================
+# NOT obsolete, recorded so nobody marks them by mistake:
+#   F15EX_cft_usaf.obj / F15EX_usaf.obj - not an old/new pair. These are two
+#   genuinely different airframes (conformal fuel tanks) that the index cannot
+#   currently tell apart, because the variant is in the filename while the
+#   folder carries no airline token. That is an index fix, by hand, on the NOTE
+#   column - see spec section 6.3. Marking either one deletes a real aircraft.
+# ============================================================================
