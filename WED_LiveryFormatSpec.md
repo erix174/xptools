@@ -1,6 +1,6 @@
-# apt.dat rows 1312-1313: per-stand fleet and livery data
+# apt.dat row 1313: per-stand fleet weighting
 
-**Specification and implementation manual.** Draft 6, 2026-09-17. Targets WED 2.8.0.
+**Specification and implementation manual.** Draft 7, 2026-09-17. Targets WED 2.8.0.
 For the X-Plane side of WED's ramp livery picker.
 
 ---
@@ -20,7 +20,7 @@ structured so that can be done mechanically:
 | 5 | Conformance vectors | tests, including every malformed case we could construct |
 | 6 | The livery index | the companion data file, and what it does and does not guarantee |
 | 7 | Evidence | measurements and the compatibility test, with method |
-| 8 | Rationale | why this shape and not the three we rejected |
+| 8 | Rationale | why this shape, and not the three candidates or the two rows we dropped |
 | 9 | Open questions | what is not decided |
 
 **The human-sized version is `WED_LiveryFormat_Brief.md`.** It has the three
@@ -33,6 +33,34 @@ statement carries an `R`-number so an implementation can be checked against a
 list rather than against prose. Line references of the form `AptIO.cpp:1208` are
 into the WED/xptools tree at branch `feature/ramp-livery-picker`.
 
+### What changed since draft 6
+
+**The format is now one row, not two.** `1312` — per-stand `+`/`-` refinements
+naming an airline and an aircraft type — is deleted, with R21, R22, its grammar
+productions and eight conformance vectors. §8.6 records the measurement: only
+**8.9%** of real (operator, class) pairs in the shipped index carry more than one
+aircraft type, and **90.5%** of operators have assets at exactly one class, so
+the size control every stand already has was pinning the aircraft anyway. What
+refinement was really being used for was working around retired aircraft, one
+stand at a time, worldwide.
+
+- **"Only this operator" needs no format support.** A one-element airline list on
+  `1301` has always meant it. It becomes a UI assertion in WED — a lock on the
+  card, greying out the rest — and costs a reader nothing.
+- **`Obsolete` is new, and is where refinement's real work moves to** (R25,
+  §6.6). A marked index row never enters the spawn pool while its `.obj` stays on
+  disk for hard-path scenery. This is also what §4.4 needed and could not do: the
+  standing recommendation there was to delete superseded exports from
+  `library.txt`, which would have broken the legacy airports it was trying to
+  leave alone.
+- **R24 is new**: a duplicate `1313` is resolved by taking the first in file
+  order, never by adjudicating which was meant. §9 records what that costs.
+- **§4.5 gains the statistic-field sentences**, one per scenario, with the
+  percentage defined as occupancy rather than as "the chance of this operator" —
+  which under a single-operator stand is always 100% and says nothing.
+- **§8.3 gains the symmetric property**: the design can now withdraw a livery
+  globally, not only add one.
+
 ### What changed since draft 5
 
 - **§4.5 gains a `P(empty)` readout**, which is the substantive addition. The
@@ -41,8 +69,9 @@ into the WED/xptools tree at branch `feature/ramp-livery-picker`.
   stand from a mistaken one, and has no eyes on it during the bulk fill that is
   the only thing which would ever produce those stands. A continuous readout, a
   delta shown at the moment of the edit, and an airport-level rollup after a fill
-  address all three. It also makes R21/R22's open-versus-closed sets visible
-  rather than merely specified.
+  address all three. It also made R21/R22's open-versus-closed sets visible
+  rather than merely specified — moot now that draft 7 has deleted both, but the
+  readout outlived them.
 - **§9 gains a fourth open question**: duplicate `1312`/`1313` on one stand is
   currently a silent overwrite, where `1301` rejects a repeat outright.
 - **Conformance vectors corrected.** Eight vectors in §5 — V1, V2, V8–V12, V15 —
@@ -79,7 +108,7 @@ into the WED/xptools tree at branch `feature/ramp-livery-picker`.
 
 - **R1** — `1301` MUST NOT be modified, reinterpreted or deprecated. Every row
   defined here is an additive refinement of the stand `1301` already describes.
-- **R2** — A reader that discards every `1312` and `1313` row MUST produce exactly
+- **R2** — A reader that discards every `1313` row MUST produce exactly
   today's behaviour. This is the floor, and it MUST be unreachable from any input.
 - **R3** — **The airline list on `1301` is the only one.** It is not repeated
   anywhere, so it cannot disagree with anything. Selection reads it directly.
@@ -97,71 +126,40 @@ into the WED/xptools tree at branch `feature/ramp-livery-picker`.
   This is the one place where a value in `1301` follows the new rows instead of
   leading them, and it is safe precisely because no reader uses it for selection
   once `1313` exists.
-- **R4** — A malformed or unparseable `1312`/`1313` row MUST be
+- **R4** — A malformed or unparseable `1313` row MUST be
   discarded, and MUST NOT fail the file, the airport, or the stand. **This is the
   opposite of the rest of `AptIO.cpp`**, where a bad row sets `ok = "Illegal …"`
   and aborts the whole load (`AptIO.cpp:1208`, `:1217`). These rows are
-  hand-editable refinements; one bad exclusion must not make an apt.dat
+  hand-editable, and one bad weight vector must not make an apt.dat
   unopenable.
 - **R5** — A `1313` row that fails to parse MUST be discarded **whole**, falling
   back to "no `1313` row present". It MUST NOT be partially applied. All-zero is
   a legal and meaningful value (§4.2), so a truncated row parsed as zeros would
   silently empty the stand — the one place where soft-fail must be explicit about
   what it falls back *to*.
-- **R22** — **`-airline` with no type removes that airline from the stand entirely.**
-  `-etd` and `-etd:A332` are both legal and mean different things: the first bans
-  Etihad here outright, the second bans one of their aircraft.
+- **R20** — **`1313` attaches to the most recent `1300`, and MUST follow it.**
+  It binds by position and nothing else — there is no name to bind to, which is
+  the whole point of the inline-only shape. A `1313` appearing before any `1300`
+  in the block has no stand to attach to: discard it per R4.
 
-  Without it the only way to say "not this operator" is to list every type they
-  currently fly — a list with **no upper bound** that also **goes stale**, since a
-  type added next year is not in it and starts parking here by itself. That is the
-  same defect that made `+` necessary (R21); this is its other half, and leaving it
-  out meant the format could say "only this one" but not "none of these".
+  Writers emit `1300`, then `1301`, then `1313`, which is what every example here
+  does. `1301` already had this constraint: `AptIO.cpp:740-743` rejects it
+  outright if there is no gate yet, or if the gate already has airlines.
 
-  A bare `-airline` **outranks every other refinement for that airline**, including
-  a `+`. There is no reading of "only their A380, and also none of their aircraft"
-  worth supporting, so the reader takes the ban and does not try to reconcile.
+- **R24** — **Ambiguous input is never adjudicated.** Where a stand carries more
+  than one `1313`, the **first in file order** wins; the rest are discarded
+  whole, not merged, not overwritten, and not compared for plausibility.
 
-  Note what this is **not** for. An exclusion does not need a class qualifier,
-  because an aircraft type only ever appears in its own class: `-dlh:B744` already
-  affects class E only, since a 747-400 **is** class E. Per-class scoping was
-  considered and dropped for that reason — naming the type already names the class.
+  This is not a tolerance policy, it is a division of labour. Two conflicting
+  answers in one file means only the person who wrote it knows which was meant,
+  and a reader that quietly picks the "better" one has converted an author's
+  mistake into nobody's mistake. Taking the first is arbitrary on purpose:
+  arbitrary and stated beats clever and silent.
 
-- **R21** — **A `+` refinement closes that airline's set; `-` leaves it open.**
-  For one airline, if any `+airline:type` is present, that airline contributes
-  **only** the listed types, at every class. If only `-` entries are present, the
-  airline contributes everything the index has for it **except** those types.
-
-  Subtraction alone cannot express a closed set, and the workaround is worse than
-  no answer. "Only the A380 parks at this pier" becomes "exclude every other type
-  this airline operates" — a list with **no upper bound**, which also **goes
-  stale**: a type added to the library next year is not in it, so it starts
-  parking at the A380-only pier on its own. That is the mirror image of the defect
-  that ruled out candidates A and B in §8.1 — those freeze and cannot let new
-  models in; open-only subtraction cannot keep them out.
-
-  `+` makes freezing **opt-in and local**. The author who writes it is asking for
-  exactly one type, so freezing is the correct reading rather than a compromise.
-
-  Mixing `+` and `-` for the **same** airline is a writer error (R10-class). A
-  reader takes `+` as authoritative and ignores `-` for that airline; do not
-  attempt to subtract from a closed set.
-
-  A `+` set is closed **across classes too**, which falls out of the definition
-  and is intended: `+uae:A388` at a stand weighted for class E means Emirates
-  contributes nothing at E, because their E-class aircraft is the 777. R18 then
-  removes them from the stage-2 pool rather than drawing them and finding nothing.
-
-- **R20** — **Per-stand rows attach to the most recent `1300`, and MUST follow it.**
-  Both `1312` and `1313` bind by position and nothing else — there is no name to
-  bind to, which is the whole point of the inline-only shape. A refinement row
-  appearing before any `1300` in the block has no stand to attach to: discard it
-  per R4.
-
-  Writers should emit `1300`, then `1301`, then the refinements, which is what
-  every example here does. `1301` in particular already had this constraint:
-  `AptIO.cpp:740-743` rejects it outright if there is no gate yet, or if the gate
-  already has airlines.
+  Note this is *more* lenient than `1301`, which rejects a repeat outright
+  (`AptIO.cpp:743`). R4 forbids that here — a duplicate must not fail the file —
+  so first-wins is the only rule that satisfies both. See §9 for what is given up
+  by not reporting it.
 
 ### Writer-side
 
@@ -170,9 +168,8 @@ A reader that has to defend against all of these is a reader nobody implements
 correctly.
 
 - **R9** — No whitespace other than a single U+0020 SPACE inside any field.
-- **R10** — Type designators match `[A-Z0-9]{2,5}`; airline codes match
-  `[A-Z0-9]{3,5}`. Anything else is dropped by the writer, not emitted for the
-  reader to police.
+- **R10** — Airline codes match `[A-Z0-9]{3,5}`. Anything else is dropped by the
+  writer, not emitted for the reader to police.
 - **R11** — Weights are non-negative integers in `0..1000`.
 - **R14** — A writer MUST NOT emit weights pointing exclusively at classes that no
   listed airline can fill. WED treats this as a hard export error (§4.5).
@@ -222,54 +219,71 @@ correctly.
   ignored rather than rejected.
 - **R17** — Three-stage selection (§4) applies **only** to stands carrying a `1313`
   row. A stand without one MUST keep today's behaviour, unchanged.
-- **R18** — Stage 2 and stage 3 MUST apply the same exclusion filter. An airline
-  whose every livery in the drawn class is excluded is not a stage-2 candidate.
-  See §4.1 — getting this wrong lets a `1312` row silently empty a stand.
+- **R18** — **Stage 2 and stage 3 MUST ask the index the same question.** An
+  airline with no usable livery in the class just drawn is not a stage-2
+  candidate at all.
+
+  This has nothing to do with refinements and survives their removal. Filtering
+  stage 2 on "has any livery at all" while filtering stage 3 on "has one in this
+  class" makes an airline a candidate with zero options, so every time it is
+  drawn the stand parks nothing. Concretely: Emirates' only E-class aircraft is
+  the 777, so at a stand weighted for class F they must be absent from the pool,
+  not drawn and then found empty. Write it as one `eligible()` used by both
+  stages and the two cannot drift apart — see §4.1.
+- **R25** — **An index row whose NOTE is `Obsolete` MUST NOT enter the spawn
+  pool.** Not at stage 2, not at stage 3, not in any count of what an airline can
+  fill. It is as if the row were absent.
+
+  This is where type-level exclusion went. The apt.dat format no longer has a way
+  to say "this airline, but not that aircraft" (§8.6), because the thing authors
+  actually needed it for was a retired or superseded asset — a fact about the
+  library, true at every airport at once, not a per-stand decision. §6.6 defines
+  the mark and §4.4 explains what it fixes.
+
+  **This rule is normative for the sim, not a WED convention.** If only WED
+  honours it, an author sees no preview for an obsolete livery while X-Plane goes
+  on spawning it, which is worse than either behaviour alone. It is one string
+  comparison at index-load time.
 
 ---
 
 ## 2. Grammar
 
 ```abnf
-; ---- the two new rows --------------------------------------------------
-refine-row     = %s"1312" 1*(1*SP refinement) *SP
+; ---- the new row -------------------------------------------------------
 weights-row    = %s"1313" 6(1*SP weight) *SP
 
-refinement     = exclusion / inclusion
-exclusion      = "-" airline [":" actype] ; one type, or the WHOLE airline (R22)
-inclusion      = "+" airline ":" actype   ; closed set: ONLY this (R21)
-
 ; ---- lexical -----------------------------------------------------------
-airline        = 3*5(ALPHA / DIGIT)  ; R10
-actype         = 2*5(ALPHA / DIGIT)  ; R10
 weight         = 1*4DIGIT            ; value MUST be 0..1000 (R11); a
                                      ;   syntactically valid 1001..9999 is
                                      ;   out of range - drop the row (R5, V11)
 SP             = %x20
 ```
 
+That is the entire addition to apt.dat: **one row code, six integers.** There is
+no second row, no sigil, no aircraft-type field and no name. Everything else this
+document describes is either an existing row (`1300`, `1301`), a rule about how to
+read these six numbers, or a companion data file that is not apt.dat at all.
+
 Parser notes:
 
-- Both rows attach to the most recent `1300` and carry no name, no reference and
+- `1313` attaches to the most recent `1300` and carries no name, no reference and
   no shared state. **Everything about a stand is written at the stand** (see
   §8.2 for the measurement that settled this).
-- `1313` takes **exactly six** weights. Five or seven is malformed; discard whole
+- It takes **exactly six** weights. Five or seven is malformed; discard whole
   per R5. Do not pad and do not truncate.
-- `-fdx:B763` is one token. Whitespace anywhere inside it is malformed.
-- A leading `-` is never ambiguous: every token after the row code is a
-  refinement, and each one begins with its own `+` or `-`.
+- A second `1313` on the same stand is not a merge and not an override: the first
+  wins and the rest are discarded (R24).
 
 ### Rows in context
 
 ```
 1300 51.157304 -0.171800 347.5 gate heavy|jets Gate 42
 1301 E airline ual dal baw aal afr klm dlh
-1312 -dal:B772 -baw:A35K
 1313 0 0 3 0 1 0
 
 1300 51.147042 -0.174540 -128.8 gate heavy Cargo 1
 1301 E cargo fdx ups
-1312 -fdx:B763
 1313 0 0 0 0 1 0
 ```
 
@@ -293,22 +307,18 @@ asserted.
 
 1300 47.44310000 -122.30120000 090.0 gate heavy|jets A1
 1301 E airline dal ual aal baw uae
-1312 -ual:B744
 1313 0 0 0 3 7 0
 
 1300 47.44240000 -122.30120000 090.0 gate heavy|jets A2
 1301 E airline dal ual aal baw uae
-1312 -ual:B744
 1313 0 0 0 3 7 0
 
 1300 47.44170000 -122.30120000 090.0 gate jets B1
 1301 C airline dal ual aal afr dlh klm swa aca
-1312 -dal:MD82
 1313 0 0 10 0 0 0
 
 1300 47.44100000 -122.30120000 090.0 gate jets B2
 1301 C airline dal ual aal afr dlh klm swa aca
-1312 -dal:MD82
 1313 0 2 8 0 0 0
 
 1300 47.44030000 -122.30120000 090.0 gate turboprops|jets R1
@@ -317,7 +327,6 @@ asserted.
 
 1300 47.43960000 -122.30120000 090.0 gate heavy|jets CGO1
 1301 D cargo fdx ups
-1312 -fdx:DC10
 1313 0 0 0 10 0 0
 
 1300 47.43890000 -122.30120000 090.0 tie_down props GA1
@@ -325,7 +334,6 @@ asserted.
 
 1300 47.43820000 -122.30120000 090.0 gate jets F1
 1301 F airline uae
-1312 +uae:A388
 1313 0 0 0 0 0 10
 
 1300 47.43750000 -122.30120000 090.0 gate jets T1
@@ -338,15 +346,15 @@ asserted.
 
 | stand | feature |
 |---|---|
-| `A1`, `A2` | two stands with **identical** refinements, written out at each. No name, no reference, no resolution step |
-| `A1`, `A2` | an **exclusion that changes the airline pool** (see R18 below) |
-| `B1` | exclusion plus a single-class weight |
-| `B2` | same airlines and exclusion as `B1`, **different weights** — the edit that used to mean "leave the group" is now just a different number |
-| `R1` | weights only, no exclusion |
-| `CGO1` | exclusion plus weights, cargo op type |
-| `GA1` | **no new rows at all** — today's behaviour, untouched (R17) |
-| `F1` | **`+` closed set** (R21) — only the A380, and nothing that ships later |
-| `T1` | weights spanning two classes, no exclusion |
+| `A1`, `A2` | two stands with **identical** weights, written out at each. No name, no reference, no resolution step |
+| `A1`, `A2` | an operator on `1301` with nothing at one of the weighted classes — the R18 case |
+| `B1` | a single-class weight: everything here is class C |
+| `B2` | same operators as `B1`, **different weights** — the edit that used to mean "leave the group" is now just a different number |
+| `R1` | weights concentrated on one class, a different one |
+| `CGO1` | weights plus a cargo op type |
+| `GA1` | **no new row at all** — today's behaviour, untouched (R17) |
+| `F1` | a class the shipped library cannot fill — the R14 warning case, not an error |
+| `T1` | weights spanning two classes |
 
 #### What actually spawns
 
@@ -373,27 +381,32 @@ of the listed airlines can ever fill** is the error case, and R14 forbids it.
 
 #### The number that shows why R18 exists
 
-`A1` lists five airlines and excludes `-ual:B744`. **That is United's only E-class
-livery** — they have `B752` and `B763` at D and nothing else at E.
+`A1` lists five operators and is weighted 30/70 across D and E. United's only
+class-E livery in the shipped library is the `B744` — an aircraft they retired in
+2017, and one the library should therefore be marking `Obsolete` (§6.6). Once it
+is, United has **nothing at E**: `B752` and `B763` at D, and that is all.
 
 | | class E candidates | stand parks nothing |
 |---|---|---|
-| **With R18** — stage 2 applies refinements | **4** (UAL not a candidate) | **0%** |
-| Without — stage 2 ignores them | 5 (UAL picked, then empty) | **14%** |
+| **With R18** — stage 2 asks "has one at *this* class" | **4** (UAL not a candidate) | **0%** |
+| Without — stage 2 asks "has one at all" | 5 (UAL picked, then empty) | **14%** |
 
-Fourteen percent of the time, on a stand whose author did nothing wrong, from one
-exclusion. The author wrote "no 747s at this gate" and would have got "and
-sometimes nothing at all". Note UAL still parks at D — the exclusion stays
-surgical, which is the whole point.
+Fourteen percent of the time, on a stand whose author did nothing wrong, from a
+single missing asset. Note United still parks at D — withdrawing one aircraft
+does not withdraw the operator, which is exactly the surgical effect earlier
+drafts were trying to buy with a per-stand exclusion row.
 
 #### Things this example is careful about
 
 - **Every stand stands alone.** `A1` and `A2` repeat two identical rows and that is
   fine: it costs about 40 bytes, and §8.2 measures the alternative as both larger
   and more complex.
-- **Exclusions leave something behind.** `-dal:MD82` is safe because Delta also has
-  `A320` and `B738` at C. `-ual:B744` is safe only because R18 handles it.
-- **`GA1` carries no new rows.** An airport does not have to adopt this format
+- **A withdrawn aircraft leaves something behind — usually.** Marking Delta's
+  `MD82` obsolete is safe because they also have `A320` and `B738` at C. United's
+  `B744` empties their class E outright, and only R18 keeps that from turning into
+  an intermittently empty stand. §6.6's blast-radius check exists to tell those
+  two cases apart before the mark is made, not after.
+- **`GA1` carries no new row.** An airport does not have to adopt this format
   stand-by-stand, and a mixed file is normal.
 - **Class A is GA and military only** — no real airline has an A-class livery,
   which is why `GA1` is `general_aviation` rather than an airline stand.
@@ -401,12 +414,11 @@ surgical, which is the whole point.
 
 ### 2.5 One stand, line by line
 
-Stand `A1` from §2.4, pulled apart. Four lines, and two of them already exist.
+Stand `A1` from §2.4, pulled apart. Three lines, and two of them already exist.
 
 ```
 1300 47.44310000 -122.30120000 090.0 gate heavy|jets A1
 1301 E airline dal ual aal baw uae
-1312 -ual:B744
 1313 0 0 0 3 7 0
 ```
 
@@ -433,19 +445,10 @@ That is the whole stand. There is nothing elsewhere in the file to look up.
  row code
 ```
 
-**Everything below is additive. Delete both new rows and this stand behaves
+**Everything below is additive. Delete the one new row and this stand behaves
 exactly as it does today** (R2). That is the property the whole design is built on.
 
-#### The two rows added
-
-```
-1312  -ual:B744
- |    |
- |    one token per refinement, space separated. Each begins with its own sigil:
- |       "-" open set   - everything this airline has, MINUS this type
- |       "+" closed set - ONLY this type, and nothing added later (R21)
- row code
-```
+#### The one row added
 
 ```
 1313  0  0  0  3  7  0
@@ -464,31 +467,34 @@ exactly as it does today** (R2). That is the property the whole design is built 
 
 ```
 1. class   := weighted draw over 0 0 0 3 7 0        -> D 30%, E 70%
-2. airline := uniform over those in 1301 that have an ELIGIBLE livery
-              in the class drawn (R18)
-                 at E: dal, aal, baw, uae            <- ual is NOT here
+2. airline := uniform over those in 1301 that have a livery in the
+              class drawn (R18)
+                 at E: dal, aal, baw, uae            <- ual has nothing at E
                  at D: dal, ual                      <- ual IS here
-3. livery  := uniform over that airline's eligible liveries in that class,
-              honouring EXPORT_RATIO if library.txt sets one
+3. livery  := uniform over that airline's liveries in that class, skipping
+              any marked Obsolete (R25), honouring EXPORT_RATIO if
+              library.txt sets one
 ```
 
-Step 2 is where the exclusion earns its keep. `-ual:B744` removes United's only
-E-class aircraft, so United simply stops being a candidate **at E** — while
-remaining one at D, where they have the 757 and 767. One line, and the effect is
-surgical rather than blunt.
+Step 2 is where R18 earns its keep. United's only class-E aircraft in the shipped
+library is the 747-400, an aircraft they retired in 2017 — so the library, not
+this file, is what should stop it spawning (§6.6). Once it is marked, United
+simply is not a class-E candidate anywhere, while remaining one at D where they
+have the 757 and 767.
 
-Had stage 2 ignored refinements, United would still be drawn at E, find nothing,
-and the stand would park **nothing 14% of the time** (§2.4).
+Had stage 2 skipped that check and asked only "does this airline have *any*
+livery", United would still be drawn at E, find nothing, and the stand would park
+**nothing 14% of the time** (§2.4).
 
 #### What this looks like in a Gateway diff
 
 1. **A stand is a contiguous run of lines.** Reviewing what parks somewhere means
-   reading two to four consecutive rows, never resolving a name against a
+   reading two or three consecutive rows, never resolving a name against a
    definition elsewhere in the block.
 2. **An edit to one stand touches only that stand.** There is no shared object to
    change underneath other stands, and no name that changes when content changes.
 3. **`1301` still reads correctly on its own**, so a reviewer who ignores the new
-   rows entirely still sees which airlines an author assigned.
+   row entirely still sees which airlines an author assigned.
 
 ## 3. Reader algorithm
 
@@ -498,23 +504,24 @@ One pass. There is nothing to resolve, because nothing refers to anything.
 for each row in the airport block:
     1300 …          -> begin a new stand; it becomes "current"
     1301 …          -> size letter, op type, airline list  (existing behaviour)
-    1312 r…         -> current_stand.refinements = [r…]    (R20: needs a current stand)
-    1313 w×6        -> current_stand.weights     = [w×6]
+    1313 w×6        -> if current stand already has weights: DISCARD this row (R24)
+                       else if no current stand:             DISCARD this row (R20)
+                       else current_stand.weights = [w×6]
 
 then, per stand:
     if weights present and length != 6:      drop weights entirely   (R5)
     if any weight outside 0..1000:           drop weights entirely   (R5)
-    if a refinement does not match the grammar:  drop THAT refinement only
 ```
 
-The asymmetry in the last two lines is intentional, and it is the one place the
-two rows are treated differently. A refinement means "also apply this" — dropping
-one bad token leaves the rest meaningful and independent. A weight vector means
-"here is the whole distribution" — dropping one element changes what the other
-five mean.
+**A bad `1313` is dropped whole, never partially** (R5). The row means "here is
+the whole distribution", so discarding one element silently changes what the
+other five mean — and because all-zero is legal and means "nothing parks here"
+(§4.2), a truncated row read as zeros would empty the stand without saying so.
+There is no partial-acceptance path to get wrong, because there is nothing left
+in this format that could be partially accepted.
 
-A stand with no `1312` and no `1313` is not a special case to detect. It simply
-has no refinements and no weights, and R17 keeps it on today's behaviour.
+A stand with no `1313` is not a special case to detect. It simply has no weights,
+and R17 keeps it on today's behaviour.
 
 ## 4. Selection algorithm
 
@@ -539,30 +546,30 @@ livery   := weighted_choice(liveries, weights = EXPORT_RATIO or uniform)
 
 where
   eligible(a, class):
-      if ("-", a, NONE) in stand.refinements:      # "-a" with no type: whole airline
-          return []                                #   R22, and it outranks everything
-      allow = { t for ("+", a2, t) in stand.refinements if a2 == a }
-      if allow is non-empty:                       # CLOSED set for this airline
-          return [ L for L in index.liveries(a, class) if L.type in allow ]
-      deny  = { t for ("-", a2, t) in stand.refinements if a2 == a and t is not NONE }
-      return [ L for L in index.liveries(a, class) if L.type not in deny ]
+      return [ L for L in index.liveries(a, class) if not L.obsolete ]   # R25
 ```
+
+That is the whole of it. There is no per-stand filter to apply, because the
+format no longer carries one: a stand says which airlines and which classes, and
+the index says what exists. The only subtraction left is `Obsolete`, and it lives
+in the index because it is a fact about the library rather than about this stand
+(§8.6).
 
 If a stage has no candidates, nothing parks at that stand this time. That is a
 correct outcome, not an error — see §4.5.
 
-**Stage 2 MUST apply the exclusions too (R18).** Filtering stage 2 on "has any
-livery in this class" while filtering stage 3 on "…that is not excluded" lets an
-exclusion silently empty a stand. Concretely, in the sample package: BAW's only
-C-class livery is the A320, so a refinement excluding `-baw:A320` makes BAW a valid
-stage-2 candidate with zero stage-3 options. Every time BAW is drawn, the stand
-parks nothing. The author wrote "don't park BAW's A320 here" and got "sometimes
-park nothing here", which is not the same sentence.
+**Both stages MUST call the same `eligible()` (R18).** Filtering stage 2 on "has
+any livery at all" while filtering stage 3 on "has one in this class" makes an
+airline a candidate with zero options, so every time it is drawn the stand parks
+nothing. Concretely, in the sample package: BAW's only C-class livery is the
+A320, so at a stand weighted for class D they must be absent from the stage-2
+pool, not drawn there and found empty.
 
-Writing it as one `eligible()` used by both stages makes the two impossible to
-drift apart. This was found by building the sample in `docs/livery_sample/` and
-tracing stand `07-POLICY-A` by hand; drafts 1–4 had the flattened form and the
-bug.
+Writing it once and calling it twice makes the two impossible to drift apart.
+Drafts 1–4 had the flattened form and the bug; it was found by building the
+sample in `docs/livery_sample/` and tracing one stand by hand. The rule outlived
+the refinements it was originally written for, because it was never really about
+them — it is about the index not having what the author assumed.
 
 ### 4.2 Weights
 
@@ -631,11 +638,32 @@ Two wrong fixes, stated so they are not tried:
 - De-duplicating on the object path changes nothing. Paths are unique by
   construction, including for the duplicate pairs.
 
-**Recommendation: do not de-duplicate in the sim.** Fix it in the library by
-removing the superseded exports — a data problem with a data fix, and the list is
-in §6.3. A 2× skew on 38 aircraft is a much smaller defect than a de-duplication
-rule that silently deletes liveries, and unlike that rule it disappears
-permanently once the assets are cleaned.
+**Recommendation: do not de-duplicate in the sim. Mark the superseded asset
+`Obsolete` in the index (§6.6) and let R25 drop it.**
+
+This replaces the recommendation earlier drafts carried, which was to delete the
+superseded `EXPORT_EXTEND` lines from `library.txt`. That fix was never performed
+and could not have been: an asset removed from the library stops resolving, and
+scenery that references it by a hard path stops loading. The whole problem is
+that these objects must remain reachable while ceasing to be *chosen*, and
+nothing in `library.txt` can express that distinction. A NOTE value can.
+
+The twelve pairs are identified and marked — `AT45_FDX_static.obj` superseded by
+`ATR42-500_FedEx.obj`, and eleven more of the same shape, every one with its
+replacement sitting beside it. **They empty zero (airline, class) pairs**, so the
+skew disappears and nothing becomes unfillable.
+
+The thirteenth pair is not one: `F15EX_cft` / `F15EX` are genuinely different
+airframes (conformal tanks) that the index cannot currently tell apart. That is
+an index fix by hand on the NOTE column, not an obsolescence mark — see §6.3.
+
+**The danger of this mechanism is its reach.** A mark is global and has no
+per-stand undo: the livery stops existing at every airport at once, and an
+(airline, class) pair left with no asset is a stand that silently parks nothing —
+the §4.5 defect, created by a data edit. Marking `B752` would empty **twenty**
+pairs, and the 757 is in daily service. The generator therefore prints the blast
+radius of every mark on every run, and answers `--what-if <TYPE>` without
+requiring the mark to be made first. Read that number before committing a row.
 
 ### 4.5 What class-first costs, and who absorbs it
 
@@ -683,14 +711,14 @@ silently and in one click.
 
 #### What to display, and what not to
 
-All four levels are computable from `1301`, `1313`, `1312` and the index. They are
-not equally worth showing:
+All four levels are computable from `1301`, `1313` and the index. They are not
+equally worth showing:
 
 | value | how | show it? |
 |---|---|---|
 | P(class) | `1313` normalised | low value — the author just wrote it |
 | **P(empty)** | `Σ_c P(c) · [no airline eligible at c]` | **first-class. Not buried in a detail view** |
-| P(airline) | `Σ_c P(c) · [eligible] / n_eligible(c)` | yes — this is where a ban's cost shows |
+| P(airline) | `Σ_c P(c) · [eligible] / n_eligible(c)` | yes — this is where deselecting an operator shows its cost |
 | P(one livery) | `P(airline, c) · 1/\|eligible\|` or `EXPORT_RATIO` | **de-emphasise** |
 
 `P(empty)` earns the top slot because it is **the only quantity in this design
@@ -711,23 +739,65 @@ the number" but "what did I just do". At the moment of the click:
 Deselect United:     empty  3% → 31%
 ```
 
-This is what makes an over-aggressive ban self-evident, and it needs no memory of
+This is what makes an over-aggressive cut self-evident, and it needs no memory of
 the previous value.
+
+#### The sentences
+
+One per scenario, because the scenarios differ in kind rather than in degree. The
+percentage is always **occupancy** — `1 − P(empty)` — never "the chance of this
+operator", which under a single-operator stand is 100% and says nothing:
+
+```
+one operator   This ramp will spawn Emirates aircraft, size D-E, 70% of the time.
+               (no Emirates aircraft exists at size D)
+
+several        This ramp has an even chance between whichever of Delta, United,
+               American has an aircraft at the size drawn - size C-E, 95% of
+               the time.
+
+military       This ramp will spawn military aircraft from: Italy, Sweden, USA.
+general av.    This ramp will spawn GA aircraft from: USA, Germany, Canada, France.
+
+nothing        This ramp will not spawn any static aircraft.
+```
+
+Three constraints these sentences are written to satisfy:
+
+1. **"Even chance" is true per class, not overall.** R18 removes an operator that
+   has nothing at the class drawn, so listing three operators does not give each
+   33%. The wording says "whichever of … has an aircraft at the size drawn"
+   rather than implying an even split over all three, because an author who reads
+   the simpler sentence will plan around a number that is not true.
+2. **"Nothing parks here" has three causes that look identical from outside**
+   (§4.5 point 2 above): all-zero weights, no operator with an asset at a weighted
+   class, and an operation type of `none`. The sentence must say which — the
+   readout is the only place in the whole design where they can be told apart.
+3. **The country data behind the military and GA sentences is thin, and the
+   wording must survive that.** `XPMI` carries 11 rows of which 6 have no country
+   at all; `XPGA` carries 51 across 11 countries, 28 of them USA. Naming three
+   countries is the most these sentences can honestly do today.
+
+**A heterogeneous multi-selection cannot be given any of these sentences.** Ramps
+in one selection may differ in operator list and in size range — which is why the
+operator checkbox is tri-state to begin with. A uniform selection takes the same
+sentence with a count; a mixed one gets the aggregate only, *"12 of 47 stands park
+nothing"*, and no sentence pretending the selection is one stand.
 
 #### Two properties of the readout worth stating
 
-**It makes `+` versus `-` visible.** R21/R22 are the most abstract rules here —
-two sigils, three precedence rules, every conflict resolved silently. The readout
-renders the distinction directly:
+**It makes late binding visible, which is otherwise the design's most abstract
+property.** Nothing in the file says what will actually park anywhere — that is
+resolved against whatever is installed, which is the entire argument of §8.3 and
+also the thing an author cannot see. The readout is where it becomes concrete:
 
 ```
-United      30%   open — new UAL types will join automatically
-Emirates    10%   closed — A388 only
+United      30%   3 aircraft at C-E
+Emirates    10%   1 aircraft at E — nothing at D or F yet
 ```
 
-An author **sees** open and closed sets instead of reading a rule about them,
-which is also the best available defence against implementations diverging on
-R21/R22 without anyone noticing.
+"nothing at D or F **yet**" is the format working as intended, not a defect, and
+an author who can see the word stops reading an empty class as a mistake.
 
 **It is computed against the author's install, and must say so.** Per §6.4 the
 index is install-specific and a mismatch fails silently. A probability readout
@@ -785,19 +855,14 @@ whatever the current step-down does with it.
 |---|---|---|
 | V1 | `1313 0 0 10 0 0 0` on a stand | class C always; stages 2–3 then run |
 | V2 | `1313 0 0 0 0 0 0` | nothing parks. **Legal**, not an error (R5) |
-| V5 | `1312 -fdx:B763` with no `1313` on the stand | exclusion recorded, but **today's behaviour** still applies (R17) — exclusions alone do not activate three-stage selection |
 | V6 | `1313 1000 0 0 0 0 0` | legal; 1000 is the ceiling (R11) |
-| V23 | `1312 +uae:A388` | Emirates contributes **only** the A388, at every class. Every other airline on `1301` is unaffected (R21) |
-| V24 | `1312 +uae:A388 -uae:B772` | writer error. `+` is authoritative; the `-` is ignored, not subtracted from the closed set (R21) |
-| V25 | `1312 +uae:A388 -dal:B772` | independent per airline: Emirates closed to A388, Delta open minus the 777 |
-| V27 | `1312 -etd` | Etihad contributes nothing at any class. Other airlines untouched (R22) |
-| V28 | `1312 -etd -etd:A332` | the bare ban wins; the type entry is redundant, not additive (R22) |
-| V29 | `1312 -uae +uae:A388` | the bare ban wins. No attempt to reconcile "only this" with "none of these" (R22) |
+| V26 | `1313 0 0 0 0 0 10` where the only listed operator has nothing at F | operator is **not** a stage-2 candidate; the stand parks nothing. Correct behaviour, and the R14 warning case for a writer |
 | V30 | `1301 A airline dal` with `1313 0 0 0 0 9 1` | reader: selection uses the weights, the letter is not consulted. Writer/WED: correct the letter to `F` (R23) |
-| V26 | `1312 +uae:A388` on a stand weighted class E only | Emirates is **not** a stage-2 candidate — A388 is class F, they have nothing at E (R18 + R21) |
+| V31 | an index row for the drawn (airline, class) whose NOTE is `Obsolete` | that row is not a stage-3 candidate, and does not make its operator a stage-2 candidate either (R25) |
 
-V5 is the case most likely to be got wrong. Exclusions are subtractive
-refinements of a selection that only exists once `1313` is present.
+V26 is the case most likely to be got wrong, and it is the one R18 exists for: an
+operator with no asset at the class drawn must be absent from the pool, not drawn
+and then found empty.
 
 ### 5.2 Malformed — all of these MUST load the file successfully
 
@@ -808,18 +873,22 @@ refinements of a selection that only exists once `1313` is present.
 | V10 | `1313 0 0 -5 0 0 0` | drop weights whole (R11, R5) |
 | V11 | `1313 0 0 9999 0 0 0` | drop weights whole (R11, R5) |
 | V12 | `1313 0 0 1.5 0 0 0` | drop weights whole — no decimal point is legal (§4.2) |
-| V15 | `1312 -fdx:B763 garbage -ups:B752` | drop `garbage` only; both valid exclusions survive (§3 pass 3) |
-| V16 | `1312` with no refinements after it | drop the row (R4) |
+| V16 | `1313` with nothing after it | drop the row (R4) |
+| V17 | **two** `1313` rows on one stand | the **first** applies; the second is discarded whole. Not merged, not overwritten, not compared (R24) |
 | V18 | a `1314` row | ignored (R15) |
 | V19 | an embedded tab inside an airline list | writer defect (R9); reader treats it as a field separator, which may yield an unparseable token — drop that token, keep the row |
-| V20 | file at version `1200` containing both new rows | loads; new rows apply (§7.2 — no version gate) |
+| V20 | file at version `1200` containing a `1313` row | loads; the row applies (§7.2 — no version gate) |
+| V32 | `1313` appearing before any `1300` in the airport block | drop the row — there is no stand to attach it to (R20) |
+
+V17 is new in draft 7 and is the one with a decision behind it rather than a
+mechanism: see §9 for what taking the first costs.
 
 ### 5.3 The two that must never happen
 
 | # | input | expected |
 |---|---|---|
 | V21 | any row above | **the file still loads.** No input in §5.2 may produce a load failure (R4) |
-| V22 | every new row stripped | byte-identical aircraft placement to today (R2) |
+| V22 | every `1313` row stripped | byte-identical aircraft placement to today (R2) |
 
 V22 is the regression test worth automating. It is the one guarantee everything
 else rests on.
@@ -896,7 +965,7 @@ The 26 groups have three distinct causes, and they need different responses:
 
 | cause | groups | rows | what to do |
 |---|---|---|---|
-| **Old and new asset both exported** for one real aircraft — `AT45_FDX_static.obj` *and* `ATR42-500_FedEx.obj` | 13 | 26 | **Library fix.** The visible tip of the 38 `_DUP` collisions in §8.4. Each doubles that aircraft's spawn probability (§4.4) |
+| **Old and new asset both exported** for one real aircraft — `AT45_FDX_static.obj` *and* `ATR42-500_FedEx.obj` | 13 | 26 | **Mark the old one `Obsolete`** (§6.6). Twelve are marked; the thirteenth is the `F15EX` pair below, which is not a duplicate at all. Each unmarked pair doubles that aircraft's spawn probability (§4.4) |
 | **Genuinely different airframes, distinguished only by registration** — Air China's five Peony tails, eight PC-12s, Delta's two 757s | 11 | 50 | **Nothing. Correct as-is.** The index carries the distinction in `REG`; the note legitimately repeats |
 | **Genuinely different airframes the index cannot currently name** — `757PW` / `757PW_winglet` / `757RR` / `757RR_winglet` (engine and winglet variants), `F15EX` / `F15EX_cft` (conformal tanks) | 2 | 7 | **Index fix, by hand** — 6 of those 7 rows. The variant is in the *filename* but the folder is a bare `<TYPE>/` with no airline token, so the folder-driven variant rule finds nothing. Deriving it from the filename would have to tell a variant from an airline name and a registration (`757_Delta_N654DL.obj`), a heuristic that would misfire across the other 292 rows to fix 6 |
 
@@ -938,6 +1007,57 @@ of these is a regression.
 
 I3 and I4 are the ones worth re-running in CI. They are the only way the
 "data says yes, disk says no" failure of §6.4 gets caught before a user sees it.
+
+### 6.6 `Obsolete` — the one reserved NOTE value
+
+**`Obsolete` in the NOTE column means the livery must never be chosen** (R25). It
+is not a caption, and it is the only value in that column a reader interprets.
+
+Everything else about NOTE is unchanged: it stays an **open vocabulary**, free
+text, rendered in parentheses after the operator's name. `Obsolete` is a reserved
+sentinel inside an open field, not the first entry of an enum, and a reader that
+starts validating this column against a list will silently drop the Peony, Mixue
+and Peacock liveries that the column exists to carry (§6.2).
+
+The marked row keeps its `.obj` on disk and its `EXPORT_EXTEND` line in
+`library.txt`. That is the entire point: scenery referencing the object by a hard
+path still loads, while nothing *chooses* it any more. No other mechanism
+available to us separates "reachable" from "selectable" — deleting the export
+does both at once.
+
+**Two things it is for.**
+
+1. **Superseded assets.** An old and a new object for the same real aircraft are
+   both exported, so that aircraft draws double probability (§4.4). Twelve such
+   pairs are marked today and they empty no (airline, class) pair.
+2. **Retired airframes.** The operator no longer flies the type, so a stand
+   listing them should not park one. United's 747-400 is the clean case: retired
+   in 2017, and it is their only class-E asset in the library — which is exactly
+   why earlier drafts needed a per-stand `-ual:B744` at every 747-era gate. The
+   mark states the fact once, globally, where it is true.
+
+**Marks live in `livery_obsolete.txt`, never in the index directly.** The index is
+generated; a hand edit to it is wiped on the next regeneration. The sidecar is
+keyed by object path and merged by the generator, exactly as
+`livery_reg_overrides.txt` already does for hand-read registrations.
+
+**A mark's blast radius must be read before it is made.** Withdrawing a livery is
+global and has no per-stand undo, and an (airline, class) pair left with no asset
+is a stand that silently parks nothing — the §4.5 defect, manufactured by a data
+edit. The generator prints, for every mark, how many pairs it would empty, and
+answers the question hypothetically without requiring the mark:
+
+```
+obsolete marks        : 12 rows
+  would empty         : 0 (airline,class) pair(s)
+what-if B752          : 36 rows, would empty 20 pair(s)  AHY/D ATN/D AZV/D ...
+what-if MD82          :  6 rows, would empty  2 pair(s)  AZA/C SAS/C
+```
+
+The 757 is in daily service; twenty emptied pairs is what one careless line
+costs. Emptying pairs is not always wrong — a genuinely retired type *should*
+empty them — but it must be a decision someone made with the number in front of
+them.
 
 ---
 
@@ -1156,6 +1276,11 @@ stand's payload is **six integers**. Measured against the real global apt.dat
 | grouped, definition carries the airline list | 1.31 MB |
 | grouped, definition carries only weights and refinements | 0.92 MB |
 
+(Those figures were measured while the format still had two rows. Draft 7 dropped
+`1312` entirely, so the real inline cost is now lower than 0.85 MB and the case
+against grouping only widens. The numbers are left as measured rather than
+rescaled, because the conclusion never depended on their size.)
+
 **Grouping is larger, not smaller** — every variant of it. A reference row costs
 roughly what the six integers cost, so you pay the per-stand price anyway and add
 the definitions on top. The break-even is a group of **more than 6.8 stands**, and
@@ -1196,6 +1321,59 @@ tell you what parks at a stand; you need the index too. Acceptable, because
 tooling can show it — WED does, and an export report could — while freezing
 cannot be undone by tooling.
 
+**Draft 7 adds the symmetric half: the design can now remove, not only add.** A
+row marked `Obsolete` (§6.6) stops being chosen at every airport in the world,
+with zero apt.dat edits — the same late-binding mechanism as "a model ships and
+it just appears", run backwards. This is the first time anything in the design
+withdraws rather than supplies, and it is worth stating plainly because it
+changes the behaviour of existing scenery without changing any file. That is
+acceptable for the same reason the forward direction is: the author wrote intent,
+not a resolved answer, and an aircraft its operator retired was never part of
+what they meant.
+
+### 8.6 Why per-stand type refinement was dropped
+
+Drafts 1–6 carried a second row, `1312`, letting an author write `-ual:B744` or
+`+uae:A388`: this airline, but only (or never) that aircraft. Draft 7 deletes it
+outright, along with R21, R22 and eight conformance vectors.
+
+**It was not paying for itself.** Measured against the shipped 298-row index,
+counting real operators and ignoring the `XP*` pseudo-codes:
+
+| | |
+|---|---|
+| (operator, class) pairs in the index | 168 |
+| …carrying **more than one** aircraft type | **15 — 8.9%** |
+| real operators in the index | 148 |
+| …whose assets sit at **exactly one** class | **134 — 90.5%** |
+
+An aircraft type only ever appears in its own wingspan class, so naming a type
+already names a class — which means the size slider that every stand has anyway
+already pins the aircraft for nine operators in ten. `1312` bought discrimination
+*within* a class, and within-class is where the library almost never offers a
+choice.
+
+**What it was actually being used for was a library defect.** Every worked
+example in drafts 1–6 tells the same story on inspection: `-ual:B744` at a 747-era
+gate, `-dal:MD82` at a Delta stand, `-fdx:DC10` at a cargo stand. None of those is
+an author expressing a preference — they are all authors working around an
+aircraft the operator no longer flies, one stand at a time, at every airport in
+the world. Stating that fact once in the index (§6.6) is the same answer in the
+right place, and it cannot go stale the way a per-stand list does.
+
+**What is genuinely lost**, and it is not nothing: an author cannot say "Delta,
+but the A320 rather than the 737" — both are class C and both are current. That
+is 15 pairs across the entire library, and in every one of them the operator
+really does fly both types. Relative frequency between two current aircraft is
+what `EXPORT_RATIO` is for (§4.3), and it belongs to the library, which sees all
+airports, rather than to one stand.
+
+This is the same lesson §8.2 records, applied to expressiveness instead of size:
+**measure a mechanism against the payload it will actually operate on**, not the
+payload that motivated it. Grouping died because the thing it shared turned out to
+be six integers. Refinement died because the thing it discriminated turned out to
+be, nine times in ten, a single aircraft.
+
 ### 8.4 Defects found in the shipped library
 
 By-product of building the index, offered as data rather than complaint:
@@ -1230,10 +1408,11 @@ Fixed on our side; R9 exists so it is not reintroduced in another field.
 
 ## 9. Open questions
 
-1. **Row code allocation.** `1312` and `1313` are proposals. **Two codes, not
-   four** - dropping the grouping machinery (§8.2) gave back the two that carried
-   policy names. Any two work. This is the only item blocking WED-side
-   implementation.
+1. **Row code allocation.** `1313` is a proposal. **One code, not two** —
+   dropping per-stand refinement (§8.6) gave back the one that carried them, as
+   dropping the grouping machinery before it (§8.2) gave back two more. Four, to
+   two, to one. **Any single unused code works**, and this is the only item
+   blocking WED-side implementation.
 2. **Version policy.** §7.2 removes the compatibility argument for a bump, so this
    is now a question about signalling intent. Our recommendation: no bump.
 3. **A process decision that is not one person's**: §7.3. If a bump happens, new
@@ -1241,14 +1420,33 @@ Fixed on our side; R9 exists so it is not reintroduced in another field.
    generates which version for whom? This needs Jim and the release manager. It
    has no answer today and it is the only part of this with no technical
    solution.
-4. **What a duplicate `1312`/`1313` on one stand means.** §3 assigns
-   (`current_stand.weights = [w×6]`), so a second row silently overwrites the
-   first. `1301` does the opposite and rejects a repeat outright
-   (`AptIO.cpp:743`), which makes the new rows the lenient ones by accident
-   rather than by decision. Recommended: at most one of each per stand, second
-   and later occurrences discarded per R4 — cheap to state, cheap to implement,
-   and it keeps a misbound row from looking like valid data. Needs a vector in
-   §5.2 either way; there is none today.
+
+**Closed since draft 6 — a duplicate `1313` on one stand.** The behaviour is R24:
+the first in file order wins and the rest are discarded whole. Recorded here
+rather than silently, because it comes with a cost that is worth being explicit
+about.
+
+A reader that repairs ambiguous input should say it did. This one cannot, and the
+reason is structural rather than an oversight: WED's parser (`AptIO.cpp`) has no
+concept of a non-fatal diagnostic — a problem sets `ok = "Illegal …"` and aborts
+the whole file, which R4 forbids for this row. Adding a warning channel means
+changing a parser shared with MeshTool, DSF2Text and RenderFarm, for a defect
+that no shipped file has ever contained, since `1313` does not exist in the wild
+yet. Every check that *can* run against WED's object model goes into the existing
+validator instead — which has the better reach anyway, because Gateway already
+runs it on submission (`WED_GatewayExport.cpp:498`). But a duplicate row is gone
+by the time that validator sees anything: the parser took the first and the
+second never became a value.
+
+So the honest statement is: hand-write two `1313` rows and one of them vanishes
+without a word. That is a deliberate trade, not a gap. The person who wrote them
+went around the editor and knows it; the next author will never see that anything
+was dropped; and nothing propagates, because a Gateway submission is re-emitted
+from WED's object model rather than forwarded as the author's bytes (§8.5).
+
+If it ever needs recovering, the cheap shape is a count on `AptGate_t` — "N rows
+discarded while parsing" — which reaches the validator without touching the
+parser's signature or any other tool.
 
 ---
 
