@@ -1,7 +1,12 @@
 # apt.dat: per-stand fleet and livery data — proposed format
 
 For Jim K. — the X-Plane side of WED's ramp livery picker.
-Draft 1, 2026-09-16. Targets WED 2.8.0.
+Draft 2, 2026-09-16. Targets WED 2.8.0.
+
+Draft 2 adds the tolerance test result (the sim ignores the new rows - measured, not
+assumed), the half of compatibility that is not solved (an older WED cannot open these
+files at all), the constraints a writer must hold to, and a note on which X-Plane build
+an index describes.
 
 ---
 
@@ -281,6 +286,61 @@ serve builds older than 12.4, that needs checking against whichever is the real 
 a question about your release support policy more than about the format.
 
 The full log is kept alongside this document.
+
+---
+
+## What a writer must guarantee
+
+Constraints on whoever produces the file, not requests to the reader. A reader that has
+to defend against all of these is a reader nobody implements correctly.
+
+- **No whitespace other than a single space inside any field.** WED had a live instance
+  of this: `CorrectAirlinesString` collapsed only the literal space character, so a
+  newline — reachable from a hand-authored document, where the value is an XML attribute
+  — travelled through `fprintf("%s")` (`AptIO.cpp:1475`) and appeared in the exported
+  file as a row of its own. Fixed on our side; stated here so it is not reintroduced in
+  another field.
+- **Bounded field lengths.** The airline list is capped at 1024 characters, cut at a
+  token boundary so truncation cannot invent a code that was never written. The longest
+  list in the real global apt.dat is 27 codes, about 110 characters.
+- **Type designators `[A-Z0-9]{2,5}`, airline codes `[A-Z0-9]{3,5}`.** Anything else is
+  dropped by the writer rather than emitted for the reader to police.
+- **Weights are small non-negative integers**, bounded (we use 0..1000). They are
+  relative, so nothing is lost, and it removes any chance of overflow when a reader sums
+  them.
+- **Policy names are generated, never author-supplied** — derived from a content hash,
+  so there is no free-text field for anyone to put anything into.
+
+### Why we believe this closes the abuse question
+
+A Gateway submission is validated and then **re-emitted from WED's object model**
+(`WED_GatewayExport.cpp:498`, then `:543`), not forwarded as the author's bytes.
+Whatever someone puts in a file either fails to parse — in which case WED refuses the
+import outright — or becomes a typed value that WED re-serialises in its own format.
+
+Combined with the tolerance result above, where even a genuinely corrupt row leaves
+X-Plane saying "the scenery may not look correct" rather than failing, we could not find
+a path from a hand-edited local file to a crash on anyone else's machine. The airline
+newline was the one way through and it is now closed.
+
+---
+
+## A note on the index we generated
+
+`livery_index.txt` carries a header recording its schema version, its data version as
+`<YYYYMMDD>-r<n>`, and **the X-Plane build it was generated from**. That last field
+exists because the index is install-specific and a mismatch fails silently.
+
+We hit exactly that while preparing this document. The machine it was built on has two
+installs: **12.4.4-pnl5 with 376 static aircraft** and **12.4.3-r2 with 298**. The 78
+extra are assets in the beta lane that released users do not have. An index built from
+the beta and read against the release resolves 78 entries to files that are not there,
+and the only symptom is previews that quietly never appear.
+
+Relevant on your side too: whatever ships this index has to ship it from the same build
+as the assets it describes.
+
+---
 
 ## What we need from you
 
