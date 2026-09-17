@@ -844,6 +844,9 @@ WED_LiveryPane::WED_LiveryPane(
 						IResolver *		resolver,
 						WED_Archive *	archive,
 						GUI_TabPane *	host_tabs) :
+	// The host tab pane is itself a commander (GUI_TabPane.h:35), so it is the
+	// natural parent: focus flows window -> tab pane -> this pane -> mSearchField.
+	GUI_Commander(host_tabs),
 	mResolver(resolver),
 	mArchive(archive),
 	mHostTabs(host_tabs),
@@ -2092,7 +2095,15 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 				}
 				else if (r == wed_Icao_Placeholder)
 				{
-					info_text = "Airport ICAO not set (\"" + icao + "\") - country unknown, can't weight liveries by region.";
+					// Two different situations reach wed_Icao_Placeholder and they
+					// need different sentences. Saying "not set" about a code the
+					// user can see filled in reads as a bug in WED rather than as
+					// a fact about the code - which is how it read for ZZLI, a
+					// deliberate choice from ICAO's reserved range.
+					if (icao.empty())
+						info_text = "Airport ICAO not set - country unknown, can't weight liveries by region.";
+					else
+						info_text = "\"" + icao + "\" is a placeholder or reserved ICAO code - country unknown, can't weight liveries by region.";
 					warn = true;
 				}
 				else if (r == wed_Icao_IndexUnavailable)

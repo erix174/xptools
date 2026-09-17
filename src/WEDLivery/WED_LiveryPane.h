@@ -50,6 +50,7 @@
 
 #include "GUI_Pane.h"
 #include "GUI_Listener.h"
+#include "GUI_Commander.h"
 #include "WED_AirportDatabase.h"
 #include "WED_AirlineDirectory.h"
 #include "WED_LiveryThumbnailCache.h"
@@ -66,7 +67,15 @@ class	GUI_Broadcaster;
 class	GUI_GraphState;
 class	GUI_TextField;
 
-class	WED_LiveryPane : public GUI_Pane, public GUI_Listener {
+// GUI_Commander is not decoration. Every pane handed to GUI_TabPane::AddPane()
+// ends up as a child of GUI_ChangeView, and GUI_ChangeView::SetSubView()
+// dynamic_casts it to GUI_Commander so it can hand the tab keyboard focus
+// (GUI_ChangeView.cpp:47). Without that base this pane fired
+// DebugAssert(c != NULL) on every switch INTO the Liveries tab, and - past the
+// assert - mSearchField could never join the focus chain, because the chain has
+// no route into a pane that is not a commander. WED_PropertyPane and WED_TCEPane
+// are both commanders for exactly this reason; this pane was the odd one out.
+class	WED_LiveryPane : public GUI_Pane, public GUI_Commander, public GUI_Listener {
 public:
 
 						 WED_LiveryPane(
