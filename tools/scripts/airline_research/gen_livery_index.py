@@ -103,11 +103,28 @@ NOTE_RULES = [
     (r"fiction",                   "Fictional"),
 ]
 
-def note_for(folder, fname):
+def note_for(folder, fname, raw_variant=None):
+    """The livery note. NOTE_RULES only NORMALISE names we recognise; anything
+    else is kept as the asset itself spelled it.
+
+    Falling back to "Default" for an unrecognised token was a real regression:
+    Nine Air's eleven colours (Blue, Cyan, DarkGreen, Grape, KellyGreen, Purple,
+    Red, Wine, Yellow, Canaloupe, Modern) all collapsed into one indistinguishable
+    "Default", which is precisely the data this file exists to carry. The note
+    column is an OPEN vocabulary - the same reason type exclusions are subtractive.
+    A closed fallback throws away exactly the variants nobody thought to enumerate.
+    """
     hay = (folder + " " + fname).lower()
     for pat, note in NOTE_RULES:
         if re.search(pat, hay):
             return note
+
+    # Nothing matched: keep the asset's own variant token if the folder had one.
+    if raw_variant:
+        t = raw_variant.strip("_").replace("_", " ").strip()
+        if t:
+            return t[:1].upper() + t[1:]
+
     return "Default"
 
 # --------------------------------------------------------------- asset scan
@@ -254,7 +271,31 @@ for dp, _dn, fn in os.walk(ROOT):
             ioc, confident = disambiguate(prefix, ioc, airline)
         if reg and not ioc and confident:
             reg = ""                                  # it was never a registration
-        note = note_for(folder, f)
+        # The folder is <TYPE>_<AIRLINE>_<VARIANT...>; hand the variant part to
+        # note_for so an unrecognised one survives instead of collapsing to
+        # "Default" - see that function.
+        #
+        # Except when AIRLINE_REMAP consumed that token: for B738_RYR_9H the "9H"
+        # IS the subsidiary, already turned into the airline MAY, and passing it
+        # on would put "9H" in the note column as though it were a livery name.
+        _toks = folder.split("_")
+        _remapped = AIRLINE_REMAP.get((_toks[0].upper(),
+                                       _toks[1].upper() if len(_toks) > 1 else "",
+                                       _toks[2] if len(_toks) > 2 else ""))
+        if _remapped:
+            _raw = None
+        else:
+            # Where the variant starts depends on whether the folder names an
+            # airline at all. <TYPE>_<AIRLINE>_<VARIANT> for an operator's livery,
+            # but <TYPE>_<VARIANT> for a generic one - C172_skyhawk, C172_waves,
+            # B738_BBJ1. Assuming the three-token shape collapsed every generic
+            # variant into "Default", losing exactly the distinction they exist to
+            # make.
+            _airline_in_folder = (len(_toks) > 1 and len(_toks[1]) == 3
+                                  and _toks[1].isalpha() and _toks[1].isupper())
+            _start = 2 if _airline_in_folder else 1
+            _raw = "_".join(_toks[_start:]) if len(_toks) > _start else None
+        note = note_for(folder, f, _raw)
 
         if typ is None or airline is None or (reg and not confident) or ioc == "???":
             flagged.append((full, typ, airline, reg, ioc))
