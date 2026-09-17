@@ -81,6 +81,17 @@ into the WED/xptools tree at branch `feature/ramp-livery-picker`.
   reference to a name not defined in the same block is dangling: discard per R4.
 - **R8** — The policy name `-` means "this stand only". It MUST NOT be treated as
   a definable or referenceable name.
+- **R20** — **Per-stand rows attach to the most recent `1300`, and MUST follow it.**
+  That is `1311`, and `1312`/`1313` written in the inline `-` form. R6's
+  free placement applies to *policy definitions* only — a definition has a name to
+  bind to, while a per-stand row has nothing but its position. A stand row
+  appearing before any `1300` in the block has no stand to attach to: discard it
+  per R4.
+
+  Writers should emit `1300`, then `1301`, then the refinements, which is what
+  every example here does. `1301` in particular already had this constraint:
+  `AptIO.cpp:740-743` rejects it outright if there is no gate yet, or if the gate
+  already has airlines.
 
 ### Writer-side
 
@@ -196,6 +207,253 @@ only inline rows and add grouping later with **no reader change**. WED will do
 exactly that.
 
 ---
+
+### 2.4 A complete worked example — one airport, every feature
+
+Everything above in one airport block. **This is the reference scenario**: if an
+implementation reproduces the resolution table below, it has all of §1–§4 right.
+
+`KXYZ` is fictional, the airlines are real, and every outcome in the table was
+computed against the shipped index (`20260916-r1`, X-Plane 12.4.3-r2) rather than
+asserted.
+
+```
+1    433 0 0 KXYZ Example Intl
+1302 icao_code KXYZ
+1302 country USA
+100 45.00 26 0 0.25 0 2 1 16L 47.46300000 -122.30800000 0 0 2 0 0 0 34R 47.43100000 -122.30800000 0 0 2 0 0 0
+
+1310 g_7c1e02  dal ual aal baw uae
+1312 g_7c1e02  -ual:B744
+1313 g_7c1e02  0 0 0 3 7 0
+
+1310 g_2f8a41  dal ual aal afr dlh klm swa aca
+1312 g_2f8a41  -dal:MD82
+1313 g_2f8a41  0 0 10 0 0 0
+
+1300 47.44310000 -122.30120000 090.0 gate heavy|jets A1
+1301 E airline dal ual aal baw uae
+1311 g_7c1e02
+
+1300 47.44240000 -122.30120000 090.0 gate heavy|jets A2
+1301 E airline dal ual aal baw uae
+1311 g_7c1e02
+
+1300 47.44170000 -122.30120000 090.0 gate jets B1
+1301 C airline dal ual aal afr dlh klm swa aca
+1311 g_2f8a41
+
+1300 47.44100000 -122.30120000 090.0 gate jets B2
+1301 C airline dal ual aal afr dlh klm swa aca
+1311 g_2f8a41
+1313 -  0 2 8 0 0 0
+
+1300 47.44030000 -122.30120000 090.0 gate turboprops|jets R1
+1301 B airline dal afr
+1313 -  0 10 0 0 0 0
+
+1300 47.43960000 -122.30120000 090.0 gate heavy|jets CGO1
+1301 D cargo fdx ups
+1312 -  -fdx:DC10
+1313 -  0 0 0 10 0 0
+
+1300 47.43890000 -122.30120000 090.0 tie_down props GA1
+1301 A general_aviation
+
+1300 47.43820000 -122.30120000 090.0 gate jets T1
+1301 C airline cca ana jal sia qfa
+1311 g_9b04de
+
+1310 g_9b04de  cca ana jal sia qfa
+1313 g_9b04de  0 0 9 1 0 0
+99
+```
+
+#### What each stand demonstrates
+
+| stand | feature | rows |
+|---|---|---|
+| `A1`, `A2` | **shared policy** — two stands, one definition. The 83% case | `1311` |
+| `A1`, `A2` | **exclusion that changes the airline pool** (see R18 below) | `1312` |
+| `B1` | shared policy, second group | `1311` |
+| `B2` | **policy reference plus an inline override** — takes the group's airlines and exclusion, replaces its weights | `1311` + inline `1313` |
+| `R1` | **inline only**, no group, no definition | `1313 -` |
+| `CGO1` | **inline exclusion and weights**, cargo op type | `1312 -`, `1313 -` |
+| `GA1` | **no new rows at all** — today's behaviour, untouched (R17) | — |
+| `T1` | **forward reference** — its policy is defined after it (R6) | `1311` |
+
+#### What actually spawns
+
+Computed, not asserted:
+
+| stand | class draw | resolves to |
+|---|---|---|
+| `A1`, `A2` | D 30% | 2 airlines — `B752`, `B763` |
+| | E 70% | **4** airlines — `B772` |
+| `B1` | C 100% | 8 airlines — `A320`, `AT72`, `B738` |
+| `B2` | B 20% | 2 airlines — `CRJ1`, `CRJ2` |
+| | C 80% | 8 airlines — `A320`, `AT72`, `B738` |
+| `R1` | B 100% | 2 airlines — `CRJ1`, `CRJ2` |
+| `CGO1` | D 100% | 2 airlines — `B752`, `B763` |
+| `GA1` | — | today's step-down from `A` |
+| `T1` | C 90% | 5 airlines — `A320`, `B738` |
+| | D 10% | 2 airlines — `B763` |
+
+No weighted class anywhere resolves to nothing. That is the property a writer must
+guarantee (R14) and the one WED will enforce as a hard export error.
+
+#### The number that shows why R18 exists
+
+`A1` lists five airlines and excludes `-ual:B744`. **That is United's only E-class
+livery** — they have `B752` and `B763` at D and nothing else at E.
+
+| | class E candidates | stand parks nothing |
+|---|---|---|
+| **With R18** — stage 2 applies exclusions | **4** (UAL not a candidate) | **0%** |
+| Without — stage 2 ignores them | 5 (UAL picked, then empty) | **14%** |
+
+Fourteen percent of the time, on a stand whose author did nothing wrong, from one
+exclusion. The author wrote "no 747s at this gate" and would have got "and
+sometimes nothing at all". Note UAL still parks at D — the exclusion stays
+surgical, which is the whole point.
+
+#### Things this example is careful about
+
+- **`1301` lists exactly the policy's airlines** on every referencing stand (R13).
+  The duplication is the only cross-check against a file edited in one place.
+- **Exclusions leave something behind.** `-dal:MD82` is safe because Delta also has
+  `A320` and `B738` at C. `-ual:B744` is safe only because R18 handles it.
+- **`GA1` carries no new rows.** An airport does not have to adopt this format
+  stand-by-stand, and a mixed file is normal.
+- **No class F anywhere.** The library ships zero F-class liveries, so any weight
+  on F is dead. Class A is GA and military only — no real airline has an A-class
+  livery, which is why `GA1` is `general_aviation` rather than an airline stand.
+- **No comments.** apt.dat has no comment syntax (R19); the annotation lives here.
+
+### 2.5 One stand, line by line
+
+Stand `A1` from §2.4, pulled apart. It is the densest stand in the example — it
+touches every row this proposal defines, plus the two it does not change.
+
+```
+1300 47.44310000 -122.30120000 090.0 gate heavy|jets A1
+1301 E airline dal ual aal baw uae
+1311 g_7c1e02
+```
+
+…pointing at a definition elsewhere in the same airport block:
+
+```
+1310 g_7c1e02  dal ual aal baw uae
+1312 g_7c1e02  -ual:B744
+1313 g_7c1e02  0 0 0 3 7 0
+```
+
+#### The two rows that already exist, and are not touched
+
+```
+1300  47.44310000  -122.30120000  090.0  gate  heavy|jets  A1
+ |    |            |              |      |     |           |
+ |    latitude     longitude      |      |     |           name (rest of line)
+ |                                |      |     equipment bitfield
+ row code                         |      ramp type: gate / hangar / misc / tie_down
+                                  heading, degrees true
+```
+
+```
+1301  E  airline  dal ual aal baw uae
+ |    |  |        |
+ |    |  |        airline ICAO codes, space separated, case-insensitive
+ |    |  ramp operation type: none / airline / cargo / general_aviation / military
+ |    ICAO wingspan class A-F. Today this is the ONLY size control, and the sim
+ |    step-downs from it: ~75% E, then 75% of the rest D, and so on.
+ row code
+```
+
+**Everything below is additive. Delete all of it and this stand behaves exactly
+as it does today** (R2). That is the property the whole design is built on.
+
+#### The one row added to the stand
+
+```
+1311  g_7c1e02
+ |    |
+ |    policy name. Content-derived by the writer, never author-supplied (R12).
+ |    Scoped to this airport block; valid wherever in it the definition sits (R6).
+ row code: "this stand uses that policy"
+```
+
+#### The definition it points at
+
+```
+1310  g_7c1e02  dal ual aal baw uae
+                |
+                MUST equal 1301's list on every stand that references this
+                policy (R13). The duplication is deliberate - it is the only
+                cross-check that catches a file edited in one place and not
+                the other. On any disagreement, 1301 wins (R3).
+```
+
+```
+1312  g_7c1e02  -ual:B744
+                |
+                "-<airline>:<type>" - do not park United's 747-400 here.
+                Subtractive and open-ended: the author removes what they do not
+                want, and never has to enumerate what they do. A type that
+                ships next year is included automatically.
+```
+
+```
+1313  g_7c1e02  0  0  0  3  7  0
+                A  B  C  D  E  F
+                         |  |
+                         |  70% of arrivals are E-class
+                         30% are D-class
+
+                Always six integers, in class order, no exceptions (R5).
+                Relative, not percentages - "3 and 7" is the same as "30 and 70".
+                Integers only: a decimal point would be at the mercy of the
+                user's locale (§4.2).
+```
+
+#### What the sim does with it, in order
+
+```
+1. class   := weighted draw over 0 0 0 3 7 0        -> D 30%, E 70%
+2. airline := uniform over those in 1301 that have a NON-EXCLUDED livery
+              in the class drawn (R18)
+                 at E: dal, aal, baw, uae            <- ual is NOT here
+                 at D: dal, ual                      <- ual IS here
+3. livery  := uniform over that airline's liveries in that class,
+              honouring EXPORT_RATIO if library.txt sets one
+```
+
+Step 2 is where the exclusion earns its keep. `-ual:B744` removes United's only
+E-class aircraft, so United simply stops being a candidate **at E** — while
+remaining one at D, where they have the 757 and 767. One line, and the effect is
+surgical rather than blunt.
+
+Had stage 2 ignored exclusions, United would still be drawn at E, find nothing,
+and the stand would park **nothing 14% of the time** (§2.4). The author wrote
+"no 747s at this gate"; they did not write "and sometimes nothing at all".
+
+#### What this looks like in a Gateway diff
+
+Three properties matter to whoever reviews these:
+
+1. **Policy names are content hashes, so they are stable.** A definition whose
+   content did not change keeps its name and does not appear in the diff. Names
+   like `g1`, `g2` would renumber whenever an unrelated group was added, turning
+   a one-stand edit into a whole-file churn.
+2. **Grouping is re-derived, never trusted** (R16). WED copies the policy into
+   each stand on import and re-groups by content hash on export. A hand-forged or
+   inconsistent grouping is silently normalised by one round-trip, so the diff
+   reflects what the author meant rather than how they typed it.
+3. **An author changing one stand produces one stand's worth of diff.** If the
+   change makes the stand differ from its group, it leaves the group and gets
+   inline rows; if it makes two groups identical, they merge. Either way the
+   airline list on `1301` still reads correctly on its own, so a reviewer can see
+   what parks there without resolving anything.
 
 ## 3. Reader algorithm
 
