@@ -185,39 +185,60 @@ ban and is how an author says "never D here", which is a case they have asked fo
 
 ---
 
-## The open question, and we can answer it for you
+## Version and unknown rows — tested, answered
 
-**Does a version bump have to accompany this?**
+We said we would answer this rather than ask you to. Result below; the reasoning matters
+because **WED and the sim behave differently**, and we had assumed they matched.
 
-apt.dat's version check is a whitelist. In WED's reader:
+### The test
 
-```c
-// AptIO.cpp:313-320
-if (vers != 703 && vers != 715 && vers != 810 && vers != 850 && vers != 1000 &&
-    vers != 1050 && vers != 1100 && vers != 1130 && vers != 1200)
-{
-    if (vers > LATEST_APT_VERSION) ok = "Format is newer than supported by this version of WED";
-    else                           ok = "Unsupported version";
-}
+Four single-airport scenery packages in `Custom Scenery/`, loaded by
+**X-Plane 12.4.4 (build 124406)**:
+
+| pack | apt.dat | result |
+|---|---|---|
+| `ZZ01` | version 1200, valid | silent |
+| `ZZ02` | version 1200, plus an unknown row code `1310` | **silent** |
+| `ZZ03` | **version 1300** — not a version that exists | **silent** |
+| `ZZ04` | version 1200, deliberately corrupt runway row | error, named, with a line number |
+
+`ZZ04` is the control that proves the harness works. It produced:
+
+```
+E/SCN: An apt.dat enumeration is out of range: Invalid surface code. Expected a code
+       less than 58 but got 60615503. Airport is ZZ04.
+       File is Custom Scenery/ZZZ_aptdat_test_ZZ04/Earth nav data/apt.dat.
+E/SYS: MACIBM_alert: There was a problem loading the scenery package: ...
+       The scenery may not look correct.
 ```
 
-and an unrecognised **row code** is likewise fatal (`:1208` "Illegal unknown record").
-Row `1301` itself shipped this way, gated at version 1050 (`:738`).
+So the sim does parse these files at startup, does report errors with file and line, and
+would have told us about `1310` or version `1300` if it objected.
 
-So on WED's side the mechanism is clearly "declare a version; readers that do not know
-it refuse the file" — not "tolerate unknown rows". **We do not know whether the sim
-behaves the same**, and it decides everything downstream:
+### What this means
 
-- **If the sim skips unknown rows**, these can go into a 1200 file and old builds keep
-  working. Backward compatibility costs nothing.
-- **If the sim refuses**, a version bump is mandatory, and old X-Plane cannot read any
-  file containing these rows at all.
+1. **X-Plane 12 ignores unknown row codes.** `1310` passed without comment.
+2. **X-Plane 12 accepts an unrecognised version number.** `1300` passed without comment.
+3. **Even a genuine error is non-fatal.** `ZZ04` still loaded — "the scenery may not look
+   correct", not "this file is rejected".
 
-**We will test this ourselves before you spend time on it** — a Custom Scenery package
-with a synthetic unknown row, loaded in a current build, reading `Log.txt`. Expect the
-answer with the next revision of this document. Please do not burn time confirming it.
+That is the opposite of WED, which whitelists versions (`AptIO.cpp:313-320`), rejects
+unknown row codes (`:1208`), and aborts the entire load on either. Row `1301` shipped
+gated at version 1050 (`:738`), which is what led us to assume the sim gated too.
 
----
+**Consequence: these rows can go into a 1200 file and old X-Plane keeps working**,
+reading `1301` and ignoring the rest — exactly the degradation the format is built
+around. A version bump becomes a choice about signalling intent, not a compatibility
+requirement, and the Gateway two-version problem largely disappears.
+
+### What this does NOT establish
+
+We tested **one current build**. Whether X-Plane 11, or an early 12, is equally tolerant
+is unknown, and that tolerance may have been added at some point. If Gateway has to
+serve builds older than 12.4, that needs checking against whichever is the real floor —
+a question about your release support policy more than about the format.
+
+The full log is kept alongside this document.
 
 ## What we need from you
 

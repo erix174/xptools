@@ -1,0 +1,202 @@
+Log.txt for X-Plane 12.4.4-pnl5-0e7d6f93 (build 124406 Intel 64-bit, Vulkan e7806db48f4e4da25cb8e8935d2364ff3af2d770)
+Compiled on Aug  7 2026 21:39:41
+X-Plane Started on Wed Sep 16 21:13:49 2026
+
+This log file is generated automatically by Laminar Research applications and contains diagnostics about your graphics hardware, installation, and any error conditions.
+If you need to contact tech support or file a bug, please send us this file. NOTE: this file is rewritten every time you start ANY of your X-System applications.
+
+Windows 10.0 (build 26200/2)
+This is a 64-bit version of Windows.
+CPU type: Intel Core i5-14600K - Speed: 3.2-3.6 GHz - Cores: 20
+          Microcode 0x133
+Physical Memory (total for computer): 34059501568
+Maximum Virtual Memory (for X-Plane only): 140737488224256
+
+X-System folder:'D:\X-Plane 12/', case sensitive=0
+
+0:00:00.000 D/INS: Requested registration of X-Plane path with different capitalization (new: D:\X-Plane 12/, old: D:\x-plane 12/)
+0:00:00.000 I/GFX/VK: Vulkan Layers: VK_LAYER_NV_optimus (1), VK_LAYER_NV_present (1), VK_LAYER_VALVE_steam_overlay (1), VK_LAYER_VALVE_steam_fossilize (1)
+0:00:00.000 I/GFX/VK: Initialized Aftermath with result 1
+0:00:00.000 I/GFX/VK: Capability list:
+Vulkan Device       : NVIDIA GeForce RTX 5070 (c327100000)
+Vulkan Version      : 1.4.341
+Vulkan Driver       : 610.62.0
+Vulkan Extensions   : VK_KHR_16bit_storage VK_KHR_8bit_storage VK_KHR_acceleration_structure VK_KHR_bind_memory2 VK_KHR_buffer_device_address VK_KHR_calibrated_timestamps VK_KHR_compute_shader_derivatives VK_KHR_cooperative_matrix VK_KHR_copy_commands2 VK_KHR_copy_memory_indirect VK_KHR_create_renderpass2 VK_KHR_dedicated_allocation VK_KHR_deferred_host_operations VK_KHR_depth_clamp_zero_one VK_KHR_depth_stencil_resolve VK_KHR_descriptor_update_template VK_KHR_device_group VK_KHR_draw_indirect_count VK_KHR_driver_properties VK_KHR_dynamic_rendering VK_KHR_dynamic_rendering_local_read VK_KHR_external_fence VK_KHR_external_fence_win32 VK_KHR_external_memory VK_KHR_external_memory_win32 VK_KHR_external_semaphore VK_KHR_external_semaphore_win32 VK_KHR_format_feature_flags2 VK_KHR_fragment_shader_barycentric VK_KHR_fragment_shading_rate VK_KHR_get_memory_requirements2 VK_KHR_global_priority VK_KHR_image_format_list VK_KHR_imageless_framebuffer VK_KHR_index_type_uint8 VK_KHR_internally_synchronized_queues VK_KHR_line_rasterization VK_KHR_load_store_op_none VK_KHR_maintenance1 VK_KHR_maintenance10 VK_KHR_maintenance2 VK_KHR_maintenance3 VK_KHR_maintenance4 VK_KHR_maintenance5 VK_KHR_maintenance6 VK_KHR_maintenance7 VK_KHR_maintenance8 VK_KHR_maintenance9 VK_KHR_map_memory2 VK_KHR_multiview VK_KHR_pipeline_binary VK_KHR_pipeline_executable_properties VK_KHR_pipeline_library VK_KHR_present_id VK_KHR_present_id2 VK_KHR_present_mode_fifo_latest_ready VK_KHR_present_wait VK_KHR_present_wait2 VK_KHR_push_descriptor VK_KHR_ray_query VK_KHR_ray_tracing_maintenance1 VK_KHR_ray_tracing_pipeline VK_KHR_ray_tracing_position_fetch VK_KHR_relaxed_block_layout VK_KHR_robustness2 VK_KHR_sampler_mirror_clamp_to_edge VK_KHR_sampler_ycbcr_conversion VK_KHR_separate_depth_stencil_layouts VK_KHR_shader_atomic_int64 VK_KHR_shader_bfloat16 VK_KHR_shader_clock VK_KHR_shader_draw_parameters VK_KHR_shader_expect_assume VK_KHR_shader_float16_int8 VK_KHR_shader_float_controls VK_KHR_shader_float_controls2 VK_KHR_shader_fma VK_KHR_shader_integer_dot_product VK_KHR_shader_maximal_reconvergence VK_KHR_shader_non_semantic_info VK_KHR_shader_quad_control VK_KHR_shader_relaxed_extended_instruction VK_KHR_shader_subgroup_extended_types VK_KHR_shader_subgroup_rotate VK_KHR_shader_subgroup_uniform_control_flow VK_KHR_shader_terminate_invocation VK_KHR_shader_untyped_pointers VK_KHR_spirv_1_4 VK_KHR_storage_buffer_storage_class VK_KHR_swapchain VK_KHR_swapchain_maintenance1 VK_KHR_swapchain_mutable_format VK_KHR_synchronization2 VK_KHR_timeline_semaphore VK_KHR_unified_image_layouts VK_KHR_uniform_buffer_standard_layout VK_KHR_variable_pointers VK_KHR_vertex_attribute_divisor VK_KHR_video_decode_av1 VK_KHR_video_decode_h264 VK_KHR_video_decode_h265 VK_KHR_video_decode_queue VK_KHR_video_decode_vp9 VK_KHR_video_encode_av1 VK_KHR_video_encode_h264 VK_KHR_video_encode_h265 VK_KHR_video_encode_intra_refresh VK_KHR_video_encode_quantization_map VK_KHR_video_encode_queue VK_KHR_video_maintenance1 VK_KHR_video_maintenance2 VK_KHR_video_queue VK_KHR_vulkan_memory_model VK_KHR_win32_keyed_mutex VK_KHR_workgroup_memory_explicit_layout VK_KHR_zero_initialize_workgroup_memory VK_EXT_4444_formats VK_EXT_attachment_feedback_loop_dynamic_state VK_EXT_attachment_feedback_loop_layout VK_EXT_blend_operation_advanced VK_EXT_border_color_swizzle VK_EXT_buffer_device_address VK_EXT_calibrated_timestamps VK_EXT_color_write_enable VK_EXT_conditional_rendering VK_EXT_conservative_rasterization VK_EXT_custom_border_color VK_EXT_custom_resolve VK_EXT_depth_bias_control VK_EXT_depth_clamp_control VK_EXT_depth_clamp_zero_one VK_EXT_depth_clip_control VK_EXT_depth_clip_enable VK_EXT_depth_range_unrestricted VK_EXT_descriptor_buffer VK_EXT_descriptor_heap VK_EXT_descriptor_indexing VK_EXT_device_address_binding_report VK_EXT_device_fault VK_EXT_device_generated_commands VK_EXT_discard_rectangles VK_EXT_dynamic_rendering_unused_attachments VK_EXT_extended_dynamic_state VK_EXT_extended_dynamic_state2 VK_EXT_extended_dynamic_state3 VK_EXT_external_memory_host VK_EXT_fragment_shader_interlock VK_EXT_full_screen_exclusive VK_EXT_global_priority VK_EXT_global_priority_query VK_EXT_graphics_pipeline_library VK_EXT_hdr_metadata VK_EXT_host_image_copy VK_EXT_host_query_reset VK_EXT_image_2d_view_of_3d VK_EXT_image_robustness VK_EXT_image_sliced_view_of_3d VK_EXT_image_view_min_lod VK_EXT_index_type_uint8 VK_EXT_inline_uniform_block VK_EXT_legacy_vertex_attributes VK_EXT_line_rasterization VK_EXT_load_store_op_none VK_EXT_memory_budget VK_EXT_memory_decompression VK_EXT_memory_priority VK_EXT_mesh_shader VK_EXT_multi_draw VK_EXT_mutable_descriptor_type VK_EXT_nested_command_buffer VK_EXT_non_seamless_cube_map VK_EXT_opacity_micromap VK_EXT_pageable_device_local_memory VK_EXT_pci_bus_info VK_EXT_pipeline_creation_cache_control VK_EXT_pipeline_creation_feedback VK_EXT_pipeline_library_group_handles VK_EXT_pipeline_robustness VK_EXT_post_depth_coverage VK_EXT_present_mode_fifo_latest_ready VK_EXT_present_timing VK_EXT_primitive_topology_list_restart VK_EXT_primitives_generated_query VK_EXT_private_data VK_EXT_provoking_vertex VK_EXT_queue_family_foreign VK_EXT_ray_tracing_invocation_reorder VK_EXT_robustness2 VK_EXT_sample_locations VK_EXT_sampler_filter_minmax VK_EXT_scalar_block_layout VK_EXT_separate_stencil_usage VK_EXT_shader_64bit_indexing VK_EXT_shader_atomic_float VK_EXT_shader_demote_to_helper_invocation VK_EXT_shader_float8 VK_EXT_shader_image_atomic_int64 VK_EXT_shader_long_vector VK_EXT_shader_module_identifier VK_EXT_shader_object VK_EXT_shader_replicated_composites VK_EXT_shader_subgroup_ballot VK_EXT_shader_subgroup_partitioned VK_EXT_shader_subgroup_vote VK_EXT_shader_uniform_buffer_unsized_array VK_EXT_shader_viewport_index_layer VK_EXT_subgroup_size_control VK_EXT_swapchain_maintenance1 VK_EXT_texel_buffer_alignment VK_EXT_tooling_info VK_EXT_transform_feedback VK_EXT_vertex_attribute_divisor VK_EXT_vertex_attribute_robustness VK_EXT_vertex_input_dynamic_state VK_EXT_ycbcr_2plane_444_formats VK_EXT_ycbcr_image_arrays VK_EXT_zero_initialize_device_memory VK_NV_acquire_winrt_display VK_NV_clip_space_w_scaling VK_NV_cluster_acceleration_structure VK_NV_compute_occupancy_priority VK_NV_compute_shader_derivatives VK_NV_cooperative_matrix VK_NV_cooperative_matrix2 VK_NV_cooperative_vector VK_NV_copy_memory_indirect VK_NV_corner_sampled_image VK_NV_coverage_reduction_mode VK_NV_cuda_kernel_launch VK_NV_dedicated_allocation VK_NV_dedicated_allocation_image_aliasing VK_NV_descriptor_pool_overallocation VK_NV_device_diagnostic_checkpoints VK_NV_device_diagnostics_config VK_NV_device_generated_commands VK_NV_device_generated_commands_compute VK_NV_disk_cache_utils VK_NV_extended_sparse_address_space VK_NV_external_compute_queue VK_NV_external_memory VK_NV_external_memory_win32 VK_NV_fill_rectangle VK_NV_fragment_coverage_to_color VK_NV_fragment_shader_barycentric VK_NV_fragment_shading_rate_enums VK_NV_framebuffer_mixed_samples VK_NV_geometry_shader_passthrough VK_NV_inherited_viewport_scissor VK_NV_internal_nvpresent VK_NV_linear_color_attachment VK_NV_low_latency VK_NV_low_latency2 VK_NV_memory_decompression VK_NV_mesh_shader VK_NV_optical_flow VK_NV_partitioned_acceleration_structure VK_NV_present_metering VK_NV_push_constant_bank VK_NV_raw_access_chains VK_NV_ray_tracing VK_NV_ray_tracing_invocation_reorder VK_NV_ray_tracing_linear_swept_spheres VK_NV_ray_tracing_motion_blur VK_NV_representative_fragment_test VK_NV_sample_mask_override_coverage VK_NV_scissor_exclusive VK_NV_shader_atomic_float16_vector VK_NV_shader_image_footprint VK_NV_shader_sm_builtins VK_NV_shader_subgroup_partitioned VK_NV_shading_rate_image VK_NV_viewport_array2 VK_NV_viewport_swizzle VK_NV_win32_keyed_mutex VK_NVX_binary_import VK_NVX_image_view_handle VK_NVX_multiview_per_view_attributes VK_AMD_buffer_marker VK_GOOGLE_hlsl_functionality1 VK_GOOGLE_user_type 
+Vulkan Instance Extensions: VK_KHR_device_group_creation VK_KHR_display VK_KHR_external_fence_capabilities VK_KHR_external_m
+0:00:00.000 I/GFX/VK: 
+alpha_to_one               : 1	amd_buffer_markers         : 1	anisotropy                 : 1	baseline_desktop           : 1	baseline_desktop_linux     : 0	
+baseline_desktop_win32     : 1	baseline_mobile            : 0	buffer_device_address      : 1	descriptor_buffers         : 0	ext_device_fault           : 1	
+fullscreen_exclusive       : 1	host_query_reset           : 1	imageless_framebuffer      : 0	maintenance3               : 0	maintenance4               : 1	
+memory_budget              : 0	nv_device_diagnostics      : 1	pageable_device_memory     : 1	present_latest_ready       : 1	push_descriptors           : 1	
+qcom_render_pass_transform : 0	shader_float16             : 0	shader_int16               : 0	sparse                     : 1	storage_image_multisample  : 1	
+timeline_semaphores        : 1	validation_cache           : 0	variable_rate_shading      : 1	vulkan_11                  : 1	vulkan_12                  : 1	
+vulkan_13                  : 1	
+0:00:00.000 I/GFX: 
+anisotropic_avail   : 1	coarse_timer_avail  : 1	precise_timer_avail : 1	tess_avail          : 0	geom_avail          : 0	
+viewport_arr        : 1	layer_arr           : 1	native_reverse_z    : 1	has_reverse_z       : 1	
+persistent map      : 1	msaa shader write   : 1	shader float16      : 0	shader int16        : 0	
+rebar               : 1	unified memory      : 0	alpha to one        : 1	msaa storage image  : 1	
+sparse bindings     : 1	sparse page size    : 65536	
+max iso filtering   : 16
+max samples         : 3
+max texture size    : 32768 (hardware limit)
+max tex units       : 1048576
+
+This video card is bucketed as: Vulkan with async compute
+0:00:00.000 I/GFX/VK: Device Queues:
+Queue 0: Generic, Presentation, Sparse, (VK_QUEUE_GRAPHICS_BIT|VK_QUEUE_COMPUTE_BIT|VK_QUEUE_TRANSFER_BIT|VK_QUEUE_SPARSE_BINDING_BIT)
+Queue 1: Transfer, (VK_QUEUE_TRANSFER_BIT|VK_QUEUE_SPARSE_BINDING_BIT)
+Queue 2: Async Compute, (VK_QUEUE_COMPUTE_BIT|VK_QUEUE_TRANSFER_BIT|VK_QUEUE_SPARSE_BINDING_BIT)
+Queue 3: (VK_QUEUE_TRANSFER_BIT|VK_QUEUE_SPARSE_BINDING_BIT|VK_QUEUE_VIDEO_DECODE_BIT_KHR)
+Queue 4: (VK_QUEUE_TRANSFER_BIT|VK_QUEUE_SPARSE_BINDING_BIT|VK_QUEUE_VIDEO_ENCODE_BIT_KHR)
+Queue 5: (VK_QUEUE_TRANSFER_BIT|VK_QUEUE_SPARSE_BINDING_BIT|VK_QUEUE_OPTICAL_FLOW_BIT_NV)
+0:00:00.000 I/GFX/VK: Heap info (2 heaps)
+	Heap 0 - Flags: VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, size: 11.66 gb
+	Heap 1 - Flags: VkMemoryHeapFlags(0), size: 15.86 gb
+Memory type info (5 types)
+	Heap: 1, flags: VkMemoryPropertyFlags(0)
+	Heap: 0, flags: VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+	Heap: 1, flags: VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT|VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+	Heap: 1, flags: VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT|VK_MEMORY_PROPERTY_HOST_COHERENT_BIT|VK_MEMORY_PROPERTY_HOST_CACHED_BIT
+	Heap: 0, flags: VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT|VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT|VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+0:00:00.000 I/GFX/VK: 
+Discovered Vulkan devices, in order of preference:
+	 (0) NVIDIA GeForce RTX 5070
+		Vulkan: 1.4.341, driver: 0.0.0
+		LUID: c327100000
+		Bridge distance: 0
+		Supports Zink: Yes
+		This device is usable
+	 (1) Intel(R) UHD Graphics 770
+		Vulkan: 1.4.323, driver: 0.0.0
+		LUID: fd3d100000
+		Bridge distance: 17
+		Supports Zink: Yes
+		This device is usable
+
+0:00:00.000 I/GFX/Bridge: OpenGL bridge device:
+	 NVIDIA GeForce RTX 5070/PCIe/SSE2
+		OpenGL: 4.6.0 NVIDIA 610.62
+		LUID: c327100000
+
+0:00:00.000 I/GFX: Diagnostics         : memory	
+Device memory       : 11717836800
+Host memory         : 16224444416
+
+
+0:00:00.000 I/GFX/bridge: 
+OpenGL bridge device:
+OpenGL Vendor       : NVIDIA Corporation
+OpenGL Render       : NVIDIA GeForce RTX 5070/PCIe/SSE2 (c327100000)
+OpenGL Version      : 4.6.0 NVIDIA 610.62 (460/0)
+OpenGL Extensions   : GL_AMD_multi_draw_indirect GL_AMD_seamless_cubemap_per_texture GL_AMD_vertex_shader_viewport_index GL_AMD_vertex_shader_layer GL_ARB_arrays_of_arrays GL_ARB_base_instance GL_ARB_bindless_texture GL_ARB_blend_func_extended GL_ARB_buffer_storage GL_ARB_clear_buffer_object GL_ARB_clear_texture GL_ARB_clip_control GL_ARB_color_buffer_float GL_ARB_compatibility GL_ARB_compressed_texture_pixel_storage GL_ARB_conservative_depth GL_ARB_compute_shader GL_ARB_compute_variable_group_size GL_ARB_conditional_render_inverted GL_ARB_copy_buffer GL_ARB_copy_image GL_ARB_cull_distance GL_ARB_debug_output GL_ARB_depth_buffer_float GL_ARB_depth_clamp GL_ARB_depth_texture GL_ARB_derivative_control GL_ARB_direct_state_access GL_ARB_draw_buffers GL_ARB_draw_buffers_blend GL_ARB_draw_indirect GL_ARB_draw_elements_base_vertex GL_ARB_draw_instanced GL_ARB_enhanced_layouts GL_ARB_ES2_compatibility GL_ARB_ES3_compatibility GL_ARB_ES3_1_compatibility GL_ARB_ES3_2_compatibility GL_ARB_explicit_attrib_location GL_ARB_explicit_uniform_location GL_ARB_fragment_coord_conventions GL_ARB_fragment_layer_viewport GL_ARB_fragment_program GL_ARB_fragment_program_shadow GL_ARB_fragment_shader GL_ARB_fragment_shader_interlock GL_ARB_framebuffer_no_attachments GL_ARB_framebuffer_object GL_ARB_framebuffer_sRGB GL_ARB_geometry_shader4 GL_ARB_get_program_binary GL_ARB_get_texture_sub_image GL_ARB_gl_spirv GL_ARB_gpu_shader5 GL_ARB_gpu_shader_fp64 GL_ARB_gpu_shader_int64 GL_ARB_half_float_pixel GL_ARB_half_float_vertex GL_ARB_imaging GL_ARB_indirect_parameters GL_ARB_instanced_arrays GL_ARB_internalformat_query GL_ARB_internalformat_query2 GL_ARB_invalidate_subdata GL_ARB_map_buffer_alignment GL_ARB_map_buffer_range GL_ARB_multi_bind GL_ARB_multi_draw_indirect GL_ARB_multisample GL_ARB_multitexture GL_ARB_occlusion_query GL_ARB_occlusion_query2 GL_ARB_parallel_shader_compile GL_ARB_pipeline_statistics_query GL_ARB_pixel_buffer_object GL_ARB_point_parameters GL_ARB_point_sprite GL_ARB_polygon_offset_clamp GL_ARB_post_depth_coverage GL_ARB_program_interface_query GL_ARB_provoking_vertex GL_ARB_query_buffer_object GL_ARB_robust_buffer_access_behavior GL_ARB_robustness GL_ARB_sample_locations GL_ARB_sample_shading GL_ARB_sampler_objects GL_ARB_seamless_cube_map GL_ARB_seamless_cubemap_per_texture GL_ARB_separate_shader_objects GL_ARB_shader_atomic_counter_ops GL_ARB_shader_atomic_counters GL_ARB_shader_ballot GL_ARB_shader_bit_encoding GL_ARB_shader_clock GL_EXT_shader_realtime_clock GL_ARB_shader_draw_parameters GL_ARB_shader_group_vote GL_ARB_shader_image_load_store GL_ARB_shader_image_size GL_ARB_shader_objects GL_ARB_shader_precision GL_ARB_shader_storage_buffer_object GL_ARB_shader_subroutine GL_ARB_shader_texture_image_samples GL_ARB_shader_texture_lod GL_ARB_shading_language_100 GL_ARB_shader_viewport_layer_array GL_ARB_shading_language_420pack GL_ARB_shading_language_include GL_ARB_shading_language_packing GL_ARB_shadow GL_ARB_sparse_buffer GL_ARB_sparse_texture GL_ARB_sparse_texture2 GL_ARB_sparse_texture_clamp GL_ARB_spirv_extensions GL_ARB_stencil_texturing GL_ARB_sync GL_ARB_tessellation_shader GL_ARB_texture_barrier GL_ARB_texture_border_clamp GL_ARB_texture_buffer_object GL_ARB_texture_buffer_object_rgb32 GL_ARB_texture_buffer_range GL_ARB_texture_compression GL_ARB_texture_compression_bptc GL_ARB_texture_compression_rgtc GL_ARB_texture_cube_map GL_ARB_texture_cube_map_array GL_ARB_texture_env_add GL_ARB_texture_env_combine GL_ARB_texture_env_crossbar GL_ARB_texture_env_dot3 GL_ARB_texture_filter_anisotropic GL_ARB_texture_filter_minmax GL_ARB_texture_float GL_ARB_texture_gather GL_ARB_texture_mirror_clamp_to_edge GL_ARB_texture_mirrored_repeat GL_ARB_texture_multisample GL_ARB_texture_non_power_of_two GL_ARB_texture_query_levels GL_ARB_texture_query_lod GL_ARB_texture_rectangle GL_ARB_texture_rg GL_ARB_texture_rgb10_a2ui GL_ARB_texture_stencil8 GL_ARB_texture_storage GL_ARB_texture_storage_multisample GL_ARB_texture_swizzle GL_ARB_texture_view GL_ARB_timer_query GL_ARB_transform_feedback2 GL_ARB_transform_feedback3 GL_ARB_transform_feedback_instanced GL_ARB_transform_feedback_overflow_query GL_ARB_transpose_matrix GL_ARB_uniform_buffer_object GL_ARB_vertex_array_bgra GL_ARB_vertex_array_object GL_ARB_vertex_attrib_64bit GL_ARB_vertex_attrib_binding GL_ARB_vertex_buffer_object GL_ARB_vertex_program GL_ARB_vertex_shader GL_ARB_vertex_type_10f_11f_11f_rev GL_ARB_vertex_type_2_10_10_10_rev GL_ARB_viewport_array GL_ARB_window_pos GL_ATI_draw_buffers GL_ATI_texture_float GL_ATI_texture_mirror_once GL_S3_s3tc GL_EXT_texture_env_add GL_EXT_abgr GL_EXT_bgra GL_EXT_bindable_uniform GL_EXT_blend_color GL_EXT_blend_equation_separate GL_EXT_blend_func_separate GL_EXT_blend_minmax GL_EXT_blend_subtract GL_EXT_compiled_vertex_array GL_EXT_Cg_shader GL_EXT_depth_bounds_test GL_EXT_direct_state_access GL_EXT_draw_buffers2 GL_EXT_draw_instanced GL_EXT_draw_range_elements GL_EXT_fog_coord GL_EXT_framebuffer_blit GL_EXT_framebuffer_multisample GL_EXTX_framebuffer_mixed_formats GL_EXT_framebuffer_multisample_blit_scaled GL_EXT_framebuffer_object GL_EXT_framebuffer_sRGB GL_EXT_geometry_shader4 GL_EXT_gpu_program_parameters GL_EXT_gpu_shader4 GL_EXT_multi_draw_arrays GL_EXT_multiview_texture_multisample GL_EXT_multiview_timer_query GL_EXT_packed_depth_stencil GL_EXT_packed_float GL_EXT_packed_pixels GL_EXT_pixel_buffer_object GL_EXT_point_parameters GL_EXT_polygon_offset_clamp GL_EXT_post_depth_coverage GL_EXT_provoking_vertex GL_EXT_raster_multisample GL_EXT_rescale_normal GL_EXT_secondary_color GL_EXT_separate_shader_objects GL_EXT_separate_specular_color GL_EXT_shader_image_load_formatted GL_EXT_shader_image_load_store GL_EXT_shader_integer_mix GL_EXT_shadow_funcs GL_EXT_sparse_texture2 GL_EXT_stencil_two_side GL_EXT_stencil_wrap GL_EXT_texture3D GL_EXT_texture_array GL_EXT_texture_buffer_object GL_EXT_texture_compression_dxt1 GL_EXT_texture_compression_latc GL_EXT_texture_compression_rgtc GL_EXT_texture_compression_s3tc GL_EXT_texture_cube_map GL_EXT_texture_edge_clamp GL_EXT_texture_env_combine GL_EXT_texture_env_dot3 GL_EXT_texture_filter_anisotropic GL_EXT_texture_filter_minmax GL_EXT_texture_integer GL_EXT_texture_lod GL_EXT_texture_lod_bias GL_EXT_texture_mirror_clamp GL_EXT_texture_object GL_EXT_texture_shadow_lod GL_EXT_texture_shared_exponent GL_EXT_texture_sRGB GL_EXT_texture_sRGB_R8 GL_EXT_texture_sRGB_decode GL_EXT_texture_storage GL_EXT_texture_swizzle GL_EXT_timer_query GL_EXT_transform_feedback2 GL_EXT_vertex_array GL_EXT_vertex_array_bgra GL_EXT_vertex_attrib_64bit GL_EXT_window_rectangles GL_EXT_import_sync_object GL_IBM_rasterpos_clip GL_IBM_texture_mirrored_repeat GL_KHR_context_flush_control GL_KHR_debug GL_EXT_memory_object GL_EXT_memory_object_win32 GL_NV_memory_object_sparse GL_EXT_win32_keyed_mutex GL_KHR_parallel_shader_compile GL_KHR_no_error GL_KHR_robust_buffer_access_behavior GL_KHR_robustness GL_EXT_semaphore GL_EXT_semaphore_win32 GL_NV_timeline_semaphore GL_KHR_shader_subgroup GL_KTX_buffer_region GL_NV_alpha_to_coverage_dither_control GL_NV_bindless_multi_draw_indirect GL_NV_bindless_multi_draw_indirect_count GL_NV_bindless_texture GL_NV_blend_equation_advanced GL_NV_blend_equation_advanced_coherent GL_NVX_blend_equation_advanced_multi_draw_buffers GL_NV_blend_minmax_factor GL_NV_blend_square GL_NV_clip_space_w_scaling GL_NV_command_list GL_NV_compute_program5 GL_NV_compute_shader_derivatives GL_NV_conditional_render GL_NV_conservative_raster GL_NV_conservative_raster_dilate GL_NV_conservative_raster_pre_snap GL_NV_conservative_raster_pre_snap_triangles GL_NV_conservative_raster_underestimation GL_NV_copy_depth_to_color GL_NV_copy_image GL_NV_depth_buffer_float GL_NV_depth_clamp GL_NV_draw_texture GL_NV_draw_vulkan_image GL_NV_ES1_1_compatibility GL_NV_ES3_1_compatibility GL_NV_explicit_multisample GL_NV_feature_query GL_NV_fence GL_NV_fill_rectangle GL_NV_float_buffer GL_NV_fog_distance GL_NV_fragment_coverage_to_color GL_NV_frag
+CPU count        : 20
+0:00:00.000 I/GFX/VK: Surface formats for surface:
+0:00:00.000 I/GFX/VK: 	VK_FORMAT_B8G8R8A8_UNORM
+0:00:00.000 I/GFX/VK: 	VK_FORMAT_B8G8R8A8_SRGB
+0:00:00.000 I/GFX/VK: 	VK_FORMAT_R8G8B8A8_UNORM
+0:00:00.000 I/GFX/VK: 	VK_FORMAT_R8G8B8A8_SRGB
+0:00:00.000 I/GFX/VK: 	VK_FORMAT_A2B10G10R10_UNORM_PACK32
+0:00:00.000 I/GFX/VK: Picked VK_FORMAT_B8G8R8A8_SRGB as the common window surface format
+0:00:00.000 I/GFX/VK: Surface 000001E90C84F550:
+0:00:00.000 I/GFX/VK: 	minImageCount 2:
+0:00:00.000 I/GFX/VK: 	maxImageCount 8:
+0:00:00.000 I/GFX/VK: 	supportedUsageFlags 9f:
+0:00:00.000 I/GFX/VK: 	supportedTransforms: VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR
+0:00:00.000 I/GFX/VK: 	currentTransform: VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR
+0:00:00.000 I/GFX/VK: Created swapchain for 000001E90C875440 with size { 2558x768x2 }. Mode: VK_PRESENT_MODE_IMMEDIATE_KHR
+0:00:00.000 I/WMG: Monitor 0: { 0, 0, 3440, 1440 }
+0:00:00.000 I/WMG: Monitor 1: { -2560, 0, 2560, 1440 }
+0:00:00.000 I/WMG: Re-building fbos for window 000001E90C669810 using pool 7
+0:00:00.000 I/FMOD: Initial Sample rate: 48000 speaker mode: 7 (8 speakers)
+0:00:00.000 I/FMOD: Using driver 0: Realtek HD Audio 2nd output (Realtek(R) Audio)
+Fetching plugins for D:\X-Plane 12/Resources/plugins
+
+Loaded: D:\X-Plane 12/Resources/plugins/PluginAdmin/64/win.xpl (xpsdk.examples.pluginadmin).
+
+AviTab version 0.5.1
+Loaded: D:\X-Plane 12/Resources/plugins/AviTab/win_x64/AviTab.xpl (org.solhost.folko.avitab).
+
+DataRefTool:INFO - DataRefTool by Lee C. Baker
+DataRefTool:INFO - Version 2.5.0
+DataRefTool:INFO - datareftool.com
+DataRefTool:TRACE - Plugin init: load prefs from D:\X-Plane 12/Output/preferences\datareftool.json
+Loaded: D:\X-Plane 12/Resources/plugins/DataRefTool_v2.5.0/64/win.xpl (com.leecbaker.datareftool).
+
+Garmin GI260: loaded audio sample: D:\X-Plane 12\Resources\plugins\Garmin GI260 Popout\Resources\Beep.wav (44100 Hz, 2 channel)
+Loaded: D:\X-Plane 12/Resources/plugins/Garmin GI260 Popout/64/win.xpl (com.x-plane.garmin.gi260).
+
+Found stats plugin2: 3
+I found the following scenery packages (prioritized in this order):
+  0 Custom Scenery/Aerosoft - LFMN Nice Cote d Azur X/
+  1 Custom Scenery/Aerosoft - LPFR Faro/
+  2 Custom Scenery/X-Plane Airports - EGPR Barra/
+  3 Custom Scenery/X-Plane Airports - KBTV Burlington/
+  4 Custom Scenery/X-Plane Airports - KJRB Downtown Manhattan Heliport/
+  5 Custom Scenery/X-Plane Airports - LSEZ Zermatt Heliport/
+  6 Custom Scenery/X-Plane Airports - TFFJ St Barthelemy/
+  7 Custom Scenery/X-Plane Airports - TNCS Juancho E Yrausquin/
+  8 Custom Scenery/X-Plane Landmarks - Dubai/
+  9 Custom Scenery/X-Plane Landmarks - Saint Louis/
+ 10 Custom Scenery/ZZZ_aptdat_test_ZZ01/
+ 11 Custom Scenery/ZZZ_aptdat_test_ZZ02/
+ 12 Custom Scenery/ZZZ_aptdat_test_ZZ03/
+ 13 Custom Scenery/ZZZ_aptdat_test_ZZ04/
+ 14 Global Scenery/Global Airports/
+ 15 Custom Scenery/X-Plane Landmarks - Berlin and Frankfurt/
+ 16 Custom Scenery/X-Plane Landmarks - Budapest/
+ 17 Custom Scenery/X-Plane Landmarks - Chicago/
+ 18 Custom Scenery/X-Plane Landmarks - Las Vegas/
+ 19 Custom Scenery/X-Plane Landmarks - London/
+ 20 Custom Scenery/X-Plane Landmarks - Los Angeles/
+ 21 Custom Scenery/X-Plane Landmarks - New York/
+ 22 Custom Scenery/X-Plane Landmarks - Paris/
+ 23 Custom Scenery/X-Plane Landmarks - Portland/
+ 24 Custom Scenery/X-Plane Landmarks - Rio De Janeiro/
+ 25 Custom Scenery/X-Plane Landmarks - Salzburg/
+ 26 Custom Scenery/X-Plane Landmarks - San Francisco/
+ 27 Custom Scenery/X-Plane Landmarks - Sydney/
+ 28 Custom Scenery/X-Plane Landmarks - Washington DC/
+ 29 Custom Scenery/FSExpo KLAF/
+ 30 Custom Scenery/Zzz Klaf/
+ 31 Global Scenery/X-Plane 12 Demo Areas/
+ 32 Global Scenery/X-Plane 12 Global Scenery/
+ 33 Resources/default scenery/1000 autogen/
+ 34 Resources/default scenery/1000 decals/
+ 35 Resources/default scenery/1000 roads/
+ 36 Resources/default scenery/1000 world terrain/
+ 37 Resources/default scenery/1200 atc data/
+ 38 Resources/default scenery/1200 beaches/
+ 39 Resources/default scenery/1200 forests/
+ 40 Resources/default scenery/1240 liveries/
+ 41 Resources/default scenery/700 roads/
+ 42 Resources/default scenery/900 beaches/
+ 43 Resources/default scenery/900 europe objects/
+ 44 Resources/default scenery/900 forests/
+ 45 Resources/default scenery/900 roads/
+ 46 Resources/default scenery/900 us objects/
+ 47 Resources/default scenery/900 world object placeholders/
+ 48 Resources/default scenery/airport scenery/
+ 49 Resources/default scenery/sim objects/
+ 50 Resources/tutorials/tutorials_Alaska/
+ 51 Resources/tutorials/tutorials_Hawaii/
+ 52 Resources/tutorials/tutorials_Portland/
+ 53 Resources/tutorials/tutorials_Seattle/
+
+0:00:00.000 D/HID: HID Bridge Running
+0:01:25.831 E/SYS: MACIBM_alert: There was a problem loading the scenery package:
+0:01:25.831 E/SYS: MACIBM_alert: Custom Scenery/ZZZ_aptdat_test_ZZ04/
+0:01:25.831 E/SYS: MACIBM_alert: The scenery may not look correct.
+0:01:25.831 E/SYS: MACIBM_alert: Please see the Log.txt file for detailed error information.
+0:01:25.831 E/SYS: MACIBM_alert: C:\Users\Administrator\builds\GecRx2m4B\3\x-plane\design\source_code\engine\aptnav\airp.cpp:1338
+0:01:25.831 E/SYS: +-------------------------------------------------------------------------------
+0:01:25.831 E/SYS: | There was a problem loading the scenery package:
+0:01:25.831 E/SYS: | Custom Scenery/ZZZ_aptdat_test_ZZ04/
+0:01:25.831 E/SYS: | The scenery may not look correct.
+0:01:25.831 E/SYS: | Please see the Log.txt file for detailed error information.
+0:01:25.831 E/SYS: | (airp.cpp:1338)
+0:01:25.831 E/SYS: +-------------------------------------------------------------------------------
+0:01:25.831 E/SCN: Custom Scenery/ZZZ_aptdat_test_ZZ04/Earth nav data/apt.dat:
+0:01:25.831 E/SCN: An apt.dat enumeration is out of range: Invalid surface code.  Expected a code less than 58 but got 60615503.  Airport is ZZ04.  File is Custom Scenery/ZZZ_aptdat_test_ZZ04/Earth nav data/apt.dat.
+Custom Scenery/ZZZ_aptdat_test_ZZ04/Earth nav data/apt.dat:Custom Scenery/ZZZ_aptdat_test_ZZ04/Earth nav data/apt.dat:5
+100 THIS_IS_NOT_A_NUMBER garbage garbage
