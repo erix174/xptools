@@ -1,9 +1,13 @@
 # apt.dat: per-stand fleet and livery data — proposed format
 
 For Jim K. — the X-Plane side of WED's ramp livery picker.
-Draft 3, 2026-09-16. Targets WED 2.8.0.
+Draft 4, 2026-09-16. Targets WED 2.8.0.
 
-Draft 3 makes the biggest change so far: **selection happens in three stages, class
+Draft 4 adds what class-first selection costs and who absorbs it: 17.2% of stands
+would spawn nothing under a naive migration, so WED takes that as a hard export error
+plus a one-click fix, and the sim should not add a fallback.
+
+Draft 3 made the biggest change so far: **selection happens in three stages, class
 first**, and `1313` carries six explicit integer weights rather than a list. That is a
 change in ordering, not only in data - see "Selection" below for why flattening it lets
 the size of the asset library override the author.
@@ -224,6 +228,43 @@ the library's, and that is exactly where `EXPORT_RATIO` already expresses Lamina
 
 It also leaves room to weight airlines later (`1310` could carry `ual=3 baw=1`) without
 restructuring anything.
+
+### What it costs, and who absorbs it
+
+Class-first selection is strictly more expressive, but it gives up the one virtue the
+step-down had: it always found *something*. Four consequences, and how we propose to
+split them between us.
+
+**1. A stand can now be silently empty, and this is common.** Measured against the real
+global apt.dat and the real shipped livery set: if every stand's weight were set to the
+class it already declares, **7,604 of 44,242 stands (17.2%) would spawn nothing at all**,
+touching **1,675 of 3,958 airports (42%)**. The cause is almost never "this airline has
+no models" — only 1.8% of stands are that — it is "this airline has no model **in this
+stand's class**". A gate marked E whose airlines fly C-class aircraft is the common case,
+and today the step-down hides it by quietly substituting something smaller.
+
+  **We absorb this.** WED will refuse to export weights pointing at a class none of the
+  listed airlines can fill — a hard validation error, not a dismissible warning — and
+  will offer to set the weights to the classes those airlines can actually fill. The sim
+  should **not** add a fallback: an empty stand is the correct reading of what the author
+  wrote, and re-introducing a step-down would take back the expressiveness this change
+  exists to provide.
+
+**2. Three stages means three ways to find no candidate**, and they look identical from
+outside: all-zero weights (intentional), no listed airline has that class (a mistake),
+everything excluded (a mistake). Only the first should ever reach a released file, which
+is what the validator is for.
+
+**3. The pipeline must be gated on `1313` being present.** A stand without that row keeps
+today's behaviour exactly. Applying three-stage selection everywhere would change the
+appearance of all 20,108 airports that have ramp starts, none of whose authors asked for
+it. Whether the legacy path's own library bias is worth fixing separately is your call,
+but it should not ride in on this.
+
+**4. A `1313` row that fails to parse must be discarded whole**, falling back to
+"no `1313` row". Not partially applied. All-zero is a legal, meaningful value — so a
+truncated row that happens to parse as zeros would silently empty a stand, which is the
+one case where soft-fail needs to be explicit about *what* it falls back to.
 
 ### What this replaces
 

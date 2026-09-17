@@ -45,31 +45,26 @@ So the spec goes before the code, even though the code is more obviously "progre
 
 ---
 
-## Phase 0 — Unblock Jim  *(do this first)*
+## Phase 0 — Unblock Jim  *(DONE 2026-09-16)*
 
-**Write the apt.dat format spec and send it with a sample file.**
+`WED_LiveryFormatSpec.md`, now at draft 3, with `docs/livery_evidence/` alongside it.
 
-Contents, in order of importance:
+Two things changed while writing it, both because they were tested rather than assumed:
 
-1. **The version gate, first and loudest.** apt.dat's reader whitelists versions
-   (`AptIO.cpp:313-320`) and refuses anything else — it does not tolerate unknown rows.
-   WED's own reader also hard-fails on an unknown row code (`:1208`, `:1217`). Row
-   `1301` itself shipped this way, gated at version 1050 (`:738`). Jim needs to confirm
-   the sim behaves the same, because it decides whether new rows require a version bump
-   — and they almost certainly do.
-2. The row layout: `1301` untouched; `1310`/`1311` named policy and reference;
-   `1312` exclusions; `1313` class weights. Inline form uses `-` as the policy name.
-3. The invariants: `1301` stands alone and is authoritative; policies are scoped to
-   their airport block and valid anywhere within it; unlisted classes fall back to the
-   `1301` letter rather than meaning zero; new rows soft-fail, never failing the file.
-4. The measurements that justify it — 220,610 explicit pairs vs ~0.9 MB of intent,
-   53.9% of airline codes currently resolving to no model, 83% of stands sharing an
-   airline list with four or more neighbours.
-5. Sample apt.dat, updated from the one already sent.
+- **The version gate is a WED problem, not a sim problem.** We expected an unrecognised
+  row or version to be refused, because WED refuses both (`AptIO.cpp:313-320`, `:1208`)
+  and row `1301` shipped gated at version 1050 (`:738`). X-Plane 12.4.4 does neither: it
+  ignores unknown rows, accepts an unknown version, and treats even a genuinely corrupt
+  row as non-fatal. So the new rows can live in a 1200 file and old sims keep working.
+  The unsolved half is the reverse — an **older WED cannot open** a file containing them
+  at all, which is a Gateway policy question rather than a format one.
+- **Selection became class-first, in three stages.** Class, then airline, then livery,
+  each decided by whoever should decide it. Flattening it lets the size of the asset
+  library override the author: 120 B738 liveries against 42 A359 means two classes set
+  to equal probability still come out overwhelmingly 737s.
 
-**Also raise, because it is a process question and not a technical one:** new WED will
-write a version old X-Plane refuses. Gateway serves both. Who generates which version
-for whom? This needs Jim *and* the release manager, and it has no answer today.
+Still open with Jim: row code allocation, whether to bump the version for signalling,
+and which apt.dat version Gateway serves to which client.
 
 ---
 
@@ -133,7 +128,55 @@ This is also where `width_min` finally survives export.
 
 ---
 
-## Phase 5 — One-click fill
+## Phase 5 — One-click fill, and the validator that must ship with it
+
+**These two are one feature, not two.** Class-first selection gives an author the power
+to say "only D spawns here", and with it the power to say it about a class none of their
+airlines can fill. Nothing degrades that gracefully any more - the stand is simply empty,
+every time, with no symptom except an empty apron.
+
+### The scale, measured
+
+Against the real global apt.dat crossed with the real shipped livery set:
+
+| | |
+|---|---|
+| stands carrying airlines | 44,242 |
+| **would go completely empty** if weighted to their own current class | **7,604 (17.2%)** |
+| **airports with at least one such stand** | **1,675 of 3,958 (42%)** |
+| airlines with no asset at *any* class | 790 stands (1.8%) |
+
+That last row is the important nuance. The problem is almost never "this airline has no
+models" - it is "this airline has no model **in this stand's class**". A gate marked E
+whose airlines only fly C-class aircraft is the common case, and it is invisible today
+because the current cascading step-down quietly substitutes something smaller.
+
+So a naive migration - take each stand's existing letter, write it as the weight - breaks
+one stand in six and touches nearly half of all commercially served airports.
+
+### What this forces
+
+1. **A validator that cannot be bypassed.** Not a warning the author can wave through:
+   weights pointing at a class none of the listed airlines can fill is an export error,
+   the same class as the existing gateway validation errors. The data is wrong and the
+   symptom is silent, which is the combination that earns a hard stop.
+2. **One-click fill has to be offered at the point of failure**, not buried in a menu.
+   The validator knows exactly which stands are broken and what would fix them, so the
+   error should carry the remedy: set the weights to the classes these airlines can
+   actually fill.
+3. **Fill has to be a bulk operation from the start.** At 42% of airports and up to 326
+   affected stands at a single one (CDG), a per-stand fix is not a fix. Design it as
+   "apply to selection" / "apply to airport" from day one - retrofitting bulk onto a
+   single-stand action is how this ends up unusable at exactly the airports that matter.
+
+### Quantity is a design input here, not an afterthought
+
+Whoever implements this should size it against the numbers above before choosing an
+approach. 20,108 airports have ramp starts; 3,958 carry airline data; the worst single
+airport has 326 airline stands. An implementation that is fine at 10 stands and quadratic
+at 300 will fail precisely at CDG, ICN, ORD and PEK.
+
+## Phase 5 detail — one-click fill
 
 Applies the recommendation strategy plus the default preset probability across an
 airport. Mandatory, per the product decision — the author trusts our recommendations
