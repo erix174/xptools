@@ -696,7 +696,7 @@ sample package in a WED built from this very branch:
 
 ```
 Unable to read apt.dat file
-'D:\...\Custom Scenery\ZZZ_livery_format_sample\Earth nav datapt.dat':
+'D:\...\Custom Scenery\ZZZ_livery_format_sample\Earth nav data\apt.dat':
 Illegal unknown record (Line 13)
 ```
 
