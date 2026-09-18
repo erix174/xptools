@@ -51,6 +51,7 @@
 #include "GUI_Pane.h"
 #include "GUI_Listener.h"
 #include "GUI_Commander.h"
+#include "GUI_Timer.h"
 #include "WED_AirportDatabase.h"
 #include "WED_AirlineDirectory.h"
 #include "WED_LiveryIndex.h"
@@ -76,7 +77,11 @@ class	GUI_TextField;
 // assert - mSearchField could never join the focus chain, because the chain has
 // no route into a pane that is not a commander. WED_PropertyPane and WED_TCEPane
 // are both commanders for exactly this reason; this pane was the odd one out.
-class	WED_LiveryPane : public GUI_Pane, public GUI_Commander, public GUI_Listener {
+// GUI_Timer drives two things that move on their own: a hovered card cycling
+// through its operator's other aircraft, and a tray sliding open or shut. Both
+// need frames the mouse does not deliver, and neither can be done from Draw(),
+// which only runs when something else has already asked for a redraw.
+class	WED_LiveryPane : public GUI_Pane, public GUI_Commander, public GUI_Listener, public GUI_Timer {
 public:
 
 						 WED_LiveryPane(
@@ -244,21 +249,16 @@ private:
 	const AirlineCard *					CardFor(const std::string & icao_lower) const;
 
 
-	// ---- livery preview cards (framework/scaffolding only - see WED_LiveryThumbnailCache.h) ----
-	// The cards are the FIRST ROWS of the same scrolled content as the airline
-	// checklist, not a separate viewport with its own scrollbar - one mScrollOffset
-	// moves cards and checklist together, so the checklist can't get stranded off
-	// the bottom of the tab. Layout within that content is:
-	//     ContentTop() -> [ kCardCount cards ] -> [ checklist rows ] -> bottom
-	// Cards are currently populated from mPreviewObjVpaths - an arbitrary handful of
-	// library .obj resources, not real airline/aircraft matches (that bridge doesn't
-	// exist yet - see this pane's own top-of-file THEORY OF OPERATION comment).
+	// ---- livery preview cards ----
+	// Cards ARE the airline rows of the scrolled content, not a separate viewport
+	// with its own scrollbar - one mScrollOffset moves the whole list, so a section
+	// header can never get stranded off the bottom of the tab.
 	//
 	// CardHeight() takes bounds because the image's height derives from the pane's
 	// ACTUAL width (fixed 16:9) - a card is exactly as tall as its full-width image
 	// plus one text row, so it must never be computed from a nominal/guessed width
 	// (that mismatch once rendered the whole block as one oversized black slab - see
-	// CardRectForIndex()'s image_h, which must use this SAME bounds-derived width).
+	// DrawAirlineCard()'s image_h, which must use this SAME bounds-derived width).
 	float				CardWidth(int bounds[4]) const;			// one column's width, gaps already taken out
 	float				CardHeight(int bounds[4]) const;
 
@@ -272,7 +272,8 @@ private:
 	// empty rather than centring what is left, so a lone final card sits under the
 	// first column with whitespace to its right.
 	struct RowSlot {
-		float	top, bot;		// vertical extent, already scrolled
+		float	top, bot;		// the CARD's own extent (or the text row's), already scrolled
+		float	slot_bot;		// bottom including any open tray; == bot when none
 		float	x0, x1;			// horizontal extent - the card's own, or the full row
 		bool	is_card;
 	};
@@ -280,16 +281,35 @@ private:
 	// clamp mScrollOffset. Takes only "is this row a card", not the rows themselves:
 	// WED_LiveryDisplayRow is private to the .cpp, and the layout genuinely needs
 	// nothing else, so this stays a pure function of its arguments.
+	// `tray_h` is per row and usually all zeros: the extra height an open tray adds
+	// under a card. It is applied to the whole GRID LINE, not to one card, because a
+	// tray that pushed only its own column down would slide out from under its
+	// neighbour and overlap the line below.
 	float				LayoutRows(int bounds[4], const std::vector<bool> & is_card,
+								   const std::vector<float> & tray_h,
 								   std::vector<RowSlot> & out) const;
 	// The row under the cursor, card or not; -1 for none. Replaces RowForY, which
 	// could not tell which column of a card line was hit.
-	int					RowForXY(int bounds[4], const std::vector<bool> & is_card, int x, int y) const;
+	int					RowForXY(int bounds[4], const std::vector<bool> & is_card,
+								 const std::vector<float> & tray_h, int x, int y) const;
+
+	// Sub-targets inside one card. Both are carved off the card's own rect so they
+	// cannot drift from what DrawAirlineCard paints.
+	void				LockIconRect(const RowSlot & slot, float r_out[4]) const;
+	void				TrayTabRect (const RowSlot & slot, float r_out[4]) const;
 
 	void				DrawAirlineCard(GUI_GraphState * state, const RowSlot & slot,
 										const AirlineCard & card, int show,
 										bool is_selected, bool is_hover, bool is_pressed,
+										bool is_locked, bool is_dimmed,
 										int & renders_this_frame);
+	void				DrawCardTray(GUI_GraphState * state, const RowSlot & slot,
+									 const AirlineCard & card, float open_frac);
+	// Takes the rows' icao codes, not the rows: WED_LiveryDisplayRow lives in the
+	// .cpp's anonymous namespace and cannot be named here. An empty string means
+	// "not an airline row".
+	void				TrayHeights(const std::vector<std::string> & row_icaos,
+									std::vector<float> & out) const;
 	const WED_LiveryThumbnail *	EnsureRawFlagTexture(const std::string & ioc_country_code);	// no masking - see .cpp
 
 	// ---- ramp operation filter (row of chips) ----
@@ -484,10 +504,37 @@ private:
 	int							mContentDragStartY;
 	float						mContentDragStartOffset;
 
-	// Hover only. Cards are previews of what this stand will spawn, not a
-	// picker - the selection they used to carry belonged to the per-stand
-	// aircraft-type whitelist that draft 7 removed (spec §8.6).
-	int							mHoverCard;			// -1 if the cursor isn't over a card
+	virtual void				TimerFired(void);
+	void						SyncAnimationTimer(void);	// runs only while something is actually moving
+
+	// ---- hover cycling ----
+	// A hovered card steps through its operator's other aircraft once a second, so
+	// one card can answer "what else do they park here" without being opened. The
+	// cycle is identified by ICAO, not row index, for the same reason the cards are
+	// - rows are rebuilt constantly and an index would land on a stranger.
+	std::string					mCycleAirline;		// empty when nothing is cycling
+	int							mCycleShow;			// which livery is on the face
+	float						mCycleAccum;		// seconds since the last step
+
+	// ---- the tray ----
+	// Opening one tray closes whichever was open, and the two animate TOGETHER -
+	// one extending while the other retracts - so the list never jumps.
+	std::string					mTrayAirline;		// the tray opening/open; empty for none
+	float						mTrayOpen;			// 0..1
+	std::string					mTrayClosing;		// the tray retracting; empty for none
+	float						mTrayClosingOpen;	// 1..0
+
+	// ---- the exclusive lock ----
+	// "Only this operator parks here." At most one card can hold it, and while one
+	// does every other card is drawn dimmed, because the lock has taken them out of
+	// the running - see the format spec on why this is UI-only and never reaches
+	// apt.dat as a row of its own.
+	std::string					mLockedAirline;		// empty when no card holds the lock
+
+	// Section headers that are collapsed. Only "All Airlines" starts collapsed: it
+	// is the tier with no filter behind it, so expanding it can mean hundreds of
+	// cards, and rendering those unasked is the one way this pane can stall.
+	std::set<std::string>		mCollapsedSections;
 
 	std::map<std::string, WED_LiveryThumbnail>	mRawFlagTex;	// unmasked flag icon textures (w/h = source PNG's own), keyed by IOC country code
 
