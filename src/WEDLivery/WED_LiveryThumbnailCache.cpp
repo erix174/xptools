@@ -47,13 +47,17 @@
 // std::max(...) into a compile error - every call here is written as (std::max)(...)
 // to defeat that, the same workaround WED_FlagProjector.cpp and WED_LiveryPane.cpp use.
 
-// 32:9 - a side-on airliner is a long, thin subject, so a letterbox that matches its
-// own proportions wastes far less of the card than a 16:9 one. Big enough to stay
-// sharp scaled down to a card's real on-screen size, small enough that a screenful of
-// cards' worth of these is trivial GPU memory. MUST stay in sync with
-// kCardImageAspect in WED_LiveryPane.cpp, which sizes the card that displays it.
-static const int kThumbW = 1024;
-static const int kThumbH = 288;
+// 32:9 - a side-on airliner is a long, thin subject, so a letterbox that matches
+// its own proportions wastes far less of the card than a 16:9 one. MUST stay in
+// sync with kCardImageAspect in WED_LiveryPane.cpp, which sizes the card that
+// displays it.
+//
+// 512x144. A card is about 250px wide on screen, so this is 2x
+// oversampled - 1024 was 4x, and the extra sharpness nobody can see cost 1.18MB
+// of VRAM per entry against 0.29MB here. Cutting it is what pays for the bigger
+// cache below: half the memory for twice the entries.
+static const int kThumbW = 512;
+static const int kThumbH = 144;
 
 // Dead-level side elevation, nose to the left - these cards are meant to read as a
 // consistent catalogue of liveries, so every one is shot from the identical angle
@@ -195,7 +199,12 @@ static float	ModelYawCorrection(const XObj8 * o, const string & obj_path)
 // Defensive ceiling - not something the normal visible-range+margin math in
 // WED_LiveryPane should ever bump into, just a backstop against unbounded GPU memory
 // if that math ever miscounts.
-static const size_t kMaxCachedThumbnails = 32;
+// 64 entries at 0.29MB is 19MB of VRAM - half what 32 entries at the old size
+// cost. The cap matters because GetThumbnail REFUSES rather than evicting when
+// full, so a keep-alive window wider than the cap leaves cards permanently
+// blank; 64 comfortably covers a tall pane's window plus a hovered card's whole
+// livery set.
+static const size_t kMaxCachedThumbnails = 64;
 
 bool WED_LiveryThumbnailCache::IsCached(const string & obj_path) const
 {

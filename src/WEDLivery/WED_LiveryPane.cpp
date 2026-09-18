@@ -4485,9 +4485,18 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 					if (slots[vi].top < keep_lo)           break;		// everything below is further away
 					const AirlineCard * ac = CardFor(rows[vi].icao);
 					if (!ac || ac->abs_paths.empty()) continue;
-					int sh = (rows[vi].icao == mCycleAirline)
-								? mCycleShow % (int) ac->abs_paths.size() : 0;
-					keep_alive_paths.insert(ac->abs_paths[sh]);
+
+					// EVERY livery of the card being cycled, not just the one on its
+					// face. Keeping only the visible one meant each tick of the hover
+					// cycle evicted the aircraft it had just finished showing, and
+					// wrapping round re-rendered it - 44 renders for 12 objects in one
+					// short session. The parse is cached by then, but the texture
+					// allocation and the offscreen pass are not.
+					if (rows[vi].icao == mCycleAirline)
+						for (size_t k = 0; k < ac->abs_paths.size(); ++k)
+							keep_alive_paths.insert(ac->abs_paths[k]);
+					else
+						keep_alive_paths.insert(ac->abs_paths[0]);
 				}
 			}
 
