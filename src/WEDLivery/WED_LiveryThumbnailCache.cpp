@@ -93,37 +93,86 @@ static const float kCamPsi = 90.0f;
 // correctly oriented already, so leaving the convention alone is the right
 // answer for them - and staying still is the only safe failure here, since a
 // wrong rotation is worse than the wrong convention it was trying to repair.
-static float	ModelYawCorrection(const XObj8 * o)
+// IT CANNOT BE DONE FROM THE BOUNDING BOX. "Longer than it is wide" sounds like
+// the whole answer and is not: sorted by X/Z aspect, the shipped library puts the
+// PA-28 at 1.47 and the MD-80 at 1.35, because a Cherokee really is wider than it
+// is long. Any threshold that rotates the MD-80 breaks eight correctly-oriented
+// light aircraft, so the vertices have to be looked at.
+//
+// AND THEY CANNOT BE READ FROM THE LOADED OBJECT EITHER, which is what made the
+// first version of this a no-op: ObjDraw.cpp:284 does geo_tri.clear(8) once the
+// mesh is in VRAM to free the RAM, so anything WED has already drawn - and the
+// map draws static aircraft - arrives here with an empty point pool. We take that
+// pool when it is still full and fall back to the file when it is not, memoised,
+// because the answer is a property of the asset and never changes.
+static bool	CentrelineOffsets(const XObj8 * o, const string & obj_path, double & off_x, double & off_z)
 {
-	int n = o->geo_tri.count();
-	if (n < 32) return 0.0f;					// too little geometry to judge
-
 	double y0 = o->xyz_min[1], y1 = o->xyz_max[1];
 	double hx = (o->xyz_max[0] - o->xyz_min[0]) * 0.5;
 	double hz = (o->xyz_max[2] - o->xyz_min[2]) * 0.5;
-	if (y1 <= y0 || hx <= 0.0 || hz <= 0.0) return 0.0f;
+	if (y1 <= y0 || hx <= 0.0 || hz <= 0.0) return false;
 
 	double cx  = (o->xyz_max[0] + o->xyz_min[0]) * 0.5;
 	double cz  = (o->xyz_max[2] + o->xyz_min[2]) * 0.5;
-	double cut = y0 + 0.99 * (y1 - y0);
+	double cut = y0 + 0.99 * (y1 - y0);			// the top 1% - fin tip or T-tail centre
 
 	double sum_x = 0.0, sum_z = 0.0;
 	int    top   = 0;
-	for (int i = 0; i < n; ++i)
+
+	int n = o->geo_tri.count();
+	if (n >= 32)
 	{
-		const float * v = o->geo_tri.get(i);
-		if (v[1] < cut) continue;
-		sum_x += fabs(v[0] - cx) / hx;
-		sum_z += fabs(v[2] - cz) / hz;
-		++top;
+		for (int i = 0; i < n; ++i)
+		{
+			const float * v = o->geo_tri.get(i);
+			if (v[1] < cut) continue;
+			sum_x += fabs(v[0] - cx) / hx;
+			sum_z += fabs(v[2] - cz) / hz;
+			++top;
+		}
 	}
-	if (top < 4) return 0.0f;
+	else
+	{
+		// The pool was freed. Re-read the VT records off disk. One pass, nothing
+		// retained: the Y cut comes from the bounding box, which survives, so
+		// there is no need to find the maximum first. Note VT is followed by a
+		// TAB in most shipped assets and a space in others.
+		FILE * fi = fopen(obj_path.c_str(), "r");
+		if (!fi) return false;
+		char line[512];
+		while (fgets(line, sizeof(line), fi))
+		{
+			if (line[0] != 'V' || line[1] != 'T' || (line[2] != ' ' && line[2] != '\t')) continue;
+			double x, y, z;
+			if (sscanf(line + 3, "%lf %lf %lf", &x, &y, &z) != 3) continue;
+			if (y < cut) continue;
+			sum_x += fabs(x - cx) / hx;
+			sum_z += fabs(z - cz) / hz;
+			++top;
+		}
+		fclose(fi);
+	}
 
-	double off_x = sum_x / (double) top;
-	double off_z = sum_z / (double) top;
+	if (top < 4) return false;
+	off_x = sum_x / (double) top;
+	off_z = sum_z / (double) top;
+	return true;
+}
 
-	if (off_z < 0.25 && off_x > 0.5) return 90.0f;	// fuselage on X - yawed
-	return 0.0f;									// normal, or not sure enough
+static float	ModelYawCorrection(const XObj8 * o, const string & obj_path)
+{
+	static map<string, float> memo;
+	map<string, float>::const_iterator m = memo.find(obj_path);
+	if (m != memo.end()) return m->second;
+
+	double off_x = 0.0, off_z = 0.0;
+	float  psi   = 0.0f;
+	if (CentrelineOffsets(o, obj_path, off_x, off_z) && off_z < 0.25 && off_x > 0.5)
+		psi = 90.0f;							// fuselage lies on X - yawed
+
+	LOG_MSG("I/LiveryThumb yaw %s: offX=%.2f offZ=%.2f -> +%.0f\n", obj_path.c_str(), off_x, off_z, psi);
+	memo[obj_path] = psi;
+	return psi;
 }
 
 // Defensive ceiling - not something the normal visible-range+margin math in
@@ -234,7 +283,7 @@ const WED_LiveryThumbnail * WED_LiveryThumbnailCache::GetThumbnail(WED_ResourceM
 	// Both the silhouette fit and the modelview below must use the SAME azimuth,
 	// or the projection is fitted to a view that is never drawn and the model is
 	// clipped. See ModelYawCorrection.
-	float cam_psi = kCamPsi + ModelYawCorrection(o);
+	float cam_psi = kCamPsi + ModelYawCorrection(o, obj_path);
 
 	// Remember what was bound/current before hijacking it, so this always leaves the
 	// caller's own on-screen rendering state exactly as it found it, success or not.
@@ -284,7 +333,9 @@ const WED_LiveryThumbnail * WED_LiveryThumbnailCache::GetThumbnail(WED_ResourceM
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_rb);
 
 	bool complete = glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
-	LOG_MSG("I/LiveryThumb %s: fbo_complete=%d radius=%.3f\n", obj_path.c_str(), (int) complete, real_radius);
+	LOG_MSG("I/LiveryThumb %s: fbo_complete=%d radius=%.3f psi=%.1f tris=%d dx=%.1f dz=%.1f\n",
+		obj_path.c_str(), (int) complete, real_radius, cam_psi, o->geo_tri.count(),
+		o->xyz_max[0] - o->xyz_min[0], o->xyz_max[2] - o->xyz_min[2]);
 	LOG_FLUSH();
 	if (complete)
 	{
