@@ -2591,23 +2591,40 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 	float left_avail = (cc_x - 6) - text_x0;
 
 	string head = card.icao + " - " + type_str;
-	string tail;
+	string tail, tail_short;
 	if (card.abs_paths.size() > 1)
 	{
-		char m[32];
+		char m[40];
 		snprintf(m, sizeof(m), "  (and %d more)", (int) card.abs_paths.size() - 1);
 		tail = m;
+		snprintf(m, sizeof(m), "  (+%d)", (int) card.abs_paths.size() - 1);
+		tail_short = m;
 	}
 
-	// THE SUFFIX IS RESERVED BEFORE THE HEAD IS MEASURED, so a long type or a
-	// narrow pane eats into "AAL - B772" and never into "(and 3 more)". Truncating
-	// the whole string end-first - which is what the old single-phrase caption did -
-	// dropped exactly the part that says there is more to see.
+	// THE HEAD IS THE IDENTITY AND IS NEVER WHAT GETS DROPPED. Reserving the suffix
+	// first was exactly backwards: on a narrow card there was too little left for
+	// "AAL - B738", the ellipsis loop ate it down to nothing, and the card rendered
+	// as a bare "(and 2 more)" with no operator on it at all - while the
+	// single-livery cards beside it, which have no suffix to reserve, were fine.
+	//
+	// So the head is fitted first and the suffix is added only if it still fits.
+	// Losing it costs little: the arrow in the gutter already says there is more,
+	// and the hover tip names all of them.
+	float head_w = GUI_MeasureRange(font_UI_Basic, head.c_str(), head.c_str() + head.size());
 	float tail_w = tail.empty() ? 0.0f
 				 : GUI_MeasureRange(font_UI_Basic, tail.c_str(), tail.c_str() + tail.size());
-	float head_avail = left_avail - tail_w;
 
-	if (GUI_MeasureRange(font_UI_Basic, head.c_str(), head.c_str() + head.size()) > head_avail)
+	// Long form, then the compact one, then nothing - degrading rather than
+	// overriding, so a card only loses the wording when it genuinely cannot hold it.
+	if (head_w + tail_w > left_avail)
+	{
+		tail   = tail_short;
+		tail_w = tail.empty() ? 0.0f
+			   : GUI_MeasureRange(font_UI_Basic, tail.c_str(), tail.c_str() + tail.size());
+		if (head_w + tail_w > left_avail) tail.clear();		// the arrow carries it instead
+	}
+
+	if (head_w > left_avail)
 	{
 		const string ell = "...";
 		while (!head.empty())
@@ -2616,7 +2633,7 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 			while (!head.empty() && head[head.size() - 1] == ' ')
 				head.pop_back();			// no "Air ..." - tuck the dots up against the text
 			string probe = head + ell;
-			if (GUI_MeasureRange(font_UI_Basic, probe.c_str(), probe.c_str() + probe.size()) <= head_avail)
+			if (GUI_MeasureRange(font_UI_Basic, probe.c_str(), probe.c_str() + probe.size()) <= left_avail)
 				break;
 		}
 		head = head.empty() ? string() : head + ell;
@@ -3454,6 +3471,11 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 		float lr[4], tr[4];
 		LockIconRect(slots[mTrackRow], lr);
 		TrayTabRect (slots[mTrackRow], tr);
+
+		LOG_MSG("I/LiveryClick %s at (%d,%d)  tray=[%.0f..%.0f x %.0f..%.0f] hit=%d  lock=%d\n",
+				icao.c_str(), x, y, tr[0], tr[2], tr[1], tr[3],
+				(int)(x >= tr[0] && x <= tr[2] && y >= tr[1] && y <= tr[3]),
+				(int)(x >= lr[0] && x <= lr[2] && y >= lr[1] && y <= lr[3]));
 
 		if (x >= lr[0] && x <= lr[2] && y >= lr[1] && y <= lr[3])
 		{
@@ -4654,7 +4676,12 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			float visible_h  = top - (float) b[1];
 			float max_scroll = (content_h > visible_h) ? (content_h - visible_h) : 0.0f;
 			if (mScrollOffset < 0)          mScrollOffset = 0;
-			if (mScrollOffset > max_scroll) mScrollOffset = max_scroll;
+			if (mScrollOffset > max_scroll)
+			{
+				LOG_MSG("I/LiveryScroll clamp %.0f -> %.0f  (content=%.0f visible=%.0f rows=%d)\n",
+						mScrollOffset, max_scroll, content_h, visible_h, (int) rows.size());
+				mScrollOffset = max_scroll;
+			}
 			if (mScrollOffset != 0.0f)		// the clamp may have moved it - relay out
 				content_h = LayoutRows(b, is_card, tray_h, slots);
 
@@ -4808,17 +4835,52 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 
 				if (row.kind == wed_Row_Header)
 				{
-					// A collapsed section has to look collapsed, or it reads as a
-					// tier that simply had nothing in it - which is a different
-					// thing this pane goes out of its way to distinguish elsewhere.
+					// A COLLAPSIBLE SECTION IS DRAWN AS A CONTROL, not as a line of
+					// text that happens to be clickable. It gets a band, a chevron
+					// and its count, because the only thing that previously told the
+					// reader it could be opened was a parenthetical - which reads as
+					// a caption, not a button, and left the section looking like one
+					// more label in a list of labels.
+					bool collapsible = (row.header_text == "All Airlines");
+					bool collapsed   = mCollapsedSections.count(row.header_text) != 0;
+					float tx = (float) b[0] + pad;
+
+					if (collapsible)
+					{
+						state->SetState(0,0,0,0,1,0,0);
+						glColor4f(1.0f, 1.0f, 1.0f, (int) vi == mHoverRow ? 0.10f : 0.055f);
+						glBegin(GL_QUADS);
+							glVertex2f((float) b[0] + 2, row_bot);
+							glVertex2f((float) b[2] - 2, row_bot);
+							glVertex2f((float) b[2] - 2, row_top);
+							glVertex2f((float) b[0] + 2, row_top);
+						glEnd();
+
+						// Same convention as the card's tray arrow: right when shut,
+						// down when open. One gesture, one shape, two places.
+						float acx = tx + 5.0f, acy = (row_top + row_bot) * 0.5f;
+						float lon = 4.5f, lat = 2.8f;
+						float ang = collapsed ? 0.0f : -1.57079633f;
+						float ca = cosf(ang), sa = sinf(ang);
+						const float px[3] = {  lon, -lon * 0.55f, -lon * 0.55f };
+						const float py[3] = { 0.0f, -lat,          lat         };
+						glColor4f(0.85f, 0.85f, 0.88f, 1.0f);
+						glBegin(GL_TRIANGLES);
+							for (int i = 0; i < 3; ++i)
+								glVertex2f(acx + px[i] * ca - py[i] * sa,
+										   acy + px[i] * sa + py[i] * ca);
+						glEnd();
+						tx += 16.0f;
+					}
+
 					string htxt = row.header_text;
-					if (mCollapsedSections.count(row.header_text))
+					if (collapsible)
 					{
 						char n[48];
-						snprintf(n, sizeof(n), "   (%d - click to expand)", row.hidden_count);
-						htxt += n;
+						snprintf(n, sizeof(n), "   %d", collapsed ? row.hidden_count : 0);
+						if (collapsed) htxt += n;
 					}
-					GUI_FontDraw(state, font_UI_Basic, row_col, b[0] + pad, row_bot + (row_h - line_h) * 0.5f, htxt.c_str());
+					GUI_FontDraw(state, font_UI_Basic, row_col, tx, row_bot + (row_h - line_h) * 0.5f, htxt.c_str());
 					// Every section except the last ("All Airlines") is some flavor of
 					// recommendation (manual pin, direct hit, same country, or popular fleet) -
 					// star all of them, same as the old two-tier layout starred "Recommended".
