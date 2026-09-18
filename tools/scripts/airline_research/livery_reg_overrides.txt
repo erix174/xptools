@@ -61,19 +61,37 @@ heavy/A359/A359_Singapore.obj ***
 heavy/A359/A359_Thai.obj ***
 
 
-# ---- OCR pass, 2026-09-16 - NOT YET EYEBALLED ------------------------------
+# ---- OCR pass, 2026-09-16, corrected 2026-09-17 ----------------------------
 # Read off the textures by easyocr, then repaired against each country's
 # registration format. Only rows the FILENAME had nothing for are here;
 # where a filename carried a registration it was kept, because filenames come
 # from Laminar's own naming and beat OCR competing with painted titles.
-# Lines marked REVIEW failed the format check and are probably misread text.
-# Delete or correct a row rather than trusting it - several are livery words
-# (BRASIL, DELTA) that happen to fit a registration shape.
+#
+# WHAT WENT WRONG THE FIRST TIME, so the next pass does not repeat it: easyocr
+# was asked for the best text on the texture, and on an airliner the best text
+# is the TITLES. It returned DELTA, FEDEX, BRASIL, BRITAI - livery words that
+# happen to fit a registration shape, which then survived the format check and
+# reached the preview cards as tail numbers, painting a German flag on a Delta
+# A320 because "DELTA" starts with D.
+#
+# The reg is never the most legible text on the hull. It is small, usually
+# rendered upside-down or mirrored because of how the fuselage is unwrapped,
+# and it sits next to a flag decal. Take EVERY detection with its box, keep the
+# ones with that shape and that neighbour, then look at the crop. The 2026-09-17
+# pass did exactly that and every row it changed below was confirmed by eye, not
+# by a confidence score - N864DA and G-YMMU came back at 0.35 while DELTA came
+# back at 0.94.
+#
+# An empty value here is a decision, not a gap - see FORMAT above. Rows blanked
+# on 2026-09-17 are of two kinds: military and state liveries, which carry a
+# serial or a modex and have no tail number to read, and liveries whose reg is
+# off the mapped area or at the atlas seam. Both are "inspected, nothing to
+# record", and both are better than a confident wrong flag.
 
 fighter/EUFI/EUFI_RAF.obj *** HSIHI
-fighter/F15/F15EX_cft_usaf.obj *** DORIC
-fighter/F15/F15EX_usaf.obj *** DORIC
-fighter/F4/F4_static.obj *** IOWSS
+fighter/F15/F15EX_cft_usaf.obj ***
+fighter/F15/F15EX_usaf.obj ***
+fighter/F4/F4_static.obj ***
 heavy/A359/A359_iberojet.obj *** ECNBO
 heavy/A35K/A35K_AirCaraibes.obj *** FHMIL
 heavy/A35K/A35K_BritishAirways.obj *** GXWBG
@@ -88,25 +106,25 @@ heavy/A35K/A35K_Qatar.obj *** A7ANS
 heavy/A35K/A35K_Starlux.obj *** B58551
 heavy/A35K/A35K_VirginAtlantic.obj *** GVTEA
 heavy/B744_CPA/B744_CPA_static.obj *** DOTAD
-heavy/B744_UAL/B744_UAL_static.obj *** OOOO   # REVIEW
-heavy/B772_AAL/B772_AAL_static.obj *** NSOIPGMA   # REVIEW
-heavy/B772_BAW/B772_BAW_static.obj *** IIOON
-heavy/B772_DAL/B772_DAL_static.obj *** DELTA
-heavy/DC10_AIO/DC10_AIO_static.obj *** FORCE
-heavy/DC10_FDX/DC10_FDX_static.obj *** FEDEX
-heavy/DC10_white/DC10_white_static.obj *** NDCIOX   # REVIEW
-helo/H60/SH60_Seahawk_static.obj *** IIIZI
+heavy/B744_UAL/B744_UAL_static.obj ***
+heavy/B772_AAL/B772_AAL_static.obj ***
+heavy/B772_BAW/B772_BAW_static.obj *** GYMMU
+heavy/B772_DAL/B772_DAL_static.obj *** N864DA
+heavy/DC10_AIO/DC10_AIO_static.obj ***
+heavy/DC10_FDX/DC10_FDX_static.obj *** N360FE
+heavy/DC10_white/DC10_white_static.obj ***
+helo/H60/SH60_Seahawk_static.obj ***
 helo/S76/S76_static.obj *** N7ER
 helo/S76_coastguard/S76_coastguard_static.obj *** SEJRM
 jet/A320_AAL/A320_AAL_static.obj *** N604AW
-jet/A320_ACA/A320_ACA_static.obj *** FEEEN
+jet/A320_ACA/A320_ACA_static.obj ***
 jet/A320_AFR/A320_AFR_static.obj *** FGKXC
 jet/A320_ASA/A320_ASA_static.obj *** N835VA
-jet/A320_AZU/A320_AZU_static.obj *** BRASIL
+jet/A320_AZU/A320_AZU_static.obj *** PRAJB
 jet/A320_BAW/A320_BAW_static.obj *** GEUYS
 jet/A320_CCA/A320_CCA_static.obj *** B6608
 jet/A320_CSN/A320_CSN_static.obj *** B6908
-jet/A320_DAL/A320_DAL_static.obj *** DELTA
+jet/A320_DAL/A320_DAL_static.obj *** N325US
 jet/A320_DLH/A320_DLH_static.obj *** DALZC
 jet/A320_EZY/A320_EZY_static.obj *** OEIZU
 jet/A320_IGO/A320_IGO_static.obj *** LNDIG
@@ -115,8 +133,8 @@ jet/A320_QLK/A320_QLK_static.obj *** VHVQS
 jet/A320_QTR/A320_QTR_static.obj *** A7AHH
 jet/A320_UAL/A320_UAL_static.obj *** N880UA
 jet/A320_VLG/A320_VLG_static.obj *** ECMBF
-jet/B722_CJT/B722_CJT_static.obj *** CARGOJED   # REVIEW
-jet/B722_FDX/B722_FDX_static.obj *** FEDEX
+jet/B722_CJT/B722_CJT_static.obj ***
+jet/B722_FDX/B722_FDX_static.obj ***
 jet/B738_AAL/B738_AAL_static.obj *** N816NN
 jet/B738_ASA/B738_ASA_static.obj *** N563AS
 jet/B738_CCA/B738_CCA_static.obj *** B1766
@@ -136,16 +154,16 @@ jet/B738_KLM/B738_KLM_static.obj *** PHBXH
 jet/B738_QFA/B738_QFA_static.obj *** VHXZE
 jet/B738_SWA/B738_SWA_static.obj *** N85292
 jet/B738_TLM/B738_TLM_static.obj *** HSLUP
-jet/B763_ANA/B763_ANA_static.obj *** HLAINC   # REVIEW
-jet/B763_DAL/B763_DAL_static.obj *** DELTA
-jet/B763_FDX/B763_FDX_static.obj *** 4LLZN   # REVIEW
-jet/B763_JAL/B763_JAL_static.obj *** JAPAN   # REVIEW
-jet/B763_UAL/B763_UAL_static.obj *** VNSLSN   # REVIEW
-jet/CRJ1_AFR/CRJ100_Air_France.obj *** BRITAI
-jet/CRJ1_AFR/CRJ1_AFR_static.obj *** BRITAI
+jet/B763_ANA/B763_ANA_static.obj ***
+jet/B763_DAL/B763_DAL_static.obj *** N178DZ
+jet/B763_FDX/B763_FDX_static.obj *** N277FE
+jet/B763_JAL/B763_JAL_static.obj ***
+jet/B763_UAL/B763_UAL_static.obj ***
+jet/CRJ1_AFR/CRJ100_Air_France.obj *** FGRJC
+jet/CRJ1_AFR/CRJ1_AFR_static.obj *** FGRJC
 jet/CRJ1_AUA/CRJ100_Austrian_Arrows.obj *** OELRH
 jet/CRJ1_AUA/CRJ1_AUA_static.obj *** OELRH
-jet/CRJ2_DAL/CRJ2_DAL_static.obj *** DELTA
+jet/CRJ2_DAL/CRJ2_DAL_static.obj *** N8930E
 jet/E55P/E55P_EJA.obj *** N403QS
 jet/E55P/E55P_LXJ.obj *** XAIBE
 jet/E55P/E55P_WUP.obj *** N652UP
@@ -160,8 +178,8 @@ jet/J328_WLC/Dornier_328_jet_Welcome_Air.obj *** OELJR
 jet/J328_WLC/J328_WLC_static.obj *** OELJR
 jet/MD80_AZA/MD80_AZA_static.obj *** BILEJI
 jet/MD80_AZA/MD80_Alitalia.obj *** BILEJI
-jet/MD80_DAL/MD80_DAL_static.obj *** DETTA
-jet/MD80_DAL/MD80_Delta.obj *** DETTA
+jet/MD80_DAL/MD80_DAL_static.obj *** N910DL
+jet/MD80_DAL/MD80_Delta.obj *** N910DL
 jet/SF50_blue/SF50_blue_static.obj *** N163MV
 jet/SF50_gold/SF50_gold_static.obj *** N163MV
 prop/BE58/BE58_static.obj *** N45XS
@@ -170,15 +188,15 @@ prop/C172_olive/C172_olive_static.obj *** ETOEB
 prop/C172_skyhawk/C172_skyhawk_static.obj *** N172SP
 prop/C172_waves/C172_waves_static.obj *** N172SP
 prop/C172_white/C172_white_static.obj *** N172SP
-turboprop/AT45_FDX/AT45_FDX_static.obj *** FEDEX
-turboprop/AT45_FDX/ATR42-500_FedEx.obj *** FEDEX
+turboprop/AT45_FDX/AT45_FDX_static.obj *** N906FX
+turboprop/AT45_FDX/ATR42-500_FedEx.obj *** N906FX
 turboprop/AT72_EGF/AT72_EGF_static.obj *** N980AE
 turboprop/AT72_EGF/ATR72-500_American_Eagle.obj *** N980AE
 turboprop/BE9L/BE9L_static.obj *** N43XS
 turboprop/BE9L_white/BE9L_white_static.obj *** DXOGJ
 turboprop/D328_LPV/D328_LPV_static.obj *** OELKF
 turboprop/D328_LPV/Dornier_328_prop_Air_Alps.obj *** OELKF
-turboprop/E2/E2_Hawkeye_static.obj *** NAVYE   # REVIEW
+turboprop/E2/E2_Hawkeye_static.obj ***
 turboprop/P180/P180_avanti_white.obj *** ISERG
 turboprop/P180/P180_static.obj *** ISERG
 turboprop/P180_Ferrari/P180_avanti_ferrari.obj *** IFXRB

@@ -203,13 +203,20 @@ def disambiguate(prefix, ioc, airline):
 # Registrations read off the textures by hand - see the file's own header. These
 # win over anything derived from a filename, and an EMPTY value there is a
 # positive "inspected, no tail number painted" finding, not a gap.
+#
+# A '#' ANYWHERE IN THE VALUE MAKES IT UNKNOWN, not a registration with a note
+# attached. The marker means "OCR produced this and nobody has confirmed it", so
+# the honest output is no registration at all - which also means no flag, rather
+# than a confident wrong one. The 2026-09-16 pass shipped nine such rows and they
+# reached the preview cards as real tail numbers, painting German flags on Delta
+# aircraft, because the value was taken verbatim and the comment went with it.
 OVERRIDES = {}
 _ovr = os.path.join(os.path.dirname(os.path.abspath(__file__)), "livery_reg_overrides.txt")
 if os.path.exists(_ovr):
     for l in open(_ovr, encoding="utf-8"):
         if l.startswith("#") or "***" not in l: continue
         k, _, v = l.partition("***")
-        OVERRIDES[k.strip()] = v.strip()
+        OVERRIDES[k.strip()] = "" if "#" in v else v.strip()
 
 # Liveries that must not spawn. Same sidecar pattern as the registrations above,
 # and for the same reason: a mark is a human decision and has to survive the next
