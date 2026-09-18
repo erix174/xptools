@@ -784,6 +784,34 @@ operator checkbox is tri-state to begin with. A uniform selection takes the same
 sentence with a count; a mixed one gets the aggregate only, *"12 of 47 stands park
 nothing"*, and no sentence pretending the selection is one stand.
 
+#### The other empty: a stand that parks the same thing forever
+
+`P(empty)` is not the only invisible failure, and it is not the only common one.
+Measured against the real global apt.dat: of the **39,247** stands listing two or
+more operators, authors list a mean of **7.8** and only **4.0** can appear at the
+declared class — and **6,879 of them (17.5%)** collapse to **exactly one**.
+
+That stand parks the same airline every single time. It is not empty, so nothing
+above sees it: aircraft spawn, occupancy reads 100%, and the only symptom is that
+a whole pier turns out to be Air France. It will never be reported as a bug,
+because nothing about it looks broken.
+
+R18 is not at fault — an operator with no asset at the class drawn *must* be
+absent from the pool, or the stand would park nothing part of the time instead.
+The side effect is that the author's list is silently truncated, and the truncation
+is the thing worth showing:
+
+```
+Only DELTA will ever park here
+The other 7 listed operators have no aircraft at size C-E, so every
+aircraft on this stand is the same airline.
+```
+
+**This ranks below an empty stand and above a healthy one.** Parking nothing is
+worse news than parking one thing, so it does not displace the empty warning; but
+it must displace the reassuring sentence, which is otherwise the only thing an
+author would ever see.
+
 #### Two properties of the readout worth stating
 
 **It makes late binding visible, which is otherwise the design's most abstract
@@ -1411,8 +1439,15 @@ Fixed on our side; R9 exists so it is not reintroduced in another field.
 1. **Row code allocation.** `1313` is a proposal. **One code, not two** —
    dropping per-stand refinement (§8.6) gave back the one that carried them, as
    dropping the grouping machinery before it (§8.2) gave back two more. Four, to
-   two, to one. **Any single unused code works**, and this is the only item
-   blocking WED-side implementation.
+   two, to one. **Any single unused code works.**
+
+   Earlier drafts called this "the only item blocking WED-side implementation".
+   That was wrong, and the WED side proved it by shipping: the reader, the
+   writer, the entity property and the editor were all built with the code as a
+   single named constant in `AptDefs.h`, so an answer changes one line. What is
+   actually blocked is **distributing a file anyone else will read** - a Gateway
+   submission, a public build - because a provisional code written into scenery
+   that other people open is the one mistake §8.1 calls globally fatal.
 2. **Version policy.** §7.2 removes the compatibility argument for a bump, so this
    is now a question about signalling intent. Our recommendation: no bump.
 3. **A process decision that is not one person's**: §7.3. If a bump happens, new

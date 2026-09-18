@@ -1732,8 +1732,14 @@ static void ValidateAirportMetadata(WED_Airport* who, validation_error_vector& m
 				{
 					bool multi_prefix = false;
 					string d = country.substr(0, 3);
+						// `d`, not `c`. Reaching this branch already established
+						// that `c` is a valid iso3166 code, so searching for it
+						// again made multi_prefix unconditionally true and
+						// reported "USA XXX Nowhere" as carrying two valid
+						// prefixes. The question here is whether the REMAINDER
+						// starts with a second one.
 						for (const auto& iso : iso3166_codes)
-							if (c == iso.front())
+							if (d == iso.front())
 							{
 								multi_prefix = true;
 								break;

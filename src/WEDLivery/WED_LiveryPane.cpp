@@ -875,15 +875,34 @@ WED_LiveryPane::WED_LiveryPane(
 	mContentDragStartOffset(0),	// listed here anyway so all the "simple scalar" inits stay together
 	mHoverCard(-1),
 	mTrackCard(-1),
+	mDragWeightBar(-1),
+	mHoverWeightBar(-1),
+	mHoverWeightButton(false),
+	mTrackWeightButton(false),
 	mCoverageDirty(true)
 {
 	// Zeroed rather than left indeterminate: Draw() reads mCoverage before the
 	// first RecomputeCoverage() can run if a frame lands before any selection
 	// change, and index_ready == false makes that frame say "index not loaded"
 	// instead of printing garbage counts.
-	memset(&mCoverage, 0, sizeof(mCoverage));
-	mCoverage.lo_class = 'A';
-	mCoverage.hi_class = 'F';
+	// Field by field, NOT memset. Coverage carries std::strings now
+	// (index_version, sole_operator), and zeroing the bytes of a std::string is
+	// undefined behaviour - it overwrites the object's own bookkeeping, so the
+	// first assignment or destruction afterwards is working from a state the
+	// implementation never produced. It happened to survive on MSVC's small
+	// string; that is luck, not a guarantee.
+	mCoverage.index_ready      = false;
+	mCoverage.weighted         = false;
+	mCoverage.p_occupied       = 0.0f;
+	mCoverage.empty_cause      = Coverage::empty_None;
+	mCoverage.stands           = 0;
+	mCoverage.stands_empty     = 0;
+	mCoverage.classes_in_range = 0;
+	mCoverage.classes_filled   = 0;
+	mCoverage.airlines_listed  = 0;
+	mCoverage.airlines_eligible= 0;
+	mCoverage.lo_class         = 'A';
+	mCoverage.hi_class         = 'F';
 
 	// Seeds the "Popular Airlines" weighted shuffle (see GetPopularAirlinesCodes()) once
 	// per WED run, not once per pane/document - a static guard rather than reseeding
@@ -972,6 +991,7 @@ void	WED_LiveryPane::Hide(void)
 	// hidden tab caused it. Abort rather than commit - a drag the user never
 	// finished should not land in the undo stack.
 	AbortSizeDrag();
+	AbortWeightDrag();		// same reason - see AbortSizeDrag()'s caller comment above
 
 	GUI_Pane::Hide();
 	mThumbCache.DiscardAll();
@@ -1180,6 +1200,175 @@ void	WED_LiveryPane::RebuildSelection(void)
 }
 
 // ---------------------------------------------------------------------------------------------
+// spawn weight bars  (apt.dat row 1313)
+// ---------------------------------------------------------------------------------------------
+
+bool	WED_LiveryPane::SelectionHasWeights(void) const
+{
+	int w[6];
+	for (size_t i = 0; i < mSelectedRamps.size(); ++i)
+		if (mSelectedRamps[i]->GetClassWeights(w)) return true;
+	return false;
+}
+
+// The weights to draw, or false when the selection disagrees about them. A
+// mixed selection still SHOWS the section - the author needs to see that the
+// stands differ - it just draws indeterminate, the same answer the tri-state
+// operator checkbox gives to the same question.
+bool	WED_LiveryPane::SelectionWeights(int out_w[6]) const
+{
+	bool have = false;
+	int  w[6];
+	for (size_t i = 0; i < mSelectedRamps.size(); ++i)
+	{
+		int cur[6];
+		if (!mSelectedRamps[i]->GetClassWeights(cur)) return false;	// one stand has none -> mixed
+		if (!have) { memcpy(w, cur, sizeof(w)); have = true; }
+		else if (memcmp(w, cur, sizeof(w)) != 0) return false;		// they disagree
+	}
+	if (!have) return false;
+	memcpy(out_w, w, sizeof(w));
+	return true;
+}
+
+// Bars are relative, so the track has no natural ceiling. Ten is the idiom the
+// format itself uses - §4.2 notes "3 and 7" means the same as "30 and 70" - but
+// a file that arrived carrying 700/300 has to stay both visible and draggable,
+// so the track grows to fit whatever is already there.
+int		WED_LiveryPane::WeightTrackMax(void) const
+{
+	int w[6], hi = 10;
+	if (SelectionWeights(w))
+		for (int i = 0; i < 6; ++i) if (w[i] > hi) hi = w[i];
+	return hi;
+}
+
+void	WED_LiveryPane::WeightBarRect(int bounds[4], int idx, float r_out[4]) const
+{
+	float line_h   = GUI_GetLineHeight(font_UI_Basic);
+	float handle_r = line_h * 0.5f;
+	// Same extents as the size slider, so bar i sits directly beneath the A-F
+	// tick label the slider already draws for class i.
+	float track_x0 = bounds[0] + 4 + handle_r;
+	float track_x1 = bounds[2] - 4 - handle_r;
+	float step     = (track_x1 - track_x0) / 5.0f;
+	float half     = (std::min)(step * 0.36f, 22.0f);
+
+	float top, bot;
+	WeightsYRange(bounds, top, bot);
+
+	float cx = track_x0 + step * idx;
+	r_out[0] = cx - half;
+	r_out[2] = cx + half;
+	r_out[1] = bot + line_h * 2 + 4;			// leaves the label and percentage rows below
+	r_out[3] = top - line_h - 6;				// leaves the section title above
+}
+
+int		WED_LiveryPane::WeightBarForXY(int bounds[4], int x, int y) const
+{
+	if (WeightsHeight() <= 0) return -1;
+	for (int i = 0; i < 6; ++i)
+	{
+		float r[4];
+		WeightBarRect(bounds, i, r);
+		// Generous vertically: the whole column is the target, not just the
+		// filled part, or dragging a zero-height bar back up would be
+		// impossible.
+		if (x >= r[0] && x <= r[2] && y >= r[1] - 4 && y <= r[3] + 4) return i;
+	}
+	return -1;
+}
+
+int		WED_LiveryPane::WeightValueForY(int bounds[4], int y) const
+{
+	float r[4];
+	WeightBarRect(bounds, 0, r);
+	float h = r[3] - r[1];
+	if (h <= 0) return 0;
+
+	float frac = ((float) y - r[1]) / h;
+	if (frac < 0.0f) frac = 0.0f;
+	if (frac > 1.0f) frac = 1.0f;
+
+	int v = (int) (frac * (float) WeightTrackMax() + 0.5f);	// snap to an integer
+	if (v < 0)    v = 0;
+	if (v > 1000) v = 1000;									// R11 ceiling
+	return v;
+}
+
+void	WED_LiveryPane::ApplyWeightDrag(void)
+{
+	for (size_t i = 0; i < mSelectedRamps.size(); ++i)
+		mSelectedRamps[i]->SetClassWeights(mDragWeights);
+	mCoverageDirty = true;
+}
+
+void	WED_LiveryPane::AbortWeightDrag(void)
+{
+	if (mDragWeightBar < 0) return;
+	mArchive->AbortCommand();
+	mDragWeightBar = -1;
+}
+
+// The ONLY path that gives a stand a 1313 row. Seeds one unit per class inside
+// the size range the author already set, which reads as "any of these, equally"
+// - the honest starting point, and the same thing the range meant before
+// weights existed.
+void	WED_LiveryPane::SeedWeightsFromSizeRange(void)
+{
+	if (mSelectedRamps.empty()) return;
+
+	mArchive->StartCommand("Add Spawn Weights");
+	for (size_t i = 0; i < mSelectedRamps.size(); ++i)
+	{
+		int lo = WidthEnumToIndex(mSelectedRamps[i]->GetWidthMin());
+		int hi = WidthEnumToIndex(mSelectedRamps[i]->GetWidth());
+		if (lo > hi) std::swap(lo, hi);
+
+		int w[6];
+		for (int k = 0; k < 6; ++k) w[k] = (k >= lo && k <= hi) ? 1 : 0;
+		mSelectedRamps[i]->SetClassWeights(w);
+	}
+	mArchive->CommitCommand();
+
+	mCoverageDirty = true;
+	Refresh();
+}
+
+// Back to "no 1313 row on this stand", which is NOT six zeros. Six zeros is the
+// author saying nothing parks here (§4.2); no row at all is the author not
+// having said anything, which keeps today's step-down (R17). Conflating the two
+// would make one of them unreachable from the UI.
+void	WED_LiveryPane::ClearWeights(void)
+{
+	if (mSelectedRamps.empty()) return;
+
+	mArchive->StartCommand("Remove Spawn Weights");
+	for (size_t i = 0; i < mSelectedRamps.size(); ++i)
+		mSelectedRamps[i]->ClearClassWeights();
+	mArchive->CommitCommand();
+
+	mCoverageDirty = true;
+	Refresh();
+}
+
+void	WED_LiveryPane::WeightButtonRect(int bounds[4], float b_out[4]) const
+{
+	// Lives on the size slider's row, right-aligned, because that is where the
+	// author is when they decide this stand needs a distribution rather than a
+	// range. Same derive-from-the-section idiom as SortButtonRect().
+	float top, bot;
+	SliderYRange(bounds, top, bot);
+	const float pad = 4;
+	const float w   = 124;
+
+	b_out[2] = (float) bounds[2] - pad;
+	b_out[0] = b_out[2] - w;
+	b_out[3] = top - 3;
+	b_out[1] = b_out[3] - (GUI_GetLineHeight(font_UI_Basic) + 6);
+}
+
+// ---------------------------------------------------------------------------------------------
 // coverage readout  (WED_LiveryFormatSpec.md §4.5)
 // ---------------------------------------------------------------------------------------------
 
@@ -1324,6 +1513,14 @@ void	WED_LiveryPane::RecomputeCoverage(void)
 			c.lo_class          = (char) ('A' + lo);
 			c.hi_class          = (char) ('A' + hi);
 
+			// Variety collapse. The author listed several operators and exactly
+			// one of them can ever appear, so this stand parks the same airline
+			// every single time. It is NOT the empty case - aircraft do spawn,
+			// nothing looks broken - which is why nothing else in this readout
+			// would ever mention it.
+			if (eligible.size() == 1 && codes.size() > 1)
+				c.sole_operator = *eligible.begin();
+
 			// Once a stand is weighted, the size SLIDER is no longer what the
 			// sentence should name - the author's weights are. They usually
 			// agree (R23 derives the 1301 letter from the weights on export),
@@ -1389,6 +1586,17 @@ float	WED_LiveryPane::SliderHeight(void) const
 	return GUI_GetLineHeight(font_UI_Basic) * 3 + 16;
 }
 
+float	WED_LiveryPane::WeightsHeight(void) const
+{
+	// Collapses to nothing when there is nothing to show. A stand with no 1313
+	// row keeps today's behaviour (R17) and should not be carrying an empty
+	// control that implies otherwise.
+	if (!SelectionHasWeights()) return 0;
+
+	// title row + bar track + the A-F label row + the percentage row
+	return GUI_GetLineHeight(font_UI_Basic) * 3 + 44;
+}
+
 float	WED_LiveryPane::CoverageHeight(void) const
 {
 	// Two lines: the headline, and one line of detail. Fixed rather than
@@ -1438,11 +1646,22 @@ void	WED_LiveryPane::SliderYRange(int bounds[4], float & top, float & bot) const
 	bot = top - SliderHeight();
 }
 
-void	WED_LiveryPane::CoverageYRange(int bounds[4], float & top, float & bot) const
+void	WED_LiveryPane::WeightsYRange(int bounds[4], float & top, float & bot) const
 {
 	float stop, sbot;
 	SliderYRange(bounds, stop, sbot);
-	top = sbot - GapHeight();
+	const float h = WeightsHeight();
+	// A hidden section takes no gap either, or every stand without weights
+	// would carry a stripe of dead space where the bars would have been.
+	top = sbot - (h > 0 ? GapHeight() : 0);
+	bot = top - h;
+}
+
+void	WED_LiveryPane::CoverageYRange(int bounds[4], float & top, float & bot) const
+{
+	float wtop, wbot;
+	WeightsYRange(bounds, wtop, wbot);
+	top = wbot - GapHeight();
 	bot = top - CoverageHeight();
 }
 
@@ -1835,6 +2054,18 @@ int		WED_LiveryPane::MouseMove(int x, int y)
 	int hover_card = mSelectedRamps.empty() ? -1 : CardForXY(b, x, y);
 	if (hover_card != mHoverCard)		{ mHoverCard = hover_card;		changed = true; }
 
+	int hover_wbar = mSelectedRamps.empty() ? -1 : WeightBarForXY(b, x, y);
+	if (hover_wbar != mHoverWeightBar)	{ mHoverWeightBar = hover_wbar;	changed = true; }
+
+	bool over_wbtn = false;
+	if (!mSelectedRamps.empty())
+	{
+		float wb[4];
+		WeightButtonRect(b, wb);
+		over_wbtn = (x >= wb[0] && x <= wb[2] && y >= wb[1] && y <= wb[3]);
+	}
+	if (over_wbtn != mHoverWeightButton)	{ mHoverWeightButton = over_wbtn;	changed = true; }
+
 	int row = -1;
 	if (!mSelectedRamps.empty() && !over_sort && !over_recommend && !over_clear)
 	{
@@ -1889,7 +2120,49 @@ int		WED_LiveryPane::MouseDown(int x, int y, int button)
 		return 1;
 	}
 
-	int handle = SliderHandleForXY(b, x, y);
+	// The add/clear button, and the bars, both before the slider - the button
+	// overlaps the slider's row, and a press on a bar must not be read as a
+	// press on anything underneath it.
+	{
+		float wb[4];
+		WeightButtonRect(b, wb);
+		if (x >= wb[0] && x <= wb[2] && y >= wb[1] && y <= wb[3])
+		{
+			mTrackWeightButton = true;
+			Refresh();
+			return 1;
+		}
+	}
+
+	int wbar = WeightBarForXY(b, x, y);
+	if (wbar >= 0)
+	{
+		int w[6];
+		if (!SelectionWeights(w))
+		{
+			// Mixed selection: the first drag unifies it, which is the rule the
+			// tri-state operator checkbox already uses. Start from the first
+			// ramp's own weights so the gesture has somewhere to stand.
+			if (!mSelectedRamps.empty() && !mSelectedRamps[0]->GetClassWeights(w))
+				for (int k = 0; k < 6; ++k) w[k] = 0;
+		}
+		memcpy(mDragWeights,  w, sizeof(w));
+		memcpy(mDragWeights0, w, sizeof(w));	// what MouseUp compares against
+
+		mDragWeightBar = wbar;
+		mArchive->StartCommand("Set Spawn Weights");
+
+		mDragWeights[wbar] = WeightValueForY(b, y);
+		ApplyWeightDrag();
+		Refresh();
+		return 1;
+	}
+
+	// A stand carrying weights has its size derived from them (R23), so the
+	// slider is a readout, not a control. Refusing the hit here is the other
+	// half of drawing it greyed - a visual-only disable that still responds to
+	// clicks is exactly the bug that two-part idiom exists to prevent.
+	int handle = SelectionHasWeights() ? -1 : SliderHandleForXY(b, x, y);
 	if (handle >= 0)
 	{
 		int minIdx = WidthEnumToIndex(mSelectedRamps[0]->GetWidthMin());
@@ -1980,6 +2253,23 @@ void	WED_LiveryPane::MouseDrag(int x, int y, int button)
 		return;
 	}
 
+	// The gesture is locked to the bar it started on. Sliding sideways does NOT
+	// paint across the neighbours: an author correcting one class should not
+	// discover they have flattened the other five.
+	if (mDragWeightBar >= 0)
+	{
+		int bw[4];
+		GetBounds(bw);
+		int v = WeightValueForY(bw, y);
+		if (v != mDragWeights[mDragWeightBar])
+		{
+			mDragWeights[mDragWeightBar] = v;
+			ApplyWeightDrag();
+			Refresh();
+		}
+		return;
+	}
+
 	if (mDragHandle < 0) return;
 
 	int b[4];
@@ -2018,6 +2308,37 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 {
 	int b[4];
 	GetBounds(b);
+
+	if (mTrackWeightButton)
+	{
+		mTrackWeightButton = false;
+		float wb[4];
+		WeightButtonRect(b, wb);
+		if (x >= wb[0] && x <= wb[2] && y >= wb[1] && y <= wb[3])
+		{
+			if (SelectionHasWeights())	ClearWeights();
+			else						SeedWeightsFromSizeRange();
+		}
+		Refresh();
+		return;
+	}
+
+	if (mDragWeightBar >= 0)
+	{
+		// Commit only if something moved. A click that lands on a bar's
+		// existing height is a no-op, and a no-op has no business on the undo
+		// stack - the same call the map's handle tool makes when a drag turns
+		// out to have moved zero pixels.
+		if (memcmp(mDragWeights, mDragWeights0, sizeof(mDragWeights)) == 0)
+			mArchive->AbortCommand();
+		else
+			mArchive->CommitCommand();
+
+		mDragWeightBar = -1;
+		mCoverageDirty = true;
+		Refresh();
+		return;
+	}
 
 	if (mContentDragStartY >= 0)
 	{
@@ -2650,6 +2971,147 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		glColor4f(0.05f, 0.05f, 0.05f, 1.0f);
 		DrawCircleOutline(max_x, track_y, handle_r);
 		DrawGrabberDashes(max_x, track_y, handle_r);
+
+		// Once weights exist the size letter is DERIVED from them (R23), so
+		// this control is a readout. Mask it the way the disabled Recommend
+		// button is masked - the hit tests already refuse it, and this is the
+		// half that says so.
+		if (SelectionHasWeights())
+		{
+			state->SetState(0,0,0,0,1,0,0);
+			glColor4f(0.0f, 0.0f, 0.0f, 0.55f);
+			glBegin(GL_QUADS);
+				glVertex2f((float) b[0] + 1, slider_bot);
+				glVertex2f((float) b[2] - 1, slider_bot);
+				glVertex2f((float) b[2] - 1, slider_top);
+				glVertex2f((float) b[0] + 1, slider_top);
+			glEnd();
+			state->SetState(0,0,0,0,0,0,0);
+			GUI_FontDraw(state, font_UI_Basic, WED_Color_RGBA(wed_Table_Text),
+						 b[0] + pad, slider_bot + 4, "Size is derived from the weights below");
+		}
+	}
+
+	// --- spawn weight bars (apt.dat row 1313) ---
+	// Only drawn when the selection actually has weights; WeightsHeight()
+	// collapses the section to nothing otherwise, and the button below is how
+	// an author gets here from there.
+	if (!mSelectedRamps.empty() && WeightsHeight() > 0)
+	{
+		float wtop, wbot;
+		WeightsYRange(b, wtop, wbot);
+
+		int w[6];
+		const bool uniform = SelectionWeights(w);
+		if (!uniform) for (int i = 0; i < 6; ++i) w[i] = 0;
+		const int track_max = WeightTrackMax();
+
+		int total = 0;
+		for (int i = 0; i < 6; ++i) total += w[i];
+
+		// zone background, matching the slider and the readout above and below
+		state->SetState(0,0,0,0,0,0,0);
+		glColor4f(0.14f, 0.14f, 0.14f, 1.0f);
+		glBegin(GL_QUADS);
+			glVertex2f((float) b[0] + 1, wbot);
+			glVertex2f((float) b[2] - 1, wbot);
+			glVertex2f((float) b[2] - 1, wtop);
+			glVertex2f((float) b[0] + 1, wtop);
+		glEnd();
+		glColor4f(0.40f, 0.40f, 0.40f, 1.0f);
+		glBegin(GL_LINE_LOOP);
+			glVertex2f((float) b[0] + 1, wbot);
+			glVertex2f((float) b[2] - 1, wbot);
+			glVertex2f((float) b[2] - 1, wtop);
+			glVertex2f((float) b[0] + 1, wtop);
+		glEnd();
+
+		float * hdr_col = WED_Color_RGBA(wed_Header_Text);
+		float * lbl_col = WED_Color_RGBA(wed_Table_Text);
+		float   dim[4]  = { 0.62f, 0.62f, 0.62f, 1.0f };
+
+		GUI_FontDraw(state, font_UI_Basic, hdr_col, b[0] + pad, wtop - line_h * 0.9f,
+					 uniform ? "Spawn Distribution (relative)" : "Spawn Distribution - selection differs");
+
+		for (int i = 0; i < 6; ++i)
+		{
+			float r[4];
+			WeightBarRect(b, i, r);
+			float full_h = r[3] - r[1];
+			float frac   = (track_max > 0) ? (float) w[i] / (float) track_max : 0.0f;
+			float fill_t = r[1] + full_h * frac;
+
+			const bool hot = (i == mHoverWeightBar) || (i == mDragWeightBar);
+
+			// the empty column, so a zero bar is still a visible drop target
+			state->SetState(0,0,0,0,0,0,0);
+			glColor4f(0.20f, 0.20f, 0.20f, 1.0f);
+			glBegin(GL_QUADS);
+				glVertex2f(r[0], r[1]); glVertex2f(r[0], r[3]);
+				glVertex2f(r[2], r[3]); glVertex2f(r[2], r[1]);
+			glEnd();
+
+			if (w[i] > 0)
+			{
+				if (hot) glColor4f(0.42f, 0.72f, 1.00f, 1.0f);
+				else     glColor4f(0.30f, 0.60f, 0.90f, 1.0f);
+				glBegin(GL_QUADS);
+					glVertex2f(r[0], r[1]); glVertex2f(r[0], fill_t);
+					glVertex2f(r[2], fill_t); glVertex2f(r[2], r[1]);
+				glEnd();
+			}
+
+			glColor4f(hot ? 0.85f : 0.45f, hot ? 0.85f : 0.45f, hot ? 0.85f : 0.45f, 1.0f);
+			glBegin(GL_LINE_LOOP);
+				glVertex2f(r[0], r[1]); glVertex2f(r[0], r[3]);
+				glVertex2f(r[2], r[3]); glVertex2f(r[2], r[1]);
+			glEnd();
+
+			// class letter, then the share this bar represents - the share is
+			// what the author is actually reasoning about, the integer is just
+			// how it gets stored.
+			float cx = (r[0] + r[2]) * 0.5f;
+			float tw = GUI_MeasureRange(font_UI_Basic, kWidthLabels[i], kWidthLabels[i] + 1);
+			GUI_FontDraw(state, font_UI_Basic, lbl_col, cx - tw * 0.5f, r[1] - line_h - 2, kWidthLabels[i]);
+
+			char pct[16];
+			if (!uniform)        snprintf(pct, sizeof(pct), "--");
+			else if (total <= 0) snprintf(pct, sizeof(pct), "0%%");
+			else                 snprintf(pct, sizeof(pct), "%d%%", (int) (100.0f * w[i] / total + 0.5f));
+			float pw = GUI_MeasureRange(font_UI_Basic, pct, pct + strlen(pct));
+			GUI_FontDraw(state, font_UI_Basic, (w[i] > 0) ? lbl_col : dim,
+						 cx - pw * 0.5f, r[1] - line_h * 2 - 3, pct);
+		}
+
+		if (uniform && total == 0)
+			GUI_FontDraw(state, font_UI_Basic, dim, b[0] + pad + 200, wtop - line_h * 0.9f,
+						 "- all zero: nothing parks here, deliberately");
+	}
+
+	// --- the add/clear button, on the slider's row ---
+	if (!mSelectedRamps.empty())
+	{
+		float wb[4];
+		WeightButtonRect(b, wb);
+		const bool has = SelectionHasWeights();
+
+		state->SetState(0,0,0,0,0,0,0);
+		float k = mTrackWeightButton ? 0.82f : (mHoverWeightButton ? 1.15f : 1.0f);
+		glColor4f(0.26f * k, 0.30f * k, 0.36f * k, 1.0f);
+		glBegin(GL_QUADS);
+			glVertex2f(wb[0], wb[1]); glVertex2f(wb[0], wb[3]);
+			glVertex2f(wb[2], wb[3]); glVertex2f(wb[2], wb[1]);
+		glEnd();
+		glColor4f(0.55f, 0.55f, 0.58f, 1.0f);
+		glBegin(GL_LINE_LOOP);
+			glVertex2f(wb[0], wb[1]); glVertex2f(wb[0], wb[3]);
+			glVertex2f(wb[2], wb[3]); glVertex2f(wb[2], wb[1]);
+		glEnd();
+
+		const char * cap = has ? "Clear Weights" : "Set Spawn Weights";
+		float cw = GUI_MeasureRange(font_UI_Basic, cap, cap + strlen(cap));
+		GUI_FontDraw(state, font_UI_Basic, WED_Color_RGBA(wed_Table_Text),
+					 (wb[0] + wb[2]) * 0.5f - cw * 0.5f, wb[1] + 4, cap);
 	}
 
 	// --- coverage readout (WED_LiveryFormatSpec.md §4.5) ---
@@ -2794,6 +3256,29 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			snprintf(head,   sizeof(head),   "All %d selected stands can be filled", mCoverage.stands);
 			head_col = col_good;
 			snprintf(detail, sizeof(detail), "Each stand measured against its own size range and operator list.");
+		}
+
+		// Variety collapse outranks the ordinary "it works" line, because from
+		// the author's side nothing looks wrong: the stand spawns aircraft, the
+		// occupancy reads high, and every one of them is the same airline. It
+		// does NOT outrank an empty stand - that is still the worse news - so
+		// only a healthy-looking readout gets replaced.
+		if (!mCoverage.sole_operator.empty() && head_col != col_warn)
+		{
+			string nice = mCoverage.sole_operator;
+			for (size_t i = 0; i < nice.size(); ++i) nice[i] = (char) toupper((unsigned char) nice[i]);
+
+			char rng[8];
+			if (mCoverage.lo_class == mCoverage.hi_class)
+				snprintf(rng, sizeof(rng), "%c", mCoverage.lo_class);
+			else
+				snprintf(rng, sizeof(rng), "%c-%c", mCoverage.lo_class, mCoverage.hi_class);
+
+			snprintf(head, sizeof(head), "Only %s will ever park here", nice.c_str());
+			head_col = col_warn;
+			snprintf(detail, sizeof(detail),
+				"The other %d listed operators have no aircraft at size %s, so every aircraft on this stand is the same airline.",
+				mCoverage.airlines_listed - 1, rng);
 		}
 
 		// §4.5: the readout MUST name what it resolved against. Appended rather

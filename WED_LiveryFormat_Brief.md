@@ -27,8 +27,12 @@ two-row draft was trying to do.
 
 ### 1. A row code — 10 minutes
 
-We used `1313`. **Any unused number works**; we need yours before we write the
-importer. This is the only one blocking us.
+We used `1313`. **Any unused number works.**
+
+We are not waiting on it to build - the reader, writer and editor are done, with
+the code as one constant, so your answer changes a single line. We are waiting on
+it to let a file leave this machine. Nothing goes to the Gateway, or into a
+build anyone else runs, carrying a number you have not agreed to.
 
 It was four rows, then two, now one. The grouping machinery went when we measured
 what it actually shared and found it was six integers (spec §8.2). The

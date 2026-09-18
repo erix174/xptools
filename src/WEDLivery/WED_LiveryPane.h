@@ -118,6 +118,11 @@ private:
 	float				HeaderHeight(void) const;
 	float				FilterRowHeight(void) const;
 	float				SliderHeight(void) const;
+	// 0 when the selection has no weights at all, which collapses the whole
+	// section away - see WeightsYRange(). A stand only gets weights by being
+	// asked for them, so an author who never presses the button never gets a
+	// 1313 row on anything (R17).
+	float				WeightsHeight(void) const;
 	float				CoverageHeight(void) const;
 	float				ListToolbarHeight(void) const;
 	float				GapHeight(void) const;
@@ -125,7 +130,30 @@ private:
 	void				HeaderYRange(int bounds[4], float & top, float & bot) const;
 	void				FilterYRange(int bounds[4], float & top, float & bot) const;
 	void				SliderYRange(int bounds[4], float & top, float & bot) const;
+	void				WeightsYRange(int bounds[4], float & top, float & bot) const;
 	void				CoverageYRange(int bounds[4], float & top, float & bot) const;
+
+	// ---- spawn weight bars (apt.dat row 1313) ----
+	// Six draggable bars, one per ICAO wingspan class, sharing the size
+	// slider's horizontal track so each bar sits directly under its own A-F
+	// tick label. Hand-drawn, like everything else in this pane: WED has no
+	// multi-value numeric control anywhere to reuse.
+	bool				SelectionWeights(int out_w[6]) const;	// false if none, or if the selection disagrees
+	bool				SelectionHasWeights(void) const;
+	int					WeightBarForXY(int bounds[4], int x, int y) const;	// -1 if not on one
+	int					WeightValueForY(int bounds[4], int y) const;		// snapped to an integer, clamped
+	int					WeightTrackMax(void) const;			// 10, or higher if an imported file needs it
+	void				WeightBarRect(int bounds[4], int idx, float r_out[4]) const;
+	void				ApplyWeightDrag(void);				// writes mDragWeights to every selected ramp
+	void				AbortWeightDrag(void);				// rolls back an unfinished drag; no-op if none
+
+	// The two ways in and out of having weights at all. Seeding is the ONLY
+	// path that creates a 1313 row, and clearing returns the stand to "no row",
+	// which is NOT the same as six zeros - that is a legal way to say nothing
+	// parks here (spec §4.2), and the UI has to offer both.
+	void				SeedWeightsFromSizeRange(void);
+	void				ClearWeights(void);
+	void				WeightButtonRect(int bounds[4], float b_out[4]) const;
 	void				ListToolbarYRange(int bounds[4], float & top, float & bot) const;
 	float				ContentTop(int bounds[4]) const;		// top Y of the airline checklist
 
@@ -169,6 +197,12 @@ private:
 		int		classes_filled;
 		int		airlines_listed;
 		int		airlines_eligible;	// at least one model somewhere in the range
+		// The operator that will park here when it is the ONLY one that can.
+		// Empty unless airlines_eligible == 1 and more than one was listed -
+		// see the audit: 17.5% of multi-operator stands collapse to exactly one
+		// airline forever, which produces aircraft, looks fine, and is invisible
+		// to every P(empty) check in the design.
+		std::string	sole_operator;
 		char	lo_class, hi_class;	// 'A'..'F'
 	};
 	void				RecomputeCoverage(void);
@@ -314,6 +348,18 @@ private:
 	int							mDragHandle;		// -1 when not dragging
 	int							mDragAnchorIndex;
 	int							mDragCurrentIndex;
+
+	// Weight-bar drag. mDragWeightBar is the grabbed bar, -1 when idle; the
+	// gesture is locked to it, so sliding sideways never paints across its
+	// neighbours. mDragWeights is the live vector being written; mDragWeights0
+	// is what it was when the mouse went down, so MouseUp can abort instead of
+	// commit when nothing actually moved - a click that lands on a bar's
+	// existing height must not leave an entry on the undo stack.
+	int							mDragWeightBar;
+	int							mDragWeights[6];
+	int							mDragWeights0[6];
+	int							mHoverWeightBar;	// -1 when the cursor is off the bars
+	bool						mHoverWeightButton, mTrackWeightButton;
 
 	// Single reference table for everything the picker needs to know about
 	// an airport before looking at any one ramp: country (flag banner +
