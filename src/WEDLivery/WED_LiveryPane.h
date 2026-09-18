@@ -303,6 +303,7 @@ private:
 										const AirlineCard & card, int show,
 										bool is_selected, bool is_hover, bool is_pressed,
 										bool is_locked, bool is_dimmed,
+										float tray_open,
 										int & renders_this_frame);
 	void				DrawCardTray(GUI_GraphState * state, const RowSlot & slot,
 									 const AirlineCard & card, float open_frac);
@@ -503,6 +504,7 @@ private:
 	// from the gesture's TOTAL cursor movement rather than accumulated per-move
 	// deltas (which would drift over a long drag).
 	int							mContentDragStartY;
+	int							mContentDragStartX;		// so MouseUp can tell a click from a scroll
 	float						mContentDragStartOffset;
 
 	virtual void				TimerFired(void);

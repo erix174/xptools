@@ -145,6 +145,8 @@ namespace
 		string				icao;			// lowercase, matches WED_RampPosition::CorrectAirlinesString's convention - wed_Row_Airline only
 		string				name;			// display name if known, else empty (falls back to just the code) - wed_Row_Airline only
 		string				header_text;	// wed_Row_Header only
+		int					hidden_count;	// wed_Row_Header only: rows a collapse is holding back
+		WED_LiveryDisplayRow() : kind(wed_Row_Airline), hidden_count(0) {}
 	};
 
 	// Case-insensitive substring test. `needle_lower` must already be
@@ -570,6 +572,36 @@ namespace
 		rows.swap(out);
 	}
 
+	// A header whose rows were all dropped is worse than no section: it reads as
+	// "this tier is broken" when the truth is "everything here was already shown
+	// above, or none of it is modelled". AppendAirlineSection decides whether to
+	// emit a header BEFORE DropCardless has run, so it cannot know - this does.
+	//
+	// A section that deliberately kept a note ("nothing here matches ...") is left
+	// alone: that one is saying something.
+	void PruneEmptySections(vector<WED_LiveryDisplayRow> & rows)
+	{
+		vector<bool> drop(rows.size(), false);
+		for (size_t i = 0; i < rows.size(); ++i)
+		{
+			if (rows[i].kind != wed_Row_Header) continue;
+			bool has_content = false;
+			size_t j = i + 1;
+			for (; j < rows.size() && rows[j].kind != wed_Row_Header; ++j)
+				if (rows[j].kind == wed_Row_Airline || rows[j].kind == wed_Row_Note)
+					{ has_content = true; break; }
+			if (has_content) continue;
+			// the header plus the structural padding that came with it
+			for (size_t k = i; k < rows.size() && (k == i || rows[k].kind == wed_Row_Gap ||
+												   rows[k].kind == wed_Row_Divider); ++k)
+				drop[k] = true;
+		}
+		vector<WED_LiveryDisplayRow> out;
+		for (size_t i = 0; i < rows.size(); ++i)
+			if (!drop[i]) out.push_back(rows[i]);
+		rows.swap(out);
+	}
+
 	// Drops the airline rows of any collapsed section, keeping its header. Only the
 	// header is left behind, so the section can be reopened - and "All Airlines"
 	// starts collapsed, because it is the tier with no filter behind it and
@@ -585,6 +617,19 @@ namespace
 			if (rows[i].kind == wed_Row_Header)
 				skipping = collapsed.count(rows[i].header_text) != 0;
 			if (skipping && rows[i].kind != wed_Row_Header) continue;
+			// A collapsed header carries the count it is holding back, so the reader
+			// can tell "closed, 37 operators inside" from "this tier is empty". With
+			// no number those two look identical, which is exactly the confusion the
+			// empty-section pruning above exists to prevent.
+			if (skipping && rows[i].kind == wed_Row_Header)
+			{
+				int n = 0;
+				for (size_t j = i + 1; j < rows.size() && rows[j].kind != wed_Row_Header; ++j)
+					if (rows[j].kind == wed_Row_Airline) ++n;
+				out.push_back(rows[i]);
+				out.back().hidden_count = n;
+				continue;
+			}
 			out.push_back(rows[i]);
 		}
 		rows.swap(out);
@@ -911,7 +956,8 @@ WED_LiveryPane::WED_LiveryPane(
 	mHoverClearButton(false),
 	mTrackClearButton(false),
 	mScrollOffset(0),
-	mContentDragStartY(-1),		// declared later in the header (after mCachedStatusLines) -
+	mContentDragStartY(-1),
+	mContentDragStartX(-1),		// declared later in the header (after mCachedStatusLines) -
 	mContentDragStartOffset(0),	// listed here anyway so all the "simple scalar" inits stay together
 	mCycleShow(0),
 	mCycleAccum(0.0f),
@@ -1054,6 +1100,7 @@ void	WED_LiveryPane::Hide(void)
 	// tab that gets hidden never receives the MouseUp that would have cleared
 	// it, so the pane came back still believing a gesture was in progress.
 	mContentDragStartY    = -1;
+	mContentDragStartX    = -1;
 	mTrackRow             = -1;
 	mTrackFilterChip      = -1;
 	mTrackSortButton      = false;
@@ -2213,6 +2260,7 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 										const AirlineCard & card, int show,
 										bool is_selected, bool is_hover, bool is_pressed,
 										bool is_locked, bool is_dimmed,
+										float tray_open,
 										int & renders_this_frame)
 {
 	if (card.abs_paths.empty()) return;
@@ -2458,6 +2506,42 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 	}
 	if (!caption.empty())
 		GUI_FontDraw(state, font_UI_Basic, text_col, card_x0 + 5, text_y, caption.c_str());
+
+	// --- disclosure triangle, left end of the bottom bar. ONLY on cards that have
+	// more than one livery: on a single-aircraft card there is nothing to page
+	// through and nothing for a tray to list, so an arrow there would promise a
+	// slideshow that never comes. Its presence is therefore the answer to "is this
+	// card supposed to be cycling" - which is unanswerable without it, since a
+	// still card and a card with one aircraft look identical.
+	//
+	// Points right when shut and rotates to point down as the tray extends, driven
+	// by the same 0..1 the tray height uses, so the arrow and the drawer are never
+	// out of step. Long and narrow rather than equilateral - a stubby triangle at
+	// this size reads as a blob.
+	if (card.abs_paths.size() > 1)
+	{
+		const float cx  = card_x0 + 9.0f;
+		const float cy  = card_bot + kTrayTabH * 0.5f;
+		const float lon = 5.5f, lat = 3.2f;		// along the pointing axis, and across it
+
+		// Defined pointing RIGHT, then rotated to wherever the tray has got to: a
+		// real rotation rather than a lerp between two shapes, so the triangle keeps
+		// its proportions all the way round instead of flattening in the middle.
+		float t = (tray_open < 0.0f) ? 0.0f : (tray_open > 1.0f ? 1.0f : tray_open);
+		float a = -1.57079633f * t;				// 0 = right, -90 deg = down
+		float ca = cosf(a), sa = sinf(a);
+
+		const float px[3] = {  lon, -lon * 0.55f, -lon * 0.55f };
+		const float py[3] = { 0.0f, -lat,          lat         };
+
+		state->SetState(0,0,0,0,1,0,0);
+		glColor4f(0.82f, 0.82f, 0.86f, is_dimmed ? 0.35f : 0.90f);
+		glBegin(GL_TRIANGLES);
+			for (int i = 0; i < 3; ++i)
+				glVertex2f(cx + px[i] * ca - py[i] * sa,
+						   cy + px[i] * sa + py[i] * ca);
+		glEnd();
+	}
 
 	// --- another card holds the lock, so this one is out of the running. A flat
 	// wash over the finished card rather than a different set of colours for every
@@ -2818,6 +2902,7 @@ int		WED_LiveryPane::MouseMove(int x, int y)
 		vector<WED_LiveryDisplayRow> rows = BuildCurrentDisplayRows(mSelectedRamps[0], mSortDescending,
 											gShowLiveryRecommendation != 0, mAirportDb, mCurrentAirportIcao, mSearchQuery, mAirlineDirectory, mPopularAirlinesShuffleCache);
 		{ set<string> have; CardKeys(have); DropCardless(rows, have); }
+	PruneEmptySections(rows);
 	PinSelected(rows, ParseCodes(mSelectedRamps[0]->GetAirlines()));
 		ApplyCollapse(rows, mCollapsedSections);
 		vector<bool> is_card;  vector<string> row_icaos;  vector<float> tray_h;
@@ -2992,6 +3077,7 @@ int		WED_LiveryPane::MouseDown(int x, int y, int button)
 	vector<WED_LiveryDisplayRow> rows = BuildCurrentDisplayRows(mSelectedRamps[0], mSortDescending,
 										gShowLiveryRecommendation != 0, mAirportDb, mCurrentAirportIcao, mSearchQuery, mAirlineDirectory, mPopularAirlinesShuffleCache);
 	{ set<string> have; CardKeys(have); DropCardless(rows, have); }
+	PruneEmptySections(rows);
 	PinSelected(rows, ParseCodes(mSelectedRamps[0]->GetAirlines()));
 	ApplyCollapse(rows, mCollapsedSections);
 	vector<bool> is_card;  vector<string> row_icaos;  vector<float> tray_h;
@@ -3000,6 +3086,7 @@ int		WED_LiveryPane::MouseDown(int x, int y, int button)
 	if (y <= ContentTop(b))
 	{
 		mContentDragStartY = y;
+		mContentDragStartX = x;
 		mContentDragStartOffset = mScrollOffset;
 	}
 
@@ -3113,20 +3200,24 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 		return;
 	}
 
+	// A press in the content area arms a drag-scroll, and this used to swallow the
+	// release unconditionally - which quietly disabled EVERY click in the list once
+	// the cards became the list: section headers would not expand, the lock badge
+	// and tray tab did nothing, and operators could not be ticked. Only consume the
+	// release when the cursor actually travelled; otherwise it was a click, and the
+	// handling below is what it was for.
 	if (mContentDragStartY >= 0)
 	{
-		// Toggle only if this was a click rather than a drag-scroll: the cursor has
-		// to have stayed within a few pixels of where it went down AND still be on
-		// the same card. Anything looser and every scroll drag would flip whichever
-		// card it started on.
-		// No card toggle any more. The selection these cards used to carry served
-		// the per-stand aircraft-type whitelist that draft 7 deleted (spec §8.6),
-		// so a tick on one has nothing left to mean - and the list is rebuilt
-		// whenever the operators or weights change, which would have walked an
-		// index-keyed mark onto a different aircraft. They are previews now.
-		mContentDragStartY = -1;	// nothing to commit - scrolling is view state, not document state
-		Refresh();
-		return;
+		const int kDragSlop = 3;
+		bool moved = (abs(y - mContentDragStartY) > kDragSlop) ||
+					 (mContentDragStartX >= 0 && abs(x - mContentDragStartX) > kDragSlop);
+		mContentDragStartY = -1;	// scrolling is view state, not document state - nothing to commit
+		mContentDragStartX = -1;
+		if (moved)
+		{
+			Refresh();
+			return;
+		}
 	}
 
 	if (mDragHandle >= 0)
@@ -3201,6 +3292,7 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 	vector<WED_LiveryDisplayRow> rows = BuildCurrentDisplayRows(mSelectedRamps[0], mSortDescending,
 										gShowLiveryRecommendation != 0, mAirportDb, mCurrentAirportIcao, mSearchQuery, mAirlineDirectory, mPopularAirlinesShuffleCache);
 	{ set<string> have; CardKeys(have); DropCardless(rows, have); }
+	PruneEmptySections(rows);
 	PinSelected(rows, ParseCodes(mSelectedRamps[0]->GetAirlines()));
 	ApplyCollapse(rows, mCollapsedSections);
 	vector<bool> is_card;  vector<string> row_icaos;  vector<float> tray_h;
@@ -4395,6 +4487,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			vector<WED_LiveryDisplayRow> rows = BuildCurrentDisplayRows(mSelectedRamps[0], mSortDescending,
 												gShowLiveryRecommendation != 0, mAirportDb, mCurrentAirportIcao, mSearchQuery, mAirlineDirectory, mPopularAirlinesShuffleCache);
 			{ set<string> have; CardKeys(have); DropCardless(rows, have); }
+	PruneEmptySections(rows);
 	PinSelected(rows, ParseCodes(mSelectedRamps[0]->GetAirlines()));
 			ApplyCollapse(rows, mCollapsedSections);
 			// How many of the selected ramps carry each code, computed ONCE per draw.
@@ -4536,10 +4629,14 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 					const bool dimmed = (!mLockedAirline.empty() && row.icao != mLockedAirline);
 
 					keep_alive_paths.insert(ac->abs_paths[show]);
+					float tray_frac = (rows[vi].icao == mTrayAirline)    ? mTrayOpen
+									: (rows[vi].icao == mTrayClosing)    ? mTrayClosingOpen
+									: 0.0f;
+
 					DrawAirlineCard(state, slots[vi], *ac, show,
 									n_with == n_ramps, (int) vi == mHoverRow,
 									(int) vi == mTrackRow, locked, dimmed,
-									renders_this_frame);
+									tray_frac, renders_this_frame);
 
 					if (row.icao == mTrayAirline && mTrayOpen > 0.0f)
 						DrawCardTray(state, slots[vi], *ac, mTrayOpen);
@@ -4584,7 +4681,12 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 					// tier that simply had nothing in it - which is a different
 					// thing this pane goes out of its way to distinguish elsewhere.
 					string htxt = row.header_text;
-					if (mCollapsedSections.count(row.header_text)) htxt += "   (click to expand)";
+					if (mCollapsedSections.count(row.header_text))
+					{
+						char n[48];
+						snprintf(n, sizeof(n), "   (%d - click to expand)", row.hidden_count);
+						htxt += n;
+					}
 					GUI_FontDraw(state, font_UI_Basic, row_col, b[0] + pad, row_bot + (row_h - line_h) * 0.5f, htxt.c_str());
 					// Every section except the last ("All Airlines") is some flavor of
 					// recommendation (manual pin, direct hit, same country, or popular fleet) -
