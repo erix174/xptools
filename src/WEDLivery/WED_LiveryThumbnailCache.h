@@ -68,22 +68,22 @@ public:
 	WED_LiveryThumbnailCache() {}
 	~WED_LiveryThumbnailCache() { DiscardAll(); }
 
-	// True if obj_vpath already has a cached texture - i.e. calling GetThumbnail() for
+	// True if obj_path already has a cached texture - i.e. calling GetThumbnail() for
 	// it right now is a cheap map lookup, NOT a fresh off-screen render. Callers use
 	// this to budget how many actual renders happen in a single frame (see
 	// WED_LiveryPane::Draw()'s card strip block) - a burst of newly-visible,
 	// never-rendered cards (e.g. a big scrollbar jump) is throttled to a handful of
 	// new renders per frame rather than rendering all of them in one frame, which is
 	// what caused the visible stutter/thrash on fast repeated scrolling.
-	bool	IsCached(const std::string & obj_vpath) const;
+	bool	IsCached(const std::string & obj_path) const;
 
-	// Returns the cached thumbnail for obj_vpath, rendering it first if this is the
+	// Returns the cached thumbnail for obj_path, rendering it first if this is the
 	// first time it's been asked for. Returns NULL if the resource couldn't be loaded
 	// as an .obj (caller should just skip drawing that card's image this frame), or if
 	// the cache is already at its hard capacity (see the .cpp) and this would be a new
 	// entry - a defensive ceiling, not something normal use should ever actually hit.
 	const WED_LiveryThumbnail *	GetThumbnail(WED_ResourceMgr * res_mgr, ITexMgr * tex_mgr,
-									GUI_GraphState * g, const std::string & obj_vpath);
+									GUI_GraphState * g, const std::string & obj_path);
 
 	// Frees the GL texture for every cached entry whose vpath is NOT in
 	// currently_visible - call once per Draw() with the vpaths of cards actually in

@@ -222,4 +222,14 @@ std::string	WED_LiveryDisplayName(const std::string & airline_name,
 // or an empty string when no X-Plane folder has been selected yet.
 std::string	WED_LiveryIndexDefaultPath(void);
 
+// <X-Plane root>/Resources/default scenery/sim objects/apt_aircraft/, "" if no
+// usable root is selected yet.
+std::string	WED_LiveryAssetDir(void);
+
+// An index row's obj_path made openable: joined onto the asset directory and
+// separator-normalised. "" when there is no root, or the path was empty.
+// ALWAYS build a livery's real path with this rather than concatenating - see
+// the .cpp for the two ways a hand-built one fails, both of them silent.
+std::string	WED_LiveryObjectPath(const std::string & obj_path);
+
 #endif /* WED_LIVERYINDEX_H */

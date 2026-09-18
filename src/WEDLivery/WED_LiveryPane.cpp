@@ -27,7 +27,7 @@
 #include "WED_FlagAssets.h"
 #include "WED_FlagProjector.h"
 #include "WED_FlagIndex.h"
-#include "WED_LibraryMgr.h"		// card strip placeholder object picker - see PickPlaceholderObjectVpaths()
+#include "WED_LibraryMgr.h"
 
 #include "WED_RampPosition.h"
 #include "WED_Airport.h"
@@ -792,10 +792,6 @@ static string CodesToString(const set<string> & codes)
 	return oss.str();
 }
 
-// How many preview cards sit above the checklist. Single source of truth: the
-// placeholder picker, CardsBlockHeight() and Draw()'s range math all use it, so they
-// can't drift out of sync with each other.
-static const int kCardCount = 4;
 
 // Aspect of a card's image area. MUST match kThumbW/kThumbH in
 // WED_LiveryThumbnailCache.cpp - that's the shape the cached texture is rendered at,
@@ -810,35 +806,6 @@ static const float kCardImageAspect = 32.0f / 9.0f;
 // value rather than scaling with the pane.
 static const int   kCardCols = 2;
 static const float kCardGap  = 6.0f;
-
-// Card placeholder (framework only - no airline/aircraft matching yet, see
-// WED_LiveryThumbnailCache.h). Walks the library tree collecting the first `n` plain
-// .obj resources it finds, with zero regard for whether they look anything like an
-// aircraft - this exists purely to prove the render/cache/evict pipeline against SOME
-// real .obj data. Recurses depth-first; gives up once `out` has n entries.
-static void CollectPlaceholderObjectVpaths(WED_LibraryMgr * lib_mgr, const string & dir, int n, vector<string> & out)
-{
-	if ((int) out.size() >= n) return;
-
-	vector<string> children;
-	lib_mgr->GetResourceChildren(dir, pack_Library, children);
-	for (vector<string>::const_iterator c = children.begin(); c != children.end() && (int) out.size() < n; ++c)
-	{
-		res_type t = lib_mgr->GetResourceType(*c);
-		if (t == res_Directory)
-			CollectPlaceholderObjectVpaths(lib_mgr, *c, n, out);
-		else if (t == res_Object)
-			out.push_back(*c);
-	}
-}
-
-static vector<string> PickPlaceholderObjectVpaths(WED_LibraryMgr * lib_mgr, int n)
-{
-	vector<string> out;
-	if (lib_mgr)
-		CollectPlaceholderObjectVpaths(lib_mgr, string(), n, out);
-	return out;
-}
 
 WED_LiveryPane::WED_LiveryPane(
 						IResolver *		resolver,
@@ -874,7 +841,6 @@ WED_LiveryPane::WED_LiveryPane(
 	mContentDragStartY(-1),		// declared later in the header (after mCachedStatusLines) -
 	mContentDragStartOffset(0),	// listed here anyway so all the "simple scalar" inits stay together
 	mHoverCard(-1),
-	mTrackCard(-1),
 	mDragWeightBar(-1),
 	mHoverWeightBar(-1),
 	mHoverWeightButton(false),
@@ -947,10 +913,9 @@ WED_LiveryPane::WED_LiveryPane(
 
 	RebuildSelection();
 
-	// Card placeholder data - see PickPlaceholderObjectVpaths()'s own comment.
-	mPreviewObjVpaths = PickPlaceholderObjectVpaths(WED_GetLibraryMgr(mResolver), kCardCount);
-	LOG_MSG("I/LiveryPane found %d placeholder object(s) for the preview cards\n", (int) mPreviewObjVpaths.size());
-	LOG_FLUSH();
+	// Cards are built from the livery index on the first Draw and rebuilt
+	// whenever the selection, the operators or the weights change - see
+	// RebuildPreviewCards(). There is nothing to seed here.
 }
 
 WED_LiveryPane::~WED_LiveryPane()
@@ -1000,7 +965,6 @@ void	WED_LiveryPane::Hide(void)
 	// tab that gets hidden never receives the MouseUp that would have cleared
 	// it, so the pane came back still believing a gesture was in progress.
 	mContentDragStartY    = -1;
-	mTrackCard            = -1;
 	mTrackRow             = -1;
 	mTrackFilterChip      = -1;
 	mTrackSortButton      = false;
@@ -1222,6 +1186,92 @@ void	WED_LiveryPane::RebuildSelection(void)
 			int my_tab = mHostTabs->GetTabForPane(this);
 			if (my_tab >= 0) mHostTabs->SetTab(my_tab);
 			mLastAutoSwitchedInRamps = mSelectedRamps;
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------------------------
+// preview cards
+// ---------------------------------------------------------------------------------------------
+
+// One card per livery that can actually spawn on the selected stand.
+//
+// The question asked here is deliberately the same one RecomputeCoverage() asks
+// - which classes can spawn, and which of the listed operators has a livery at
+// each - so the cards and the sentence above them are answers to one query
+// rather than two that can disagree. They used to disagree spectacularly: a
+// stand reading "this stand parks nothing" had four aircraft pictured directly
+// underneath it, because the cards were the first four objects in the library
+// and had nothing to do with the ramp at all.
+//
+// Obsolete liveries need no filtering here. R25 keeps them out of the index's
+// lookup tables entirely, so a query cannot return one.
+void	WED_LiveryPane::RebuildPreviewCards(void)
+{
+	mPreviewCards.clear();
+
+	if (mSelectedRamps.size() != 1) return;		// a mixed selection has no single answer to preview
+	if (!mLiveryIndex.IsLoaded())   return;
+
+	WED_RampPosition * ramp = mSelectedRamps[0];
+
+	// Which classes this stand can draw. Weights when it has them, otherwise the
+	// size range - R17's two states, and the same branch RecomputeCoverage takes.
+	bool use_class[6] = { false, false, false, false, false, false };
+	int  w[6];
+	if (ramp->GetClassWeights(w))
+	{
+		for (int k = 0; k < 6; ++k) use_class[k] = (w[k] > 0);
+	}
+	else
+	{
+		int lo = WidthEnumToIndex(ramp->GetWidthMin());
+		int hi = WidthEnumToIndex(ramp->GetWidth());
+		if (lo > hi) std::swap(lo, hi);
+		for (int k = lo; k <= hi; ++k) use_class[k] = true;
+	}
+
+	// Grouped by operator, then by class, so one airline's liveries sit together
+	// rather than being interleaved by size. ParseCodes returns a sorted set, so
+	// the order is stable across rebuilds - a card must not jump to a different
+	// slot because an unrelated operator was ticked.
+	set<string> codes = ParseCodes(ramp->GetAirlines());
+	for (set<string>::const_iterator it = codes.begin(); it != codes.end(); ++it)
+	{
+		string code_uc = *it;
+		for (size_t ci = 0; ci < code_uc.size(); ++ci)
+			code_uc[ci] = (char) toupper((unsigned char) code_uc[ci]);
+
+		for (int k = 0; k < 6; ++k)
+		{
+			if (!use_class[k]) continue;
+
+			vector<const WED_LiveryIndexEntry *> hits;
+			mLiveryIndex.GetForAirlineAndClass(code_uc, (char) ('A' + k), hits);
+
+			for (size_t h = 0; h < hits.size(); ++h)
+			{
+				const WED_LiveryIndexEntry * e = hits[h];
+
+				PreviewCard c;
+				c.obj_path    = e->obj_path;
+				c.abs_path    = WED_LiveryObjectPath(e->obj_path);
+				c.airline     = e->airline;
+				c.ioc_country = e->reg_country;
+
+				// The friendly name if the directory knows the code, the code
+				// itself if it does not - a livery the index has is worth showing
+				// even when the operator is missing from the name table.
+				string friendly = mAirlineDirectory.GetName(e->airline);
+				if (friendly.empty()) friendly = e->airline;
+				c.caption = WED_LiveryDisplayName(friendly, e->note);
+
+				// No path, no card. An index row whose object cannot be located -
+				// no X-Plane root selected yet, for instance - would otherwise
+				// become a card that can never draw anything.
+				if (!c.abs_path.empty())
+					mPreviewCards.push_back(c);
+			}
 		}
 	}
 }
@@ -1760,7 +1810,7 @@ float	WED_LiveryPane::CardHeight(int bounds[4]) const
 // not cards: kCardCols of them sit side by side per row.
 float	WED_LiveryPane::CardsBlockHeight(int bounds[4]) const
 {
-	int rows = (kCardCount + kCardCols - 1) / kCardCols;		// ceil
+	int rows = ((int) mPreviewCards.size() + kCardCols - 1) / kCardCols;		// ceil
 	return rows * (CardHeight(bounds) + kCardGap) + kCardGap;
 }
 
@@ -1796,7 +1846,7 @@ int		WED_LiveryPane::CardForXY(int bounds[4], int x, int y) const
 {
 	if (y > ContentTop(bounds)) return -1;			// above the content area entirely
 
-	for (int i = 0; i < (int) mPreviewObjVpaths.size(); ++i)
+	for (int i = 0; i < (int) mPreviewCards.size(); ++i)
 	{
 		float r[4];
 		CardRectForIndex(bounds, i, r);
@@ -2276,7 +2326,7 @@ int		WED_LiveryPane::MouseDown(int x, int y, int button)
 	// MouseUp decides which actually happened - see its slop check. The checklist
 	// below deliberately doesn't get drag-scroll: its rows are click targets, so
 	// only the wheel (or a drag started up here) scrolls it.
-	if (!mPreviewObjVpaths.empty())
+	if (!mPreviewCards.empty())
 	{
 		float ctop = ContentTop(b);
 		float cards_bot = ctop + mScrollOffset - CardsBlockHeight(b);
@@ -2284,7 +2334,6 @@ int		WED_LiveryPane::MouseDown(int x, int y, int button)
 		{
 			mContentDragStartY = y;
 			mContentDragStartOffset = mScrollOffset;
-			mTrackCard = CardForXY(b, x, y);		// -1 when the press landed in a gap
 			Refresh();
 			return 1;
 		}
@@ -2406,15 +2455,11 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 		// to have stayed within a few pixels of where it went down AND still be on
 		// the same card. Anything looser and every scroll drag would flip whichever
 		// card it started on.
-		const int kClickSlop = 4;
-		if (mTrackCard >= 0 &&
-			abs(y - mContentDragStartY) <= kClickSlop &&
-			CardForXY(b, x, y) == mTrackCard)
-		{
-			if (mSelectedCards.count(mTrackCard))	mSelectedCards.erase(mTrackCard);
-			else									mSelectedCards.insert(mTrackCard);
-		}
-		mTrackCard = -1;
+		// No card toggle any more. The selection these cards used to carry served
+		// the per-stand aircraft-type whitelist that draft 7 deleted (spec §8.6),
+		// so a tick on one has nothing left to mean - and the list is rebuilt
+		// whenever the operators or weights change, which would have walked an
+		// index-keyed mark onto a different aircraft. They are previews now.
 		mContentDragStartY = -1;	// nothing to commit - scrolling is view state, not document state
 		Refresh();
 		return;
@@ -3197,7 +3242,10 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		float cov_top, cov_bot;
 		CoverageYRange(b, cov_top, cov_bot);
 
-		if (mCoverageDirty) RecomputeCoverage();
+		// One flag drives both. The cards and the readout are answers to the
+		// same query, so recomputing one without the other is exactly how they
+		// would drift back into contradicting each other.
+		if (mCoverageDirty) { RecomputeCoverage(); RebuildPreviewCards(); }
 
 		// zone background, matching the slider's so the two read as one stack
 		state->SetState(0,0,0,0,0,0,0);
@@ -3600,13 +3648,31 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 
 		// --- livery preview card strip (framework/scaffolding only - see this pane's
 		// .h comment on this section, and WED_LiveryThumbnailCache.h for the render/
-		// cache/evict design). Text and per-card country are still placeholders -
-		// there's no airline/aircraft/asset matching to draw real ones from yet. ---
-		if (!mPreviewObjVpaths.empty())
+		// cache/evict design). ---
+		//
+		// An empty strip is an ANSWER, not a blank. A stand whose operators have
+		// nothing at its classes gets no cards, and saying so here is what stops
+		// the strip contradicting the readout directly above it - which is
+		// exactly what it used to do, showing four aircraft under the words
+		// "this stand parks nothing".
+		if (mPreviewCards.empty() && !mSelectedRamps.empty())
+		{
+			float dim[4] = { 0.62f, 0.62f, 0.62f, 1.0f };
+			const char * why =
+				!mLiveryIndex.IsLoaded()
+					? "No previews - the livery index could not be loaded."
+				: (mSelectedRamps.size() != 1)
+					? "Select a single ramp start to preview what parks there."
+					: "Nothing to preview - no listed operator has an aircraft at this stand's size.";
+			GUI_FontDraw(state, font_UI_Basic, dim, b[0] + pad,
+						 ContentTop(b) + mScrollOffset - line_h * 1.4f, why);
+		}
+
+		if (!mPreviewCards.empty())
 		{
 			float content_top = ContentTop(b);
 			float content_bot = (float) b[1];
-			int n_cards = (int) mPreviewObjVpaths.size();
+			int n_cards = (int) mPreviewCards.size();
 
 			// Only cards that actually land inside the content viewport get drawn (and
 			// therefore rendered) - CardRectForIndex() reads the SHARED mScrollOffset,
@@ -3628,14 +3694,17 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			// re-rendered from scratch the instant it scrolls back in - fast
 			// back-and-forth scrolling would thrash the cache and stutter every frame
 			// instead of scrolling smoothly through already-cached neighbours.
-			set<string> keep_alive_vpaths;
+			// MUST hold the same strings GetThumbnail()/IsCached() are called with, or
+			// every entry is evicted and re-rendered on every frame - which looks
+			// like a performance mystery rather than a mismatch.
+			set<string> keep_alive_paths;
 			if (first_visible >= 0)
 			{
 				const int kMargin = 1;
 				int first_keep = (std::max)(0, first_visible - kMargin);
 				int last_keep  = (std::min)(n_cards - 1, last_visible + kMargin);
 				for (int ki = first_keep; ki <= last_keep; ++ki)
-					keep_alive_vpaths.insert(mPreviewObjVpaths[ki]);
+					keep_alive_paths.insert(mPreviewCards[ki].abs_path);
 			}
 
 			// Throw away every cached picture when the user points WED at a
@@ -3696,7 +3765,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 				float r[4];
 				CardRectForIndex(b, ci, r);
 
-				const string & vpath = mPreviewObjVpaths[ci];
+				const PreviewCard & card = mPreviewCards[ci];
 
 				float card_x0   = r[0], card_x1 = r[2];
 				float card_bot  = r[1], card_top = r[3];
@@ -3725,8 +3794,11 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 				// transparent background lets it show through (see the blend note on
 				// the image quad below), so this IS the picture's backdrop. Selected
 				// cards sit "pressed in" (darker); hover lifts it slightly. ---
-				bool is_selected = mSelectedCards.count(ci) != 0;
-				bool is_pressed  = (mTrackCard == ci);
+				// Cards are previews, not a picker - there is no selected state left
+				// to draw. Hover survives because pointing at a card and having it
+				// respond is how the strip reads as a list of distinct things.
+				const bool is_selected = false;
+				const bool is_pressed  = false;
 				bool is_hovered  = (mHoverCard == ci) && !is_pressed;
 
 				// A selected card swaps its whole body from neutral grey to the
@@ -3823,11 +3895,11 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 				// class - never a live 3D view). Texcoords use the plain GL
 				// render-to-texture convention (t=0 at the bottom) since this texture
 				// came from our own FBO render, not a loaded image file.
-				bool already_cached = mThumbCache.IsCached(vpath);
+				bool already_cached = mThumbCache.IsCached(card.abs_path);
 				const WED_LiveryThumbnail * thumb = nullptr;
 				if (already_cached || renders_this_frame < kMaxRendersPerFrame)
 				{
-					thumb = mThumbCache.GetThumbnail(res_mgr, tex_mgr, state, vpath);
+					thumb = mThumbCache.GetThumbnail(res_mgr, tex_mgr, state, card.abs_path);
 					if (!already_cached) ++renders_this_frame;
 				}
 				if (thumb && thumb->tex != 0)
@@ -3851,7 +3923,12 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 				// Flag icon first - the caption is truncated to whatever room is left
 				// beside it, so a narrow pane can never overlap the two.
 				float text_room_x1 = card_x1 - 4;
-				const WED_LiveryThumbnail * flag = EnsureRawFlagTexture(string("USA"));	// TODO: real per-card country once wired up
+				// The registration country of THIS aircraft, not the airport's -
+				// an operator's fleet can be registered anywhere, and the index
+				// carries the IOC code per livery for exactly this.
+				const WED_LiveryThumbnail * flag = card.ioc_country.empty()
+													? NULL
+													: EnsureRawFlagTexture(card.ioc_country);
 				if (flag && flag->tex != 0 && flag->w > 0 && flag->h > 0)
 				{
 					float icon_h = (image_bot - text_bot) - 6;
@@ -3876,12 +3953,13 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 					state->SetState(0,0,0,0,0,0,0);
 				}
 
-				// Caption line: "ICAO - Name" on the left, country code right-aligned
-				// just inside the flag. All placeholder text for now - see the comment
-				// at the top of this block.
-				const char * card_icao    = "ICAO";
-				const char * card_name    = "Placeholder Airline";
-				const char * card_country = "USA";
+				// Caption line: "ICAO - Name (Note)" on the left, registration
+				// country right-aligned just inside the flag. All of it from the
+				// index row this card was built from.
+				string icao_uc = card.airline;
+				const char * card_icao    = icao_uc.c_str();
+				const char * card_name    = card.caption.c_str();
+				const char * card_country = card.ioc_country.empty() ? "" : card.ioc_country.c_str();
 
 				float text_col[4] = { 0.88f, 0.88f, 0.90f, 1.0f };
 				float text_y = text_bot + ((image_bot - text_bot) - line_h) * 0.5f + 2;
@@ -3917,50 +3995,6 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 
 				// --- selected tick, dead centre, only once the toggle is actually on
 				// (i.e. after a completed press-and-release) ---
-				if (is_selected)
-				{
-					int tick_tex = GUI_GetTextureResource("livery_selected.png", tex_Linear | tex_Mipmap, NULL);
-					if (tick_tex)
-					{
-						float tick = (std::min)((card_x1 - card_x0), (image_top - image_bot)) * 0.38f;
-						float cx = (card_x0 + card_x1) * 0.5f;
-						float cy = (image_bot + image_top) * 0.5f;
-
-						// t=0 at the BOTTOM here - GUI_GetTextureResource() hands back a
-						// normal bottom-up GL texture, unlike the flag icons loaded
-						// through WED_LoadPngTopDownARGB() a few lines up, which need
-						// the opposite mapping. Getting these two mixed up flips the
-						// tick upside down.
-						state->SetState(0,1,0,0,1,0,0);
-						state->BindTex(tick_tex, 0);
-
-						// Shadow first: the same textured quad in black, CONCENTRIC
-						// (not offset) and scaled slightly up, twice - a soft dark
-						// halo hugging the tick's own outline rather than a shifted
-						// copy of it. Default GL_MODULATE means colour * texture, so
-						// black plus the tick's own alpha gives its silhouette free.
-						for (int k = 1; k >= 0; --k)
-						{
-							float grow = tick * (k ? 0.077f : 0.035f);	// 30% tighter than the first pass at this
-							glColor4f(0, 0, 0, k ? 0.091f : 0.154f);	// ...and 30% weaker
-							glBegin(GL_QUADS);
-								glTexCoord2f(0,0); glVertex2f(cx - tick - grow, cy - tick - grow);
-								glTexCoord2f(1,0); glVertex2f(cx + tick + grow, cy - tick - grow);
-								glTexCoord2f(1,1); glVertex2f(cx + tick + grow, cy + tick + grow);
-								glTexCoord2f(0,1); glVertex2f(cx - tick - grow, cy + tick + grow);
-							glEnd();
-						}
-
-						glColor4f(1,1,1,0.95f);
-						glBegin(GL_QUADS);
-							glTexCoord2f(0,0); glVertex2f(cx - tick, cy - tick);
-							glTexCoord2f(1,0); glVertex2f(cx + tick, cy - tick);
-							glTexCoord2f(1,1); glVertex2f(cx + tick, cy + tick);
-							glTexCoord2f(0,1); glVertex2f(cx - tick, cy + tick);
-						glEnd();
-						state->SetState(0,0,0,0,0,0,0);
-					}
-				}
 
 				// --- frame last, so it sits over the picture, footer and sheen ---
 				state->SetState(0,0,0,0,0,0,0);
@@ -3980,7 +4014,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 				glEnd();
 			}
 			glPopAttrib();		// restores GL_SCISSOR_TEST enable + rect to whatever they were on entry
-			mThumbCache.EvictNotVisible(keep_alive_vpaths);
+			mThumbCache.EvictNotVisible(keep_alive_paths);
 		}
 
 		if (cur_op_enum == ramp_operation_None)
@@ -4016,7 +4050,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			// away most of it) just as easily as a resize can. The preview cards are
 			// part of this same scrolled content, so their block counts toward the
 			// height being scrolled through.
-			float cards_h    = mPreviewObjVpaths.empty() ? 0.0f : CardsBlockHeight(b);
+			float cards_h    = mPreviewCards.empty() ? 0.0f : CardsBlockHeight(b);
 			float content_h  = cards_h + rows.size() * row_h;
 			float visible_h  = top - (float) b[1];
 			float max_scroll = (content_h > visible_h) ? (content_h - visible_h) : 0.0f;

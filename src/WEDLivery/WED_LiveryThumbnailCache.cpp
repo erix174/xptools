@@ -70,9 +70,9 @@ static const float kCamPsi = 90.0f;
 // if that math ever miscounts.
 static const size_t kMaxCachedThumbnails = 32;
 
-bool WED_LiveryThumbnailCache::IsCached(const string & obj_vpath) const
+bool WED_LiveryThumbnailCache::IsCached(const string & obj_path) const
 {
-	return mCache.find(obj_vpath) != mCache.end();
+	return mCache.find(obj_path) != mCache.end();
 }
 
 // True when this GL context can do render-to-texture at all.
@@ -131,31 +131,31 @@ static bool FBOAvailable(void)
 }
 
 const WED_LiveryThumbnail * WED_LiveryThumbnailCache::GetThumbnail(WED_ResourceMgr * res_mgr, ITexMgr * tex_mgr,
-	GUI_GraphState * g, const string & obj_vpath)
+	GUI_GraphState * g, const string & obj_path)
 {
 	// Checked before the cache lookup is even worth doing: without FBOs nothing
 	// will ever land in the cache, and the caller already handles a null return by
 	// drawing the card without a picture.
 	if (!FBOAvailable()) return nullptr;
 
-	auto it = mCache.find(obj_vpath);
+	auto it = mCache.find(obj_path);
 	if (it != mCache.end())
 		return &it->second;
 
-	if (mFailed.count(obj_vpath))
+	if (mFailed.count(obj_path))
 		return nullptr;		// already tried this one - see mFailed's comment
 
 	if (mCache.size() >= kMaxCachedThumbnails)
 		return nullptr;
 
 	const XObj8 * o = nullptr;
-	if (!res_mgr || !res_mgr->GetObj(obj_vpath, o, 0) || !o)
+	if (!res_mgr || !res_mgr->GetObjAbsolute(obj_path, o) || !o)
 	{
 		// Logged ONCE per path - mFailed short-circuits every later attempt, so
 		// this stops being a per-frame log write and a per-frame file open.
-		LOG_MSG("E/LiveryThumb GetObj FAILED for %s (res_mgr=%p)\n", obj_vpath.c_str(), (void *) res_mgr);
+		LOG_MSG("E/LiveryThumb GetObj FAILED for %s (res_mgr=%p)\n", obj_path.c_str(), (void *) res_mgr);
 		LOG_FLUSH();
-		mFailed.insert(obj_vpath);
+		mFailed.insert(obj_path);
 		return nullptr;
 	}
 
@@ -218,7 +218,7 @@ const WED_LiveryThumbnail * WED_LiveryThumbnailCache::GetThumbnail(WED_ResourceM
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_rb);
 
 	bool complete = glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
-	LOG_MSG("I/LiveryThumb %s: fbo_complete=%d radius=%.3f\n", obj_vpath.c_str(), (int) complete, real_radius);
+	LOG_MSG("I/LiveryThumb %s: fbo_complete=%d radius=%.3f\n", obj_path.c_str(), (int) complete, real_radius);
 	LOG_FLUSH();
 	if (complete)
 	{
@@ -323,9 +323,9 @@ const WED_LiveryThumbnail * WED_LiveryThumbnailCache::GetThumbnail(WED_ResourceM
 		// gen/attach/check/delete cycle repeats every frame for every visible
 		// card - on a machine where FBOs do not work at all, that is the steady
 		// state, not an edge case.
-		LOG_MSG("E/LiveryThumb offscreen FBO incomplete for %s\n", obj_vpath.c_str());
+		LOG_MSG("E/LiveryThumb offscreen FBO incomplete for %s\n", obj_path.c_str());
 		LOG_FLUSH();
-		mFailed.insert(obj_vpath);
+		mFailed.insert(obj_path);
 	}
 
 	glBindFramebuffer(GL_FRAMEBUFFER, (GLuint) prev_fbo);
@@ -344,7 +344,7 @@ const WED_LiveryThumbnail * WED_LiveryThumbnailCache::GetThumbnail(WED_ResourceM
 	entry.tex = tex;
 	entry.w = kThumbW;
 	entry.h = kThumbH;
-	auto ins = mCache.emplace(obj_vpath, entry);
+	auto ins = mCache.emplace(obj_path, entry);
 	return &ins.first->second;
 }
 
@@ -367,4 +367,11 @@ void WED_LiveryThumbnailCache::DiscardAll()
 	for (auto & kv : mCache)
 		glDeleteTextures(1, &kv.second.tex);
 	mCache.clear();
+
+	// mFailed too, which this was not doing - and its own documentation says it
+	// should ("switching tabs or changing the X-Plane folder gives a genuinely
+	// missing file a fresh chance"). The blacklist outliving the cache meant a
+	// livery that failed once stayed refused for the rest of the session, even
+	// after the user pointed WED at an install that has it.
+	mFailed.clear();
 }

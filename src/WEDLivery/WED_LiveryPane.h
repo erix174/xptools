@@ -422,7 +422,26 @@ private:
 	// ---- livery preview cards (framework/scaffolding only) ----
 	WED_LiveryThumbnailCache	mThumbCache;
 	std::string					mLiveryIndexPath;	// last resolved path; a change means a new X-Plane root
-	std::vector<std::string>	mPreviewObjVpaths;	// populated once in the constructor
+
+	// One card per livery that can actually spawn on the selected stand. Built
+	// from the index by RebuildPreviewCards(), which asks it the SAME question
+	// RecomputeCoverage() asks - so the cards and the readout above them cannot
+	// end up describing different aircraft.
+	//
+	// Static previews, not a picker. The selection state these used to carry
+	// served the per-stand aircraft-type whitelist that draft 7 deleted (spec
+	// §8.6); a tick on a card has nothing left to mean, and since the list is
+	// rebuilt whenever the operators or the weights change, a mark kept by index
+	// would drift onto a different aircraft anyway.
+	struct PreviewCard {
+		std::string	obj_path;		// as the index stores it, relative to apt_aircraft/
+		std::string	abs_path;		// joined and separator-normalised; THE CACHE KEY
+		std::string	airline;		// ICAO code - grouping, and the caption's left half
+		std::string	caption;		// WED_LiveryDisplayName(friendly name, note)
+		std::string	ioc_country;	// reg_country, for the flag icon
+	};
+	std::vector<PreviewCard>	mPreviewCards;
+	void						RebuildPreviewCards(void);
 
 	// Click-and-drag scrolling of the content area ("grab and pull", same feel as a
 	// touch scroll) - moves mScrollOffset, so cards and checklist move together.
@@ -433,14 +452,10 @@ private:
 	int							mContentDragStartY;
 	float						mContentDragStartOffset;
 
-	// Card interaction. A card is a toggle: click it to select that livery, click
-	// again to deselect. mTrackCard is the one currently held down (-1 = none) and
-	// only becomes a toggle on mouse-up, and only if the gesture didn't turn into a
-	// drag-scroll (see MouseUp's slop check) - so dragging the grid to scroll never
-	// accidentally flips a selection.
+	// Hover only. Cards are previews of what this stand will spawn, not a
+	// picker - the selection they used to carry belonged to the per-stand
+	// aircraft-type whitelist that draft 7 removed (spec §8.6).
 	int							mHoverCard;			// -1 if the cursor isn't over a card
-	int							mTrackCard;			// -1 if no card is pressed
-	std::set<int>				mSelectedCards;		// indices into mPreviewObjVpaths
 
 	std::map<std::string, WED_LiveryThumbnail>	mRawFlagTex;	// unmasked flag icon textures (w/h = source PNG's own), keyed by IOC country code
 

@@ -27,6 +27,7 @@
 #include "WED_PackageMgr.h"
 #include "PlatformUtils.h"
 #include "MemFileUtils.h"		// MF_GetFileType, for the X-Plane root check
+#include "WED_LibraryMgr.h"		// WED_clean_rpath - separator normalisation, see WED_LiveryObjectPath()
 
 #include <fstream>
 #include <algorithm>
@@ -413,6 +414,43 @@ string	WED_LiveryIndexDefaultPath(void)
 		return string();
 	}
 
+	return WED_LiveryAssetDir() + "livery_index.txt";
+}
+
+// <X-Plane root>/Resources/default scenery/sim objects/apt_aircraft/, or "" when
+// no usable root is selected. Empty is a real answer rather than an error worth
+// asserting on: WED runs perfectly well before a folder is chosen, and every
+// caller here has something sensible to do with nothing.
+string	WED_LiveryAssetDir(void)
+{
+	if (gPackageMgr == NULL) return string();
+
+	string root;
+	if (!gPackageMgr->GetXPlaneFolder(root)) return string();
+	if (!IsXPlaneRoot(root)) return string();
+
 	return root + DIR_STR "Resources" DIR_STR "default scenery" DIR_STR
-				  "sim objects" DIR_STR "apt_aircraft" DIR_STR "livery_index.txt";
+				  "sim objects" DIR_STR "apt_aircraft" DIR_STR;
+}
+
+// Turns an index row's obj_path - stored relative to apt_aircraft/, with forward
+// slashes - into something the OS can actually open.
+//
+// Two reasons this is a function rather than a concatenation at each call site.
+// WED_ResourceMgr::GetObjAbsolute() prepends NOTHING, so a caller handing it the
+// bare "jet/B738_UAL/..." resolves it against the process working directory and
+// fails. And the separators have to be normalised: LoadObj passes this same path
+// on to process_texture_path(), whose ".." unwinding scans for DIR_CHAR only, so
+// a path mixing the index's '/' with Windows' '\' walks up the wrong component
+// and the object's texture silently fails to resolve - a blank thumbnail with
+// nothing in the log to explain it.
+string	WED_LiveryObjectPath(const string & obj_path)
+{
+	if (obj_path.empty()) return string();
+	const string dir = WED_LiveryAssetDir();
+	if (dir.empty()) return string();
+
+	string full = dir + obj_path;
+	WED_clean_rpath(full);
+	return full;
 }
