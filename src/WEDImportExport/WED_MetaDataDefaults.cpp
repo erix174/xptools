@@ -186,7 +186,7 @@ bool add_iso3166_country_metadata(WED_Airport & apt)
 
 		has_iso = country.size() >= 3;
 		for (int i = 0; i < 3 && has_iso; i++)
-			has_iso &= (bool)isalpha(country[i]);
+			has_iso &= (bool)isalpha((unsigned char) country[i]);
 		if (country.size() > 3)
 			has_iso &= country[3] == ' ';
 

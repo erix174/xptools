@@ -218,7 +218,7 @@ string FILE_get_file_extension(const string& path)
 	{
 		name = name.substr(dot_start+1);
 		for (string::iterator i = name.begin(); i != name.end(); ++i)
-		    (*i) = tolower(*i);
+		    (*i) = (char) tolower((unsigned char) *i);   // cast: char is signed, a UTF-8 byte >= 0x80 asserts
 		return name;
 	}
 }

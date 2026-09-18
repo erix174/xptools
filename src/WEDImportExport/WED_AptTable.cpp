@@ -239,7 +239,7 @@ int		WED_AptTable::DoubleClickCell(
 inline void toupper(string& io_string)
 {
 	for(int i = 0; i < io_string.size(); ++i)
-		io_string[i] = toupper(io_string[i]);
+		io_string[i] = (char) toupper((unsigned char) io_string[i]);   // cast: see STLUtils.cpp's ci_upper
 }
 
 struct sort_by_apt {

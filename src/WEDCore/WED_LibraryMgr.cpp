@@ -514,13 +514,13 @@ void WED_LibraryMgr::RescanLines()
 			for(int i = 0; i < 30; ++i)
 			{
 				if(nice_name[i] == 0) break;
-				if(i == 0) nice_name[0] = toupper(nice_name[0]);
+				if(i == 0) nice_name[0] = (char) toupper((unsigned char) nice_name[0]);
 				if(nice_name[i] == '_')
 				{
 					nice_name[i] = ' ';
 					if(nice_name[i+1] != 0)
 					{
-						nice_name[i+1] = toupper(nice_name[i+1]);
+						nice_name[i+1] = (char) toupper((unsigned char) nice_name[i+1]);
 						if(nice_name[i+2] == 0)
 						{
 							nice_name[i+1] = 0;
@@ -565,7 +565,7 @@ void WED_LibraryMgr::RescanLines()
 						}
 					}
 #else
-					for(int i = 0; i < resnam.length(); ++i) resnam[i] = tolower(resnam[i]); // C11 would make this so much easier ...
+					for(int i = 0; i < resnam.length(); ++i) resnam[i] = (char) tolower((unsigned char) resnam[i]); // C11 would make this so much easier ...
 
 					if(resnam.find("_red") != string::npos)
 					{
@@ -624,7 +624,7 @@ void WED_LibraryMgr::RescanLines()
 			for(int i = 0; i < 30; ++i)
 			{
 				if(nice_name[i] == 0) break;
-				if(i == 0) nice_name[0] = toupper(nice_name[0]);
+				if(i == 0) nice_name[0] = (char) toupper((unsigned char) nice_name[0]);
 				if(nice_name[i] == '_')
 				{
 					nice_name[i] = ' ';
@@ -632,7 +632,7 @@ void WED_LibraryMgr::RescanLines()
 					{
 						if(strcmp(nice_name+i+1,"G_uni") == 0) strcpy(nice_name+i+1,"(Unidirectional Green)");
 						else if(strcmp(nice_name+i+1,"YG_uni") == 0) strcpy(nice_name+i+1,"(Unidirectional Amber/Green)");
-						else nice_name[i+1] = toupper(nice_name[i+1]);
+						else nice_name[i+1] = (char) toupper((unsigned char) nice_name[i+1]);
 					}
 				}
 			}

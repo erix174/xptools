@@ -148,7 +148,7 @@ void	BreakString(const string& line, vector<string>& words)
 void	StringToUpper(string& s)
 {
 	for (string::iterator i = s.begin(); i != s.end(); ++i)
-		*i = toupper(*i);
+		*i = (char) toupper((unsigned char) *i);   // cast: char is signed, a UTF-8 byte >= 0x80 asserts
 }
 
 bool	HasExtNoCase(const string& inStr, const char * inExt)

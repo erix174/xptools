@@ -1565,7 +1565,7 @@ static bool is_a_number(const string& s)
 {
 	if (!s.empty())
 	{
-		if (isspace(s[0]) == false)
+		if (isspace((unsigned char) s[0]) == false)
 		{
 			char* p;
 			strtod(s.c_str(), &p);
@@ -1589,7 +1589,7 @@ static bool contains_word(const string& s, const char* word)
 	{
 		char c_preceed = p > 0 ? s[p-1] : ' ';
 		char c_follow  = p < s.length()+strlen(word) ? s[p+strlen(word)] : ' ';
-		if(!isalpha(c_preceed) && !isalpha(c_follow))
+		if(!isalpha((unsigned char) c_preceed) && !isalpha((unsigned char) c_follow))
 			return true;
 	}
 	return false;
@@ -1698,7 +1698,7 @@ static void ValidateAirportMetadata(WED_Airport* who, validation_error_vector& m
 
 			bool has_iso_code = country.size() >= 3;
 			for (int i = 0; i < 3 && has_iso_code; i++)
-				has_iso_code &= (bool) isalpha(country[i]);
+				has_iso_code &= (bool) isalpha((unsigned char) country[i]);
 			if (country.size() > 3)
 				has_iso_code &= country[3] == ' ';
 
@@ -1753,7 +1753,7 @@ static void ValidateAirportMetadata(WED_Airport* who, validation_error_vector& m
 
 			if (is_a_number(country))
 				error_content = "Country name cannot be a number";
-			else if (isdigit(country[0]))
+			else if (isdigit((unsigned char) country[0]))
 				error_content = "Country name cannot start with a number";
 
 			if (error_content.size())
@@ -1833,7 +1833,7 @@ static void ValidateAirportMetadata(WED_Airport* who, validation_error_vector& m
 		string icao_code        = who->GetMetaDataValue(wed_AddMetaDataICAO);
 		string error_content;
 
-		if (!icao_code.empty() && (air_org_code_valid(4,4, false, icao_code, error_content) == false || tolower(icao_code[0]) == 'x'))
+		if (!icao_code.empty() && (air_org_code_valid(4,4, false, icao_code, error_content) == false || tolower((unsigned char) icao_code[0]) == 'x'))
 			add_formated_metadata_error(error_template, wed_AddMetaDataICAO, error_content, who, msgs, apt);
 		all_keys.push_back(icao_code);
 	}
@@ -1914,7 +1914,7 @@ static void ValidateAirportMetadata(WED_Airport* who, validation_error_vector& m
 
 		string region_code      = who->GetMetaDataValue(wed_AddMetaDataRegionCode);
 		all_keys.push_back(region_code);
-		::transform(region_code.begin(), region_code.end(), region_code.begin(), ::toupper);
+		::transform(region_code.begin(), region_code.end(), region_code.begin(), [](unsigned char ch){ return (char) toupper(ch); });
 
 		vector<string> region_codes = vector<string>(NUM_REGION_CODES);
 		region_codes.insert(region_codes.end(), &legal_region_codes[0], &legal_region_codes[NUM_REGION_CODES]);
@@ -1935,7 +1935,7 @@ static void ValidateAirportMetadata(WED_Airport* who, validation_error_vector& m
 			{
 				error_content = "State cannot be a number";
 			}
-			else if (isdigit(state[0]))
+			else if (isdigit((unsigned char) state[0]))
 			{
 				error_content = "State cannot start with a number";
 			}
@@ -2012,7 +2012,7 @@ static void ValidateAirportMetadata(WED_Airport* who, validation_error_vector& m
 
 	for(vector<string>::iterator itr = all_keys.begin(); itr != all_keys.end(); ++itr)
 	{
-		::transform(itr->begin(), itr->end(), itr->begin(), ::tolower);
+		::transform(itr->begin(), itr->end(), itr->begin(), [](unsigned char ch){ return (char) tolower(ch); });
 		if(itr->find("http") != string::npos)
 			msgs.push_back(validation_error_t("Metadata value " + *itr + " contains 'http', is likely a URL", err_airport_metadata_invalid, who, apt));
 	}
@@ -2385,7 +2385,7 @@ static void ValidateAptName(const string name, const string icao, validation_err
 		if (strlen_utf8(name) > 30)
 			msgs.push_back(validation_error_t(string("Airport name '") + name + "' is longer than 30 characters.", err_type, apt, apt));
 
-		if (isspace(name[0]) || isspace(name[name.length() - 1]))
+		if (isspace((unsigned char) name[0]) || isspace((unsigned char) name[name.length() - 1]))
 			msgs.push_back(validation_error_t("Airport name includes leading or trailing spaces.", err_type, apt, apt));
 
 		int lcase = count_if(name.begin(), name.end(), ::islower);
@@ -2394,8 +2394,8 @@ static void ValidateAptName(const string name, const string icao, validation_err
 			msgs.push_back(validation_error_t("Airport name is all upper case.", err_type, apt, apt));
 
 		string name_lcase(name), icao_lcase(icao);
-		::transform(name_lcase.begin(), name_lcase.end(), name_lcase.begin(), ::tolower);  // waiting for C++11 ...
-		::transform(icao_lcase.begin(), icao_lcase.end(), icao_lcase.begin(), ::tolower);  // waiting for C++11 ...
+		::transform(name_lcase.begin(), name_lcase.end(), name_lcase.begin(), [](unsigned char ch){ return (char) tolower(ch); });  // waiting for C++11 ...
+		::transform(icao_lcase.begin(), icao_lcase.end(), icao_lcase.begin(), [](unsigned char ch){ return (char) tolower(ch); });  // waiting for C++11 ...
 
 		if (contains_word(name_lcase, "airport"))
 			msgs.push_back(validation_error_t("The airport name should not include the word 'Airport'.", warn_airport_name_style, apt, apt));
