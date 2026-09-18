@@ -237,6 +237,7 @@ private:
 	// sort order changes the row list under it. A row carries its icao, the card
 	// data is looked up by that, and the two cannot disagree.
 	struct AirlineCard {
+		std::string					icao;			// UPPERCASE, as the caption shows it
 		std::string					name;			// friendly name, or the code if unknown
 		std::string					ioc_country;	// for the flag icon
 		std::vector<std::string>	abs_paths;		// THE CACHE KEYS, one per livery
@@ -248,6 +249,9 @@ private:
 	void								RebuildAirlineCards(void);
 	const AirlineCard *					CardFor(const std::string & icao_lower) const;
 	void								CardKeys(std::set<std::string> & out) const;
+	// (lowercase icao, display name) for every operator that has a card here. The
+	// source for the "All Airlines" tier, which used to read a hand-written list.
+	std::vector<std::pair<std::string,std::string> >	AllOperators(void) const;
 
 
 	// ---- livery preview cards ----
@@ -305,6 +309,7 @@ private:
 										bool is_locked, bool is_dimmed,
 										float tray_open,
 										int & renders_this_frame);
+	void				DrawHoverTip(GUI_GraphState * state, int bounds[4]);
 	void				DrawCardTray(GUI_GraphState * state, const RowSlot & slot,
 									 const AirlineCard & card, float open_frac);
 	// Takes the rows' icao codes, not the rows: WED_LiveryDisplayRow lives in the
@@ -516,6 +521,7 @@ private:
 	// cycle is identified by ICAO, not row index, for the same reason the cards are
 	// - rows are rebuilt constantly and an index would land on a stranger.
 	std::string					mCycleAirline;		// empty when nothing is cycling
+	int							mHoverX, mHoverY;	// last cursor position, for the hover tip
 	int							mCycleShow;			// which livery is on the face
 	float						mCycleAccum;		// seconds since the last step
 

@@ -418,7 +418,9 @@ namespace
 							const string & airport_country_ioc, const string & airport_icao,
 							const set<string> & checked_lower, map<string, vector<string> > & popular_cache,
 							const string & search_query,
-							const WED_AirlineDirectory & directory, vector<WED_LiveryDisplayRow> & out)
+							const WED_AirlineDirectory & directory,
+							const vector<pair<string,string> > & all_operators,
+							vector<WED_LiveryDisplayRow> & out)
 	{
 		out.clear();
 		if (ramp_op_enum == ramp_operation_None)
@@ -430,17 +432,26 @@ namespace
 
 		int category = RampOpToLiveryCategory(ramp_op_enum);
 
-		// The one tier with an op_type to filter by - see this function's own doc comment above.
+		// EVERY OPERATOR THE LIVERY INDEX HAS, not the hand-written placeholder list
+		// in WED_LiveryData.h. That list is about 25 codes chosen years ago; the
+		// shipped index carries 152, and none of the two sets' overlap survives
+		// DropCardless - which is why this section came out empty and could not be
+		// opened. The caller passes what it found, already reduced to operators with
+		// a livery that fits this stand.
+		//
+		// No op_type filter here any more either: the placeholder list carried one
+		// per row and the index does not, and inventing one from the code would be
+		// guessing. The tiers above have never been filtered by it - see this
+		// function's own doc comment - so this now matches them.
 		vector<WED_LiveryDisplayRow> all_rows;
-		for (int i = 0; i < kWED_PlaceholderAirlineCount; ++i)
-			if (category < 0 || kWED_PlaceholderAirlines[i].op_type == category)
-			{
-				WED_LiveryDisplayRow r;
-				r.kind = wed_Row_Airline;
-				r.icao = kWED_PlaceholderAirlines[i].icao;		// already lowercase
-				r.name = kWED_PlaceholderAirlines[i].name;
-				all_rows.push_back(r);
-			}
+		for (size_t i = 0; i < all_operators.size(); ++i)
+		{
+			WED_LiveryDisplayRow r;
+			r.kind = wed_Row_Airline;
+			r.icao = all_operators[i].first;			// lowercase, as rows carry it
+			r.name = all_operators[i].second;
+			all_rows.push_back(r);
+		}
 		SortAirlineRows(all_rows, sort_descending);
 
 		if (!query_lower.empty())
@@ -718,7 +729,8 @@ namespace
 	vector<WED_LiveryDisplayRow> BuildCurrentDisplayRows(WED_RampPosition * primary_ramp, bool sort_descending,
 							bool show_recommendation, WED_AirportDatabase & airport_db, const string & current_icao,
 							const string & search_query, WED_AirlineDirectory & directory,
-							map<string, vector<string> > & popular_cache)
+							map<string, vector<string> > & popular_cache,
+							const vector<pair<string,string> > & all_operators)
 	{
 		vector<WED_LiveryDisplayRow> rows;
 		if (!primary_ramp) return rows;
@@ -766,7 +778,7 @@ namespace
 
 		BuildDisplayRows(primary_ramp->GetRampOperationType(), sort_descending, show_recommendation,
 							manual, direct_hit, airport_country, current_icao, checked_lower, popular_cache,
-							search_query, directory, rows);
+							search_query, directory, all_operators, rows);
 		return rows;
 	}
 
@@ -929,7 +941,8 @@ static const float kCardImageAspect = 32.0f / 9.0f;
 // The grab strip along a card's bottom edge: the tray's handle, and the only
 // place the disclosure arrow can live without sitting on the operator's name.
 // Declared here because CardHeight() has to reserve it.
-static const float kTrayTabH = 14.0f;
+static const float kTrayTabH    = 18.0f;	// height of the caption line's clickable gutter
+static const float kTrayGutterW = 22.0f;	// and its width
 
 // Cards are laid out as a grid of "trading cards": kCardCols per row, with a fixed
 // gap on every side and between them. The gap is what actually makes each card read
@@ -972,6 +985,8 @@ WED_LiveryPane::WED_LiveryPane(
 	mContentDragStartX(-1),		// declared later in the header (after mCachedStatusLines) -
 	mContentDragStartOffset(0),	// listed here anyway so all the "simple scalar" inits stay together
 	mCycleShow(0),
+	mHoverX(0),
+	mHoverY(0),
 	mCycleAccum(0.0f),
 	mTrayOpen(0.0f),
 	mTrayClosingOpen(0.0f),
@@ -1397,6 +1412,7 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 		// that operator can park here - the most informative single frame, and a
 		// stable one, since it does not move when an unrelated class is weighted out.
 		AirlineCard card;
+		card.icao = code_uc;
 		for (int k = 5; k >= 0; --k)
 		{
 			if (!use_class[k]) continue;
@@ -1444,6 +1460,14 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 // Rows carry a lowercase icao; cards are keyed by the same string, so this cannot
 // return a card belonging to a different row - see the .h on why the two are not
 // a pair of parallel vectors.
+vector<pair<string,string> >	WED_LiveryPane::AllOperators(void) const
+{
+	vector<pair<string,string> > out;
+	for (map<string, AirlineCard>::const_iterator i = mAirlineCards.begin(); i != mAirlineCards.end(); ++i)
+		out.push_back(make_pair(i->first, i->second.name));
+	return out;
+}
+
 void	WED_LiveryPane::CardKeys(set<string> & out) const
 {
 	out.clear();
@@ -1982,12 +2006,8 @@ float	WED_LiveryPane::CardHeight(int bounds[4]) const
 	// render as one oversized black slab the first time this was tried: the image
 	// then draws taller than the slot this function claims it needs, overflowing
 	// into the next card and the checklist below.)
-	// image, then the caption row, then the tray bar. The bar is a STRIP OF ITS OWN
-	// rather than the bottom few pixels of the caption: sharing meant the
-	// disclosure arrow was drawn over the operator's name and the click target sat
-	// on top of the text, so the tray effectively could not be opened.
 	float image_h = CardWidth(bounds) / kCardImageAspect;
-	return image_h + GUI_GetLineHeight(font_UI_Basic) + 8 + kTrayTabH;
+	return image_h + GUI_GetLineHeight(font_UI_Basic) + 8;
 }
 
 // THE ONE PLACE ROW GEOMETRY IS COMPUTED. Cards are no longer a block above the
@@ -2142,8 +2162,14 @@ void	WED_LiveryPane::LockIconRect(const RowSlot & slot, float r_out[4]) const
 // a worse target for no gain.
 void	WED_LiveryPane::TrayTabRect(const RowSlot & slot, float r_out[4]) const
 {
+	// The gutter the disclosure arrow sits in, at the left of the caption line -
+	// NOT a strip of its own. A dedicated row made every card taller for one glyph,
+	// and the count it carried belongs next to the operator's name anyway.
+	//
+	// Deliberately wider than the arrow it contains: the arrow is about 11px and
+	// nobody can reliably hit that, so the whole gutter answers.
 	r_out[0] = slot.x0;
-	r_out[2] = slot.x1;
+	r_out[2] = slot.x0 + kTrayGutterW;
 	r_out[1] = slot.bot;
 	r_out[3] = slot.bot + kTrayTabH;
 }
@@ -2267,6 +2293,65 @@ void	WED_LiveryPane::TrayHeights(const vector<string> & row_icaos, vector<float>
 	}
 }
 
+
+// The operator's full aircraft list, at the cursor. The caption can only fit
+// "(and 3 more)" - this is what says WHICH three, without making the reader open
+// the tray to find out that none of them was what they wanted.
+//
+// Drawn LAST in Draw(), after the scissor is popped, for the usual reason a
+// tooltip is: it has to be allowed outside the box that spawned it, and a card
+// near the bottom of the list has nowhere else to put it.
+void	WED_LiveryPane::DrawHoverTip(GUI_GraphState * state, int b[4])
+{
+	if (mCycleAirline.empty()) return;
+	const AirlineCard * ac = CardFor(mCycleAirline);
+	if (!ac || ac->types.size() < 2) return;		// one aircraft explains itself
+
+	string text = ac->name + ": ";
+	for (size_t i = 0; i < ac->types.size(); ++i)
+	{
+		if (i) text += ", ";
+		text += ac->types[i];
+	}
+
+	float line_h = GUI_GetLineHeight(font_UI_Basic);
+	float tw     = GUI_MeasureRange(font_UI_Basic, text.c_str(), text.c_str() + text.size());
+	float pad    = 6.0f;
+	float w      = tw + pad * 2.0f;
+	float h      = line_h + pad * 2.0f - 2.0f;
+
+	// Flip to the other side of the cursor rather than being clipped - a tip that
+	// runs off the pane is worse than no tip, because the part that falls off is
+	// the end of the list.
+	float x0 = (float) mHoverX + 14.0f;
+	if (x0 + w > (float) b[2] - 2.0f) x0 = (float) mHoverX - 14.0f - w;
+	if (x0 < (float) b[0] + 2.0f)     x0 = (float) b[0] + 2.0f;
+
+	float y1 = (float) mHoverY + 6.0f + h;
+	if (y1 > (float) b[3] - 2.0f) y1 = (float) mHoverY - 6.0f;
+	float y0 = y1 - h;
+
+	state->SetState(0,0,0,0,1,0,0);
+	glColor4f(0.0f, 0.0f, 0.0f, 0.30f);
+	glBegin(GL_QUADS);
+		glVertex2f(x0+2, y0-2);  glVertex2f(x0+w+2, y0-2);
+		glVertex2f(x0+w+2, y1-2); glVertex2f(x0+2, y1-2);
+	glEnd();
+	glColor4f(0.13f, 0.13f, 0.16f, 0.98f);
+	glBegin(GL_QUADS);
+		glVertex2f(x0, y0);  glVertex2f(x0+w, y0);
+		glVertex2f(x0+w, y1); glVertex2f(x0, y1);
+	glEnd();
+	glColor4f(0.45f, 0.45f, 0.50f, 1.0f);
+	glBegin(GL_LINE_LOOP);
+		glVertex2f(x0+0.5f, y0+0.5f);   glVertex2f(x0+w-0.5f, y0+0.5f);
+		glVertex2f(x0+w-0.5f, y1-0.5f); glVertex2f(x0+0.5f, y1-0.5f);
+	glEnd();
+
+	float tc[4] = { 0.90f, 0.90f, 0.93f, 1.0f };
+	GUI_FontDraw(state, font_UI_Basic, tc, x0 + pad, y0 + pad - 1.0f, text.c_str());
+}
+
 // ONE CARD. Everything it needs is passed in: it is called from the row loop now,
 // once per airline row, rather than from a block of its own above the checklist.
 // `show` picks which of the operator's liveries is on the face - see AirlineCard
@@ -2293,8 +2378,7 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 	float image_h   = (card_x1 - card_x0) / kCardImageAspect;	// must match CardHeight()
 	float image_top = card_top;
 	float image_bot = image_top - image_h;
-	float bar_top   = card_bot + kTrayTabH;		// the tray strip owns the bottom
-	float text_bot  = bar_top;
+	float text_bot  = card_bot;
 
 	// --- drop shadow: a few offset, increasingly transparent slabs down
 	// and to the right. Cheap stand-in for a real blur (no shader/FBO
@@ -2475,22 +2559,16 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 		state->SetState(0,0,0,0,0,0,0);
 	}
 
-	// Caption line: "TYPE - Name (Note)" on the left, registration
-	// country right-aligned just inside the flag. All of it from the
-	// index row this card was built from.
+	// Caption line: "AAL - B772 (and 3 more)" on the left, registration country
+	// right-aligned just inside the flag.
 	//
-	// THE AIRCRAFT TYPE, not the airline's ICAO code, holds the left
-	// slot. Cards are grouped by operator and the operator's name is
-	// already in the right half, so "DAL - Delta Air Lines" spent the
-	// slot saying the same thing twice - and Delta's three class-C
-	// liveries (A320, B738, MD82) all rendered as the same caption
-	// under three different pictures, which reads as a duplication
-	// bug. The type is the axis that actually separates them, and is
-	// the axis library.txt cannot express at all - see
-	// WED_LiveryIndex.h on why this index exists.
-	string type_uc = type_str;
-	const char * card_icao    = type_uc.c_str();
-	const char * card_name    = card.name.c_str();
+	// OPERATOR FIRST, THEN THE AIRCRAFT. Both are needed - a card is one operator
+	// but the picture is one aircraft, and neither alone explains what is on
+	// screen. Leading with the operator is what makes the tail safe to elide: the
+	// code is fixed-width, so "(and N more)" always lands in the same place
+	// regardless of how long the operator's name would have been. Leading with the
+	// full name instead put the interesting part behind an unpredictable amount of
+	// text, which is how "B772 - American ... " ate its own suffix.
 	const char * card_country = card.ioc_country.empty() ? "" : card.ioc_country.c_str();
 
 	float text_col[4] = { 0.88f, 0.88f, 0.90f, 1.0f };
@@ -2506,24 +2584,47 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 	// PLUS the "..." fits, so the dots are always the last three glyphs
 	// and always land inside the bound (the country code's left edge) -
 	// never hanging over it or getting clipped themselves.
-	float left_avail = (cc_x - 6) - (card_x0 + 5);
-	string caption = string(card_icao) + " - " + card_name;
-	if (GUI_MeasureRange(font_UI_Basic, caption.c_str(), caption.c_str() + caption.size()) > left_avail)
+	// The text starts after the arrow's gutter when there is an arrow, and at the
+	// card's edge when there is not, so a single-aircraft card does not carry an
+	// indent for a control it does not have.
+	float text_x0    = card_x0 + (card.abs_paths.size() > 1 ? kTrayGutterW : 5.0f);
+	float left_avail = (cc_x - 6) - text_x0;
+
+	string head = card.icao + " - " + type_str;
+	string tail;
+	if (card.abs_paths.size() > 1)
+	{
+		char m[32];
+		snprintf(m, sizeof(m), "  (and %d more)", (int) card.abs_paths.size() - 1);
+		tail = m;
+	}
+
+	// THE SUFFIX IS RESERVED BEFORE THE HEAD IS MEASURED, so a long type or a
+	// narrow pane eats into "AAL - B772" and never into "(and 3 more)". Truncating
+	// the whole string end-first - which is what the old single-phrase caption did -
+	// dropped exactly the part that says there is more to see.
+	float tail_w = tail.empty() ? 0.0f
+				 : GUI_MeasureRange(font_UI_Basic, tail.c_str(), tail.c_str() + tail.size());
+	float head_avail = left_avail - tail_w;
+
+	if (GUI_MeasureRange(font_UI_Basic, head.c_str(), head.c_str() + head.size()) > head_avail)
 	{
 		const string ell = "...";
-		while (!caption.empty())
+		while (!head.empty())
 		{
-			caption.pop_back();
-			while (!caption.empty() && caption[caption.size() - 1] == ' ')
-				caption.pop_back();			// no "Air ..." - tuck the dots up against the text
-			string probe = caption + ell;
-			if (GUI_MeasureRange(font_UI_Basic, probe.c_str(), probe.c_str() + probe.size()) <= left_avail)
+			head.pop_back();
+			while (!head.empty() && head[head.size() - 1] == ' ')
+				head.pop_back();			// no "Air ..." - tuck the dots up against the text
+			string probe = head + ell;
+			if (GUI_MeasureRange(font_UI_Basic, probe.c_str(), probe.c_str() + probe.size()) <= head_avail)
 				break;
 		}
-		caption = caption.empty() ? string() : caption + ell;
+		head = head.empty() ? string() : head + ell;
 	}
+
+	string caption = head + tail;
 	if (!caption.empty())
-		GUI_FontDraw(state, font_UI_Basic, text_col, card_x0 + 5, text_y, caption.c_str());
+		GUI_FontDraw(state, font_UI_Basic, text_col, text_x0, text_y, caption.c_str());
 
 	// --- disclosure triangle, left end of the bottom bar. ONLY on cards that have
 	// more than one livery: on a single-aircraft card there is nothing to page
@@ -2536,24 +2637,10 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 	// by the same 0..1 the tray height uses, so the arrow and the drawer are never
 	// out of step. Long and narrow rather than equilateral - a stubby triangle at
 	// this size reads as a blob.
-	{
-		// The bar reads as a separate strip so it is visibly a thing you can press.
-		state->SetState(0,0,0,0,1,0,0);
-		glColor4f(0.0f, 0.0f, 0.0f, 0.22f);
-		glBegin(GL_QUADS);
-			glVertex2f(card_x0, card_bot);  glVertex2f(card_x1, card_bot);
-			glVertex2f(card_x1, bar_top);   glVertex2f(card_x0, bar_top);
-		glEnd();
-		glColor4f(1.0f, 1.0f, 1.0f, 0.10f);
-		glBegin(GL_LINES);
-			glVertex2f(card_x0, bar_top);   glVertex2f(card_x1, bar_top);
-		glEnd();
-	}
-
 	if (card.abs_paths.size() > 1)
 	{
-		const float cx  = card_x0 + 10.0f;
-		const float cy  = card_bot + kTrayTabH * 0.5f;
+		const float cx  = card_x0 + kTrayGutterW * 0.5f;
+		const float cy  = card_bot + (image_bot - card_bot) * 0.5f;
 		const float lon = 5.5f, lat = 3.2f;		// along the pointing axis, and across it
 
 		// Defined pointing RIGHT, then rotated to wherever the tray has got to: a
@@ -2573,13 +2660,6 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 				glVertex2f(cx + px[i] * ca - py[i] * sa,
 						   cy + px[i] * sa + py[i] * ca);
 		glEnd();
-
-		// The count, so the bar says what opening it will get you.
-		char cnt[24];
-		snprintf(cnt, sizeof(cnt), "%d aircraft", (int) card.abs_paths.size());
-		float cc[4] = { 0.80f, 0.80f, 0.84f, is_dimmed ? 0.40f : 0.85f };
-		GUI_FontDraw(state, font_UI_Basic, cc, cx + 10.0f,
-					 card_bot + (kTrayTabH - line_h) * 0.5f + 1.0f, cnt);
 	}
 
 	// --- another card holds the lock, so this one is out of the running. A flat
@@ -2939,7 +3019,7 @@ int		WED_LiveryPane::MouseMove(int x, int y)
 	if (!mSelectedRamps.empty() && !over_sort && !over_recommend && !over_clear)
 	{
 		vector<WED_LiveryDisplayRow> rows = BuildCurrentDisplayRows(mSelectedRamps[0], mSortDescending,
-											gShowLiveryRecommendation != 0, mAirportDb, mCurrentAirportIcao, mSearchQuery, mAirlineDirectory, mPopularAirlinesShuffleCache);
+											gShowLiveryRecommendation != 0, mAirportDb, mCurrentAirportIcao, mSearchQuery, mAirlineDirectory, mPopularAirlinesShuffleCache, AllOperators());
 		{ set<string> have; CardKeys(have); DropCardless(rows, have); }
 	PruneEmptySections(rows);
 	PinSelected(rows, ParseCodes(mSelectedRamps[0]->GetAirlines()));
@@ -2952,6 +3032,7 @@ int		WED_LiveryPane::MouseMove(int x, int y)
 		// Hovering a card starts it cycling; leaving stops it and drops the card
 		// back to index 0. Keyed by icao so the cycle survives the row list being
 		// rebuilt underneath it, which happens on this very call.
+		mHoverX = x; mHoverY = y;
 		string want = (row >= 0) ? rows[row].icao : string();
 		if (want != mCycleAirline)
 		{
@@ -3114,7 +3195,7 @@ int		WED_LiveryPane::MouseDown(int x, int y, int button)
 	// meant restricting it to most of the list and then stopping arbitrarily at a
 	// section header.
 	vector<WED_LiveryDisplayRow> rows = BuildCurrentDisplayRows(mSelectedRamps[0], mSortDescending,
-										gShowLiveryRecommendation != 0, mAirportDb, mCurrentAirportIcao, mSearchQuery, mAirlineDirectory, mPopularAirlinesShuffleCache);
+										gShowLiveryRecommendation != 0, mAirportDb, mCurrentAirportIcao, mSearchQuery, mAirlineDirectory, mPopularAirlinesShuffleCache, AllOperators());
 	{ set<string> have; CardKeys(have); DropCardless(rows, have); }
 	PruneEmptySections(rows);
 	PinSelected(rows, ParseCodes(mSelectedRamps[0]->GetAirlines()));
@@ -3146,6 +3227,17 @@ void	WED_LiveryPane::MouseDrag(int x, int y, int button)
 	// Draw()'s job (it's the one that knows the current content height).
 	if (mContentDragStartY >= 0)
 	{
+		// NOTHING MOVES UNTIL THE GESTURE CLEARS THE SLOP. A click almost always
+		// drifts a pixel or two, and scrolling by that much slides the content out
+		// from under the cursor between press and release - which is why the tray
+		// could not be opened: its bar is 14px tall, so a 2px shift was enough for
+		// the release to land on the card body instead and be read as a tick. The
+		// card body is 90px tall, so ticking kept working and hid the cause.
+		const int kDragSlop = 3;
+		if (abs(y - mContentDragStartY) <= kDragSlop &&
+			(mContentDragStartX < 0 || abs(x - mContentDragStartX) <= kDragSlop))
+			return;
+
 		mScrollOffset = mContentDragStartOffset + (float) (y - mContentDragStartY);
 		if (mScrollOffset < 0) mScrollOffset = 0;
 		Refresh();
@@ -3329,7 +3421,7 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 	}
 
 	vector<WED_LiveryDisplayRow> rows = BuildCurrentDisplayRows(mSelectedRamps[0], mSortDescending,
-										gShowLiveryRecommendation != 0, mAirportDb, mCurrentAirportIcao, mSearchQuery, mAirlineDirectory, mPopularAirlinesShuffleCache);
+										gShowLiveryRecommendation != 0, mAirportDb, mCurrentAirportIcao, mSearchQuery, mAirlineDirectory, mPopularAirlinesShuffleCache, AllOperators());
 	{ set<string> have; CardKeys(have); DropCardless(rows, have); }
 	PruneEmptySections(rows);
 	PinSelected(rows, ParseCodes(mSelectedRamps[0]->GetAirlines()));
@@ -4524,7 +4616,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		else
 		{
 			vector<WED_LiveryDisplayRow> rows = BuildCurrentDisplayRows(mSelectedRamps[0], mSortDescending,
-												gShowLiveryRecommendation != 0, mAirportDb, mCurrentAirportIcao, mSearchQuery, mAirlineDirectory, mPopularAirlinesShuffleCache);
+												gShowLiveryRecommendation != 0, mAirportDb, mCurrentAirportIcao, mSearchQuery, mAirlineDirectory, mPopularAirlinesShuffleCache, AllOperators());
 			{ set<string> have; CardKeys(have); DropCardless(rows, have); }
 	PruneEmptySections(rows);
 	PinSelected(rows, ParseCodes(mSelectedRamps[0]->GetAirlines()));
@@ -4742,6 +4834,10 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			}
 
 			glPopAttrib();		// restores GL_SCISSOR_TEST enable + rect to whatever they were on entry
+
+			// After the clip, deliberately: a tip has to be allowed outside the box
+			// that spawned it, and a card near the bottom has nowhere else to put it.
+			DrawHoverTip(state, b);
 
 			mThumbCache.EvictNotVisible(keep_alive_paths);
 
