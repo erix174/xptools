@@ -51,7 +51,6 @@
 #include "GUI_Pane.h"
 #include "GUI_Listener.h"
 #include "GUI_Commander.h"
-#include "GUI_Timer.h"
 #include "WED_AirportDatabase.h"
 #include "WED_AirlineDirectory.h"
 #include "WED_LiveryIndex.h"
@@ -60,6 +59,7 @@
 #include <string>
 #include <map>
 #include <set>
+#include <ctime>
 
 class	IResolver;
 class	WED_Archive;
@@ -77,11 +77,7 @@ class	GUI_TextField;
 // assert - mSearchField could never join the focus chain, because the chain has
 // no route into a pane that is not a commander. WED_PropertyPane and WED_TCEPane
 // are both commanders for exactly this reason; this pane was the odd one out.
-// GUI_Timer drives two things that move on their own: a hovered card cycling
-// through its operator's other aircraft, and a tray sliding open or shut. Both
-// need frames the mouse does not deliver, and neither can be done from Draw(),
-// which only runs when something else has already asked for a redraw.
-class	WED_LiveryPane : public GUI_Pane, public GUI_Commander, public GUI_Listener, public GUI_Timer {
+class	WED_LiveryPane : public GUI_Pane, public GUI_Commander, public GUI_Listener {
 public:
 
 						 WED_LiveryPane(
@@ -517,8 +513,11 @@ private:
 	int							mContentDragStartX;		// so MouseUp can tell a click from a scroll
 	float						mContentDragStartOffset;
 
-	virtual void				TimerFired(void);
-	void						SyncAnimationTimer(void);	// runs only while something is actually moving
+	// Advances whatever is in motion by the wall-clock time since the last frame
+	// and reports whether anything still is, so Draw() can ask for another frame.
+	// NOT a GUI_Timer: see the .cpp on why that never fired here.
+	bool						StepAnimation(void);
+	clock_t						mLastAnimClock;
 
 	// ---- hover cycling ----
 	// A hovered card steps through its operator's other aircraft once a second, so

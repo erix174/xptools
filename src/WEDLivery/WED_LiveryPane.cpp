@@ -985,6 +985,7 @@ WED_LiveryPane::WED_LiveryPane(
 	mContentDragStartX(-1),		// declared later in the header (after mCachedStatusLines) -
 	mContentDragStartOffset(0),	// listed here anyway so all the "simple scalar" inits stay together
 	mCycleShow(0),
+	mLastAnimClock(0),
 	mHoverX(0),
 	mHoverY(0),
 	mCycleAccum(0.0f),
@@ -1118,7 +1119,7 @@ void	WED_LiveryPane::Hide(void)
 	// pane nobody is looking at.
 	mCycleAirline.clear();  mCycleShow = 0;  mCycleAccum = 0.0f;
 	mTrayClosing.clear();   mTrayClosingOpen = 0.0f;
-	Stop();
+	mLastAnimClock = 0;
 
 	// Everything else the mouse was in the middle of, too. Only the two drags
 	// above own an archive command, so only they can strand it - but the rest of
@@ -2091,6 +2092,11 @@ float	WED_LiveryPane::LayoutRows(int bounds[4], const vector<bool> & is_card,
 	}
 	if (col != 0) y -= card_h + line_extra;			// trailing partial line still takes its height
 
+	// A bottom margin, counted into the content height so it can actually be
+	// scrolled to. Without it the last section header - usually the collapsed "All
+	// Airlines" - sits flush on the pane's edge with its box touching the frame.
+	y -= kCardGap * 2.0f;
+
 	return y_top - y;								// total content height
 }
 
@@ -2190,56 +2196,59 @@ static float	TrayFullHeight(size_t n_liveries)
 	return kTrayPad * 2.0f + (float) n_liveries * kTrayRowH;
 }
 
-// Runs only while something is actually moving. A timer left running behind a
-// static pane is a redraw every frame forever, which on this pane means re-running
-// BuildCurrentDisplayRows and the whole layout for nothing.
-void	WED_LiveryPane::SyncAnimationTimer(void)
+// ANIMATION IS DRIVEN FROM Draw(), NOT FROM A TIMER. GUI_Timer's Windows path is
+// SetTimer(NULL, 0, ...) - a thread timer whose WM_TIMER only arrives if the
+// message loop dispatches messages with a NULL hwnd. It does not here: the log
+// showed Start() being called on every hover (busy=1) and TimerFired running
+// exactly zero times, which is why neither the hover cycle nor the tray ever
+// moved while both looked correct in every other respect.
+//
+// Advancing on wall-clock time inside Draw() and asking for another frame while
+// anything is still moving needs no platform support and is the same pattern the
+// progressive thumbnail fill in this pane already uses successfully. It also
+// self-limits: when nothing is animating no extra frame is requested.
+//
+// Returns true when something is still in motion, so Draw() knows to come back.
+bool	WED_LiveryPane::StepAnimation(void)
 {
-	bool busy = !mCycleAirline.empty()
-			 || (!mTrayAirline.empty()   && mTrayOpen        < 1.0f)
-			 || (!mTrayClosing.empty()   && mTrayClosingOpen > 0.0f);
-	LOG_MSG("I/LiveryTimer sync busy=%d cycle=%s tray=%s open=%.2f\n",
-			(int) busy, mCycleAirline.c_str(), mTrayAirline.c_str(), mTrayOpen);
-	if (busy) Start(1.0f / 30.0f);
-	else      Stop();
-}
+	clock_t now = clock();
+	if (mLastAnimClock == 0) { mLastAnimClock = now; return false; }
 
-void	WED_LiveryPane::TimerFired(void)
-{
-	static int s_ticks = 0;
-	if ((s_ticks++ % 30) == 0)
-		LOG_MSG("I/LiveryTimer fired #%d tray=%s open=%.2f\n", s_ticks, mTrayAirline.c_str(), mTrayOpen);
+	float dt = (float)(now - mLastAnimClock) / (float) CLOCKS_PER_SEC;
+	mLastAnimClock = now;
 
-	const float dt = 1.0f / 30.0f;
-	bool changed = false;
+	// A frame that took a long time - the window was hidden, or a thumbnail parse
+	// ran long - must not teleport the animation to its end.
+	if (dt < 0.0f)  dt = 0.0f;
+	if (dt > 0.1f)  dt = 0.1f;
 
-	// Trays: one extends while the other retracts, both at the same rate, so the
-	// rows below them never jump - the total height they occupy stays continuous.
+	bool moving = false;
+
 	const float kTraySpeed = 4.0f;				// full travel in a quarter second
 	if (!mTrayAirline.empty() && mTrayOpen < 1.0f)
 	{
 		mTrayOpen = (std::min)(1.0f, mTrayOpen + dt * kTraySpeed);
-		changed = true;
+		moving = true;
 	}
 	if (!mTrayClosing.empty())
 	{
 		mTrayClosingOpen -= dt * kTraySpeed;
 		if (mTrayClosingOpen <= 0.0f) { mTrayClosingOpen = 0.0f; mTrayClosing.clear(); }
-		changed = true;
+		moving = true;
 	}
 
 	// One aircraft per second on the hovered card. mCycleShow is advanced blind and
 	// wrapped by the drawer against the card's actual length, because the card can
-	// change under the cursor (a weight drag can remove a whole class) and clamping
-	// here would need the card, which this does not have.
+	// change under the cursor - a weight drag can remove a whole class - and
+	// clamping here would need the card, which this does not have.
 	if (!mCycleAirline.empty())
 	{
 		mCycleAccum += dt;
-		if (mCycleAccum >= 1.0f) { mCycleAccum = 0.0f; ++mCycleShow; changed = true; }
+		if (mCycleAccum >= 1.0f) { mCycleAccum -= 1.0f; ++mCycleShow; }
+		moving = true;
 	}
 
-	if (changed) Refresh();
-	SyncAnimationTimer();
+	return moving;
 }
 
 // The list under an open card: every aircraft that operator can park at this
@@ -2611,9 +2620,10 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 	if (card.abs_paths.size() > 1)
 	{
 		char m[40];
-		snprintf(m, sizeof(m), "  (+%d)", (int) card.abs_paths.size() - 1);
+		snprintf(m, sizeof(m), "  (and %d more)", (int) card.abs_paths.size() - 1);
 		tail = m;
-		tail_short = m;		// already the compact form - nothing shorter to fall back to
+		snprintf(m, sizeof(m), "  (+%d)", (int) card.abs_paths.size() - 1);
+		tail_short = m;
 	}
 
 	// THE HEAD IS THE IDENTITY AND IS NEVER WHAT GETS DROPPED. Reserving the suffix
@@ -3102,14 +3112,13 @@ int		WED_LiveryPane::MouseMove(int x, int y)
 			mCycleShow    = 0;
 			mCycleAccum   = 0.0f;
 			changed       = true;
-			SyncAnimationTimer();
+			Refresh();
 		}
 	}
 	else if (!mCycleAirline.empty())
 	{
 		mCycleAirline.clear(); mCycleShow = 0; mCycleAccum = 0.0f;
 		changed = true;
-		SyncAnimationTimer();
 	}
 	if (row != mHoverRow)				{ mHoverRow = row;				changed = true; }
 
@@ -3556,7 +3565,7 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 				if (!mTrayAirline.empty()) { mTrayClosing = mTrayAirline; mTrayClosingOpen = mTrayOpen; }
 				mTrayAirline = icao;  mTrayOpen = 0.0f;
 			}
-			SyncAnimationTimer();
+			Refresh();
 			mTrackRow = -1;
 			Refresh();
 			return;
@@ -3714,7 +3723,16 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 				// apt.dat entry may still carry a perfectly good country line
 				// that a metadata-only lookup would otherwise shadow. Give
 				// that a second try before giving up.
-				if (r == wed_Icao_NotFound && !icao_meta.empty() && icao_meta != icao_primary)
+				//
+				// A PLACEHOLDER COUNTS AS A MISS. It used to retry only on
+				// NotFound, so an airport whose metadata still held a reserved
+				// code - "ZZLI" - kept reporting "placeholder, country unknown"
+				// after its Airport ID had been corrected to a real one, and the
+				// pane looked like it was failing to refresh when it was in fact
+				// faithfully reporting stale metadata. A reserved code carries no
+				// information by definition, so anything real must outrank it.
+				if ((r == wed_Icao_NotFound || r == wed_Icao_Placeholder) &&
+					!icao_meta.empty() && icao_meta != icao_primary)
 				{
 					string country2;
 					WED_IcaoLookupResult r2 = LookupIcaoCountry(mAirportDb, icao_primary, country2);
@@ -4903,13 +4921,24 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 
 					if (collapsible)
 					{
+						// A filled box with its own outline, full width. The faint
+						// wash it had before was invisible against the panel, so the
+						// section still read as a line of text - which is the thing
+						// being fixed.
 						state->SetState(0,0,0,0,1,0,0);
-						glColor4f(1.0f, 1.0f, 1.0f, (int) vi == mHoverRow ? 0.10f : 0.055f);
+						glColor4f(1.0f, 1.0f, 1.0f, (int) vi == mHoverRow ? 0.16f : 0.09f);
 						glBegin(GL_QUADS);
-							glVertex2f((float) b[0] + 2, row_bot);
-							glVertex2f((float) b[2] - 2, row_bot);
-							glVertex2f((float) b[2] - 2, row_top);
-							glVertex2f((float) b[0] + 2, row_top);
+							glVertex2f((float) b[0] + kCardGap, row_bot);
+							glVertex2f((float) b[2] - kCardGap, row_bot);
+							glVertex2f((float) b[2] - kCardGap, row_top);
+							glVertex2f((float) b[0] + kCardGap, row_top);
+						glEnd();
+						glColor4f(1.0f, 1.0f, 1.0f, 0.22f);
+						glBegin(GL_LINE_LOOP);
+							glVertex2f((float) b[0] + kCardGap + 0.5f, row_bot + 0.5f);
+							glVertex2f((float) b[2] - kCardGap - 0.5f, row_bot + 0.5f);
+							glVertex2f((float) b[2] - kCardGap - 0.5f, row_top - 0.5f);
+							glVertex2f((float) b[0] + kCardGap + 0.5f, row_top - 0.5f);
 						glEnd();
 
 						// Same convention as the card's tray arrow: right when shut,
@@ -4965,6 +4994,11 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			// it stops on its own once everything visible is cached, because then
 			// the cap is never reached.
 			if (renders_this_frame >= kMaxRendersPerFrame) Refresh();
+
+			// Same mechanism, different reason: while a tray is sliding or a card is
+			// cycling, ask for the next frame. Nothing is scheduled when nothing
+			// moves, so an idle pane goes quiet.
+			if (StepAnimation()) Refresh();
 
 			if (rows.empty())
 			{
