@@ -41,6 +41,7 @@
 #include <algorithm>				// std::max - parenthesised at every call site, see below
 #include <cmath>
 #include <cstring>				// strstr, for the APL extension check
+#include <ctime>					// clock, for the render-cost breakdown below
 
 // <windows.h> (force-included via XDefs.h) defines min/max as macros, which swallow
 // std::max(...) into a compile error - every call here is written as (std::max)(...)
@@ -274,6 +275,11 @@ const WED_LiveryThumbnail * WED_LiveryThumbnailCache::GetThumbnail(WED_ResourceM
 	if (mCache.size() >= kMaxCachedThumbnails)
 		return nullptr;
 
+	// Split timing: the point of the breakdown is to say whether a slow thumbnail is
+	// the OBJ parse or the GL work, because the two have completely different fixes
+	// and guessing wrong means optimising the cheap half.
+	clock_t t_begin = clock();
+
 	const XObj8 * o = nullptr;
 	if (!res_mgr || !res_mgr->GetObjAbsolute(obj_path, o) || !o)
 	{
@@ -299,6 +305,8 @@ const WED_LiveryThumbnail * WED_LiveryThumbnailCache::GetThumbnail(WED_ResourceM
 	// Both the silhouette fit and the modelview below must use the SAME azimuth,
 	// or the projection is fitted to a view that is never drawn and the model is
 	// clipped. See ModelYawCorrection.
+	clock_t t_obj = clock();			// everything before here was loading the OBJ
+
 	float cam_psi = kCamPsi + ModelYawCorrection(o, obj_path);
 
 	// Remember what was bound/current before hijacking it, so this always leaves the

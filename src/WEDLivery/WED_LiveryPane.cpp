@@ -4443,6 +4443,25 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			int         renders_this_frame = 0;
 			set<string> keep_alive_paths;
 
+			// Clip to the content viewport. GUI_Pane::InternalDraw() only scissors to
+			// the WHOLE PANE's bounds, not this section's, so without this a card
+			// scrolled half past the top paints its full image quad straight over the
+			// toolbar and slider above it - which is why the draw loop used to skip
+			// anything not entirely inside, and why cards vanished at the border.
+			// Clamp both extents to >= 0: ContentTop() subtracts a chain of fixed
+			// section heights from the pane's top edge, so dragging the property panel
+			// short can put it BELOW the pane bottom, and glScissor turns a negative
+			// extent into GL_INVALID_VALUE and then an assert in a debug build.
+			glPushAttrib(GL_SCISSOR_BIT);
+			glEnable(GL_SCISSOR_TEST);
+			{
+				int sc_w = (int) (b[2] - b[0]);
+				int sc_h = (int) (top - (float) b[1]);
+				if (sc_w < 0) sc_w = 0;
+				if (sc_h < 0) sc_h = 0;
+				glScissor((int) b[0], (int) b[1], sc_w, sc_h);
+			}
+
 			// KEEP-ALIVE IS A WIDER WINDOW THAN WHAT IS DRAWN, and it is collected in
 			// its own pass because the draw loop below breaks out the moment it goes
 			// off the bottom. Built from the visible rows alone - which is what
@@ -4452,13 +4471,13 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			// the 0.5-0.8s stall: not one slow thumbnail, but the same thumbnails
 			// being thrown away and rebuilt.
 			//
-			// One viewport's worth of margin above and below, capped by the cache
-			// itself (32 entries), so a fast scroll travels through already-cached
-			// neighbours instead of thrashing.
+			// A card and a half beyond the border in each direction - far enough that
+			// a card begins rendering well before it is needed and is not dropped the
+			// moment it leaves, which is the window the eviction below uses too.
+			const float kOffscreenMargin = CardHeight(b) * 1.5f;
 			{
-				float margin  = top - (float) b[1];
-				float keep_hi = top + margin;
-				float keep_lo = (float) b[1] - margin;
+				float keep_hi = top + kOffscreenMargin;
+				float keep_lo = (float) b[1] - kOffscreenMargin;
 				for (size_t vi = 0; vi < rows.size(); ++vi)
 				{
 					if (rows[vi].kind != wed_Row_Airline)  continue;
@@ -4477,8 +4496,13 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 				const WED_LiveryDisplayRow & row = rows[vi];
 				float row_top = slots[vi].top;
 				float row_bot = slots[vi].bot;
-				if (row_bot < b[1]) break;						// scrolled/clipped past the bottom - nothing lower matters either
-				if (row_top > top) continue;						// scrolled past the top - keep going, a later row may still be visible
+				// OVERLAP, not containment. Testing "is it entirely inside" made a
+				// card vanish the instant its edge crossed the border instead of
+				// being clipped by the scissor below, which is the whole reason that
+				// scissor exists. The margin means it also starts rendering a card
+				// and a half early, so the work is done before it is looked at.
+				if (slots[vi].top < (float) b[1] - kOffscreenMargin) break;	// this and everything below are far off
+				if (slots[vi].slot_bot > top + kOffscreenMargin) continue;	// far above; a later row may still be near
 
 				if (row.kind == wed_Row_Gap)
 					continue;
@@ -4566,6 +4590,8 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 				}
 
 			}
+
+			glPopAttrib();		// restores GL_SCISSOR_TEST enable + rect to whatever they were on entry
 
 			mThumbCache.EvictNotVisible(keep_alive_paths);
 
