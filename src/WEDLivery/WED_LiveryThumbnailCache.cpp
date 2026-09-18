@@ -98,10 +98,28 @@ static bool FBOAvailable(void)
 	// and without this check we would rediscover that by allocating, attaching,
 	// checking and deleting an FBO for every visible card, every frame, forever.
 	// WED_LibraryPreviewPane.cpp:109 already does exactly this test.
+	// EITHER extension is enough, and asking only for ARB was wrong. The
+	// renderer below is deliberately written to satisfy the STRICTER of the two
+	// specs - it passes the sized GL_DEPTH_COMPONENT24 precisely because
+	// EXT_framebuffer_object rejects the unsized base format - so a driver
+	// exposing only EXT can render these thumbnails perfectly well. Gating on
+	// ARB alone turned "we hardened this for EXT" into "we refuse to run on
+	// EXT", and the symptom would have been previews silently absent on an
+	// older Mac with no hint that a one-word test was the reason.
+	//
+	// glGetString(GL_EXTENSIONS) is safe to read here: WED asks for no
+	// NSOpenGLPFAOpenGLProfile, so Mac hands back a legacy 2.1 compatibility
+	// context - see the note in TexUtils.cpp, which explains that requesting
+	// 3.2 core would disable the immediate-mode drawing the whole UI is built
+	// on. In a core context this call would return NULL instead.
 	const char * ext_str = (const char *) glGetString(GL_EXTENSIONS);
-	s_state = (ext_str && strstr(ext_str, "GL_ARB_framebuffer_object")) ? 1 : 0;
+	s_state = (ext_str && (strstr(ext_str, "GL_ARB_framebuffer_object") ||
+						   strstr(ext_str, "GL_EXT_framebuffer_object"))) ? 1 : 0;
 	if (!s_state)
-		LOG_MSG("E/LiveryThumb no GL_ARB_framebuffer_object - preview cards disabled.\n");
+		LOG_MSG("E/LiveryThumb no ARB/EXT_framebuffer_object - preview cards disabled.\n");
+	else
+		LOG_MSG("I/LiveryThumb framebuffer objects available (%s)\n",
+				strstr(ext_str, "GL_ARB_framebuffer_object") ? "ARB" : "EXT only");
 #else
 	s_state = (glGenFramebuffers  != NULL && glBindFramebuffer        != NULL &&
 			   glGenRenderbuffers != NULL && glFramebufferTexture2D   != NULL &&
