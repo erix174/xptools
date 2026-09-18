@@ -557,6 +557,19 @@ namespace
 		rows.swap(out);
 	}
 
+	// Drops every airline row that has no card behind it. WITHOUT THIS THE GRID GETS
+	// HOLES: the layout allocates a slot for every airline row, and Draw() then
+	// skipped the ones with nothing modelled, leaving the slot empty and pushing the
+	// rest of the line sideways. Layout and content have to walk the same list.
+	void DropCardless(vector<WED_LiveryDisplayRow> & rows, const set<string> & have_cards)
+	{
+		vector<WED_LiveryDisplayRow> out;
+		for (size_t i = 0; i < rows.size(); ++i)
+			if (rows[i].kind != wed_Row_Airline || have_cards.count(rows[i].icao))
+				out.push_back(rows[i]);
+		rows.swap(out);
+	}
+
 	// Drops the airline rows of any collapsed section, keeping its header. Only the
 	// header is left behind, so the section can be reopened - and "All Airlines"
 	// starts collapsed, because it is the tier with no filter behind it and
@@ -1372,6 +1385,13 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 // Rows carry a lowercase icao; cards are keyed by the same string, so this cannot
 // return a card belonging to a different row - see the .h on why the two are not
 // a pair of parallel vectors.
+void	WED_LiveryPane::CardKeys(set<string> & out) const
+{
+	out.clear();
+	for (map<string, AirlineCard>::const_iterator i = mAirlineCards.begin(); i != mAirlineCards.end(); ++i)
+		out.insert(i->first);
+}
+
 const WED_LiveryPane::AirlineCard *	WED_LiveryPane::CardFor(const string & icao_lower) const
 {
 	map<string, AirlineCard>::const_iterator i = mAirlineCards.find(icao_lower);
@@ -2034,6 +2054,12 @@ static void	RowIcaos(const vector<WED_LiveryDisplayRow> & rows, vector<string> &
 // card sub-targets, the animation timer, and the tray
 // ---------------------------------------------------------------------------------------------
 
+// ONE per frame, not a batch. Each render parses an OBJ that can be 150k lines
+// and uploads a 2048-square texture, so two of them in a frame is a visible
+// hitch; one, with Draw() asking for another frame while any remain, fills a cold
+// screenful over a few frames and never blocks.
+static const int   kMaxRendersPerFrame = 1;
+
 static const float kTrayRowH   = 18.0f;		// one aircraft line inside an open tray
 static const float kTrayPad    =  6.0f;
 static const float kLockSize   = 14.0f;
@@ -2195,7 +2221,6 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 	const string & type_str = card.types[show];
 
 	float line_h = GUI_GetLineHeight(font_UI_Basic);
-	const int kMaxRendersPerFrame = 2;
 
 	WED_ResourceMgr * res_mgr = WED_GetResourceMgr(mResolver);
 	ITexMgr *         tex_mgr = WED_GetTexMgr(mResolver);
@@ -2792,7 +2817,8 @@ int		WED_LiveryPane::MouseMove(int x, int y)
 	{
 		vector<WED_LiveryDisplayRow> rows = BuildCurrentDisplayRows(mSelectedRamps[0], mSortDescending,
 											gShowLiveryRecommendation != 0, mAirportDb, mCurrentAirportIcao, mSearchQuery, mAirlineDirectory, mPopularAirlinesShuffleCache);
-		PinSelected(rows, ParseCodes(mSelectedRamps[0]->GetAirlines()));
+		{ set<string> have; CardKeys(have); DropCardless(rows, have); }
+	PinSelected(rows, ParseCodes(mSelectedRamps[0]->GetAirlines()));
 		ApplyCollapse(rows, mCollapsedSections);
 		vector<bool> is_card;  vector<string> row_icaos;  vector<float> tray_h;
 		CardFlags(rows, is_card);  RowIcaos(rows, row_icaos);  TrayHeights(row_icaos, tray_h);
@@ -2965,6 +2991,7 @@ int		WED_LiveryPane::MouseDown(int x, int y, int button)
 	// section header.
 	vector<WED_LiveryDisplayRow> rows = BuildCurrentDisplayRows(mSelectedRamps[0], mSortDescending,
 										gShowLiveryRecommendation != 0, mAirportDb, mCurrentAirportIcao, mSearchQuery, mAirlineDirectory, mPopularAirlinesShuffleCache);
+	{ set<string> have; CardKeys(have); DropCardless(rows, have); }
 	PinSelected(rows, ParseCodes(mSelectedRamps[0]->GetAirlines()));
 	ApplyCollapse(rows, mCollapsedSections);
 	vector<bool> is_card;  vector<string> row_icaos;  vector<float> tray_h;
@@ -3173,6 +3200,7 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 
 	vector<WED_LiveryDisplayRow> rows = BuildCurrentDisplayRows(mSelectedRamps[0], mSortDescending,
 										gShowLiveryRecommendation != 0, mAirportDb, mCurrentAirportIcao, mSearchQuery, mAirlineDirectory, mPopularAirlinesShuffleCache);
+	{ set<string> have; CardKeys(have); DropCardless(rows, have); }
 	PinSelected(rows, ParseCodes(mSelectedRamps[0]->GetAirlines()));
 	ApplyCollapse(rows, mCollapsedSections);
 	vector<bool> is_card;  vector<string> row_icaos;  vector<float> tray_h;
@@ -4366,7 +4394,8 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		{
 			vector<WED_LiveryDisplayRow> rows = BuildCurrentDisplayRows(mSelectedRamps[0], mSortDescending,
 												gShowLiveryRecommendation != 0, mAirportDb, mCurrentAirportIcao, mSearchQuery, mAirlineDirectory, mPopularAirlinesShuffleCache);
-			PinSelected(rows, ParseCodes(mSelectedRamps[0]->GetAirlines()));
+			{ set<string> have; CardKeys(have); DropCardless(rows, have); }
+	PinSelected(rows, ParseCodes(mSelectedRamps[0]->GetAirlines()));
 			ApplyCollapse(rows, mCollapsedSections);
 			// How many of the selected ramps carry each code, computed ONCE per draw.
 			// Asking per row would be O(rows x ramps) every frame - a few hundred
@@ -4413,6 +4442,35 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			// mystery rather than a mismatch.
 			int         renders_this_frame = 0;
 			set<string> keep_alive_paths;
+
+			// KEEP-ALIVE IS A WIDER WINDOW THAN WHAT IS DRAWN, and it is collected in
+			// its own pass because the draw loop below breaks out the moment it goes
+			// off the bottom. Built from the visible rows alone - which is what
+			// shipped - a card evicted the instant it scrolled out was re-rendered
+			// the instant it scrolled back in, so dragging the pane taller re-rendered
+			// everything it revealed AND everything it had just pushed past. That is
+			// the 0.5-0.8s stall: not one slow thumbnail, but the same thumbnails
+			// being thrown away and rebuilt.
+			//
+			// One viewport's worth of margin above and below, capped by the cache
+			// itself (32 entries), so a fast scroll travels through already-cached
+			// neighbours instead of thrashing.
+			{
+				float margin  = top - (float) b[1];
+				float keep_hi = top + margin;
+				float keep_lo = (float) b[1] - margin;
+				for (size_t vi = 0; vi < rows.size(); ++vi)
+				{
+					if (rows[vi].kind != wed_Row_Airline)  continue;
+					if (slots[vi].bot > keep_hi)           continue;
+					if (slots[vi].top < keep_lo)           break;		// everything below is further away
+					const AirlineCard * ac = CardFor(rows[vi].icao);
+					if (!ac || ac->abs_paths.empty()) continue;
+					int sh = (rows[vi].icao == mCycleAirline)
+								? mCycleShow % (int) ac->abs_paths.size() : 0;
+					keep_alive_paths.insert(ac->abs_paths[sh]);
+				}
+			}
 
 			for (size_t vi = 0; vi < rows.size(); ++vi)
 			{
@@ -4510,6 +4568,13 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			}
 
 			mThumbCache.EvictNotVisible(keep_alive_paths);
+
+			// Rendering is capped per frame, so a screenful that is entirely cold
+			// fills in over the next few frames instead of blocking one of them for
+			// all of it. Asking for the next frame here is what keeps that going;
+			// it stops on its own once everything visible is cached, because then
+			// the cap is never reached.
+			if (renders_this_frame >= kMaxRendersPerFrame) Refresh();
 
 			if (rows.empty())
 			{

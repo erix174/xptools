@@ -105,7 +105,7 @@ static const float kCamPsi = 90.0f;
 // map draws static aircraft - arrives here with an empty point pool. We take that
 // pool when it is still full and fall back to the file when it is not, memoised,
 // because the answer is a property of the asset and never changes.
-static bool	CentrelineOffsets(const XObj8 * o, const string & obj_path, double & off_x, double & off_z)
+static bool	CentrelineOffsets(const XObj8 * o, const string & obj_path, double & off_x, double & off_z, double & sign_x)
 {
 	double y0 = o->xyz_min[1], y1 = o->xyz_max[1];
 	double hx = (o->xyz_max[0] - o->xyz_min[0]) * 0.5;
@@ -116,7 +116,7 @@ static bool	CentrelineOffsets(const XObj8 * o, const string & obj_path, double &
 	double cz  = (o->xyz_max[2] + o->xyz_min[2]) * 0.5;
 	double cut = y0 + 0.99 * (y1 - y0);			// the top 1% - fin tip or T-tail centre
 
-	double sum_x = 0.0, sum_z = 0.0;
+	double sum_x = 0.0, sum_z = 0.0, signed_x = 0.0;
 	int    top   = 0;
 
 	int n = o->geo_tri.count();
@@ -126,8 +126,9 @@ static bool	CentrelineOffsets(const XObj8 * o, const string & obj_path, double &
 		{
 			const float * v = o->geo_tri.get(i);
 			if (v[1] < cut) continue;
-			sum_x += fabs(v[0] - cx) / hx;
-			sum_z += fabs(v[2] - cz) / hz;
+			sum_x    += fabs(v[0] - cx) / hx;
+			signed_x +=     (v[0] - cx) / hx;
+			sum_z    += fabs(v[2] - cz) / hz;
 			++top;
 		}
 	}
@@ -146,16 +147,18 @@ static bool	CentrelineOffsets(const XObj8 * o, const string & obj_path, double &
 			double x, y, z;
 			if (sscanf(line + 3, "%lf %lf %lf", &x, &y, &z) != 3) continue;
 			if (y < cut) continue;
-			sum_x += fabs(x - cx) / hx;
-			sum_z += fabs(z - cz) / hz;
+			sum_x    += fabs(x - cx) / hx;
+			signed_x +=     (x - cx) / hx;
+			sum_z    += fabs(z - cz) / hz;
 			++top;
 		}
 		fclose(fi);
 	}
 
 	if (top < 4) return false;
-	off_x = sum_x / (double) top;
-	off_z = sum_z / (double) top;
+	off_x  = sum_x    / (double) top;
+	off_z  = sum_z    / (double) top;
+	sign_x = signed_x / (double) top;
 	return true;
 }
 
@@ -165,12 +168,25 @@ static float	ModelYawCorrection(const XObj8 * o, const string & obj_path)
 	map<string, float>::const_iterator m = memo.find(obj_path);
 	if (m != memo.end()) return m->second;
 
-	double off_x = 0.0, off_z = 0.0;
+	double off_x = 0.0, off_z = 0.0, sign_x = 0.0;
 	float  psi   = 0.0f;
-	if (CentrelineOffsets(o, obj_path, off_x, off_z) && off_z < 0.25 && off_x > 0.5)
-		psi = 90.0f;							// fuselage lies on X - yawed
+	if (CentrelineOffsets(o, obj_path, off_x, off_z, sign_x) && off_z < 0.25 && off_x > 0.5)
+	{
+		// The axis alone is not enough - the DIRECTION along it decides which way to
+		// turn, and getting that wrong leaves the aircraft side-on but facing the
+		// opposite way to every other card, which is what shipped first. The top 1%
+		// of vertices ARE the tail, so the sign of their offset says which end it is
+		// on: tail at +X means the nose already points screen-left once the standard
+		// 90 is undone; tail at -X needs the full half turn.
+		//
+		// This is the same rule every model goes through, not an exception for these
+		// - a normal aircraft has its tail at +Z and keeps kCamPsi for exactly the
+		// same reason. 293 of the 298 shipped objects come out of here with 0.
+		psi = (sign_x > 0.0) ? -90.0f : 90.0f;
+	}
 
-	LOG_MSG("I/LiveryThumb yaw %s: offX=%.2f offZ=%.2f -> +%.0f\n", obj_path.c_str(), off_x, off_z, psi);
+	LOG_MSG("I/LiveryThumb yaw %s: offX=%.2f offZ=%.2f signX=%+.2f -> %+.0f\n",
+			obj_path.c_str(), off_x, off_z, sign_x, psi);
 	memo[obj_path] = psi;
 	return psi;
 }
