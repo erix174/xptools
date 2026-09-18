@@ -44,7 +44,7 @@ PREFIX_IOC = {
     "JY": "JOR",  "SU": "EGY", "7T": "ALG", "CN": "MAR", "TS": "TUN",
     "ET": "ETH",  "5Y": "KEN", "ZS": "RSA", "9J": "ZAM",
     "VT": "IND",  "AP": "PAK", "S2": "BAN", "4R": "SRI", "8Q": "MDV",
-    "B": "CHN",   "JA": "JPN", "HL": "KOR", "9V": "SIN", "9M": "MAS",
+    "B": "CHN",   "JA": "JPN", "HL": "KOR", "9V": "SGP", "9M": "MAS",
     "PK": "INA",  "HS": "THA", "XU": "CAM", "RDPL": "LAO", "VN": "VIE",
     "RP": "PHI",  "VH": "AUS", "ZK": "NZL", "DQ": "FIJ",
     "XA": "MEX",  "XB": "MEX", "XC": "MEX", "LV": "ARG", "PP": "BRA",
@@ -56,7 +56,14 @@ PREFIX_IOC = {
     "BK": "HKG",  "BH": "HKG", "BL": "HKG", "BM": "MAC",
     "YI": "IRQ",  "A4O": "OMA", "A40": "OMA", "5A": "LBA", "ST": "SUD",
     "EK": "ARM",  "4L": "GEO", "UK": "UZB", "UP": "KAZ", "EY": "TJK",
+    "EZ": "TKM",  "4K": "AZE", "LX": "LUX",
 }
+# EVERY VALUE ABOVE MUST BE A CODE WED_AirlineDirectory.txt ALSO USES. The two
+# files are joined on it - the directory gives the operator's country, this table
+# gives the registration's, and a mismatch reads as "foreign-registered aircraft"
+# rather than as a typo. "9V": "SIN" sat here until 2026-09-17 making every
+# Singapore Airlines livery look foreign-registered, because SIN is the airport
+# code and the directory quite correctly says SGP.
 # Prefixes that are genuinely ambiguous and must be reviewed by hand rather than
 # trusted: B- covers mainland China, Taiwan, Hong Kong and Macau.
 AMBIGUOUS = {"B"}
@@ -74,7 +81,14 @@ def ioc_for_reg(reg):
             continue
         # A one-letter nationality prefix needs a long body, or three-letter
         # model tokens like "BBJ1" get read as Chinese registrations.
-        if n == 1 and len(reg) - n < 4:
+        #
+        # Except for N. Every other one-letter prefix is followed by four
+        # letters (G-ABCD, D-AIXB, F-GRJC), but a US registration is N plus a
+        # DIGIT plus up to four more, and the short ones are real: N7ER was
+        # being thrown away as too short and shipped a "???" country. Requiring
+        # that digit is what keeps the exception narrow - "BBJ1" still fails
+        # here, because its prefix is B and its body does not start with one.
+        if n == 1 and len(reg) - n < 4 and not (p == "N" and reg[1:2].isdigit()):
             continue
         return PREFIX_IOC[p], p not in AMBIGUOUS, p
     return "???", False, ""

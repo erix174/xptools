@@ -1,7 +1,7 @@
 I
 1 WED Aviation Database
 # schema 1
-# data 20260917-r1
+# data 20260918-r1
 # source X-Plane 12.4.3-r2-15ff1e4d
 # assets 298 liveries under apt_aircraft/
 #
@@ -68,7 +68,7 @@ A320 *** C *** CSN  *** B6908   *** CHN *** Default    *** jet/A320_CSN/A320_CSN
 A320 *** C *** DAL  *** N325US  *** USA *** Default    *** jet/A320_DAL/A320_DAL_static.obj
 A320 *** C *** DLH  *** DALZC   *** GER *** Default    *** jet/A320_DLH/A320_DLH_static.obj
 A320 *** C *** EZY  *** OEIZU   *** AUT *** Default    *** jet/A320_EZY/A320_EZY_static.obj
-A320 *** C *** IGO  *** LNDIG   *** NOR *** Default    *** jet/A320_IGO/A320_IGO_static.obj
+A320 *** C *** IGO  *** VTIES   *** IND *** Default    *** jet/A320_IGO/A320_IGO_static.obj
 A320 *** C *** LAN  *** CCBAR   *** CHI *** Default    *** jet/A320_LAN/A320_LAN_static.obj
 A320 *** C *** QLK  *** VHVQS   *** AUS *** Default    *** jet/A320_QLK/A320_QLK_static.obj
 A320 *** C *** QTR  *** A7AHH   *** QAT *** Default    *** jet/A320_QTR/A320_QTR_static.obj
@@ -160,12 +160,12 @@ B738 *** C *** MSR  *** SUGEK   *** EGY *** Default    *** jet/B738_MSR/738_Egyp
 B738 *** C *** MXD  *** 9MLDC   *** MAS *** Default    *** jet/B738_MXD/738_BatikAirMalaysia_9MLDC.obj
 B738 *** C *** MXD  *** 9MLNY   *** MAS *** MXD2       *** jet/B738_MXD2/738_BatikAirMalaysia_9MLNY.obj
 B738 *** C *** NOK  *** HSDBQ   *** THA *** Default    *** jet/B738_NOK/738_NokAir_HSDBQ.obj
-B738 *** C *** NOZ  *** LRAUS   *** ??? *** Fictional  *** jet/B738_Fiction1/738_FICTION_LRAUS.obj
-B738 *** C *** NOZ  *** LRXUT   *** ??? *** Fictional  *** jet/B738_Fiction2/738_FICTION_LRXUT.obj
+B738 *** C *** NOZ  ***         ***     *** Fictional  *** jet/B738_Fiction1/738_FICTION_LRAUS.obj
+B738 *** C *** NOZ  ***         ***     *** Fictional  *** jet/B738_Fiction2/738_FICTION_LRXUT.obj
 B738 *** C *** NOZ  *** LNENN   *** NOR *** Default    *** jet/B738_NOZ/738_Norwegian_LNENN.obj
 B738 *** C *** OKA  *** B1962   *** CHN *** Default    *** jet/B738_OKA/738_OKAir_B1962.obj
 B738 *** C *** OMA  *** A4OBAA  *** OMA *** Default    *** jet/B738_OMA/738_OmanAir_A4OBAA.obj
-B738 *** C *** PAF  *** 0111    *** ??? *** Mil        *** jet/B738_PAF_Mil/738_PAF_0111.obj
+B738 *** C *** PAF  ***         ***     *** Mil        *** jet/B738_PAF_Mil/738_PAF_0111.obj
 B738 *** C *** PBD  *** RA73240 *** RUS *** Default    *** jet/B738_PBD/738_Pobeda_RA73240.obj
 B738 *** C *** PGT  *** TCCPD   *** TUR *** Default    *** jet/B738_PGT/738_PegasusAirlines_TCCPD.obj
 B738 *** C *** QFA  *** VHXZE   *** AUS *** Default    *** jet/B738_QFA/B738_QFA_static.obj
@@ -179,7 +179,7 @@ B738 *** C *** RYS  *** SPRSQ   *** POL *** Default    *** jet/B738_RYR_SP/738_R
 B738 *** C *** SBI  *** RA73668 *** RUS *** Default    *** jet/B738_SBI/738_S7_RA73668.obj
 B738 *** C *** SCX  *** N850SY  *** USA *** Default    *** jet/B738_SCX/738_SunCountry_N850SY.obj
 B738 *** C *** SFR  *** ZSSJT   *** RSA *** Default    *** jet/B738_SFR/738_FlySafair_ZSSJT.obj
-B738 *** C *** SIA  *** 9VMGM   *** SIN *** Default    *** jet/B738_SIA/738_SingaporeAirlines_9VMGM.obj
+B738 *** C *** SIA  *** 9VMGM   *** SGP *** Default    *** jet/B738_SIA/738_SingaporeAirlines_9VMGM.obj
 B738 *** C *** SKY  *** JA737T  *** JPN *** Default    *** jet/B738_SKY/738_SkymarkAirlines_JA737T.obj
 B738 *** C *** SWA  *** N85292  *** USA *** Default    *** jet/B738_SWA/B738_SWA_static.obj
 B738 *** C *** SWG  *** CGNCH   *** CAN *** Default    *** jet/B738_SWG/738_Sunwing_CGNCH.obj
@@ -190,7 +190,7 @@ B738 *** C *** TKJ  *** TCJZL   *** TUR *** Default    *** jet/B738_TKJ/738_Anad
 B738 *** C *** TLM  *** HSLUP   *** THA *** Default    *** jet/B738_TLM/B738_TLM_static.obj
 B738 *** C *** TOM  *** GTUKT   *** GBR *** Default    *** jet/B738_TOM/738_TUI_GTUKT.obj
 B738 *** C *** TRA  *** PHHBK   *** NED *** Default    *** jet/B738_TRA/738_Transavia_PHHBK.obj
-B738 *** C *** TUA  *** EZA020  *** ??? *** Default    *** jet/B738_TUA/738_TurkmenistanAirlines_EZA020.obj
+B738 *** C *** TUA  *** EZA020  *** TKM *** Default    *** jet/B738_TUA/738_TurkmenistanAirlines_EZA020.obj
 B738 *** C *** TVF  *** FHTVN   *** FRA *** Default    *** jet/B738_TVF/738_Transavia_FHTVN.obj
 B738 *** C *** TVS  *** OKTVH   *** CZE *** Default    *** jet/B738_TVS/738_SmartWings_OKTVH.obj
 B738 *** C *** TWB  *** HL8378  *** KOR *** Default    *** jet/B738_TWB/738_TWayAir_HL8378.obj
@@ -205,11 +205,11 @@ B738 *** C *** XPGA ***         ***     *** BBJ3       *** jet/B738_BBJ3/738_BBJ
 B738 *** C *** XPGA ***         ***     *** BBJ4       *** jet/B738_BBJ4/738_BBJ4.obj
 B738 *** C *** XPGA ***         ***     *** BBJ5       *** jet/B738_BBJ5/738_BBJ5.obj
 B738 *** C *** YZR  *** B1992   *** CHN *** Default    *** jet/B738_YZR/738_SuparnaAirlines_B1992.obj
-B744 *** E *** CPA  *** DOTAD   *** GER *** Default    *** heavy/B744_CPA/B744_CPA_static.obj
+B744 *** E *** CPA  ***         ***     *** Default    *** heavy/B744_CPA/B744_CPA_static.obj
 B744 *** E *** UAL  ***         ***     *** Default    *** heavy/B744_UAL/B744_UAL_static.obj
 B744 *** E *** VIR  ***         ***     *** Default    *** heavy/B744_VIR/B744_VIR_static.obj
-B752 *** D *** AHY  *** 4KAZ11  *** ??? *** Default    *** jet/B752/757_Azerbaijan_4KAZ11.obj
-B752 *** D *** AIO  *** C32A    *** ??? *** Default    *** jet/B752/757_C32A.obj
+B752 *** D *** AHY  *** 4KAZ11  *** AZE *** Default    *** jet/B752/757_Azerbaijan_4KAZ11.obj
+B752 *** D *** AIO  ***         ***     *** Default    *** jet/B752/757_C32A.obj
 B752 *** D *** ATN  *** N752CX  *** USA *** Default    *** jet/B752/757_ATI_N752CX.obj
 B752 *** D *** AZV  *** RA73076 *** RUS *** Default    *** jet/B752/757_azurair_RA73076.obj
 B752 *** D *** BDA  *** VTBDM   *** IND *** Default    *** jet/B752/757_BlueDart_VTBDM.obj
@@ -225,7 +225,7 @@ B752 *** D *** DHK  *** DALES   *** GER *** Default    *** jet/B752/757_DHL_DALE
 B752 *** D *** DHK  *** GBMRB   *** GBR *** Default    *** jet/B752/757_DHL_GBMRB.obj
 B752 *** D *** DOJ  *** N119NA  *** USA *** Default    *** jet/B752/757_USDOJ_N119NA.obj
 B752 *** D *** EXS  *** GLSAJ   *** GBR *** Default    *** jet/B752/757_Jet2_GLSAJ.obj
-B752 *** D *** FAG  *** ARG01   *** ??? *** Default    *** jet/B752/757_FAA_ARG01.obj
+B752 *** D *** FAG  ***         ***     *** Default    *** jet/B752/757_FAA_ARG01.obj
 B752 *** D *** FDX  *** N927FD  *** USA *** Default    *** jet/B752/757_Fedex_N927FD.obj
 B752 *** D *** GEL  *** 4LGEG   *** GEO *** Default    *** jet/B752/757_Geosky_4LGEG.obj
 B752 *** D *** ICE  *** TFFIV   *** ISL *** Default    *** jet/B752/757_Icelandair_TFFIV.obj
@@ -243,7 +243,7 @@ B752 *** D *** XPMI ***         ***     *** Default    *** jet/B752/757PW_static
 B752 *** D *** XPMI ***         ***     *** Default    *** jet/B752/757PW_winglet_static.obj
 B752 *** D *** XPMI ***         ***     *** Default    *** jet/B752/757RR_static.obj
 B752 *** D *** XPMI ***         ***     *** Default    *** jet/B752/757RR_winglet_static.obj
-B752 *** D *** XPMI *** 5701    *** ??? *** Default    *** jet/B752/757_KAF_5701.obj
+B752 *** D *** XPMI ***         ***     *** Default    *** jet/B752/757_KAF_5701.obj
 B763 *** D *** ANA  ***         ***     *** Default    *** jet/B763_ANA/B763_ANA_static.obj
 B763 *** D *** DAL  *** N178DZ  *** USA *** Default    *** jet/B763_DAL/B763_DAL_static.obj
 B763 *** D *** DHK  ***         ***     *** Default    *** jet/B763_DHK/B763_DHK_static.obj
@@ -338,7 +338,7 @@ PC12 *** B *** BTQ  *** N220JP  *** USA *** Default    *** turboprop/PC12/PC12_N
 PC12 *** B *** CNS  *** N283AF  *** USA *** Default    *** turboprop/PC12/PC12_N283AF.obj
 PC12 *** B *** FSF  *** OHZRH   *** FIN *** Default    *** turboprop/PC12/PC12_OHZRH.obj
 PC12 *** B *** GPD  *** N293TW  *** USA *** Default    *** turboprop/PC12/PC12_N293TW.obj
-PC12 *** B *** JFA  *** LXFLN   *** ??? *** Default    *** turboprop/PC12/PC12_LXFLN.obj
+PC12 *** B *** JFA  *** LXFLN   *** LUX *** Default    *** turboprop/PC12/PC12_LXFLN.obj
 PC12 *** B *** STB  *** FONGX   *** FRA *** Default    *** turboprop/PC12/PC12_FONGX.obj
 PC12 *** B *** URF  *** N821SA  *** USA *** Default    *** turboprop/PC12/PC12_N821SA.obj
 PC12 *** B *** XPGA *** CFXAB   *** CAN *** Default    *** turboprop/PC12/PC12_CFXAB.obj
@@ -349,7 +349,7 @@ PC12 *** B *** XPGA *** N26XM   *** USA *** Default    *** turboprop/PC12/PC12_N
 PC12 *** B *** XPGA *** OEEMI   *** AUT *** Default    *** turboprop/PC12/PC12_OEEMI.obj
 PC12 *** B *** XPGA *** OHFUK   *** FIN *** Default    *** turboprop/PC12/PC12_OHFUK.obj
 PC12 *** B *** XPGA *** VHFXN   *** AUS *** Default    *** turboprop/PC12/PC12_VHFXN.obj
-S76  *** A *** XPGA *** N7ER    *** ??? *** Default    *** helo/S76/S76_static.obj
+S76  *** A *** XPGA *** N7ER    *** USA *** Default    *** helo/S76/S76_static.obj
 S76  *** A *** XPMI *** SEJRM   *** SWE *** Coastguard *** helo/S76_coastguard/S76_coastguard_static.obj
 SF50 *** A *** XPGA *** N163MV  *** USA *** Gold       *** jet/SF50_gold/SF50_gold_static.obj
 SF50 *** A *** XPMI *** N163MV  *** USA *** Blue       *** jet/SF50_blue/SF50_blue_static.obj

@@ -105,7 +105,7 @@ heavy/A35K/A35K_Philippines.obj *** RPC3510
 heavy/A35K/A35K_Qatar.obj *** A7ANS
 heavy/A35K/A35K_Starlux.obj *** B58551
 heavy/A35K/A35K_VirginAtlantic.obj *** GVTEA
-heavy/B744_CPA/B744_CPA_static.obj *** DOTAD
+heavy/B744_CPA/B744_CPA_static.obj ***
 heavy/B744_UAL/B744_UAL_static.obj ***
 heavy/B772_AAL/B772_AAL_static.obj ***
 heavy/B772_BAW/B772_BAW_static.obj *** GYMMU
@@ -127,7 +127,7 @@ jet/A320_CSN/A320_CSN_static.obj *** B6908
 jet/A320_DAL/A320_DAL_static.obj *** N325US
 jet/A320_DLH/A320_DLH_static.obj *** DALZC
 jet/A320_EZY/A320_EZY_static.obj *** OEIZU
-jet/A320_IGO/A320_IGO_static.obj *** LNDIG
+jet/A320_IGO/A320_IGO_static.obj *** VTIES
 jet/A320_LAN/A320_LAN_static.obj *** CCBAR
 jet/A320_QLK/A320_QLK_static.obj *** VHVQS
 jet/A320_QTR/A320_QTR_static.obj *** A7AHH
@@ -202,3 +202,17 @@ turboprop/P180/P180_static.obj *** ISERG
 turboprop/P180_Ferrari/P180_avanti_ferrari.obj *** IFXRB
 turboprop/P180_Ferrari/P180_ferrari_static.obj *** IFXRB
 turboprop/PC12/PC12_US_Army.obj *** EIZOB
+
+# ---- not civil registrations (2026-09-17) ----------------------------------
+# These filenames carry an identifier where a registration would sit, and the
+# bootstrap read it as one and then could not name a country for it, shipping
+# "???" - which this index's own format says must never leave the generator.
+# They are military serials and one deliberately fictional pair, so the honest
+# value is the empty one: inspected, no tail number to record.
+jet/B738_PAF_Mil/738_PAF_0111.obj ***
+jet/B752/757_C32A.obj ***
+jet/B752/757_FAA_ARG01.obj ***
+jet/B752/757_KAF_5701.obj ***
+jet/B738_Fiction1/738_FICTION_LRAUS.obj ***
+jet/B738_Fiction2/738_FICTION_LRXUT.obj ***
+
