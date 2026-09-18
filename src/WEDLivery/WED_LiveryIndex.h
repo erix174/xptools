@@ -143,6 +143,15 @@ public:
 	size_t				Count(void) const { return mEntries.size(); }
 	size_t				UsableCount(void) const { return mUsable; }
 
+	// How many usable liveries exist at one wingspan class, across the WHOLE
+	// library rather than for one operator. This is what separates R14's two
+	// look-alike failures: weights aimed at a class the listed operators cannot
+	// fill is an author error one click repairs, while weights aimed at a class
+	// NOTHING in the library can fill is the author being ahead of the art, and
+	// blocking that would make it impossible to author for an aircraft that is
+	// coming. Class F returns 0 today.
+	size_t				CountAtClass(char size_class) const;
+
 	// The stamps from the index's own header, empty when it carried none. See
 	// DescribeVersion() - the readout has to say which install its numbers came
 	// from, because §6.4's install mismatch has no other symptom.
@@ -181,6 +190,7 @@ private:
 
 	std::string			mSchema, mDataStamp, mSourceBuild;
 	size_t				mUsable;			// mEntries minus the Obsolete rows
+	size_t				mAtClass[6];		// usable liveries per class A..F, whole library
 
 	std::vector<WED_LiveryIndexEntry>										mEntries;
 	std::unordered_map<std::string, std::vector<const WED_LiveryIndexEntry *> >	mByAirline;

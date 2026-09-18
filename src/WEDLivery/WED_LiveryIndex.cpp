@@ -90,6 +90,7 @@ WED_LiveryIndex::WED_LiveryIndex() :
 	mLoadAttempted(false),
 	mLoaded(false)
 {
+	for (int k = 0; k < 6; ++k) mAtClass[k] = 0;
 }
 
 bool	WED_LiveryIndex::EnsureLoaded(const string & index_path)
@@ -172,6 +173,7 @@ bool	WED_LiveryIndex::EnsureLoaded(const string & index_path)
 	// the next reallocation.
 	mEntries.swap(parsed);
 	mUsable = 0;
+	for (int k = 0; k < 6; ++k) mAtClass[k] = 0;
 	for (size_t i = 0; i < mEntries.size(); ++i)
 	{
 		const WED_LiveryIndexEntry * e = &mEntries[i];
@@ -187,6 +189,8 @@ bool	WED_LiveryIndex::EnsureLoaded(const string & index_path)
 		// header claims is not.
 		if (e->note == kObsoleteNote) continue;
 		++mUsable;
+		if (e->size_class >= 'A' && e->size_class <= 'F')
+			++mAtClass[e->size_class - 'A'];
 
 		mByAirline[e->airline].push_back(e);
 		// First writer wins on a duplicate key. Duplicates shouldn't exist, but
@@ -256,6 +260,12 @@ const WED_LiveryIndexEntry * WED_LiveryIndex::Lookup(const string & key) const
 {
 	std::unordered_map<string, const WED_LiveryIndexEntry *>::const_iterator i = mByKey.find(key);
 	return i == mByKey.end() ? NULL : i->second;
+}
+
+size_t	WED_LiveryIndex::CountAtClass(char size_class) const
+{
+	if (size_class < 'A' || size_class > 'F') return 0;
+	return mAtClass[size_class - 'A'];
 }
 
 void	WED_LiveryIndex::ForgetHeader(void)

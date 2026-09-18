@@ -151,6 +151,19 @@ private:
 		// class distribution - rather than the flat-range approximation.
 		bool	weighted;
 		float	p_occupied;			// 0..1, only meaningful when `weighted`
+		// Why a weighted stand parks nothing. Spec §4.5 point 2 notes the causes
+		// are indistinguishable from outside the editor, and §4.5's whole claim
+		// is that the readout is where they get told apart - so it has to
+		// actually tell them apart. R14's table says the last two must not be
+		// treated alike: one is an author error a click repairs, the other is an
+		// author correctly working ahead of the art.
+		enum EmptyCause {
+			empty_None = 0,		// something spawns
+			empty_ByChoice,		// all six weights zero - the author said so (§4.2)
+			empty_Unfillable,	// the listed operators have nothing at a weighted class
+			empty_NoArtYet		// NOTHING in the library has anything at those classes
+		};
+		int		empty_cause;
 		// Single-stand detail. Meaningless (and not drawn) when stands != 1.
 		int		classes_in_range;
 		int		classes_filled;

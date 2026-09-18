@@ -1204,6 +1204,7 @@ void	WED_LiveryPane::RecomputeCoverage(void)
 	c.index_ready       = false;
 	c.weighted          = false;
 	c.p_occupied        = 0.0f;
+	c.empty_cause       = Coverage::empty_None;
 	c.stands            = (int) mSelectedRamps.size();
 	c.stands_empty      = 0;
 	c.classes_in_range  = 0;
@@ -1278,11 +1279,15 @@ void	WED_LiveryPane::RecomputeCoverage(void)
 
 			if (total > 0)
 			{
-				int fillable = 0;
+				int  fillable        = 0;
+				bool any_art_at_all  = false;	// does the LIBRARY have anything at a weighted class?
 				for (int k = 0; k < 6; ++k)
 				{
 					if (wts[k] == 0) continue;
 					char size_class = (char) ('A' + k);
+
+					if (mLiveryIndex.CountAtClass(size_class) > 0) any_art_at_all = true;
+
 					for (set<string>::const_iterator it = codes.begin(); it != codes.end(); ++it)
 					{
 						vector<const WED_LiveryIndexEntry *> hits;
@@ -1292,14 +1297,21 @@ void	WED_LiveryPane::RecomputeCoverage(void)
 				}
 				c.weighted   = true;
 				c.p_occupied = (float) fillable / (float) total;
+
+				if (fillable == 0)
+					// R14's distinction, and it decides whether the author is
+					// being told they made a mistake or told they are early.
+					c.empty_cause = any_art_at_all ? Coverage::empty_Unfillable
+												   : Coverage::empty_NoArtYet;
 			}
 			else
 			{
 				// All six zero is legal and deliberate: the author said nothing
 				// parks here. That is NOT the same as an unfillable stand, and
-				// the readout must not accuse them of a mistake.
-				c.weighted   = true;
-				c.p_occupied = 0.0f;
+				// the readout must not accuse them of a mistake for it.
+				c.weighted    = true;
+				c.p_occupied  = 0.0f;
+				c.empty_cause = Coverage::empty_ByChoice;
 			}
 		}
 
@@ -1311,6 +1323,23 @@ void	WED_LiveryPane::RecomputeCoverage(void)
 			c.airlines_eligible = (int) eligible.size();
 			c.lo_class          = (char) ('A' + lo);
 			c.hi_class          = (char) ('A' + hi);
+
+			// Once a stand is weighted, the size SLIDER is no longer what the
+			// sentence should name - the author's weights are. They usually
+			// agree (R23 derives the 1301 letter from the weights on export),
+			// but a stand weighted for D alone inside a C-E range would
+			// otherwise be described as C-E, which is not what will spawn.
+			if (c.weighted)
+			{
+				int w_lo = -1, w_hi = -1;
+				for (int k = 0; k < 6; ++k)
+					if (wts[k] > 0) { if (w_lo < 0) w_lo = k; w_hi = k; }
+				if (w_lo >= 0)
+				{
+					c.lo_class = (char) ('A' + w_lo);
+					c.hi_class = (char) ('A' + w_hi);
+				}
+			}
 		}
 	}
 
@@ -2696,11 +2725,34 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 				const int pct = (int) (mCoverage.p_occupied * 100.0f + 0.5f);
 				if (pct == 0)
 				{
-					snprintf(head, sizeof(head), "This stand will not spawn any static aircraft");
-					head_col = col_muted;
-					snprintf(detail, sizeof(detail),
-						"Its class weights are all zero, or point only at sizes none of the %d listed operators can fill.",
-						mCoverage.airlines_listed);
+					// Three ways to park nothing, and they are NOT the same
+					// news. Saying "all zero, or nothing fits" would name both
+					// and choose neither, which is the §4.5 complaint restated
+					// rather than answered.
+					switch (mCoverage.empty_cause)
+					{
+					case Coverage::empty_ByChoice:
+						snprintf(head, sizeof(head), "This stand will not spawn any static aircraft");
+						head_col = col_muted;			// deliberate - not a warning
+						snprintf(detail, sizeof(detail),
+							"Every class weight is zero. That is a valid way to say a stand stays empty.");
+						break;
+
+					case Coverage::empty_NoArtYet:
+						snprintf(head, sizeof(head), "Nothing can park here yet - no aircraft exists at size %s", range);
+						head_col = col_muted;			// ahead of the art, not wrong (R14)
+						snprintf(detail, sizeof(detail),
+							"X-Plane ships no aircraft at all at this size. The stand starts working the day one does, with no edit here.");
+						break;
+
+					default:
+						snprintf(head, sizeof(head), "This stand parks nothing - and that looks unintended");
+						head_col = col_warn;
+						snprintf(detail, sizeof(detail),
+							"None of the %d listed operators has an aircraft at size %s, though other operators do. Widen the size range, or list one that flies it.",
+							mCoverage.airlines_listed, range);
+						break;
+					}
 				}
 				else
 				{
