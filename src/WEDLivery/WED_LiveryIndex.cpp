@@ -269,6 +269,21 @@ size_t	WED_LiveryIndex::CountAtClass(char size_class) const
 	return mAtClass[size_class - 'A'];
 }
 
+// mByAirline is keyed by the lowercased code, so the codes are recovered from the
+// entries themselves to hand back the spelling the file uses - which is what the
+// display and every other lookup expect.
+void	WED_LiveryIndex::GetAirlineCodes(vector<string> & out) const
+{
+	out.clear();
+	set<string> seen;
+	for (size_t i = 0; i < mEntries.size(); ++i)
+	{
+		if (mEntries[i].note == kObsoleteNote) continue;		// never spawns, never offered (R25)
+		if (seen.insert(mEntries[i].airline).second)
+			out.push_back(mEntries[i].airline);
+	}
+}
+
 void	WED_LiveryIndex::ForgetHeader(void)
 {
 	mSchema.clear();

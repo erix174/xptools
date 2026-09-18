@@ -221,6 +221,28 @@ private:
 	// frame at CDG (326 stands x 6 classes x n airlines), hence the dirty flag.
 	Coverage					mCoverage;
 	bool						mCoverageDirty;
+	// ONE CARD PER OPERATOR, not per livery. An operator with three aircraft at
+	// this stand's classes is one card that cycles through them, not three cards
+	// captioned with the same airline - which is what the per-livery model showed
+	// and read as a duplication bug.
+	//
+	// KEYED BY ICAO RATHER THAN HELD IN A PARALLEL VECTOR. The display rows are
+	// rebuilt from scratch on every hover, click and draw (BuildCurrentDisplayRows),
+	// so anything indexed by row position desyncs the moment a search term or a
+	// sort order changes the row list under it. A row carries its icao, the card
+	// data is looked up by that, and the two cannot disagree.
+	struct AirlineCard {
+		std::string					name;			// friendly name, or the code if unknown
+		std::string					ioc_country;	// for the flag icon
+		std::vector<std::string>	abs_paths;		// THE CACHE KEYS, one per livery
+		std::vector<std::string>	types;			// parallel: ICAO type designator
+		// Ordered biggest wingspan class first, and within a class reverse
+		// alphabetically, so index 0 is the one a card shows at rest.
+	};
+	std::map<std::string, AirlineCard>	mAirlineCards;		// key: LOWERCASE icao, as rows carry it
+	void								RebuildAirlineCards(void);
+	const AirlineCard *					CardFor(const std::string & icao_lower) const;
+
 
 	// ---- livery preview cards (framework/scaffolding only - see WED_LiveryThumbnailCache.h) ----
 	// The cards are the FIRST ROWS of the same scrolled content as the airline
@@ -239,9 +261,35 @@ private:
 	// CardRectForIndex()'s image_h, which must use this SAME bounds-derived width).
 	float				CardWidth(int bounds[4]) const;			// one column's width, gaps already taken out
 	float				CardHeight(int bounds[4]) const;
-	float				CardsBlockHeight(int bounds[4]) const;	// total height the cards occupy within the scrolled content
-	void				CardRectForIndex(int bounds[4], int index, float r_out[4]) const;
-	int					CardForXY(int bounds[4], int x, int y) const;	// -1 if the point isn't on a card (gaps included)
+
+	// WHERE EVERY DISPLAY ROW SITS. Airline rows are cards laid out kCardCols to a
+	// line; headers, dividers and notes stay full-width single lines between them.
+	// Draw() and every hit test run this same pass, because the previous design had
+	// the formula written out in both and they drifted - a click in the bottom of
+	// the card strip used to toggle the first airline's checkbox.
+	//
+	// A run of cards that does not fill its last line leaves the remaining columns
+	// empty rather than centring what is left, so a lone final card sits under the
+	// first column with whitespace to its right.
+	struct RowSlot {
+		float	top, bot;		// vertical extent, already scrolled
+		float	x0, x1;			// horizontal extent - the card's own, or the full row
+		bool	is_card;
+	};
+	// Fills one slot per row, and returns the total content height so the caller can
+	// clamp mScrollOffset. Takes only "is this row a card", not the rows themselves:
+	// WED_LiveryDisplayRow is private to the .cpp, and the layout genuinely needs
+	// nothing else, so this stays a pure function of its arguments.
+	float				LayoutRows(int bounds[4], const std::vector<bool> & is_card,
+								   std::vector<RowSlot> & out) const;
+	// The row under the cursor, card or not; -1 for none. Replaces RowForY, which
+	// could not tell which column of a card line was hit.
+	int					RowForXY(int bounds[4], const std::vector<bool> & is_card, int x, int y) const;
+
+	void				DrawAirlineCard(GUI_GraphState * state, const RowSlot & slot,
+										const AirlineCard & card, int show,
+										bool is_selected, bool is_hover, bool is_pressed,
+										int & renders_this_frame);
 	const WED_LiveryThumbnail *	EnsureRawFlagTexture(const std::string & ioc_country_code);	// no masking - see .cpp
 
 	// ---- ramp operation filter (row of chips) ----
@@ -426,16 +474,6 @@ private:
 	// §8.6); a tick on a card has nothing left to mean, and since the list is
 	// rebuilt whenever the operators or the weights change, a mark kept by index
 	// would drift onto a different aircraft anyway.
-	struct PreviewCard {
-		std::string	obj_path;		// as the index stores it, relative to apt_aircraft/
-		std::string	abs_path;		// joined and separator-normalised; THE CACHE KEY
-		std::string	airline;		// ICAO code - what the cards are grouped by
-		std::string	type;			// ICAO type designator - the caption's left half
-		std::string	caption;		// WED_LiveryDisplayName(friendly name, note)
-		std::string	ioc_country;	// reg_country, for the flag icon
-	};
-	std::vector<PreviewCard>	mPreviewCards;
-	void						RebuildPreviewCards(void);
 
 	// Click-and-drag scrolling of the content area ("grab and pull", same feel as a
 	// touch scroll) - moves mScrollOffset, so cards and checklist move together.

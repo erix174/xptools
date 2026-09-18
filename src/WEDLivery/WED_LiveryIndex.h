@@ -130,6 +130,14 @@ public:
 											  char size_class,
 											  std::vector<const WED_LiveryIndexEntry *> & out) const;
 
+	// Every airline code that has at least one usable livery, uppercase. This is
+	// the right source for "which operators can have a preview card": the airline
+	// directory lists thousands of operators, almost none of which are modelled,
+	// and walking it instead would cost a class lookup per operator per rebuild to
+	// discard nearly all of them. Obsolete rows are excluded, since they are not
+	// in the lookup tables at all (R25).
+	void				GetAirlineCodes(std::vector<std::string> & out) const;
+
 	// Resolves a stable key of the form <TYPE>_<AIRLINE>_<NOTE> - the same string
 	// apt.dat will eventually store per ramp. NULL if no such livery.
 	const WED_LiveryIndexEntry *
