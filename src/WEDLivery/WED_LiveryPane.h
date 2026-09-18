@@ -151,9 +151,20 @@ private:
 	// path that creates a 1313 row, and clearing returns the stand to "no row",
 	// which is NOT the same as six zeros - that is a legal way to say nothing
 	// parks here (spec §4.2), and the UI has to offer both.
+	// The button toggles a MODE, it does not delete data. Going to simple mode
+	// stashes the stand's weights in mWeightCache first, so coming back restores
+	// what the author had rather than re-seeding from the size range and losing
+	// their distribution. Keyed by the persistent ID, not by pointer: an undo
+	// can destroy and rebuild the object, and a pointer key would then either
+	// miss or, worse, hit a recycled address.
+	//
+	// Session-only on purpose. It is a convenience for toggling back and forth
+	// while editing, not a second place where weights live - the entity property
+	// remains the single source of truth, and nothing here reaches apt.dat.
 	void				SeedWeightsFromSizeRange(void);
-	void				ClearWeights(void);
+	void				SwitchToSimpleMode(void);
 	void				WeightButtonRect(int bounds[4], float b_out[4]) const;
+	std::map<int, std::string>	mWeightCache;
 	void				ListToolbarYRange(int bounds[4], float & top, float & bot) const;
 	float				ContentTop(int bounds[4]) const;		// top Y of the airline checklist
 

@@ -993,6 +993,33 @@ void	WED_LiveryPane::Hide(void)
 	AbortSizeDrag();
 	AbortWeightDrag();		// same reason - see AbortSizeDrag()'s caller comment above
 
+	// Everything else the mouse was in the middle of, too. Only the two drags
+	// above own an archive command, so only they can strand it - but the rest of
+	// the gesture state is just as live, and it is what made the pane follow the
+	// cursor with no button held after switching away mid-drag and back: the
+	// tab that gets hidden never receives the MouseUp that would have cleared
+	// it, so the pane came back still believing a gesture was in progress.
+	mContentDragStartY    = -1;
+	mTrackCard            = -1;
+	mTrackRow             = -1;
+	mTrackFilterChip      = -1;
+	mTrackSortButton      = false;
+	mTrackRecommendButton = false;
+	mTrackClearButton     = false;
+	mTrackWeightButton    = false;
+
+	// Hover highlights too, or the pane repaints with a lit-up control under a
+	// cursor that is somewhere else entirely.
+	mHoverCard            = -1;
+	mHoverRow             = -1;
+	mHoverFilterChip      = -1;
+	mHoverSliderHandle    = -1;
+	mHoverWeightBar       = -1;
+	mHoverWeightButton    = false;
+	mHoverSortButton      = false;
+	mHoverRecommendButton = false;
+	mHoverClearButton     = false;
+
 	GUI_Pane::Hide();
 	mThumbCache.DiscardAll();
 	for (map<string, WED_LiveryThumbnail>::iterator i = mRawFlagTex.begin(); i != mRawFlagTex.end(); ++i)
@@ -1245,14 +1272,18 @@ int		WED_LiveryPane::WeightTrackMax(void) const
 
 void	WED_LiveryPane::WeightBarRect(int bounds[4], int idx, float r_out[4]) const
 {
-	float line_h   = GUI_GetLineHeight(font_UI_Basic);
-	float handle_r = line_h * 0.5f;
-	// Same extents as the size slider, so bar i sits directly beneath the A-F
-	// tick label the slider already draws for class i.
-	float track_x0 = bounds[0] + 4 + handle_r;
-	float track_x1 = bounds[2] - 4 - handle_r;
-	float step     = (track_x1 - track_x0) / 5.0f;
-	float half     = (std::min)(step * 0.36f, 22.0f);
+	float line_h = GUI_GetLineHeight(font_UI_Basic);
+
+	// The bars get their OWN inset track rather than the slider's. Sharing the
+	// slider's extents put bar A's centre on the leftmost tick, which meant its
+	// left half hung 12px outside the pane - and bar F's right half likewise.
+	// Six bars of real width simply do not fit between two endpoints that were
+	// laid out for two circular handles.
+	const float pad  = 4;
+	float span       = (float) (bounds[2] - bounds[0]) - pad * 2;
+	float step       = span / 6.0f;					// six slots, not five gaps
+	float half       = (std::min)(step * 0.40f, 22.0f);
+	float track_x0   = bounds[0] + pad + step * 0.5f;	// centre of the first slot
 
 	float top, bot;
 	WeightsYRange(bounds, top, bot);
@@ -1310,10 +1341,10 @@ void	WED_LiveryPane::AbortWeightDrag(void)
 	mDragWeightBar = -1;
 }
 
-// The ONLY path that gives a stand a 1313 row. Seeds one unit per class inside
-// the size range the author already set, which reads as "any of these, equally"
-// - the honest starting point, and the same thing the range meant before
-// weights existed.
+// The ONLY path that gives a stand a 1313 row. Restores what the author had if
+// they have been here before this session, otherwise seeds one unit per class
+// inside the size range they already set - which reads as "any of these,
+// equally", and is exactly what that range meant before weights existed.
 void	WED_LiveryPane::SeedWeightsFromSizeRange(void)
 {
 	if (mSelectedRamps.empty()) return;
@@ -1321,13 +1352,27 @@ void	WED_LiveryPane::SeedWeightsFromSizeRange(void)
 	mArchive->StartCommand("Add Spawn Weights");
 	for (size_t i = 0; i < mSelectedRamps.size(); ++i)
 	{
-		int lo = WidthEnumToIndex(mSelectedRamps[i]->GetWidthMin());
-		int hi = WidthEnumToIndex(mSelectedRamps[i]->GetWidth());
+		WED_RampPosition * r = mSelectedRamps[i];
+
+		std::map<int, std::string>::const_iterator cached = mWeightCache.find(r->GetID());
+		if (cached != mWeightCache.end())
+		{
+			int w[6];
+			if (sscanf(cached->second.c_str(), "%d %d %d %d %d %d",
+					   &w[0], &w[1], &w[2], &w[3], &w[4], &w[5]) == 6)
+			{
+				r->SetClassWeights(w);
+				continue;
+			}
+		}
+
+		int lo = WidthEnumToIndex(r->GetWidthMin());
+		int hi = WidthEnumToIndex(r->GetWidth());
 		if (lo > hi) std::swap(lo, hi);
 
 		int w[6];
 		for (int k = 0; k < 6; ++k) w[k] = (k >= lo && k <= hi) ? 1 : 0;
-		mSelectedRamps[i]->SetClassWeights(w);
+		r->SetClassWeights(w);
 	}
 	mArchive->CommitCommand();
 
@@ -1335,17 +1380,32 @@ void	WED_LiveryPane::SeedWeightsFromSizeRange(void)
 	Refresh();
 }
 
-// Back to "no 1313 row on this stand", which is NOT six zeros. Six zeros is the
-// author saying nothing parks here (§4.2); no row at all is the author not
-// having said anything, which keeps today's step-down (R17). Conflating the two
-// would make one of them unreachable from the UI.
-void	WED_LiveryPane::ClearWeights(void)
+// Back to the plain size range, and back to "no 1313 row on this stand" - which
+// is NOT six zeros. Six zeros is the author saying nothing parks here (§4.2); no
+// row at all is the author not having said anything, which keeps today's
+// step-down (R17). Conflating the two would put one of them out of reach.
+//
+// The weights are stashed on the way out, so this reads as a mode switch rather
+// than a delete. Losing a distribution to a mis-click and having no way back
+// short of retyping it is not a trade worth making for a button.
+void	WED_LiveryPane::SwitchToSimpleMode(void)
 {
 	if (mSelectedRamps.empty()) return;
 
-	mArchive->StartCommand("Remove Spawn Weights");
+	mArchive->StartCommand("Use Simple Size Range");
 	for (size_t i = 0; i < mSelectedRamps.size(); ++i)
-		mSelectedRamps[i]->ClearClassWeights();
+	{
+		WED_RampPosition * r = mSelectedRamps[i];
+
+		int w[6];
+		if (r->GetClassWeights(w))
+		{
+			char buf[64];
+			snprintf(buf, sizeof(buf), "%d %d %d %d %d %d", w[0], w[1], w[2], w[3], w[4], w[5]);
+			mWeightCache[r->GetID()] = buf;
+		}
+		r->ClearClassWeights();
+	}
 	mArchive->CommitCommand();
 
 	mCoverageDirty = true;
@@ -2316,7 +2376,7 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 		WeightButtonRect(b, wb);
 		if (x >= wb[0] && x <= wb[2] && y >= wb[1] && y <= wb[3])
 		{
-			if (SelectionHasWeights())	ClearWeights();
+			if (SelectionHasWeights())	SwitchToSimpleMode();
 			else						SeedWeightsFromSizeRange();
 		}
 		Refresh();
@@ -2900,7 +2960,13 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		{
 			float fx = track_x0 + (track_x1 - track_x0) * i / 5.0f;
 			float tw = GUI_MeasureRange(font_UI_Basic, kWidthLabels[i], kWidthLabels[i] + 1);
-			GUI_FontDraw(state, font_UI_Basic, lbl_col, fx - tw * 0.5f, slider_top - line_h * 1.9f, kWidthLabels[i]);
+			// Clamped: the outer two labels are centred on the track's own
+			// endpoints, which sit close enough to the pane edge that half a
+			// glyph fell outside it.
+			float lx = fx - tw * 0.5f;
+			if (lx < (float) b[0] + 2)          lx = (float) b[0] + 2;
+			if (lx + tw > (float) b[2] - 2)     lx = (float) b[2] - 2 - tw;
+			GUI_FontDraw(state, font_UI_Basic, lbl_col, lx, slider_top - line_h * 1.9f, kWidthLabels[i]);
 		}
 
 		state->SetState(0,0,0,0,0,0,0);
@@ -2986,9 +3052,16 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 				glVertex2f((float) b[2] - 1, slider_top);
 				glVertex2f((float) b[0] + 1, slider_top);
 			glEnd();
+			// Centred in the zone rather than jammed against its bottom edge,
+			// where it landed on the track and the A-F labels and was
+			// unreadable through the mask.
 			state->SetState(0,0,0,0,0,0,0);
-			GUI_FontDraw(state, font_UI_Basic, WED_Color_RGBA(wed_Table_Text),
-						 b[0] + pad, slider_bot + 4, "Size is derived from the weights below");
+			const char * drv = "Size is derived from the weights below";
+			float dw = GUI_MeasureRange(font_UI_Basic, drv, drv + strlen(drv));
+			float dcol[4] = { 0.92f, 0.92f, 0.94f, 1.0f };
+			GUI_FontDraw(state, font_UI_Basic, dcol,
+						 ((float) b[0] + (float) b[2]) * 0.5f - dw * 0.5f,
+						 (slider_bot + slider_top) * 0.5f - line_h * 0.35f, drv);
 		}
 	}
 
@@ -3108,7 +3181,9 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			glVertex2f(wb[2], wb[3]); glVertex2f(wb[2], wb[1]);
 		glEnd();
 
-		const char * cap = has ? "Clear Weights" : "Set Spawn Weights";
+		// "Simple Mode", not "Clear": the weights are stashed, not destroyed,
+		// and the button's job is to say which of the two controls is in charge.
+		const char * cap = has ? "Simple Mode" : "Set Spawn Weights";
 		float cw = GUI_MeasureRange(font_UI_Basic, cap, cap + strlen(cap));
 		GUI_FontDraw(state, font_UI_Basic, WED_Color_RGBA(wed_Table_Text),
 					 (wb[0] + wb[2]) * 0.5f - cw * 0.5f, wb[1] + 4, cap);
