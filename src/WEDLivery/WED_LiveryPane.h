@@ -242,6 +242,11 @@ private:
 		std::string					ioc_country;	// for the flag icon
 		std::vector<std::string>	abs_paths;		// THE CACHE KEYS, one per livery
 		std::vector<std::string>	types;			// parallel: ICAO type designator
+		// Parallel too: the type with its livery note when the note distinguishes
+		// it - "B738 (Retro)". United ships Legacy AND Modern 737s and 757s, so the
+		// designator alone listed the same aircraft twice with nothing to tell the
+		// two apart, which reads as a bug in the list rather than two real liveries.
+		std::vector<std::string>	labels;
 		// Ordered biggest wingspan class first, and within a class reverse
 		// alphabetically, so index 0 is the one a card shows at rest.
 	};
