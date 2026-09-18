@@ -450,7 +450,13 @@ string	WED_LiveryObjectPath(const string & obj_path)
 	const string dir = WED_LiveryAssetDir();
 	if (dir.empty()) return string();
 
-	string full = dir + obj_path;
-	WED_clean_rpath(full);
-	return full;
+	// Clean the RELATIVE half only, then join. WED_clean_rpath maps '\', ':' and
+	// '/' all onto DIR_CHAR, which is right for a library-relative path and
+	// destructive for an absolute one: it turns "D:\SteamLibrary\..." into
+	// "D\\SteamLibrary\..." and every load fails with a path that looks almost
+	// correct in the log. The root already uses DIR_STR; only the index's
+	// forward slashes need converting.
+	string rel = obj_path;
+	WED_clean_rpath(rel);
+	return dir + rel;
 }

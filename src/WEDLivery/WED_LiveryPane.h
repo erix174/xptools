@@ -288,13 +288,6 @@ private:
 
 	std::vector<WED_RampPosition *>	mSelectedRamps;
 
-	// This tab is always clickable now (no more SetPaneEnabled-based lock),
-	// but the FIRST time selection goes empty while the user is actually
-	// looking at it, we bounce them back to "Selection" once - true right
-	// up until selection becomes non-empty again, so a second empty-out
-	// (or the user manually clicking back in while still empty) doesn't
-	// keep yanking them out.
-	bool						mAutoSwitchedAwayOnEmpty;
 
 	// Opt-in mirror image of the above (see gPromptLiveriesOnRampSelect in
 	// WED_Globals.h): the last ramp-only selection we auto-switched INTO this

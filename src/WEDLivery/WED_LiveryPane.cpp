@@ -817,7 +817,6 @@ WED_LiveryPane::WED_LiveryPane(
 	mResolver(resolver),
 	mArchive(archive),
 	mHostTabs(host_tabs),
-	mAutoSwitchedAwayOnEmpty(false),
 	mTrackRow(-1),
 	mTrackFilterChip(-1),
 	mHoverFilterChip(-1),
@@ -1153,20 +1152,20 @@ void	WED_LiveryPane::RebuildSelection(void)
 	// until selection is non-empty again.
 	if (mSelectedRamps.empty())
 	{
-		if (mHostTabs && !mAutoSwitchedAwayOnEmpty && mHostTabs->GetTab() == mHostTabs->GetTabForPane(this))
-		{
-			int sel_tab = mHostTabs->GetTabForTitle(kSelectionTabTitle);
-			if (sel_tab >= 0)
-			{
-				mHostTabs->SetTab(sel_tab);
-				mAutoSwitchedAwayOnEmpty = true;
-			}
-		}
+		// Deliberately NO auto-navigate away. Clicking a different ramp start
+		// clears the old selection before setting the new one, so the selection
+		// passes through empty on the way - and bouncing to the Selection tab at
+		// that instant threw the author off this one every single time they
+		// picked another stand, whether or not they had asked to be brought here.
+		//
+		// The empty state is already carried by Draw()'s greyed mask and its
+		// warning text, which is what that mask is FOR. Leaving the tab up and
+		// masked for a moment is the correct behaviour; navigating away from the
+		// thing the author is working in is not.
 		mLastAutoSwitchedInRamps.clear();		// selection's gone - a later re-selection counts as "new" again
 	}
 	else
 	{
-		mAutoSwitchedAwayOnEmpty = false;
 
 		// Opt-in (WED Preferences > "When Selecting Ramp Start" > "Prompt Up
 		// Static Liveries Tab", off by default - see WED_Application.cpp).
