@@ -65,6 +65,67 @@ static const int kThumbH = 288;
 static const float kCamThe = 0.0f;
 static const float kCamPsi = 90.0f;
 
+// ...except that five shipped assets do NOT point their nose down -Z. The MD-80
+// family (Delta, Alitalia, SAS) and the CRJ-100 pair are modelled yawed 90
+// degrees in their own files, so the fixed camera above stares straight up their
+// nose and the card shows a head-on aircraft among 293 side-on ones.
+//
+// The fix is a measurement, not a list of paths: a list would be wrong the day
+// Laminar re-exports one of them, and would not cover an add-on library.
+//
+// WHAT IT MEASURES: the highest point of an aircraft lies on its CENTRELINE -
+// the fin tip, or the middle of a T-tail's stabiliser - and sits near one end of
+// the fuselage. So take the top 1% of vertices and ask, for each horizontal
+// axis, how far off that axis's centre they sit. The span axis gives ~0.0 (they
+// hug it) and the fuselage axis ~0.9 (they are out at one end). Across the whole
+// shipped library the two numbers come out 0.00 vs 0.90 for a normal aircraft
+// and 0.79 vs 0.00 for a yawed one, which is not a threshold anyone has to tune.
+//
+// WHY IT ASKS THAT rather than "is the model longer than it is wide": a glider
+// is wider than it is long, and would be rotated wrongly. Earlier drafts tested
+// how the top vertices SPREAD instead, which reads exactly backwards on a T-tail
+// - a fin spreads along the fuselage, a stabiliser across it - and both families
+// that are actually broken here have T-tails.
+//
+// WHEN IT CANNOT TELL, IT DOES NOTHING. Twin tails (F-15, F/A-18), V-tails
+// (SF50) and helicopters have no single centreline high point, so neither axis
+// hugs and both bands below reject. All seven such objects in the library are
+// correctly oriented already, so leaving the convention alone is the right
+// answer for them - and staying still is the only safe failure here, since a
+// wrong rotation is worse than the wrong convention it was trying to repair.
+static float	ModelYawCorrection(const XObj8 * o)
+{
+	int n = o->geo_tri.count();
+	if (n < 32) return 0.0f;					// too little geometry to judge
+
+	double y0 = o->xyz_min[1], y1 = o->xyz_max[1];
+	double hx = (o->xyz_max[0] - o->xyz_min[0]) * 0.5;
+	double hz = (o->xyz_max[2] - o->xyz_min[2]) * 0.5;
+	if (y1 <= y0 || hx <= 0.0 || hz <= 0.0) return 0.0f;
+
+	double cx  = (o->xyz_max[0] + o->xyz_min[0]) * 0.5;
+	double cz  = (o->xyz_max[2] + o->xyz_min[2]) * 0.5;
+	double cut = y0 + 0.99 * (y1 - y0);
+
+	double sum_x = 0.0, sum_z = 0.0;
+	int    top   = 0;
+	for (int i = 0; i < n; ++i)
+	{
+		const float * v = o->geo_tri.get(i);
+		if (v[1] < cut) continue;
+		sum_x += fabs(v[0] - cx) / hx;
+		sum_z += fabs(v[2] - cz) / hz;
+		++top;
+	}
+	if (top < 4) return 0.0f;
+
+	double off_x = sum_x / (double) top;
+	double off_z = sum_z / (double) top;
+
+	if (off_z < 0.25 && off_x > 0.5) return 90.0f;	// fuselage on X - yawed
+	return 0.0f;									// normal, or not sure enough
+}
+
 // Defensive ceiling - not something the normal visible-range+margin math in
 // WED_LiveryPane should ever bump into, just a backstop against unbounded GPU memory
 // if that math ever miscounts.
@@ -170,6 +231,11 @@ const WED_LiveryThumbnail * WED_LiveryThumbnailCache::GetThumbnail(WED_ResourceM
 		-(o->xyz_max[1] + o->xyz_min[1]) * 0.5,
 		-(o->xyz_max[2] + o->xyz_min[2]) * 0.5 };
 
+	// Both the silhouette fit and the modelview below must use the SAME azimuth,
+	// or the projection is fitted to a view that is never drawn and the model is
+	// clipped. See ModelYawCorrection.
+	float cam_psi = kCamPsi + ModelYawCorrection(o);
+
 	// Remember what was bound/current before hijacking it, so this always leaves the
 	// caller's own on-screen rendering state exactly as it found it, success or not.
 	GLint prev_viewport[4];
@@ -253,7 +319,7 @@ const WED_LiveryThumbnail * WED_LiveryThumbnailCache::GetThumbnail(WED_ResourceM
 		// projected silhouette's half-width/half-height. GL applies the two rotations
 		// below as Rx(the) * Ry(psi) * v, so Ry goes first here too.
 		const double kDeg2Rad = 0.0174532925199432957;
-		double cp = cos(kCamPsi * kDeg2Rad), sp = sin(kCamPsi * kDeg2Rad);
+		double cp = cos(cam_psi * kDeg2Rad), sp = sin(cam_psi * kDeg2Rad);
 		double ct = cos(kCamThe * kDeg2Rad), st = sin(kCamThe * kDeg2Rad);
 
 		double half_w = 0.0, half_h = 0.0;
@@ -299,7 +365,7 @@ const WED_LiveryThumbnail * WED_LiveryThumbnailCache::GetThumbnail(WED_ResourceM
 		glPushMatrix();
 		glLoadIdentity();
 		glRotatef(kCamThe, 1, 0, 0);
-		glRotatef(kCamPsi, 0, 1, 0);
+		glRotatef(cam_psi, 0, 1, 0);
 
 		GLfloat light_pos[4] = { -1, 1, 1, 0 };
 		glLightfv(GL_LIGHT0, GL_POSITION, light_pos);

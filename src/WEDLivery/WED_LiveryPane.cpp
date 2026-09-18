@@ -1256,6 +1256,7 @@ void	WED_LiveryPane::RebuildPreviewCards(void)
 				c.obj_path    = e->obj_path;
 				c.abs_path    = WED_LiveryObjectPath(e->obj_path);
 				c.airline     = e->airline;
+				c.type        = e->type;
 				c.ioc_country = e->reg_country;
 
 				// The friendly name if the directory knows the code, the code
@@ -3952,11 +3953,21 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 					state->SetState(0,0,0,0,0,0,0);
 				}
 
-				// Caption line: "ICAO - Name (Note)" on the left, registration
+				// Caption line: "TYPE - Name (Note)" on the left, registration
 				// country right-aligned just inside the flag. All of it from the
 				// index row this card was built from.
-				string icao_uc = card.airline;
-				const char * card_icao    = icao_uc.c_str();
+				//
+				// THE AIRCRAFT TYPE, not the airline's ICAO code, holds the left
+				// slot. Cards are grouped by operator and the operator's name is
+				// already in the right half, so "DAL - Delta Air Lines" spent the
+				// slot saying the same thing twice - and Delta's three class-C
+				// liveries (A320, B738, MD82) all rendered as the same caption
+				// under three different pictures, which reads as a duplication
+				// bug. The type is the axis that actually separates them, and is
+				// the axis library.txt cannot express at all - see
+				// WED_LiveryIndex.h on why this index exists.
+				string type_uc = card.type;
+				const char * card_icao    = type_uc.c_str();
 				const char * card_name    = card.caption.c_str();
 				const char * card_country = card.ioc_country.empty() ? "" : card.ioc_country.c_str();
 

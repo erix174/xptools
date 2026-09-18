@@ -429,7 +429,8 @@ private:
 	struct PreviewCard {
 		std::string	obj_path;		// as the index stores it, relative to apt_aircraft/
 		std::string	abs_path;		// joined and separator-normalised; THE CACHE KEY
-		std::string	airline;		// ICAO code - grouping, and the caption's left half
+		std::string	airline;		// ICAO code - what the cards are grouped by
+		std::string	type;			// ICAO type designator - the caption's left half
 		std::string	caption;		// WED_LiveryDisplayName(friendly name, note)
 		std::string	ioc_country;	// reg_country, for the flag icon
 	};
