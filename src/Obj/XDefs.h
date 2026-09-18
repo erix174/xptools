@@ -248,7 +248,23 @@
 
 #if WED
 	extern FILE * gLogFile;
-	#define LOG_MSG(...) if(gLogFile) fprintf(gLogFile, __VA_ARGS__)
+	// In a dev build every message is flushed as it is written, because an
+	// unflushed log is worthless for exactly the failures worth logging. Twice
+	// now a crash has been investigated against a log whose last lines were
+	// still sitting in the stdio buffer when the process died: the validator
+	// bisection first produced zero probe output and read as "it never got
+	// there", and a silent exit left no final line at all. A log that stops one
+	// screenful before the interesting part is worse than no log, because it
+	// invites a confident wrong conclusion.
+	//
+	// The cost is one fflush per message. WED writes a few hundred lines in a
+	// whole session - about 7 KB - so this is not a hot path, and a release
+	// build keeps the buffered form regardless.
+	#if DEV
+		#define LOG_MSG(...) do { if(gLogFile) { fprintf(gLogFile, __VA_ARGS__); fflush(gLogFile); } } while(0)
+	#else
+		#define LOG_MSG(...) if(gLogFile) fprintf(gLogFile, __VA_ARGS__)
+	#endif
 	#define LOG_FLUSH()  fflush(gLogFile)
 #else
 	#define LOG_MSG(...)

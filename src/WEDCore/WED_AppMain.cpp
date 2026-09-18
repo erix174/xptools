@@ -43,6 +43,8 @@
 #include "GUI_Window.h"
 #include "GUI_Prefs.h"
 #include "GUI_Resources.h"
+#include <exception>			// std::set_terminate, for the DEV disappearance hooks
+#include <cstdlib>				// atexit
 
 #include <ctime>
 
@@ -159,6 +161,31 @@ int main(int argc, char * argv[])
 	Initializer linit(&argc, &argv, false);
 #endif // LIN
 	gLogFile = fopen((FILE_get_dir_name(GetApplicationPath()) + "WED_Log.txt").c_str(), "w");
+
+#if DEV
+	// Two hooks that exist only to make a disappearance readable.
+	//
+	// WED vanished once with no Windows error record, no crash dump, and no
+	// "----- WED has shut down -----" in the log - so main() never finished, yet
+	// the stdio buffer had been flushed, which is the signature of exit() rather
+	// than of a crash. There was no way to tell which from the outside, and that
+	// is the part worth fixing: a silent death should at least say how it died.
+	//
+	// atexit fires on exit() but NOT on abort() or a hard kill; the terminate
+	// handler fires on an uncaught exception. Between them, the next
+	// disappearance names its own path, and a log with neither line means the
+	// process was killed outright.
+	atexit([]() {
+		LOG_MSG("E/APP exit() was called - main() did not run to completion\n");
+		LOG_FLUSH();
+	});
+	std::set_terminate([]() {
+		LOG_MSG("E/APP std::terminate - an exception went uncaught\n");
+		LOG_FLUSH();
+		abort();
+	});
+#endif
+
 	if (gLogFile)
 	{
 #if IBM
