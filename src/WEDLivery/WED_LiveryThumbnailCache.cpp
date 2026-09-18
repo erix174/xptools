@@ -340,27 +340,52 @@ const WED_LiveryThumbnail * WED_LiveryThumbnailCache::GetThumbnail(WED_ResourceM
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, kThumbW, kThumbH, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 
-	GLuint depth_rb = 0;
-	glGenRenderbuffers(1, &depth_rb);
-	glBindRenderbuffer(GL_RENDERBUFFER, depth_rb);
-	// GL_DEPTH_COMPONENT24, not the unsized GL_DEPTH_COMPONENT. ARB_framebuffer_object
-	// accepts the base format, but the older EXT_framebuffer_object spec requires a
-	// SIZED one - an older Mac or Linux driver exposing only EXT answers the unsized
-	// token with GL_INVALID_ENUM, and the framebuffer then comes out incomplete for a
-	// reason that looks nothing like its cause.
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, kThumbW, kThumbH);
+	// Built once, then reused for every thumbnail for the life of the cache. The
+	// depth buffer never varies - same size, same format - so there is nothing to
+	// rebuild, and the pair is torn down only in DiscardAll().
+	if (mFBO == 0)
+	{
+		glGenRenderbuffers(1, &mDepthRB);
+		glBindRenderbuffer(GL_RENDERBUFFER, mDepthRB);
+		// GL_DEPTH_COMPONENT24, not the unsized GL_DEPTH_COMPONENT. ARB_framebuffer_object
+		// accepts the base format, but the older EXT_framebuffer_object spec requires a
+		// SIZED one - an older Mac or Linux driver exposing only EXT answers the unsized
+		// token with GL_INVALID_ENUM, and the framebuffer then comes out incomplete for a
+		// reason that looks nothing like its cause.
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, kThumbW, kThumbH);
 
-	GLuint fbo = 0;
-	glGenFramebuffers(1, &fbo);
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+		glGenFramebuffers(1, &mFBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, mFBO);
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, mDepthRB);
+	}
+	else
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, mFBO);
+	}
+
+	// The colour attachment is the only thing that changes - it IS the cached result.
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_rb);
 
-	bool complete = glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
-	LOG_MSG("I/LiveryThumb %s: fbo_complete=%d radius=%.3f psi=%.1f tris=%d dx=%.1f dz=%.1f\n",
+	// Completeness is a property of the ATTACHMENT CONFIGURATION, which after the
+	// first render only ever differs by which texture of identical size and format is
+	// bound. Checking it every time costs a driver validation - and on several
+	// drivers a pipeline flush - for an answer that cannot have changed.
+	if (!mFBOChecked)
+	{
+		mFBOUsable  = glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
+		mFBOChecked = true;
+		LOG_MSG("I/LiveryThumb offscreen target built: complete=%d %dx%d\n",
+				(int) mFBOUsable, kThumbW, kThumbH);
+	}
+	bool complete = mFBOUsable;
+
+	// No LOG_FLUSH below. This runs once per thumbnail and LOG_MSG already flushes
+	// per message in a DEV build - a second synchronous fsync inside the path we are
+	// trying to make fast would be measuring the thermometer.
+	LOG_MSG("I/LiveryThumb %s: complete=%d radius=%.3f psi=%.1f tris=%d dx=%.1f dz=%.1f obj=%.0fms\n",
 		obj_path.c_str(), (int) complete, real_radius, cam_psi, o->geo_tri.count(),
-		o->xyz_max[0] - o->xyz_min[0], o->xyz_max[2] - o->xyz_min[2]);
-	LOG_FLUSH();
+		o->xyz_max[0] - o->xyz_min[0], o->xyz_max[2] - o->xyz_min[2],
+		1000.0 * (double)(t_obj - t_begin) / (double) CLOCKS_PER_SEC);
 	if (complete)
 	{
 		glViewport(0, 0, kThumbW, kThumbH);
@@ -472,8 +497,8 @@ const WED_LiveryThumbnail * WED_LiveryThumbnailCache::GetThumbnail(WED_ResourceM
 	glBindFramebuffer(GL_FRAMEBUFFER, (GLuint) prev_fbo);
 	glViewport(prev_viewport[0], prev_viewport[1], prev_viewport[2], prev_viewport[3]);
 	glPopAttrib();		// restores GL_SCISSOR_TEST enable + rect to whatever they were on entry
-	glDeleteFramebuffers(1, &fbo);
-	glDeleteRenderbuffers(1, &depth_rb);
+	// The framebuffer and depth buffer are deliberately NOT deleted here - see the
+	// members' comment in the header. Deleting them per thumbnail is what stalled.
 
 	if (!complete)
 	{
@@ -515,4 +540,11 @@ void WED_LiveryThumbnailCache::DiscardAll()
 	// livery that failed once stayed refused for the rest of the session, even
 	// after the user pointed WED at an install that has it.
 	mFailed.clear();
+
+	// The offscreen target goes with them - it is rebuilt lazily on the next render.
+	// Holding it across a context teardown would leave a dangling name that the next
+	// glBindFramebuffer would quietly accept.
+	if (mFBO)     glDeleteFramebuffers(1, &mFBO);
+	if (mDepthRB) glDeleteRenderbuffers(1, &mDepthRB);
+	mFBO = 0; mDepthRB = 0; mFBOChecked = false; mFBOUsable = false;
 }

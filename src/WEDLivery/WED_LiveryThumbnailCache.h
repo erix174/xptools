@@ -65,7 +65,7 @@ struct WED_LiveryThumbnail {
 class WED_LiveryThumbnailCache {
 public:
 
-	WED_LiveryThumbnailCache() {}
+	WED_LiveryThumbnailCache() : mFBO(0), mDepthRB(0), mFBOChecked(false), mFBOUsable(false) {}
 	~WED_LiveryThumbnailCache() { DiscardAll(); }
 
 	// True if obj_path already has a cached texture - i.e. calling GetThumbnail() for
@@ -109,6 +109,22 @@ private:
 	// genuinely missing file a fresh chance rather than blacklisting it for the
 	// session.
 	std::set<std::string>						mFailed;
+
+	// THE OFFSCREEN TARGET IS BUILT ONCE AND REUSED. It used to be created and
+	// destroyed around every single thumbnail, which is the whole reason this pane
+	// stuttered where the library preview does not: deleting a framebuffer and a
+	// renderbuffer the GPU may still be writing forces the driver to block until the
+	// GPU drains, so every thumbnail cost a full CPU-GPU sync on top of its own
+	// work. The library preview never pays that - it draws straight to the back
+	// buffer and allocates nothing per frame.
+	//
+	// Only the COLOUR texture is per-thumbnail, because it is the cached result.
+	// Size and format never vary, so one depth buffer serves every render and
+	// completeness only has to be checked when the pair is first built.
+	unsigned int								mFBO;			// 0 until built
+	unsigned int								mDepthRB;
+	bool										mFBOChecked;	// completeness already verified
+	bool										mFBOUsable;
 };
 
 #endif /* WED_LIVERYTHUMBNAILCACHE_H */
