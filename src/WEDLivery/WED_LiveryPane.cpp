@@ -524,27 +524,34 @@ namespace
 	// logic (dedup by `seen`, search filtering, the per-airport shuffle) stays one
 	// thing with one reason to change.
 
-	// Hoists every ticked operator into a section of its own at the very top. The
-	// tiers below keep their own copies out of the way, because a card that is both
-	// pinned and still sitting under "Popular Airlines" would be two cards for one
-	// operator - exactly the duplication the per-operator card was meant to end.
+	// MIRRORS every ticked operator into a section at the very top, and LEAVES THE
+	// ORIGINAL WHERE IT WAS. Moving it was the obvious implementation and a bad
+	// interaction: clicking a card made it vanish from under the cursor and
+	// reappear at the top of the list, so the row you were working through
+	// reshuffled itself on every tick and you lost your place. The copy is a
+	// shortcut to what is already chosen, not a new home for it - untick, and the
+	// copy disappears while the card you actually clicked is still where you left
+	// it.
+	//
+	// Both copies are the same operator and both read their state from the same
+	// icao key, so ticking, locking or opening the tray on one shows on the other.
+	// That is honest rather than confusing: there is one operator, shown twice.
 	void PinSelected(vector<WED_LiveryDisplayRow> & rows, const set<string> & selected)
 	{
 		if (selected.empty()) return;
 
-		vector<WED_LiveryDisplayRow> picked, rest;
+		vector<WED_LiveryDisplayRow> picked;
 		for (size_t i = 0; i < rows.size(); ++i)
 		{
-			if (rows[i].kind == wed_Row_Airline && selected.count(rows[i].icao))
-			{
-				bool dup = false;
-				for (size_t j = 0; j < picked.size(); ++j)
-					if (picked[j].icao == rows[i].icao) { dup = true; break; }
-				if (!dup) picked.push_back(rows[i]);
-			}
-			else rest.push_back(rows[i]);
+			if (rows[i].kind != wed_Row_Airline || !selected.count(rows[i].icao)) continue;
+			bool dup = false;
+			for (size_t j = 0; j < picked.size(); ++j)
+				if (picked[j].icao == rows[i].icao) { dup = true; break; }
+			if (!dup) picked.push_back(rows[i]);
 		}
 		if (picked.empty()) return;
+
+		vector<WED_LiveryDisplayRow> rest = rows;
 
 		vector<WED_LiveryDisplayRow> out;
 		WED_LiveryDisplayRow h; h.kind = wed_Row_Header; h.header_text = "Selected";
@@ -918,6 +925,11 @@ static string CodesToString(const set<string> & codes)
 // it. Used by both CardHeight() and Draw()'s image quad, which must also agree with
 // each other (they once didn't - see CardHeight()'s comment).
 static const float kCardImageAspect = 32.0f / 9.0f;
+
+// The grab strip along a card's bottom edge: the tray's handle, and the only
+// place the disclosure arrow can live without sitting on the operator's name.
+// Declared here because CardHeight() has to reserve it.
+static const float kTrayTabH = 14.0f;
 
 // Cards are laid out as a grid of "trading cards": kCardCols per row, with a fixed
 // gap on every side and between them. The gap is what actually makes each card read
@@ -1970,8 +1982,12 @@ float	WED_LiveryPane::CardHeight(int bounds[4]) const
 	// render as one oversized black slab the first time this was tried: the image
 	// then draws taller than the slot this function claims it needs, overflowing
 	// into the next card and the checklist below.)
+	// image, then the caption row, then the tray bar. The bar is a STRIP OF ITS OWN
+	// rather than the bottom few pixels of the caption: sharing meant the
+	// disclosure arrow was drawn over the operator's name and the click target sat
+	// on top of the text, so the tray effectively could not be opened.
 	float image_h = CardWidth(bounds) / kCardImageAspect;
-	return image_h + GUI_GetLineHeight(font_UI_Basic) + 8;
+	return image_h + GUI_GetLineHeight(font_UI_Basic) + 8 + kTrayTabH;
 }
 
 // THE ONE PLACE ROW GEOMETRY IS COMPUTED. Cards are no longer a block above the
@@ -2110,7 +2126,6 @@ static const int   kMaxRendersPerFrame = 1;
 static const float kTrayRowH   = 18.0f;		// one aircraft line inside an open tray
 static const float kTrayPad    =  6.0f;
 static const float kLockSize   = 14.0f;
-static const float kTrayTabH   = 10.0f;		// the grab strip along the card's bottom edge
 
 // Top-right of the card. Carved off the slot rather than re-derived, so it cannot
 // drift from what DrawAirlineCard paints.
@@ -2278,7 +2293,8 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 	float image_h   = (card_x1 - card_x0) / kCardImageAspect;	// must match CardHeight()
 	float image_top = card_top;
 	float image_bot = image_top - image_h;
-	float text_bot  = card_bot;
+	float bar_top   = card_bot + kTrayTabH;		// the tray strip owns the bottom
+	float text_bot  = bar_top;
 
 	// --- drop shadow: a few offset, increasingly transparent slabs down
 	// and to the right. Cheap stand-in for a real blur (no shader/FBO
@@ -2303,7 +2319,11 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 	// Cards are previews, not a picker - there is no selected state left
 	// to draw. Hover survives because pointing at a card and having it
 	// respond is how the strip reads as a list of distinct things.
-	bool is_hovered  = is_hover && !is_pressed;
+	// NO PRESSED STATE. A press that is not also a release means nothing here - one
+	// click already does the whole job - so darkening the card mid-gesture only
+	// made it flicker on the way to the thing the user wanted.
+	(void) is_pressed;
+	bool is_hovered  = is_hover;
 
 	// A selected card swaps its whole body from neutral grey to the
 	// picker's green (0x639875). The sheen drawn later is plain white at
@@ -2314,16 +2334,14 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 	if (is_selected)
 	{
 		body_r = 0.388f; body_g = 0.596f; body_b = 0.459f;		// 0x639875
-		float k = is_pressed ? 0.82f : (is_hovered ? 1.12f : 1.0f);
+		float k = is_hovered ? 1.12f : 1.0f;
 		body_r = (std::min)(1.0f, body_r * k);
 		body_g = (std::min)(1.0f, body_g * k);
 		body_b = (std::min)(1.0f, body_b * k);
 	}
 	else
 	{
-		float g = 0.17f;
-		if (is_pressed)			g = 0.13f;
-		else if (is_hovered)	g = 0.21f;
+		float g = is_hovered ? 0.21f : 0.17f;
 		body_r = g; body_g = g; body_b = g + 0.02f;
 	}
 
@@ -2518,9 +2536,23 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 	// by the same 0..1 the tray height uses, so the arrow and the drawer are never
 	// out of step. Long and narrow rather than equilateral - a stubby triangle at
 	// this size reads as a blob.
+	{
+		// The bar reads as a separate strip so it is visibly a thing you can press.
+		state->SetState(0,0,0,0,1,0,0);
+		glColor4f(0.0f, 0.0f, 0.0f, 0.22f);
+		glBegin(GL_QUADS);
+			glVertex2f(card_x0, card_bot);  glVertex2f(card_x1, card_bot);
+			glVertex2f(card_x1, bar_top);   glVertex2f(card_x0, bar_top);
+		glEnd();
+		glColor4f(1.0f, 1.0f, 1.0f, 0.10f);
+		glBegin(GL_LINES);
+			glVertex2f(card_x0, bar_top);   glVertex2f(card_x1, bar_top);
+		glEnd();
+	}
+
 	if (card.abs_paths.size() > 1)
 	{
-		const float cx  = card_x0 + 9.0f;
+		const float cx  = card_x0 + 10.0f;
 		const float cy  = card_bot + kTrayTabH * 0.5f;
 		const float lon = 5.5f, lat = 3.2f;		// along the pointing axis, and across it
 
@@ -2541,6 +2573,13 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 				glVertex2f(cx + px[i] * ca - py[i] * sa,
 						   cy + px[i] * sa + py[i] * ca);
 		glEnd();
+
+		// The count, so the bar says what opening it will get you.
+		char cnt[24];
+		snprintf(cnt, sizeof(cnt), "%d aircraft", (int) card.abs_paths.size());
+		float cc[4] = { 0.80f, 0.80f, 0.84f, is_dimmed ? 0.40f : 0.85f };
+		GUI_FontDraw(state, font_UI_Basic, cc, cx + 10.0f,
+					 card_bot + (kTrayTabH - line_h) * 0.5f + 1.0f, cnt);
 	}
 
 	// --- another card holds the lock, so this one is out of the running. A flat
