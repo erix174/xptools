@@ -1717,7 +1717,18 @@ static void ValidateAirportMetadata(WED_Airport* who, validation_error_vector& m
 					}
 				if(!has_iso_code)
 					error_content = string("First 3 letters '") + c + "' are not a valid, upper case iso3166 country code";
-				else if (country[3] == ' ')
+				// The size test is not belt-and-braces, it is load-bearing.
+				// `country` has just had its 3-letter code erased above, so a
+				// metadata value that is ONLY a code - "USA", with no country
+				// name after it - leaves this string EMPTY, and reading [3] off
+				// it is an out-of-range subscript that aborts WED on the spot in
+				// a debug build. Gateway airports mostly write "USA United
+				// States", which is why this sat here unhit; the first hand-made
+				// apt.dat that wrote the bare code found it immediately.
+				//
+				// Same guard style as the country.size() > 3 test above, which
+				// is guarding the same string for the same reason.
+				else if (country.size() > 3 && country[3] == ' ')
 				{
 					bool multi_prefix = false;
 					string d = country.substr(0, 3);
