@@ -162,3 +162,70 @@ header against your install before suspecting the reader.
 Stand geometry is a straight line — latitude fixed at 38.900, longitude stepping
 by 95 m — so adding a stand means copying the last `1300`/`1301` pair and advancing
 the longitude by `0.0010965`.
+
+---
+
+## Range / service-area test bench (stands 20-27)
+
+The pack now sits at **ZBAA, Beijing** (40.078 N, 116.570 E, country CN) instead
+of the old synthetic Kansas position. The move is the point: the stands below
+only mean anything at an airport that is a long way from the operators listed on
+them.
+
+**IT SHADOWS THE REAL BEIJING CAPITAL.** The Airport ID and `icao_code` are both
+`ZBAA` so that WED's airport database resolves a real country and a real
+recommendation list - a fictional code resolves to nothing and none of this can
+be tested. Disable the pack when you are not testing.
+
+Stands 01-16 are unchanged and still test what they always did: weight parsing,
+malformed rows, unknown row codes, and that `1312` is ignored now that draft 7
+has deleted it. They are position-independent.
+
+### What each new stand is for
+
+| stand | classes | operators | should spawn | must NOT spawn |
+|---|---|---|---|---|
+| 20-CN-CONTROL | C | CCA CSN CES CSZ | all of them | - |
+| 21-NEVER-HERE | C | SWA EZY | nothing | SWA:B738, EZY:A320 |
+| 22-FOREIGN-NARROW | C | UAL DAL AAL BAW | nothing | UAL:B738, DAL:B738, AAL:B738, BAW:A320 ... |
+| 23-FOREIGN-WIDE | E | UAL DAL AAL BAW | UAL:B744, DAL:B772, AAL:B772, BAW:B772 | - |
+| 24-SPLIT-IN-CLASS | D | UAL UPS | UAL:B763, UPS:B763 | UAL:B752, UPS:B752 |
+| 25-MIXED-STAND | C+E | CCA UAL | CCA:A320, CCA:B738, UAL:B744 | UAL:A320, UAL:B738 |
+| 26-CARGO-SPLIT | D | FDX | FDX:B763 | FDX:B752, FDX:DC10 |
+| 27-DOMESTIC-FAR | C | CCA | CCA:A320, CCA:B738 | - |
+
+### Why these eight
+
+**20 and 27 are the controls.** Chinese narrowbodies at a Chinese airport are
+correct and common, and any filter that touches them has broken far more than it
+fixed. Zeroing the stand's class-C weight - the first mechanism considered -
+fails here, which is why it was abandoned.
+
+**21 is the easy case.** Southwest and easyJet have exactly one aircraft each
+and neither can cross the Pacific, so the whole operator fails. Removing them
+from the stand's `1301` list costs nothing. Every mechanism handles this one.
+
+**22 is the headline case** - the United 737 in Beijing. All four operators are
+listed legitimately at ZBAA and all four have widebodies that belong there; it
+is only their narrowbodies that cannot reach.
+
+**23 is the other half of 22** and must stay untouched. If a filter empties this
+stand it has confused "this operator cannot reach" with "this aircraft cannot
+reach".
+
+**24 and 26 are the ones that kill the per-operator approach.** UAL's B752
+(7,200 km) cannot reach and its B763 (11,000 km) can - and BOTH ARE CLASS D. No
+action taken against the operator as a whole, and no adjustment of the stand's
+class weights, can keep one and drop the other. Same for FedEx, where B752 and
+DC10 fail while B763 passes, all three in class D.
+
+**25 is the mixed stand.** CCA's 737 and UAL's 744 are both correct here; UAL's
+737 is not. A filter working at stand or operator granularity has no move that
+does not also break one of the two correct answers.
+
+### Distances used
+
+Great-circle from the operator's country centroid to the stand, one way:
+USA 10,443 km, GBR 8,028 km, CHN 1,179 km. An operator whose country matches the
+airport's is exempt - a domestic flight is always plausible, and a country
+centroid is meaningless at that scale (Russia's is in Siberia).
