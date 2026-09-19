@@ -40,6 +40,7 @@ WED_RampPosition::WED_RampPosition(WED_Archive * a, int i) : WED_GISPoint_Headin
 	ramp_op_type(this,PROP_Name(".Ramp Operation Type", XML_Name("ramp_start","ramp_op_type")), RampOperationType, ramp_operation_None),
 	airlines	(this,PROP_Name(".Airlines",            XML_Name("ramp_start","airlines")),""),
 	class_weights(this,PROP_Name(".Class Weights",      XML_Name("ramp_start","weights")),""),
+	weights_mode (this,PROP_Name(".Weights Mode",       XML_Name("ramp_start","weights_mode")), 0),
 	mLegacyWidthOnly(false)
 {
 }
@@ -314,6 +315,12 @@ string	WED_RampPosition::CorrectWeightsString(const string &w)
 
 bool	WED_RampPosition::GetClassWeights(int out_w[6]) const
 {
+	if (!weights_mode.value) return false;		// parked - the size range rules, see the .h
+	return HasStoredWeights(out_w);
+}
+
+bool	WED_RampPosition::HasStoredWeights(int out_w[6]) const
+{
 	const string s = CorrectWeightsString(class_weights.value);
 	if (s.empty()) return false;
 
@@ -329,12 +336,17 @@ void	WED_RampPosition::SetClassWeights(const int w[6])
 	char buf[64];
 	snprintf(buf, sizeof(buf), "%d %d %d %d %d %d", w[0], w[1], w[2], w[3], w[4], w[5]);
 	class_weights = CorrectWeightsString(buf);
+	weights_mode  = true;						// setting weights is choosing to use them
 }
+
+bool	WED_RampPosition::WeightsInUse(void) const		{ return weights_mode.value != 0; }
+void	WED_RampPosition::SetWeightsInUse(bool in_use)	{ weights_mode = in_use; }
 
 void	WED_RampPosition::ClearClassWeights(void)
 {
 	// Back to "no 1313 row on this stand", which is NOT the same as all-zero.
 	class_weights = string();
+	weights_mode  = false;
 }
 
 string  WED_RampPosition::GetAirlines() const

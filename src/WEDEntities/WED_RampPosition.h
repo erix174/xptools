@@ -67,6 +67,19 @@ public:
 	void	SetClassWeights(const int w[6]);
 	void	ClearClassWeights(void);
 
+	// THE MODE IS PART OF THE STAND, NOT OF THE SESSION. "Simple Mode" used to
+	// clear the weights and stash them in a pane-side cache, so they survived a
+	// mis-click but not a save: reopen the document and the distribution was
+	// gone. Now the weights stay on the stand and a second property says whether
+	// they are IN USE. GetClassWeights() answers false while they are not, so
+	// export (no 1313 row), the coverage readout and the cards all see "no
+	// weights" through the one call they already make; HasStoredWeights() is the
+	// raw view, for the button that brings them back. Export follows the mode
+	// the author left the stand in - that is the whole point of persisting it.
+	bool	WeightsInUse(void) const;
+	void	SetWeightsInUse(bool in_use);
+	bool	HasStoredWeights(int out_w[6]) const;
+
 	static string CorrectAirlinesString(const string &a);
 	// Normalises to six integers separated by single spaces, or returns "" if the
 	// input is not exactly six values in 0..1000 (R11). Never throws, never
@@ -95,6 +108,7 @@ private:
 	WED_PropIntEnum			ramp_op_type;
 	WED_PropStringText		airlines;
 	WED_PropStringText		class_weights;	// "" = no 1313 row; see GetClassWeights()
+	WED_PropBoolText		weights_mode;	// weights in use (1) or parked while the size range rules (0)
 
 	bool					mLegacyWidthOnly;	// true while parsing an XML element that had no width_min attribute
 

@@ -1816,16 +1816,14 @@ void	WED_LiveryPane::SeedWeightsFromSizeRange(void)
 	{
 		WED_RampPosition * r = mSelectedRamps[i];
 
-		std::map<int, std::string>::const_iterator cached = mWeightCache.find(r->GetID());
-		if (cached != mWeightCache.end())
+		// The stand may still hold a distribution from before it was switched to
+		// the size range - in this session or in a saved document. Bring it back
+		// rather than reseeding over it.
+		int stored[6];
+		if (r->HasStoredWeights(stored))
 		{
-			int w[6];
-			if (sscanf(cached->second.c_str(), "%d %d %d %d %d %d",
-					   &w[0], &w[1], &w[2], &w[3], &w[4], &w[5]) == 6)
-			{
-				r->SetClassWeights(w);
-				continue;
-			}
+			r->SetWeightsInUse(true);
+			continue;
 		}
 
 		int lo = WidthEnumToIndex(r->GetWidthMin());
@@ -1847,27 +1845,18 @@ void	WED_LiveryPane::SeedWeightsFromSizeRange(void)
 // row at all is the author not having said anything, which keeps today's
 // step-down (R17). Conflating the two would put one of them out of reach.
 //
-// The weights are stashed on the way out, so this reads as a mode switch rather
-// than a delete. Losing a distribution to a mis-click and having no way back
-// short of retyping it is not a trade worth making for a button.
+// This is a MODE SWITCH, not a delete, and the mode lives on the stand: the
+// weights stay in the document, flagged out of use, so they survive a save and
+// a reload and come straight back when the author returns. Export follows the
+// mode - a stand left in simple mode writes no 1313 row, whatever it holds.
+// (A pane-side cache did this before, and lost the distribution on every save.)
 void	WED_LiveryPane::SwitchToSimpleMode(void)
 {
 	if (mSelectedRamps.empty()) return;
 
 	mArchive->StartCommand("Use Simple Size Range");
 	for (size_t i = 0; i < mSelectedRamps.size(); ++i)
-	{
-		WED_RampPosition * r = mSelectedRamps[i];
-
-		int w[6];
-		if (r->GetClassWeights(w))
-		{
-			char buf[64];
-			snprintf(buf, sizeof(buf), "%d %d %d %d %d %d", w[0], w[1], w[2], w[3], w[4], w[5]);
-			mWeightCache[r->GetID()] = buf;
-		}
-		r->ClearClassWeights();
-	}
+		mSelectedRamps[i]->SetWeightsInUse(false);
 	mArchive->CommitCommand();
 
 	mCoverageDirty = true;

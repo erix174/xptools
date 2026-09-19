@@ -1610,6 +1610,20 @@ parser's signature or any other tool.
 
 ---
 
+### 6.8 Authoring note — the weights mode is a property of the stand
+
+WED keeps two things per stand in its own document (`earth.wed.xml`), not one:
+the six weights, and whether they are **in use**. "Simple Mode" parks the
+weights rather than deleting them; "Set Spawn Weights" brings them back exactly
+as left. Both survive save and reload.
+
+Export follows the mode: a stand in simple mode writes no `1313` row whatever
+it holds, and a stand in weights mode writes one (with R23's derived size
+letter). So the apt.dat says what the author last *chose*, and the author can
+change their mind without retyping a distribution. Nothing about this reaches
+the format - `weights_mode` is a WED-side XML attribute - and an imported
+`1313` row puts the stand in weights mode, since data present is data in use.
+
 ## Appendix — what is already built on the WED side
 
 So the shape above is not speculative. **Stated at the level it has actually been
