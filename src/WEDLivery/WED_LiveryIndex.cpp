@@ -161,6 +161,7 @@ bool	WED_LiveryIndex::EnsureLoaded(const string & index_path)
 		// The path is ALWAYS the last cell, so a schema 1 row (7 cells) and a
 		// schema 2 row (9) both read here. The two optional cells sit between.
 		e.obj_path    = cells.back();
+		if (cells.size() >= 10) e.op_class = cells[8];	// schema 3: Pax/Cargo/GA/Military/Gov, per row
 		if (cells.size() >= 9)
 		{
 			e.range_km = atoi(cells[6].c_str());		// non-numeric -> 0 -> unknown

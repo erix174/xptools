@@ -735,19 +735,14 @@ namespace
 
 		if (!directory.IsLoaded() && !directory.LoadFailed())
 		{
-			// ONE FILE: the operators come out of livery_index.txt, the same file
-			// the liveries and the sim's rule come from, so the two readers cannot
-			// disagree about who an operator is. The WED-side directory is only a
-			// fallback for an index too old to carry OPERATOR records (schema < 3).
-			string dir_path = WED_LiveryIndexDefaultPath();
-			bool ok = !dir_path.empty() && directory.EnsureLoaded(dir_path) && directory.Count() > 0;
-			if (!ok)
-			{
-				directory = WED_AirlineDirectory();		// forget the attempt, try the fallback once
-				dir_path  = WedDataFileDir() + "WED_AirlineDirectory.txt";
-				ok = directory.EnsureLoaded(dir_path);
-			}
-			if (!ok)
+			// ONE FILE, NO FALLBACK. The operators come out of livery_index.txt, the
+			// same file the liveries and the sim's rule come from, so the two
+			// readers cannot disagree about who an operator is. There is no
+			// WED-side directory any more: a second source that only ever kicks in
+			// when the first is missing is exactly the kind of path that rots
+			// between releases, and nobody notices which file they are looking at.
+			const string dir_path = WED_LiveryIndexDefaultPath();
+			if (dir_path.empty() || !directory.EnsureLoaded(dir_path) || directory.Count() == 0)
 			{
 				// Say so, once. Without the directory the tab still works, but
 				// airlines render as bare ICAO codes and the "Popular Airlines" and

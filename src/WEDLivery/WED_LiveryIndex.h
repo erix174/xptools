@@ -96,6 +96,10 @@ struct WED_LiveryIndexEntry {
 	// HUBS == "HOME": a military/government livery that parks only on home soil.
 	// Every other military row parks anywhere - see livery_home_only.txt.
 	bool			home_only;
+	// Schema 3: the operator's operation class carried on the row as well, so a
+	// row is self-contained without the OPERATOR record - Pax, Cargo, GA,
+	// Military or Gov. Empty on an older file.
+	std::string		op_class;
 	std::string		obj_path;		// relative to apt_aircraft/
 	WED_LiveryIndexEntry() : size_class(0), range_km(0), home_only(false) {}
 };

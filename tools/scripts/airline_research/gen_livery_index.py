@@ -156,7 +156,14 @@ for lib in ("sim objects", "airport scenery"):
         if vpath.startswith("lib/airport/aircraft/"):
             exports[real.replace("\\", "/")].append(vpath)
 
-WEDL = wed_livery_dir()        # derived from this script's own location
+# BOOTSTRAP DATA, NOT RUNTIME DATA. These two tables are consulted only for an
+# operator or a type the index does not already know - a livery X-Plane ships
+# for the first time. Nothing at run time reads them; livery_index.txt is the
+# single source of truth for WED and the sim alike, and it is maintained by
+# hand. Re-running this script MERGES: every row and operator record already in
+# the index is kept exactly as it is, rows for assets that no longer exist are
+# dropped, and only genuinely new assets get a guessed row for a human to check.
+WEDL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bootstrap")
 
 def _load_rows(path, ncol):
     out = []
@@ -229,12 +236,7 @@ def hubs_cell(airline):
 # Military and government rows that may only park on home soil - see that
 # file's header. The token goes in the HUBS column, which such rows never use
 # for coordinates, so schema 2 carries it without a new column.
-HOME_ONLY = set()
-_ho = os.path.join(os.path.dirname(os.path.abspath(__file__)), "livery_home_only.txt")
-if os.path.exists(_ho):
-    for l in open(_ho, encoding="utf-8"):
-        l = l.strip()
-        if l and not l.startswith("#"): HOME_ONLY.add(l.replace("\\", "/"))
+HOME_ONLY = set()          # kept from the existing index rows - see the merge below
 
 # Asset filename stem -> ICAO type designator, for the assets whose own name is
 # not one. Everything else resolves from the folder or filename directly.
@@ -272,36 +274,13 @@ def disambiguate(prefix, ioc, airline):
     op_country = airlines[airline][1]
     return (op_country, True) if op_country in allowed else (ioc, False)
 
-# Registrations read off the textures by hand - see the file's own header. These
-# win over anything derived from a filename, and an EMPTY value there is a
-# positive "inspected, no tail number painted" finding, not a gap.
-#
-# A '#' ANYWHERE IN THE VALUE MAKES IT UNKNOWN, not a registration with a note
-# attached. The marker means "OCR produced this and nobody has confirmed it", so
-# the honest output is no registration at all - which also means no flag, rather
-# than a confident wrong one. The 2026-09-16 pass shipped nine such rows and they
-# reached the preview cards as real tail numbers, painting German flags on Delta
-# aircraft, because the value was taken verbatim and the comment went with it.
+# Hand-read registrations used to live in a sidecar; they are index rows now,
+# and the merge below keeps whatever the index says over anything guessed here.
 OVERRIDES = {}
-_ovr = os.path.join(os.path.dirname(os.path.abspath(__file__)), "livery_reg_overrides.txt")
-if os.path.exists(_ovr):
-    for l in open(_ovr, encoding="utf-8"):
-        if l.startswith("#") or "***" not in l: continue
-        k, _, v = l.partition("***")
-        OVERRIDES[k.strip()] = "" if "#" in v else v.strip()
 
-# Liveries that must not spawn. Same sidecar pattern as the registrations above,
-# and for the same reason: a mark is a human decision and has to survive the next
-# regeneration. See livery_obsolete.txt's own header for what a mark means and
-# why the blast radius below has to be read before adding one.
+# "Obsolete" is a NOTE value on the row (R25); marks are kept by the merge.
 OBSOLETE_NOTE = "Obsolete"
 OBSOLETE = {}
-_obs = os.path.join(os.path.dirname(os.path.abspath(__file__)), "livery_obsolete.txt")
-if os.path.exists(_obs):
-    for l in open(_obs, encoding="utf-8"):
-        if l.startswith("#") or "***" not in l: continue
-        k, _, v = l.partition("***")
-        OBSOLETE[k.strip()] = v.strip()
 
 rows, flagged = [], []
 for dp, _dn, fn in os.walk(ROOT):
@@ -484,6 +463,54 @@ if "--dry-run" in sys.argv:
     print(f"\n--dry-run: nothing written. {OUT} left alone.")
     sys.exit(0)
 
+# ------------------------------------------------------------------ MERGE
+# The index is the source of truth. Read what it already says and prefer it.
+existing_rows = {}      # path -> cells (schema 3: 10 cells, OP at index 8)
+existing_ops  = {}      # code -> [name, cty, op, fleet, hub icaos]
+if os.path.exists(OUT):
+    for l in open(OUT, encoding="utf-8", errors="replace"):
+        if l.startswith("#") or "***" not in l: continue
+        q = [x.strip() for x in l.split("***")]
+        if q[0] == "OPERATOR" and len(q) >= 6:
+            existing_ops[q[1]] = q[2:7] + [""] * (5 - len(q[2:7]))
+        elif len(q) >= 9:
+            if len(q) == 9: q.insert(8, "")             # schema 2 row: no OP yet
+            existing_rows[q[-1].replace("\\", "/")] = q
+
+# operator facts: the index first, the bootstrap directory only for a newcomer
+for code, rec in existing_ops.items():
+    airlines[code]  = (rec[0], rec[1], rec[3], rec[2])
+    hub_icaos[code] = rec[4].split()
+_wanted = {i for v in hub_icaos.values() for i in v}
+hub_ll.update(resolve_hubs(XP, _wanted - set(hub_ll)))
+
+def op_class_for(code):
+    if code in PSEUDO_OP: return PSEUDO_OP[code]
+    a = airlines.get(code)
+    return (a[3] if a and len(a) > 3 and a[3] else "Pax")
+
+PSEUDO_OP = {"XPGA": "GA", "XPBZ": "GA", "XPMI": "Military", "XPGN": "Pax"}
+
+merged, kept, added = [], 0, 0
+for r in rows:
+    rel = r[-1].replace("\\", "/")
+    if rel in existing_rows:
+        q = existing_rows[rel]
+        # keep the hand-maintained cells; refresh only what is derived from an
+        # operator record the human may have edited since (hub coordinates)
+        if q[7] != "HOME":
+            q[7] = hubs_cell(q[2])
+        if not q[8]:
+            q[8] = op_class_for(q[2])
+        merged.append(tuple(q)); kept += 1
+    else:
+        r = list(r)
+        r.insert(8, op_class_for(r[2]))
+        merged.append(tuple(r)); added += 1
+dropped = len(existing_rows) - kept
+rows = merged
+print(f"merge: kept {kept}, new {added}, dropped {dropped} (assets no longer on disk)")
+
 with open(OUT, "w", encoding="utf-8", newline="\n") as o:
     # TWO versions, deliberately separate.
     #
@@ -523,12 +550,14 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
 # It sits next to the assets it describes so that any PR adding a livery is
 # already touching this directory.
 #
-# MANUALLY MAINTAINED. Bootstrapped by tools/scripts/airline_research/
-# gen_livery_index.py from what could be read off the shipped filenames, but
-# from here on it is edited by hand. Re-running the generator is a
-# diff-review, never a blind overwrite.
+# MANUALLY MAINTAINED, AND THE ONLY FILE EITHER PROGRAM READS. WED and X-Plane
+# both take every fact about a livery and its operator from here; there is no
+# second file and no fallback. tools/scripts/airline_research/gen_livery_index.py
+# MERGES new assets into it - every row and operator record already here is
+# kept exactly as written, only genuinely new assets get a guessed row - so
+# edit this file directly and re-run the script when X-Plane ships liveries.
 #
-# FORMAT: <TYPE> *** <CLASS> *** <AIRLINE> *** <REG> *** <REG COUNTRY> *** <NOTE> *** <RANGE_KM> *** <HUBS> *** <path>
+# FORMAT: <TYPE> *** <CLASS> *** <AIRLINE> *** <REG> *** <REG COUNTRY> *** <NOTE> *** <RANGE_KM> *** <HUBS> *** <OP> *** <path>
 #   TYPE        ICAO type designator (B738, A21N, ...).
 #   CLASS       ICAO wingspan class A-F - which ramp size this aircraft needs.
 #               Carried HERE rather than in a separate type->class file on
@@ -562,6 +591,9 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
 #               WED_AirlineDirectory.txt against Global Airports. Numbers rather
 #               than codes so the sim needs no airport lookup at spawn time.
 #               Empty = unknown = never filtered.
+#   OP          The operator's operation class - Pax, Cargo, GA, Military or
+#               Gov - repeated on the row so a row is self-contained. The ramp's
+#               None/GA/Airline/Cargo/Military filter reads it.
 #   path        Relative to apt_aircraft/. ALWAYS THE LAST COLUMN - readers take
 #               it from the end, which is what let schema 2 add columns without
 #               breaking a schema 1 reader.
@@ -598,6 +630,10 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
               "XPMI": ("Generic - military", "Military"), "XPGN": ("Generic - unpainted airliner", "Pax")}
     o.write("# ---- operators -------------------------------------------------------------\n")
     for code in sorted({r[2] for r in rows if r[2] != "????"}):
+        if code in existing_ops:
+            rec = existing_ops[code]
+            o.write(" *** ".join(["OPERATOR", code] + rec) + "\n")
+            continue
         if code in PSEUDO:
             name, opc = PSEUDO[code]; cty = ""; fleet = "0"; hubs = ""
         elif code in airlines:

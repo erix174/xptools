@@ -1629,10 +1629,16 @@ one answer for everything in the file. A reader that does not know the record
 kind skips it: a livery reader skips `OPERATOR`, and the operator reader skips
 livery rows because their fourth cell is a registration, not a class.
 
-**The hand-edited files feed only the generator now.** `WED_AirlineDirectory.txt`,
-`WED_AircraftSizeReference.txt` and the three sidecars are inputs; the index is
-the only thing either program reads. WED falls back to its own directory file
-only for an index older than schema 3.
+**The index is the only file either program reads, and it is the file that is
+maintained.** There is no WED-side directory and no fallback: a second source
+that only kicks in when the first is missing rots between releases unnoticed.
+Every fact is a column here - including `OP`, the operator's operation class
+(Pax / Cargo / GA / Military / Gov), repeated on each livery row so a row is
+self-contained. The generator is a *merge* tool: it keeps every row and
+operator record already in the file exactly as written, drops rows whose asset
+is gone, and adds a guessed row only for a genuinely new asset, using two
+bootstrap tables under `tools/scripts/airline_research/bootstrap/` that nothing
+at run time reads.
 
 ### 6.8 Authoring note — the weights mode is a property of the stand
 

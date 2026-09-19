@@ -888,9 +888,12 @@ endif()
 # loaders actually use to find them:
 #   Windows / Linux : beside the executable
 #   macOS           : inside the bundle, at WED.app/Contents/Resources
+# WED_AirlineDirectory.txt is no longer here. Operator facts ship inside
+# livery_index.txt on the X-Plane side (schema 3 OPERATOR records), the one file
+# both WED and the sim read; the directory survives only as a bootstrap input to
+# the generator under tools/scripts/airline_research/bootstrap/.
 set(WED_DATA_FILES
 	"${CMAKE_SOURCE_DIR}/src/WEDLivery/WED_AirportDatabase.txt"
-	"${CMAKE_SOURCE_DIR}/src/WEDLivery/WED_AirlineDirectory.txt"
 )
 
 # The flag artwork (206 country PNGs plus the fixed UV layers and uv_nodes.csv)
