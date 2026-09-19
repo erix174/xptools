@@ -312,7 +312,11 @@ private:
 										int & renders_this_frame);
 	void				DrawHoverTip(GUI_GraphState * state, int bounds[4]);
 	void				DrawCardTray(GUI_GraphState * state, const RowSlot & slot,
-									 const AirlineCard & card, float open_frac);
+									 const AirlineCard & card, float open_frac, int lit_row);
+	// Which tray row (if any) the point is over. -1 when no tray is open, when the
+	// point is elsewhere, or while the tray is still sliding - a target that moves
+	// under the cursor is not a target.
+	int					TrayRowForXY(int bounds[4], int x, int y);
 	// Takes the rows' icao codes, not the rows: WED_LiveryDisplayRow lives in the
 	// .cpp's anonymous namespace and cannot be named here. An empty string means
 	// "not an airline row".
@@ -526,6 +530,12 @@ private:
 	// - rows are rebuilt constantly and an index would land on a stranger.
 	std::string					mCycleAirline;		// empty when nothing is cycling
 	int							mHoverX, mHoverY;	// last cursor position, for the hover tip
+	// Which row of the open tray the cursor is on, -1 for none. While it is set the
+	// slideshow HOLDS on that aircraft instead of advancing, and when the cursor
+	// leaves the cycle resumes from there rather than from wherever it would have
+	// got to - so pointing at one aircraft to look at it does not cost you your
+	// place in the sequence.
+	int							mTrayHoverIdx;
 	int							mCycleShow;			// which livery is on the face
 	float						mCycleAccum;		// seconds since the last step
 
