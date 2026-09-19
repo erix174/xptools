@@ -1,6 +1,12 @@
 I
 1 WED Aviation Database
-# Format: <CODE> *** <Name> *** <IOC country> *** <Pax|Cargo> *** <Fleet count>
+# Format: <CODE> *** <Name> *** <IOC country> *** <Pax|Cargo> *** <Fleet count> [*** <HUBS>]
+# HUBS (optional sixth column): the operator's primary hubs as ICAO codes, space
+# separated. gen_livery_index.py resolves them to coordinates against the global
+# apt.dat and bakes those into livery_index.txt; the sim then skips a livery
+# whose nearest hub is beyond the aircraft's range from the stand. Empty is
+# "unknown" and is never filtered. Codes, not coordinates, because this file is
+# edited by hand and a code can be checked at a glance.
 # See WED_AirlineDirectory.h for the full description, including what the
 # CODE column's 3/4/5-char length means (3 = real ICAO code; 4-char "XPxx" =
 # no confirmed real code; 5-char "XXX_N"/"XXX_F" = a subsidiary/all-cargo
@@ -8,7 +14,7 @@ I
 # here since this file needs one row per distinct code).
 # Pax/Cargo is a first-pass, name-based classification - see WED_AirlineDirectory.h.
 CSB *** 21 Air *** USA *** Pax *** 22
-JYH *** 9 Air *** CHN *** Pax *** 27
+JYH *** 9 Air *** CHN *** Pax *** 27 *** ZGGG
 ABP *** ABS Jets *** CZE *** Pax *** 7
 BAR *** Abu Dhabi Aviation *** UAE *** Pax *** 4
 ABX *** ABX Air *** USA *** Pax *** 39
@@ -32,18 +38,18 @@ ADN *** Aero-Dienst *** GER *** Pax *** 2
 EOK *** Aero-K *** KOR *** Pax *** 9
 BOC *** Aerobona *** MEX *** Pax *** 1
 CDA *** Aerocardal *** CHI *** Pax *** 4
-AFL *** Aeroflot - Russian Airlines *** RUS *** Pax *** 171
+AFL *** Aeroflot - Russian Airlines *** RUS *** Pax *** 171 *** UUEE
 FCO *** Aerofrisco *** MEX *** Pax *** 1
 GTV *** Aerogaviota *** CUB *** Pax *** 4
 AEZ *** Aeroitalia *** ITA *** Pax *** 18
 TEJ *** AeroJet *** ANG *** Pax *** 2
 BJU *** Aerojet Airlines *** UKR *** Pax *** 1
-ARG *** Aerolineas Argentinas *** ARG *** Pax *** 81
+ARG *** Aerolineas Argentinas *** ARG *** Pax *** 81 *** SAEZ SABE
 HUC *** Aerolineas de Tehuacan *** MEX *** Pax *** 2
 LET *** Aerolíneas Ejecutivas *** MEX *** Pax *** 2
 NSO *** Aerolineas Sosa *** HON *** Pax *** 11
 BOX *** AeroLogic *** GER *** Pax *** 28
-AMX *** Aeroméxico *** MEX *** Pax *** 136
+AMX *** Aeroméxico *** MEX *** Pax *** 136 *** MMMX
 SLI *** Aeroméxico Connect *** MEX *** Pax *** 35
 VTM *** Aeronaves TSM *** MEX *** Pax *** 87
 ARN *** Aeronexus *** RSA *** Pax *** 1
@@ -69,7 +75,7 @@ ABS *** AfriJet *** GAB *** Pax *** 8
 AAW *** Afriqiyah Airways *** LBA *** Pax *** 8
 XPA1 *** Air 001 *** POL *** Pax *** 6
 MUS *** Air Adelphi *** VIN *** Pax *** 5
-DAH *** Air Algérie *** ALG *** Pax *** 64
+DAH *** Air Algérie *** ALG *** Pax *** 64 *** DAAG
 AYY *** Air Alliance *** GER *** Pax *** 1
 MMD *** Air Alsie *** DEN *** Pax *** 8
 TAH *** Air Anka *** TUR *** Pax *** 8
@@ -91,7 +97,7 @@ ABL *** Air Busan *** KOR *** Pax *** 21
 MSC *** Air Cairo *** EGY *** Pax *** 41
 TPC *** Air Calédonie *** FRA *** Pax *** 3
 KHV *** Air Cambodia *** CAM *** Pax *** 6
-ACA *** Air Canada *** CAN *** Pax *** 236
+ACA *** Air Canada *** CAN *** Pax *** 236 *** CYYZ CYVR CYUL
 ROU *** Air Canada Rouge *** CAN *** Pax *** 60
 FWI *** Air Caraïbes *** FRA *** Pax *** 13
 CAJ *** Air Caraïbes Atlantique *** FRA *** Pax *** 8
@@ -100,7 +106,7 @@ CEY *** Air Century *** DOM *** Pax *** 6
 CGN *** Air Changan *** CHN *** Pax *** 15
 EDC *** Air Charter Scotland *** GBR *** Pax *** 1
 CVA *** Air Chathams *** NZL *** Pax *** 7
-CCA *** Air China *** CHN *** Pax *** 535
+CCA *** Air China *** CHN *** Pax *** 535 *** ZBAA ZSPD ZUUU
 CAO *** Air China Cargo *** CHN *** Cargo *** 23
 DRC *** Air Congo *** COD *** Pax *** 6
 CPV *** Air Corporate *** ITA *** Pax *** 2
@@ -109,10 +115,10 @@ VRE *** Air Côte d'Ivoire *** CIV *** Pax *** 14
 CRQ *** Air Creebec *** CAN *** Pax *** 22
 DJU *** Air Djibouti *** DJI *** Pax *** 2
 ADO *** Air Do *** JPN *** Pax *** 12
-DLA *** Air Dolomiti *** ITA *** Pax *** 30
+DLA *** Air Dolomiti *** ITA *** Pax *** 30 *** EDDM LIPX
 EPE *** Air Eagle *** PAK *** Pax *** 1
-AEA *** Air Europa *** ESP *** Pax *** 47
-AFR *** Air France *** FRA *** Pax *** 226
+AEA *** Air Europa *** ESP *** Pax *** 47 *** LEMD
+AFR *** Air France *** FRA *** Pax *** 226 *** LFPG LFPO
 AFR_F *** Air France Cargo *** FRA *** Cargo *** 2
 HOP *** Air France Hop *** FRA *** Pax *** 36
 GHN *** Air Ghana *** GHA *** Pax *** 3
@@ -138,7 +144,7 @@ MAR *** Air Mediterranean *** GRE *** Pax *** 2
 LIF *** Air Methods *** USA *** Pax *** 1
 NTR *** Air Moana *** FRA *** Pax *** 5
 MNE *** Air Montenegro *** MNE *** Pax *** 4
-ANZ *** Air New Zealand *** NZL *** Pax *** 114
+ANZ *** Air New Zealand *** NZL *** Pax *** 114 *** NZAA
 ANG *** Air Niugini *** PNG *** Pax *** 20
 ANT *** Air North *** CAN *** Pax *** 10
 ANE *** Air Nostrum *** ESP *** Pax *** 41
@@ -163,7 +169,7 @@ RTL *** Air Thanlwin *** MYA *** Pax *** 3
 TIN *** Air Tindi *** CAN *** Pax *** 16
 XPA2 *** Air ToJoy *** CHN *** Pax *** 3
 TSC *** Air Transat *** CAN *** Pax *** 41
-ATN *** Air Transport International *** USA *** Pax *** 50
+ATN *** Air Transport International *** USA *** Pax *** 50 *** KILN
 OTC *** Air Travel *** CHN *** Pax *** 18
 URG *** Air Urga *** UKR *** Pax *** 5
 AVN *** Air Vanuatu *** VAN *** Pax *** 5
@@ -206,7 +212,7 @@ AXY *** AirX Charter *** MLT *** Pax *** 18
 TGZ *** Airzena Georgian Airways *** GEO *** Pax *** 11
 AIH *** AIRZETA *** KOR *** Pax *** 15
 PNX *** AIS Airlines *** NED *** Pax *** 3
-TKJ *** AJet *** TUR *** Pax *** 138
+TKJ *** AJet *** TUR *** Pax *** 138 *** LTFJ LTAC
 NTX *** AK Air *** GEO *** Pax *** 1
 AKJ *** Akasa Air *** IND *** Pax *** 43
 AKK *** Aklak Air *** CAN *** Pax *** 2
@@ -214,7 +220,7 @@ HYA *** Al Haya Airlines *** IRQ *** Pax *** 2
 ATE *** Al-Atheer Aviation *** KSA *** Pax *** 3
 ADJ *** Aladdin Jet *** CHN *** Pax *** 1
 TTR *** Alaman Air *** KAZ *** Pax *** 2
-ASA *** Alaska Airlines *** USA *** Pax *** 351
+ASA *** Alaska Airlines *** USA *** Pax *** 351 *** KSEA KPDX PANC KLAX KSFO
 ASA_F *** Alaska Air Cargo *** USA *** Cargo *** 5
 LAV *** Alba Star *** ESP *** Pax *** 5
 GAL *** Albatros Airlines *** VEN *** Pax *** 1
@@ -222,7 +228,7 @@ KHH *** Alexandria Airlines *** EGY *** Pax *** 2
 AAJ *** Alfa Airlines *** SUD *** Pax *** 1
 VBB *** ALK Airlines *** BUL *** Pax *** 2
 AKN *** Alkan Air *** CAN *** Pax *** 2
-ANA *** All Nippon Airways *** JPN *** Pax *** 246
+ANA *** All Nippon Airways *** JPN *** Pax *** 246 *** RJTT RJAA
 AAY *** Allegiant Air *** USA *** Pax *** 124
 LLR *** Alliance Air *** IND *** Pax *** 21
 UTY *** Alliance Airlines *** AUS *** Pax *** 79
@@ -245,7 +251,7 @@ AMQ *** AMC Aviation Poland *** POL *** Pax *** 2
 AIA *** Amelia *** FRA *** Pax *** 4
 LXE *** Amelia Executive *** AUT *** Pax *** 1
 AEH *** Amelia International *** SLO *** Pax *** 8
-AAL *** American Airlines *** USA *** Pax *** 1034
+AAL *** American Airlines *** USA *** Pax *** 1034 *** KDFW KCLT KORD KMIA KPHX KLAX KJFK KPHL KDCA
 AJB *** American Jet *** ARG *** Pax *** 5
 AMF *** Ameriflight *** USA *** Pax *** 15
 AJT *** Amerijet International *** USA *** Pax *** 11
@@ -289,7 +295,7 @@ ACP *** Astral Aviation *** KEN *** Pax *** 3
 TBZ *** ATA Airlines *** IRI *** Pax *** 23
 FLI *** Atlantic Airways *** DEN *** Pax *** 4
 ATS *** Atlas Air *** IRI *** Pax *** 4
-GTI *** Atlas Air *** USA *** Pax *** 86
+GTI *** Atlas Air *** USA *** Pax *** 86 *** KCVG KJFK
 ATJ *** Atmospherica Jets *** CZE *** Pax *** 2
 VAS *** ATRAN - Aviatrans Cargo Airlines *** RUS *** Cargo *** 5
 AMP *** ATSA Airlines *** PER *** Pax *** 2
@@ -297,7 +303,7 @@ AUK *** Auric Air *** TAN *** Pax *** 7
 AUR *** Aurigny *** GBR *** Pax *** 6
 SHU *** Aurora *** RUS *** Pax *** 19
 AUU *** Aurora Flight Sciences *** USA *** Pax *** 1
-AUA *** Austrian Airlines *** AUT *** Pax *** 66
+AUA *** Austrian Airlines *** AUT *** Pax *** 66 *** LOWW
 AXV *** AVA Airlines *** IRI *** Pax *** 5
 ATV *** Avanti Air *** GER *** Pax *** 2
 VGT *** Avantis Aviation *** GAB *** Pax *** 1
@@ -329,12 +335,12 @@ MLH *** Avion Express Malta *** MLT *** Pax *** 20
 ROI *** Avior Airlines *** VEN *** Pax *** 10
 WIN *** Awesome Cargo *** MEX *** Cargo *** 3
 AYT *** Ayit Aviation *** ISR *** Pax *** 3
-AHY *** AZAL Azerbaijan Airlines *** AZE *** Pax *** 40
+AHY *** AZAL Azerbaijan Airlines *** AZE *** Pax *** 40 *** UBBB
 AZO *** Azimuth Airlines *** RUS *** Pax *** 19
 AZM *** Azman Air *** NGR *** Pax *** 4
 RZO *** Azores Airlines *** POR *** Pax *** 9
-AZU *** Azul *** BRA *** Pax *** 171
-AZV *** Azur Air *** RUS *** Pax *** 18
+AZU *** Azul *** BRA *** Pax *** 171 *** SBKP SBCF
+AZV *** Azur Air *** RUS *** Pax *** 18 *** UUDD
 ALZ *** Azure Aviation *** BAH *** Pax *** 2
 CFE *** BA Cityflyer *** GBR *** Pax *** 20
 EFW *** BA Euroflyer *** GBR *** Pax *** 28
@@ -347,8 +353,8 @@ BAV *** Bamboo Airways *** VIE *** Pax *** 1
 BKP *** Bangkok Airways *** THA *** Pax *** 23
 BVN *** Baron Aviation Services *** USA *** Pax *** 2
 BSQ *** Basra Airlines *** IRQ *** Pax *** 2
-BTK *** Batik Air *** INA *** Pax *** 60
-MXD *** Batik Air Malaysia *** MAS *** Pax *** 48
+BTK *** Batik Air *** INA *** Pax *** 60 *** WIII
+MXD *** Batik Air Malaysia *** MAS *** Pax *** 48 *** WMKK
 BBL *** BBN Airlines Indonesia *** INA *** Pax *** 4
 BBT *** BBN Airlines Türkiye *** TUR *** Pax *** 9
 THB *** BBN Thailand Airlines *** THA *** Pax *** 1
@@ -373,7 +379,7 @@ BAG *** Birdbase Aviation *** AUT *** Pax *** 1
 BBB *** Blackbird Air *** DEN *** Pax *** 5
 BLB *** Blue Bird Aviation *** SUD *** Pax *** 3
 BBY *** Blue Bird Aviation Yemen *** YEM *** Pax *** 2
-BDA *** Blue Dart Aviation *** IND *** Pax *** 8
+BDA *** Blue Dart Aviation *** IND *** Pax *** 8 *** VOMM
 BWI *** Blue Wing Airlines *** SUR *** Pax *** 1
 BBG *** Bluebird Airways *** GRE *** Pax *** 4
 BBZ *** Bluebird Aviation *** KEN *** Pax *** 8
@@ -385,7 +391,7 @@ BPC *** Braspress Air Cargo *** BRA *** Cargo *** 3
 BAY *** Bravo Airways *** UKR *** Pax *** 1
 MXY *** Breeze Airways *** USA *** Pax *** 64
 BRD *** Bridges Air Cargo *** MLT *** Cargo *** 2
-BAW *** British Airways *** GBR *** Pax *** 299
+BAW *** British Airways *** GBR *** Pax *** 299 *** EGLL EGKK
 BEL *** Brussels Airlines *** BEL *** Pax *** 47
 BPS *** Budapest Aircraft Service *** HUN *** Pax *** 3
 BHA *** Buddha Air *** NEP *** Pax *** 16
@@ -395,7 +401,7 @@ LZB *** Bulgaria Air *** BUL *** Pax *** 16
 BRQ *** Buraq Air *** LBA *** Pax *** 6
 UNA *** Business Aviation Asia (BAA) *** CHN *** Pax *** 1
 RHT *** Busy Bee Congo *** COD *** Pax *** 6
-RYS *** Buzz *** POL *** Pax *** 87
+RYS *** Buzz *** POL *** Pax *** 87 *** EPWA EPKK
 FPY *** CAA Cargo *** COD *** Cargo *** 1
 TCV *** Cabo Verde Airlines *** CPV *** Pax *** 2
 LXC *** CAE Aviation *** LUX *** Pax *** 1
@@ -416,7 +422,7 @@ CAD *** Cardig Air *** INA *** Pax *** 1
 CGF *** Cargo Air *** BUL *** Cargo *** 11
 CTW *** Cargo Three *** PAN *** Cargo *** 1
 CWE *** Cargo Wings Express *** TUN *** Cargo *** 2
-CJT *** Cargojet Airways *** CAN *** Cargo *** 44
+CJT *** Cargojet Airways *** CAN *** Cargo *** 44 *** CYHM
 CLX *** Cargolux *** LUX *** Cargo *** 26
 ICV *** Cargolux Italia *** ITA *** Cargo *** 4
 BWA *** Caribbean Airlines *** TTO *** Pax *** 20
@@ -424,7 +430,7 @@ KRP *** Carpatair *** ROU *** Pax *** 3
 CPN *** Caspian Airlines *** IRI *** Pax *** 12
 CSJ *** Castle Aviation *** USA *** Pax *** 5
 CAZ *** CAT Aviation *** SUI *** Pax *** 3
-CPA *** Cathay Pacific *** HKG *** Pax *** 180
+CPA *** Cathay Pacific *** HKG *** Pax *** 180 *** VHHH
 CAY *** Cayman Airways *** CAY *** Pax *** 9
 CYX *** Cayman Airways Express *** CAY *** Pax *** 5
 TUP_1 *** CDEK Express *** RUS *** Pax *** 1
@@ -436,7 +442,7 @@ KEM *** CemAir *** RSA *** Pax *** 26
 HLF *** Central Airlines *** CHN *** Pax *** 10
 GLR *** Central Mountain Air *** CAN *** Pax *** 13
 CLF *** Centreline *** GBR *** Pax *** 3
-MFX *** Centrum Air / My Freighter *** UZB *** Pax *** 43
+MFX *** Centrum Air / My Freighter *** UZB *** Pax *** 43 *** UTTT
 IRU *** Chabahar Airlines *** IRI *** Pax *** 4
 CSW *** Chair Airlines *** SUI *** Pax *** 5
 CLG *** Chalair Aviation *** FRA *** Pax *** 5
@@ -446,16 +452,16 @@ CHZ *** Challenge Airlines MT *** MLT *** Pax *** 5
 HRT *** Chartright Air *** CAN *** Pax *** 1
 UEA *** Chengdu Airlines *** CHN *** Pax *** 84
 CCO *** China Air Cargo *** CHN *** Cargo *** 2
-CAL *** China Airlines *** TPE *** Pax *** 85
+CAL *** China Airlines *** TPE *** Pax *** 85 *** RCTP
 CKK *** China Cargo Airlines *** CHN *** Cargo *** 20
-CES *** China Eastern Airlines *** CHN *** Pax *** 678
+CES *** China Eastern Airlines *** CHN *** Pax *** 678 *** ZSPD ZSSS ZUCK ZLXY
 HXA *** China Express Airlines *** CHN *** Pax *** 76
 CFZ *** China Flight General Aviation Company (CFGAC) *** CHN *** Pax *** 2
 CFA *** China Flying Dragon Aviation *** CHN *** Pax *** 1
-CYZ *** China Postal Airlines *** CHN *** Pax *** 40
-CSN *** China Southern Airlines *** CHN *** Pax *** 693
+CYZ *** China Postal Airlines *** CHN *** Pax *** 40 *** ZSNJ
+CSN *** China Southern Airlines *** CHN *** Pax *** 693 *** ZGGG ZBAD ZSPD ZUUU
 CSG *** China Southern Cargo *** CHN *** Cargo *** 14
-CUA *** China United Airlines *** CHN *** Pax *** 60
+CUA *** China United Airlines *** CHN *** Pax *** 60 *** ZBAD
 CQN *** Chongqing Airlines *** CHN *** Pax *** 31
 NDL *** Chrono Aviation *** CAN *** Pax *** 3
 MBK *** Chrono Jet *** CAN *** Pax *** 3
@@ -481,9 +487,9 @@ COG *** Congo Airways *** COD *** Pax *** 5
 UZA *** Constanta *** UKR *** Pax *** 1
 VTE *** Contour Airlines *** USA *** Pax *** 28
 VCV *** Conviasa *** VEN *** Pax *** 24
-CMP *** Copa Airlines *** PAN *** Pax *** 119
+CMP *** Copa Airlines *** PAN *** Pax *** 119 *** MPTO
 CAT *** Copenhagen Airtaxi *** DEN *** Pax *** 4
-CAI *** Corendon Airlines *** TUR *** Pax *** 14
+CAI *** Corendon Airlines *** TUR *** Pax *** 14 *** LTAI
 CXI *** Corendon Airlines Europe *** MLT *** Pax *** 12
 CND *** Corendon Dutch Airlines *** NED *** Pax *** 4
 CPT *** Corporate Air *** USA *** Pax *** 12
@@ -496,13 +502,13 @@ CRA *** Cronos Airlines *** GEQ *** Pax *** 3
 CWN *** Crown Airlines *** LBA *** Pax *** 1
 CUB *** Cubana *** CUB *** Pax *** 8
 KGF *** CVsky *** CPV *** Pax *** 2
-RGN *** Cygnus Air *** ESP *** Pax *** 5
+RGN *** Cygnus Air *** ESP *** Pax *** 5 *** LEMD
 CYP *** Cyprus Airways *** CYP *** Pax *** 6
 CSA *** Czech Airlines (CSA) *** CZE *** Pax *** 6
 DAO *** Daallo Airlines *** DJI *** Pax *** 4
 DAC *** Daily Air *** TPE *** Pax *** 4
 DKZ *** Dala Air *** KAZ *** Pax *** 2
-CCD *** Dalian Airlines *** CHN *** Pax *** 12
+CCD *** Dalian Airlines *** CHN *** Pax *** 12 *** ZYTL
 DNA *** Dan Air *** ROU *** Pax *** 3
 DAV *** DANA - Dornier Aviation Nigeria Aiep *** NGR *** Pax *** 6
 DNU *** DAT *** LTU *** Pax *** 3
@@ -516,11 +522,11 @@ DCU *** DC Aviation San Marino *** SMR *** Pax *** 1
 BDJ *** Deer Jet Beijing *** CHN *** Pax *** 3
 DER *** Deer Jet Shanghai *** CHN *** Pax *** 8
 DLC *** Dehong South Asian Airline *** CHN *** Pax *** 1
-DAL *** Delta Air Lines *** USA *** Pax *** 1002
+DAL *** Delta Air Lines *** USA *** Pax *** 1002 *** KATL KDTW KMSP KSLC KJFK KLAX KSEA KBOS
 DWA *** Desert Wings Aviation *** KSA *** Pax *** 4
 DAE *** DHL Aero Expreso *** PAN *** Pax *** 10
 DHA *** DHL Air Austria *** AUT *** Pax *** 23
-DHK *** DHL Air UK *** GBR *** Pax *** 19
+DHK *** DHL Air UK *** GBR *** Pax *** 19 *** EGNX
 JOS *** DHL de Guatemala *** GUA *** Pax *** 3
 DHX *** DHL International Aviation *** BRN *** Pax *** 10
 DMS *** Diamond Sky *** EST *** Pax *** 1
@@ -528,7 +534,7 @@ OCN *** Discover Airlines *** GER *** Pax *** 34
 DVR *** Divi Divi Air *** NED *** Pax *** 3
 DKA *** Dokia Air *** ROU *** Pax *** 1
 DTH *** Domestic Airlines *** ALG *** Pax *** 15
-EPA *** Donghai Airlines *** CHN *** Pax *** 23
+EPA *** Donghai Airlines *** CHN *** Pax *** 23 *** ZGSZ
 DRK *** Drukair - Royal Bhutan Airlines *** BHU *** Pax *** 6
 DUB *** Dubai Royal Air Wing *** UAE *** Pax *** 11
 XPA6 *** Dynamic Aviation *** USA *** Pax *** 4
@@ -541,16 +547,16 @@ ESR *** Eastar Jet *** KOR *** Pax *** 23
 BBQ *** Eastern Air Express *** USA *** Pax *** 19
 EAL *** Eastern Airlines *** USA *** Pax *** 6
 LOL *** Easy Charter *** GEO *** Pax *** 1
-EZY *** easyJet *** GBR *** Pax *** 197
+EZY *** easyJet *** GBR *** Pax *** 197 *** EGKK EGGW
 EJU *** easyJet Europe *** AUT *** Pax *** 144
 EZS *** easyJet Switzerland *** SUI *** Pax *** 31
 BCS *** EAT Leipzig *** GER *** Pax *** 35
 EQR *** ECAir *** CGO *** Pax *** 1
 ECO *** EcoJet *** BOL *** Pax *** 3
 EDW *** Edelweiss *** SUI *** Pax *** 23
-MSR *** Egyptair *** EGY *** Pax *** 69
+MSR *** Egyptair *** EGY *** Pax *** 69 *** HECA
 MSX *** Egyptair Cargo *** EGY *** Cargo *** 5
-ELY *** El Al Israel Airlines *** ISR *** Pax *** 57
+ELY *** El Al Israel Airlines *** ISR *** Pax *** 57 *** LLBG
 ELG *** Elangeni *** AUT *** Pax *** 1
 EAF *** Electra Airways *** BUL *** Pax *** 15
 LVT *** Elevate Jet *** USA *** Pax *** 2
@@ -561,12 +567,12 @@ ELJ *** EliteJet *** SVK *** Pax *** 1
 GIE *** Elysian Airlines *** GUI *** Pax *** 1
 EAI *** Emerald Airlines *** IRL *** Pax *** 13
 EAG *** Emerald Airlines UK *** GBR *** Pax *** 7
-UAE *** Emirates *** UAE *** Pax *** 289
+UAE *** Emirates *** UAE *** Pax *** 289 *** OMDB
 EFC *** Emirates Flight Training Academy *** UAE *** Pax *** 5
 CFS *** Empire Airlines *** USA *** Pax *** 26
 DWC *** Empire Aviation San Marino *** SMR *** Pax *** 1
 EDV *** Endeavor Air *** USA *** Pax *** 148
-ENT *** Enter Air *** POL *** Pax *** 40
+ENT *** Enter Air *** POL *** Pax *** 40 *** EPWA
 ENU *** Enugu Air *** NGR *** Pax *** 5
 ENY *** Envoy *** USA *** Pax *** 189
 ESF *** Estafeta Carga Aerea *** MEX *** Pax *** 6
@@ -598,7 +604,7 @@ QFZ *** Fars Air Qeshm *** IRI *** Pax *** 2
 FJW *** fastjet Zimbabwe *** ZIM *** Pax *** 7
 FDA *** FDA - Fuji Dream Airlines *** JPN *** Pax *** 15
 FDR *** Federal Airlines *** RSA *** Pax *** 2
-FDX *** FedEx Express *** USA *** Pax *** 478
+FDX *** FedEx Express *** USA *** Pax *** 478 *** KMEM KIND KOAK KAFW KEWR CYYZ LFPG EDDK VHHH RJAA
 XPA7 *** FedEx Feeder *** USA *** Pax *** 101
 FJI *** Fiji Airways *** FIJ *** Pax *** 14
 FJA *** Fiji Link *** FIJ *** Pax *** 9
@@ -619,7 +625,7 @@ FLZ *** Flightlink *** TAN *** Pax *** 4
 KNT *** Flightpath *** CAN *** Pax *** 1
 ACW *** Fly Across *** MEX *** Pax *** 4
 QFF *** Fly Aden *** YEM *** Pax *** 2
-BER *** Fly Air41 Airways *** CRO *** Pax *** 7
+BER *** Fly Air41 Airways *** CRO *** Pax *** 7 *** LDZA
 EDR *** Fly All Ways *** SUR *** Pax *** 2
 KPO *** Fly Alliance *** USA *** Pax *** 2
 FLA *** Fly Angola *** ANG *** Pax *** 1
@@ -640,12 +646,12 @@ FXZ *** Fly X Airlines *** ZIM *** Pax *** 5
 VAW *** Fly2Sky *** BUL *** Pax *** 9
 FFA *** Fly4 Airlines *** IRL *** Pax *** 4
 FFV *** Fly540 *** KEN *** Pax *** 4
-FSF *** Fly7 Finland *** FIN *** Pax *** 8
+FSF *** Fly7 Finland *** FIN *** Pax *** 8 *** EFHK
 GOA *** FLY91 *** IND *** Pax *** 6
 FAD *** flyadeal *** KSA *** Pax *** 50
 AYN *** FlyArystan *** KAZ *** Pax *** 28
 DBP *** flyCAA *** COD *** Pax *** 6
-FDB *** flydubai *** UAE *** Pax *** 96
+FDB *** flydubai *** UAE *** Pax *** 96 *** OMDB
 JRE *** flyExclusive *** USA *** Pax *** 10
 FYL *** Flying Group *** LUX *** Pax *** 4
 FYG *** Flying Service *** BEL *** Pax *** 1
@@ -659,7 +665,7 @@ AUV *** FLYONE Asia *** UZB *** Pax *** 3
 FOE *** FLYONE Romania *** ROU *** Pax *** 4
 FRE *** FlyPelican *** AUS *** Pax *** 5
 FPI *** FlyPersia *** IRI *** Pax *** 2
-SFR *** FlySafair *** RSA *** Pax *** 37
+SFR *** FlySafair *** RSA *** Pax *** 37 *** FAOR
 FLD *** FlySolutions *** MLT *** Pax *** 2
 DIR *** FLYYO *** ROU *** Pax *** 3
 FIX *** Fox Aviation *** SLO *** Pax *** 2
@@ -680,10 +686,10 @@ GNJ *** GainJet Aviation *** GRE *** Pax *** 4
 GJI *** GainJet Ireland *** IRL *** Pax *** 3
 GTR *** Galistair Malta *** MLT *** Pax *** 2
 GSH *** Gama Aviation *** UAE *** Pax *** 1
-GIA *** Garuda Indonesia *** INA *** Pax *** 74
+GIA *** Garuda Indonesia *** INA *** Pax *** 74 *** WIII
 GZP *** Gazpromavia *** RUS *** Pax *** 18
 IGT *** Georgian Airlines *** GEO *** Pax *** 5
-GEL *** Geosky *** GEO *** Pax *** 4
+GEL *** Geosky *** GEO *** Pax *** 4 *** UGTB
 GER *** German Airways *** GER *** Pax *** 9
 GES *** Gestair *** ESP *** Pax *** 1
 GSM *** Gestair Malta *** MLT *** Pax *** 1
@@ -707,9 +713,9 @@ XPA9 *** Gomair *** COD *** Pax *** 4
 GPX *** GP Aviation *** BUL *** Pax *** 5
 CVU *** Grand Canyon Airlines *** USA *** Pax *** 3
 SCE *** Grand Canyon Scenic Airlines *** USA *** Pax *** 4
-GDC *** Grand China Air *** CHN *** Pax *** 3
+GDC *** Grand China Air *** CHN *** Pax *** 3 *** ZBAA
 GGN *** Great North Airlines *** CAN *** Pax *** 5
-HGB *** Greater Bay Airlines *** HKG *** Pax *** 8
+HGB *** Greater Bay Airlines *** HKG *** Pax *** 8 *** VHHH
 GWG *** Green Africa Airways *** NGR *** Pax *** 2
 GHA *** Group Holdings Aviation *** USA *** Pax *** 2
 GVA *** Grupo Aeronaútico Ova *** MEX *** Pax *** 1
@@ -726,7 +732,7 @@ HGA *** Halla Airlines *** SOM *** Pax *** 1
 HUE *** Haute Aviation *** SUI *** Pax *** 1
 HAL *** Hawaiian Airlines *** USA *** Pax *** 72
 HYY *** Hayways *** ARM *** Pax *** 2
-HBH *** Hebei Airlines *** CHN *** Pax *** 29
+HBH *** Hebei Airlines *** CHN *** Pax *** 29 *** ZBSJ
 HBR *** Hebridean Air Services *** GBR *** Pax *** 1
 HLJ *** HelloJets *** ROU *** Pax *** 10
 OAW *** Helvetic Airways *** SUI *** Pax *** 20
@@ -760,13 +766,13 @@ EVE *** Iberojet *** ESP *** Pax *** 4
 IBX *** Ibex Airlines *** JPN *** Pax *** 9
 IAN *** Ibom Air *** NGR *** Pax *** 10
 RAC *** Icar Air *** BIH *** Pax *** 1
-ICE *** Icelandair *** ISL *** Pax *** 43
+ICE *** Icelandair *** ISL *** Pax *** 43 *** BIKF
 ICE_F *** Icelandair Cargo *** ISL *** Cargo *** 1
 KAR *** Ikar *** RUS *** Pax *** 8
 BMG *** Image Air Charter *** CAN *** Pax *** 2
 JTI *** ImperialJet *** GER *** Pax *** 1
 PNK *** ImperialJet Serbia *** SRB *** Pax *** 1
-IGO *** IndiGo *** IND *** Pax *** 421
+IGO *** IndiGo *** IND *** Pax *** 421 *** VIDP VABB VOBL
 IDA *** Indonesia Air *** INA *** Pax *** 1
 AWQ *** Indonesia AirAsia *** INA *** Pax *** 24
 IWY *** interCaribbean Airways *** GBR *** Pax *** 21
@@ -777,7 +783,7 @@ IAE *** IrAero *** RUS *** Pax *** 11
 IRA *** Iran Air *** IRI *** Pax *** 29
 IRB *** Iran Airtour *** IRI *** Pax *** 18
 IRC *** Iran Aseman Airlines *** IRI *** Pax *** 8
-IAW *** Iraqi Airways *** IRQ *** Pax *** 41
+IAW *** Iraqi Airways *** IRQ *** Pax *** 41 *** ORBI
 SOY *** Island Aviation *** PHI *** Pax *** 4
 IOS *** Isles of Scilly Skybus *** GBR *** Pax *** 9
 ISR *** Israir Airlines *** ISR *** Pax *** 10
@@ -786,21 +792,21 @@ JLJ *** J-Air *** JPN *** Pax *** 32
 TGN_1 *** J&T Express *** INA *** Pax *** 1
 JMA *** Jambojet *** KEN *** Pax *** 11
 JAC *** Japan Air Commuter *** JPN *** Pax *** 11
-JAL *** Japan Airlines *** JPN *** Pax *** 150
-JTA *** Japan Transocean Air *** JPN *** Pax *** 14
+JAL *** Japan Airlines *** JPN *** Pax *** 150 *** RJTT RJAA RJBB
+JTA *** Japan Transocean Air *** JPN *** Pax *** 14 *** ROAH
 JWD *** Jayawijaya Dirgantara *** INA *** Pax *** 2
 JZR *** Jazeera Airways *** KUW *** Pax *** 22
 JZA *** Jazz Aviation *** CAN *** Pax *** 84
 JDL *** JD Airlines *** CHN *** Pax *** 13
-JJA *** Jeju Air *** KOR *** Pax *** 45
+JJA *** Jeju Air *** KOR *** Pax *** 45 *** RKPC RKSS
 PJS *** Jet Aviation Business Jets *** SUI *** Pax *** 1
 JML *** Jet Aviation Flight Services (Malta) *** MLT *** Pax *** 2
 RFE *** Jet Express Airlines *** RUS *** Pax *** 4
 JDI *** Jet Story *** POL *** Pax *** 4
 JNS *** Jet Support Services *** NGR *** Pax *** 1
-EXS *** Jet2 *** GBR *** Pax *** 139
+EXS *** Jet2 *** GBR *** Pax *** 139 *** EGCC EGNM EGSS
 JBU *** JetBlue *** USA *** Pax *** 297
-JFA *** Jetfly Aviation *** LUX *** Pax *** 35
+JFA *** Jetfly Aviation *** LUX *** Pax *** 35 *** ELLX
 JTC *** Jetica *** RUS *** Pax *** 1
 SLR *** Jetlite Air *** KEN *** Pax *** 5
 JAT *** JetSMART *** CHI *** Pax *** 56
@@ -810,12 +816,12 @@ JAP *** JetSMART Peru *** PER *** Pax *** 7
 JST *** Jetstar Airways *** AUS *** Pax *** 97
 JJP *** Jetstar Japan *** JPN *** Pax *** 22
 JSC *** Jetstream Aviation Congo *** CGO *** Pax *** 3
-JTD *** Jettime *** DEN *** Pax *** 13
+JTD *** Jettime *** DEN *** Pax *** 13 *** EKCH
 JWX *** Jetways Airlines *** KEN *** Pax *** 7
 JSU *** Jiangsu Jet *** CHN *** Pax *** 4
-CJX *** Jiangxi Air *** CHN *** Pax *** 19
+CJX *** Jiangxi Air *** CHN *** Pax *** 19 *** ZSCN
 XPB1 *** Jiangxi Cargo Airlines *** CHN *** Cargo *** 3
-JNA *** Jin Air *** KOR *** Pax *** 32
+JNA *** Jin Air *** KOR *** Pax *** 32 *** RKSI RKSS
 JXX *** Jinxiang Airlines *** CHN *** Pax *** 2
 TMG_1 *** JNE Express *** INA *** Pax *** 1
 JNJ *** JoinJet *** DEN *** Pax *** 1
@@ -847,12 +853,12 @@ LYM *** Key Lime Air *** USA *** Pax *** 18
 KIS *** Kish Air *** IRI *** Pax *** 9
 KLJ *** KlasJet *** LTU *** Pax *** 13
 KLC *** KLM Cityhopper *** NED *** Pax *** 62
-KLM *** KLM Royal Dutch Airlines *** NED *** Pax *** 125
+KLM *** KLM Royal Dutch Airlines *** NED *** Pax *** 125 *** EHAM
 KLM_F *** KLM Cargo *** NED *** Cargo *** 3
 KMM *** KM Malta Airlines *** MLT *** Pax *** 8
 KAL *** Korean Air *** KOR *** Pax *** 170
 SSJ *** KrasAvia *** RUS *** Pax *** 6
-KNA *** Kunming Airlines *** CHN *** Pax *** 32
+KNA *** Kunming Airlines *** CHN *** Pax *** 32 *** ZPPP
 KSH *** Kush Air *** UGA *** Pax *** 4
 KUH *** Kush Aviation *** SSD *** Pax *** 1
 KAC *** Kuwait Airways *** KUW *** Pax *** 31
@@ -865,7 +871,7 @@ LXW *** LaneXang *** LAO *** Pax *** 3
 LAO *** Lao Airlines *** LAO *** Pax *** 13
 LER *** LASER Airlines *** VEN *** Pax *** 10
 TAM *** LATAM Airlines Brasil *** BRA *** Pax *** 179
-LAN *** LATAM Airlines Chile *** CHI *** Pax *** 180
+LAN *** LATAM Airlines Chile *** CHI *** Pax *** 180 *** SCEL
 LNE *** LATAM Airlines Ecuador *** ECU *** Pax *** 4
 LPE *** LATAM Airlines Peru *** PER *** Pax *** 3
 LTG *** LATAM Cargo Brasil *** BRA *** Cargo *** 2
@@ -882,14 +888,14 @@ LXX *** Libyan Express *** LBA *** Pax *** 4
 LWA *** Libyan Wings *** LBA *** Pax *** 3
 GBB *** Lift *** RSA *** Pax *** 5
 FCA *** Link Airways *** AUS *** Pax *** 12
-LNI *** Lion Air *** INA *** Pax *** 90
+LNI *** Lion Air *** INA *** Pax *** 90 *** WIII
 LOG *** Loganair *** GBR *** Pax *** 37
 SNG *** Longjiang Airlines *** CHN *** Pax *** 12
 LGT *** Longtail Aviation *** BER *** Pax *** 1
 CDC *** Loong Air *** CHN *** Pax *** 78
-LOT *** LOT Polish Airlines *** POL *** Pax *** 94
-LKE *** Lucky Air *** CHN *** Pax *** 53
-DLH *** Lufthansa *** GER *** Pax *** 266
+LOT *** LOT Polish Airlines *** POL *** Pax *** 94 *** EPWA
+LKE *** Lucky Air *** CHN *** Pax *** 53 *** ZPPP
+DLH *** Lufthansa *** GER *** Pax *** 266 *** EDDF EDDM
 GEC *** Lufthansa Cargo *** GER *** Cargo *** 12
 LHX *** Lufthansa City *** GER *** Pax *** 23
 LTR *** Lufttransport *** NOR *** Pax *** 2
@@ -907,9 +913,9 @@ XPB3 *** Magma Aviation *** GBR *** Pax *** 3
 IRM *** Mahan Air *** IRI *** Pax *** 38
 HOG *** Mahogany Air *** ZAM *** Pax *** 3
 MWI *** Malawi Airlines *** MAW *** Pax *** 3
-MAS *** Malaysia Airlines *** MAS *** Pax *** 92
+MAS *** Malaysia Airlines *** MAS *** Pax *** 92 *** WMKK
 DQA *** Maldivian *** MDV *** Pax *** 23
-MAY *** Malta Air *** MLT *** Pax *** 179
+MAY *** Malta Air *** MLT *** Pax *** 179 *** LMML
 MMO *** Malta MedAir *** MLT *** Pax *** 3
 MJC *** Mandarin Air *** CHN *** Pax *** 1
 MDA *** Mandarin Airlines *** TPE *** Pax *** 14
@@ -977,7 +983,7 @@ NEW *** NEAJETS *** USA *** Pax *** 1
 NOS *** Neos *** ITA *** Pax *** 18
 RNA *** Nepal Airlines *** NEP *** Pax *** 6
 NMA *** Nesma Airlines *** EGY *** Pax *** 12
-EJA *** NetJets Aviation *** USA *** Pax *** 244
+EJA *** NetJets Aviation *** USA *** Pax *** 244 *** KCMH
 NJE *** NetJets Europe *** POR *** Pax *** 41
 NWK *** Network Aviation *** AUS *** Pax *** 42
 NXU *** Nexus Flight Operations *** KSA *** Pax *** 1
@@ -986,7 +992,7 @@ NGA *** NG Servicios Aereos *** CHI *** Pax *** 1
 JTZ *** Nicholas Air *** USA *** Pax *** 4
 NIA *** Nile Air *** EGY *** Pax *** 7
 NCA *** Nippon Cargo Airlines *** JPN *** Cargo *** 8
-NOK *** Nok Air *** THA *** Pax *** 9
+NOK *** Nok Air *** THA *** Pax *** 9 *** VTBD
 NRL *** Nolinor Aviation *** CAN *** Pax *** 11
 WET *** NORDIC Sky *** MLT *** Pax *** 1
 TYA *** NordStar Airlines *** RUS *** Pax *** 9
@@ -997,11 +1003,11 @@ NBT *** Norse Atlantic Airways *** NOR *** Pax *** 8
 UBT *** Norse Atlantic Airways UK *** GBR *** Pax *** 4
 NCB *** North Cariboo Air *** CAN *** Pax *** 2
 NWC *** North-West Air Company *** RUS *** Pax *** 5
-CNW *** North-Western Cargo *** CHN *** Cargo *** 4
+CNW *** North-Western Cargo *** CHN *** Cargo *** 4 *** ZLXY
 NWL *** North-Wright Air *** CAN *** Pax *** 3
 NAC *** Northern Air Cargo *** USA *** Cargo *** 4
 NJM *** Northern Jet *** USA *** Pax *** 2
-NOZ *** Norwegian Air Shuttle AOC *** NOR *** Pax *** 41
+NOZ *** Norwegian Air Shuttle AOC *** NOR *** Pax *** 41 *** ENGM EKCH ESSA
 NSZ *** Norwegian Air Sweden AOC *** SWE *** Pax *** 54
 LBT *** Nouvelair Tunisie *** TUN *** Pax *** 19
 NVS *** Nouvelle Air Affaires Gabon *** GAB *** Pax *** 1
@@ -1009,9 +1015,9 @@ NOV *** Nova Airways *** SUD *** Pax *** 1
 NVQ *** NovoAir *** BAN *** Pax *** 5
 NYX *** NyxAir *** EST *** Pax *** 12
 NTF *** OK Aviation Wings *** CZE *** Pax *** 3
-OKA *** Okay Airways *** CHN *** Pax *** 21
+OKA *** Okay Airways *** CHN *** Pax *** 21 *** ZBTJ
 OAL *** Olympic Air *** GRE *** Pax *** 18
-OMA *** Oman Air *** OMA *** Pax *** 36
+OMA *** Oman Air *** OMA *** Pax *** 36 *** OOMS
 OME *** Omega Aerial Refueling Services *** USA *** Pax *** 13
 OAE *** Omni Air International *** USA *** Pax *** 12
 HGO *** One Air *** GBR *** Pax *** 5
@@ -1038,7 +1044,7 @@ DIG *** PassionAir *** GHA *** Pax *** 4
 PTW *** Pattaya Airways *** THA *** Pax *** 2
 APJ *** Peach *** JPN *** Pax *** 40
 PXA *** Pecotox Air *** MDA *** Pax *** 2
-PGT *** Pegasus *** TUR *** Pax *** 132
+PGT *** Pegasus *** TUR *** Pax *** 132 *** LTFJ
 PAS *** Pelita Air *** INA *** Pax *** 21
 PEL *** Penial Air *** KEN *** Pax *** 1
 PEV *** People's *** AUT *** Pax *** 1
@@ -1054,11 +1060,11 @@ PHA *** Phoenix Air *** USA *** Pax *** 4
 PIA *** PIA Pakistan International Airlines *** PAK *** Pax *** 32
 PDT *** Piedmont Airlines *** USA *** Pax *** 91
 PLS *** Placar Linhas Aéreas *** BRA *** Pax *** 2
-CNS *** PlaneSense *** USA *** Pax *** 47
+CNS *** PlaneSense *** USA *** Pax *** 47 *** KPSM
 PTN *** PLATOON Aviation *** GER *** Pax *** 12
 PUE *** Plus Ultra *** ESP *** Pax *** 7
 TOK *** PNG Air *** PNG *** Pax *** 14
-PBD *** Pobeda *** RUS *** Pax *** 42
+PBD *** Pobeda *** RUS *** Pax *** 42 *** UUWW
 PAC *** Polar Air Cargo *** USA *** Cargo *** 5
 RKA *** Polyarnye Avialinii *** RUS *** Pax *** 2
 APF *** populAir *** SWE *** Pax *** 7
@@ -1084,9 +1090,9 @@ PHP *** PSI Air 2007 *** PHI *** Pax *** 1
 PYR *** Pyramids Airlines *** EGY *** Pax *** 1
 QYT *** QAir *** NGR *** Pax *** 2
 QNT *** Qanot Sharq Airlines *** UZB *** Pax *** 7
-QFA *** Qantas *** AUS *** Pax *** 138
-QLK *** QantasLink *** AUS *** Pax *** 127
-QTR *** Qatar Airways *** QAT *** Pax *** 270
+QFA *** Qantas *** AUS *** Pax *** 138 *** YSSY YMML YBBN
+QLK *** QantasLink *** AUS *** Pax *** 127 *** YSSY YBBN
+QTR *** Qatar Airways *** QAT *** Pax *** 270 *** OTHH
 QAC *** Qatar Airways Cargo *** QAT *** Cargo *** 30
 QQE *** Qatar Executive *** QAT *** Pax *** 29
 EQE *** Qatar Executive Europe *** MLT *** Pax *** 2
@@ -1118,7 +1124,7 @@ SDM *** Rossiya - Russian Airlines *** RUS *** Pax *** 132
 RJD *** Rotana Jet *** UAE *** Pax *** 1
 XPB7 *** Royal Air *** COM *** Pax *** 1
 XPB8 *** Royal Air Charters *** ZAM *** Pax *** 2
-RAM *** Royal Air Maroc *** MAR *** Pax *** 69
+RAM *** Royal Air Maroc *** MAR *** Pax *** 69 *** GMMN
 RXP *** Royal Air Maroc Express *** MAR *** Pax *** 6
 RYL *** Royal Air Philippines *** PHI *** Pax *** 6
 XPB9 *** Royal Airways *** CHA *** Pax *** 2
@@ -1126,17 +1132,17 @@ RBA *** Royal Brunei Airlines *** BRU *** Pax *** 12
 RJA *** Royal Jordanian *** JOR *** Pax *** 40
 RSM *** Royal Star Aviation *** PHI *** Pax *** 3
 ROJ *** RoyalJet *** UAE *** Pax *** 12
-RLH *** Ruili Airlines *** CHN *** Pax *** 28
+RLH *** Ruili Airlines *** CHN *** Pax *** 28 *** ZPMS
 RSJ *** RusJet *** RUS *** Pax *** 2
 RLU *** RusLine *** RUS *** Pax *** 9
 RUR *** Russair *** RUS *** Pax *** 1
 RUC *** Rutaca Airlines *** VEN *** Pax *** 8
 RWD *** RwandAir *** RWA *** Pax *** 15
 RYA *** Ryan Air *** USA *** Pax *** 3
-RYR *** Ryanair *** IRL *** Pax *** 344
-RUK *** Ryanair UK *** GBR *** Pax *** 15
+RYR *** Ryanair *** IRL *** Pax *** 344 *** EIDW EGSS
+RUK *** Ryanair UK *** GBR *** Pax *** 15 *** EGSS
 RAC *** Ryukyu Air Commuter *** JPN *** Pax *** 5
-SBI *** S7 Airlines *** RUS *** Pax *** 107
+SBI *** S7 Airlines *** RUS *** Pax *** 107 *** UNNT UUDD
 SAX *** Sabah Air Aviation *** MAS *** Pax *** 1
 XLK *** Safarilink Aviation *** KEN *** Pax *** 5
 SAQ *** Safe Air *** KEN *** Pax *** 1
@@ -1149,7 +1155,7 @@ PAO *** Samoa Airways *** SAM *** Pax *** 3
 SMF *** San Marino Executive Aviation *** SMR *** Pax *** 3
 SZS *** SAS Connect *** IRL *** Pax *** 34
 SVS *** SAS Link *** SWE *** Pax *** 16
-SAS *** SAS Scandinavian Airlines *** SWE *** Pax *** 143
+SAS *** SAS Scandinavian Airlines *** SWE *** Pax *** 143 *** EKCH ENGM ESSA
 SSU *** SASCA Airlines *** VEN *** Pax *** 3
 SAT *** SATA - Air Açores *** POR *** Pax *** 8
 NSE *** SATENA *** COL *** Pax *** 24
@@ -1167,11 +1173,11 @@ SVC *** Serve Air Cargo *** COD *** Cargo *** 9
 LLS *** Servicios Aereos Estrella *** MEX *** Pax *** 1
 RVP *** Sevenair Air Services *** POR *** Pax *** 5
 SSF *** Severstal *** RUS *** Pax *** 8
-CSS *** SF Airlines *** CHN *** Pax *** 89
-CDG *** Shandong Airlines *** CHN *** Pax *** 140
+CSS *** SF Airlines *** CHN *** Pax *** 89 *** ZGSZ ZHEC
+CDG *** Shandong Airlines *** CHN *** Pax *** 140 *** ZSJN ZSQD
 CSH *** Shanghai Airlines *** CHN *** Pax *** 90
 PEX *** Shell Aircraft *** GBR *** Pax *** 4
-CSZ *** Shenzhen Airlines *** CHN *** Pax *** 211
+CSZ *** Shenzhen Airlines *** CHN *** Pax *** 211 *** ZGSZ ZGGG
 SHS *** Shirak Avia *** ARM *** Pax *** 3
 SHA *** Shree Airlines *** NEP *** Pax *** 9
 SHE *** Siamwings Airlines *** THA *** Pax *** 1
@@ -1183,7 +1189,7 @@ AZQ *** Silk Way Airlines *** AZE *** Pax *** 3
 AZG *** Silk Way West Airlines *** AZE *** Pax *** 14
 USA *** Silkavia *** UZB *** Pax *** 9
 SIN *** Sin-Kung Airways *** MAS *** Pax *** 1
-SIA *** Singapore Airlines *** SGP *** Pax *** 164
+SIA *** Singapore Airlines *** SGP *** Pax *** 164 *** WSSS
 SQC *** Singapore Airlines Cargo *** SGP *** Cargo *** 7
 SJD *** Sino Jet *** CHN *** Pax *** 1
 JBE *** Sino Jet Beijing *** CHN *** Pax *** 1
@@ -1208,7 +1214,7 @@ SGA *** SkyGuard *** UZB *** Pax *** 2
 SHH *** SKYhigh Dominicana *** DOM *** Pax *** 6
 MSJ *** SkyJet Airlines *** PHI *** Pax *** 4
 UTN *** SkyLine Express *** UKR *** Pax *** 14
-SKY *** Skymark Airlines *** JPN *** Pax *** 31
+SKY *** Skymark Airlines *** JPN *** Pax *** 31 *** RJTT
 STM *** Skystream Airlines *** EST *** Pax *** 2
 SND *** Skytraders *** AUS *** Pax *** 1
 SKP *** Skytrans Australia *** AUS *** Pax *** 10
@@ -1221,7 +1227,7 @@ SKW *** SkyWest Airlines *** USA *** Pax *** 611
 SCW *** SkyWest Charter *** USA *** Pax *** 7
 GDM *** Small Fly *** MLT *** Pax *** 2
 AUL *** Smartavia *** RUS *** Pax *** 13
-TVS *** Smartwings *** CZE *** Pax *** 41
+TVS *** Smartwings *** CZE *** Pax *** 41 *** LKPR
 TVL *** Smartwings Hungary *** HUN *** Pax *** 2
 TVP *** Smartwings Poland *** POL *** Pax *** 1
 TVQ *** Smartwings Slovakia *** SVK *** Pax *** 1
@@ -1242,7 +1248,7 @@ SAA *** South African Airways *** RSA *** Pax *** 19
 SQB *** South Air *** PAK *** Pax *** 2
 SOA *** Southern Air Charter *** BAH *** Pax *** 2
 FDY *** Southern Airways Express *** USA *** Pax *** 38
-SWA *** Southwest Airlines *** USA *** Pax *** 801
+SWA *** Southwest Airlines *** USA *** Pax *** 801 *** KDAL KMDW KDEN KLAS KPHX KBWI
 STW *** Southwind Airlines *** TUR *** Pax *** 14
 UZU *** SpaceBee Airlines *** UZB *** Pax *** 2
 LDX *** SPARFELL Austria *** AUT *** Pax *** 4
@@ -1255,7 +1261,7 @@ SJO *** Spring Japan *** JPN *** Pax *** 9
 SRN *** SprintAir *** POL *** Pax *** 16
 ALK *** SriLankan Airlines *** SRI *** Pax *** 23
 SJY *** Sriwijaya Air *** INA *** Pax *** 6
-STB *** St Barth Executive *** FRA *** Pax *** 5
+STB *** St Barth Executive *** FRA *** Pax *** 5 *** TFFJ
 BRH *** Star Air *** RSA *** Pax *** 3
 SDG *** Star Air *** IND *** Pax *** 8
 DST *** Star Aviation *** ALG *** Pax *** 5
@@ -1274,26 +1280,26 @@ SUD *** Sudan Airways *** SUD *** Pax *** 1
 XUM *** SUM Air *** KOR *** Pax *** 1
 SUT *** Summit Air *** CAN *** Pax *** 27
 SAV *** Sun Air *** VIE *** Pax *** 1
-SCX *** Sun Country Airlines *** USA *** Pax *** 68
+SCX *** Sun Country Airlines *** USA *** Pax *** 68 *** KMSP
 SPQ *** Sun PhuQuoc Airways *** VIE *** Pax *** 19
 SUS *** SUN-AIR of Scandinavia *** DEN *** Pax *** 4
 VKG *** Sunclass Airlines *** DEN *** Pax *** 12
 SDR *** Sundair *** GER *** Pax *** 4
 SUV *** Sundance Air *** VEN *** Pax *** 3
 XPC2 *** Sunday Airlines *** KAZ *** Pax *** 4
-SXS *** SunExpress *** TUR *** Pax *** 86
+SXS *** SunExpress *** TUR *** Pax *** 86 *** LTAI LTBJ
 RLB *** Sunlight Air *** PHI *** Pax *** 4
 KSZ *** Sunrise Airways *** HAI *** Pax *** 12
 GCA *** Sunrise Airways Dominicana *** DOM *** Pax *** 2
 SSQ *** Sunstate Airlines *** AUS *** Pax *** 42
 CNK *** Sunwest Aviation *** CAN *** Pax *** 3
-YZR *** Suparna Airlines *** CHN *** Pax *** 17
+YZR *** Suparna Airlines *** CHN *** Pax *** 17 *** ZSPD
 SJV *** Super Air Jet *** INA *** Pax *** 60
 HKA *** Superior Aviation *** USA *** Pax *** 2
 NPG *** Supernova Airlines *** UKR *** Pax *** 1
 SLM *** Surinam Airways *** SUR *** Pax *** 2
 SWE *** Svenskt Ambulansflyg *** SWE *** Pax *** 6
-SWT *** Swiftair *** ESP *** Pax *** 43
+SWT *** Swiftair *** ESP *** Pax *** 43 *** LEMD
 MDF *** Swiftair Hellas *** GRE *** Pax *** 5
 SWR *** Swiss *** SUI *** Pax *** 90
 SAZ *** Swiss Air-Ambulance Rega *** SUI *** Pax *** 3
@@ -1313,7 +1319,7 @@ TJK *** Tajik Air *** TJK *** Pax *** 1
 EPT *** TAM Empresa Pública - TAMep *** BOL *** Pax *** 1
 TAP *** TAP Air Portugal *** POR *** Pax *** 106
 LCT *** TAR Aerolíneas *** MEX *** Pax *** 12
-TRA *** Tara Air *** NEP *** Pax *** 3
+TRA *** Tara Air *** NEP *** Pax *** 3 *** EHAM
 TQQ *** Tarco Aviation *** SUD *** Pax *** 5
 ROT *** TAROM *** ROU *** Pax *** 13
 RLA *** TARP Aviation *** RUS *** Pax *** 3
@@ -1329,7 +1335,7 @@ TNZ *** Texel Air Australasia *** NZL *** Pax *** 6
 AIQ *** Thai AirAsia *** THA *** Pax *** 62
 TAX *** Thai AirAsia X *** THA *** Pax *** 10
 THA *** Thai Airways *** THA *** Pax *** 90
-TLM *** Thai Lion Air *** THA *** Pax *** 36
+TLM *** Thai Lion Air *** THA *** Pax *** 36 *** VTBD
 TLJ *** Thalair *** FRA *** Pax *** 4
 TIV *** Thrive Aviation *** USA *** Pax *** 1
 NMG *** Tian Jiao Airlines *** CHN *** Pax *** 9
@@ -1343,15 +1349,15 @@ IRT *** Toos Airlines *** IRI *** Pax *** 2
 TAF *** Top Flight Aero-Services *** BAH *** Pax *** 2
 TTL *** Total Linhas Aereas *** BRA *** Pax *** 5
 TDR *** Trade Air *** CRO *** Pax *** 6
-GPD *** Tradewind Aviation *** USA *** Pax *** 9
+GPD *** Tradewind Aviation *** USA *** Pax *** 9 *** KHPN
 MUI *** Trans Air *** USA *** Pax *** 1
 TSG *** Trans Air Congo (TAC) *** CGO *** Pax *** 1
 GGT *** Trans Island Airways *** BAH *** Pax *** 1
 TMW *** Trans Maldivian Airways *** MDV *** Pax *** 66
 RDS *** Transair *** USA *** Pax *** 4
 GTS *** Transair *** SEN *** Pax *** 4
-TRA *** Transavia *** NED *** Pax *** 53
-TVF *** Transavia France *** FRA *** Pax *** 98
+TRA *** Transavia *** NED *** Pax *** 53 *** EHAM
+TVF *** Transavia France *** FRA *** Pax *** 98 *** LFPO
 TXC *** TransAviaExport Airlines *** BLR *** Pax *** 1
 TMD *** Transmandu *** VEN *** Pax *** 3
 TNU *** TransNusa *** INA *** Pax *** 16
@@ -1361,9 +1367,9 @@ TVV *** Travira Air *** INA *** Pax *** 4
 CEO *** Travya *** INA *** Pax *** 1
 SGX *** Tri-State Charter *** USA *** Pax *** 25
 TGN *** Trigana Air *** INA *** Pax *** 16
-TWB *** Trinity Airways *** KOR *** Pax *** 48
-TOM *** TUI Airways *** GBR *** Pax *** 75
-JAF *** TUI fly Belgium *** BEL *** Pax *** 20
+TWB *** Trinity Airways *** KOR *** Pax *** 48 *** RKSI
+TOM *** TUI Airways *** GBR *** Pax *** 75 *** EGCC EGKK
+JAF *** TUI fly Belgium *** BEL *** Pax *** 20 *** EBBR
 TFL *** TUI fly Netherlands *** NED *** Pax *** 10
 TUI *** TUIfly *** GER *** Pax *** 24
 BLX *** TUIfly Nordic *** SWE *** Pax *** 4
@@ -1371,8 +1377,8 @@ TUL *** Tulpar Air *** RUS *** Pax *** 1
 TAR *** Tunisair *** TUN *** Pax *** 18
 TUX *** Tunisair Express *** TUN *** Pax *** 2
 TAJ *** Tunisavia *** TUN *** Pax *** 3
-THY *** Turkish Airlines *** TUR *** Pax *** 417
-TUA *** Turkmenistan Airlines *** TKM *** Pax *** 23
+THY *** Turkish Airlines *** TUR *** Pax *** 417 *** LTFM
+TUA *** Turkmenistan Airlines *** TKM *** Pax *** 23 *** UTAA
 VTU *** Turpial Airlines *** VEN *** Pax *** 3
 CYF *** Tus Airways *** CYP *** Pax *** 5
 TJS *** Tyrolean Jet Services *** AUT *** Pax *** 1
@@ -1383,18 +1389,18 @@ KZU *** ULS Airlines Cargo *** TUR *** Cargo *** 4
 UMZ *** UmzaXpress *** NGR *** Pax *** 4
 UIA *** UNI Air *** TPE *** Pax *** 14
 UAG *** Union Aviation *** LAT *** Pax *** 1
-UAL *** United Airlines *** USA *** Pax *** 1138
+UAL *** United Airlines *** USA *** Pax *** 1138 *** KORD KIAH KDEN KSFO KEWR KIAD KLAX
 NUA *** United Nigeria *** NGR *** Pax *** 10
-UPS *** United Parcel Service (UPS) *** USA *** Pax *** 277
+UPS *** United Parcel Service (UPS) *** USA *** Pax *** 277 *** KSDF KPHL KONT KRFD
 UVL *** Universal Air *** MLT *** Pax *** 4
 USY *** Universal Sky Carrier (USC) *** GER *** Pax *** 4
 UCG *** Uniworld Air Cargo *** PAN *** Cargo *** 3
 UBD *** UR Airlines *** IRQ *** Pax *** 4
 SVR *** Ural Airlines *** RUS *** Pax *** 51
-CUH *** Urumqi Air *** CHN *** Pax *** 20
+CUH *** Urumqi Air *** CHN *** Pax *** 20 *** ZWWW
 UBG *** US-Bangla Airlines *** BAN *** Pax *** 16
 JUS *** USA Jet Airlines *** USA *** Pax *** 8
-UTA *** UTair Aviation *** RUS *** Pax *** 60
+UTA *** UTair Aviation *** RUS *** Pax *** 60 *** USTR
 UVT *** UVT Aero *** RUS *** Pax *** 7
 UZB *** Uzbekistan Airways *** UZB *** Pax *** 47
 UZB_1 *** Uzbekistan Express *** UZB *** Pax *** 4
@@ -1412,12 +1418,12 @@ TVJ *** VietJetAir Thailand *** THA *** Pax *** 29
 HVN *** Vietnam Airlines *** VIE *** Pax *** 97
 VAG *** Vietravel Airlines *** VIE *** Pax *** 5
 VQI *** Villa Air *** MDV *** Pax *** 3
-VIR *** Virgin Atlantic *** GBR *** Pax *** 43
-VOZ *** Virgin Australia *** AUS *** Pax *** 111
+VIR *** Virgin Atlantic *** GBR *** Pax *** 43 *** EGLL
+VOZ *** Virgin Australia *** AUS *** Pax *** 111 *** YBBN YSSY YMML
 VRA *** Virgin Australia Regional *** AUS *** Pax *** 4
 VJA *** Vista America *** USA *** Pax *** 55
 VJH *** VistaJet Germany *** GER *** Pax *** 18
-VJT *** VistaJet Malta *** MLT *** Pax *** 77
+VJT *** VistaJet Malta *** MLT *** Pax *** 77 *** LMML
 VIV *** Viva *** MEX *** Pax *** 114
 PJX *** VivaJets *** NGR *** Pax *** 1
 VOI *** Volaris *** MEX *** Pax *** 148
@@ -1428,7 +1434,7 @@ BTX *** Volkswagen Air Service *** GER *** Pax *** 6
 OLO *** Volo Airways Dominicana *** DOM *** Pax *** 1
 VOE *** Volotea Airlines *** ESP *** Pax *** 41
 VAL *** Voyageur Airways *** CAN *** Pax *** 11
-VLG *** Vueling *** ESP *** Pax *** 137
+VLG *** Vueling *** ESP *** Pax *** 137 *** LEBL
 PLM *** Wamos Air *** ESP *** Pax *** 14
 WCG *** Warsaw Cargo *** POL *** Cargo *** 1
 WSG *** Wasaya Airways *** CAN *** Pax *** 8
@@ -1440,7 +1446,7 @@ WAA *** Westair Aviation *** NAM *** Pax *** 11
 WST *** Western Air *** BAH *** Pax *** 8
 STT *** Western Aircraft *** USA *** Pax *** 5
 WGN *** Western Global Airlines *** USA *** Pax *** 19
-WJA *** WestJet *** CAN *** Pax *** 164
+WJA *** WestJet *** CAN *** Pax *** 164 *** CYYC CYYZ
 WEN *** WestJet Encore *** CAN *** Pax *** 34
 WUP *** Wheels Up *** USA *** Pax *** 11
 WHT *** White *** POR *** Pax *** 4
@@ -1461,7 +1467,7 @@ WFL *** World2Fly *** ESP *** Pax *** 6
 WPT *** World2Fly Portugal *** POR *** Pax *** 1
 XPC4 *** XCargo *** USA *** Cargo *** 4
 XEJ *** XE Jet *** NGR *** Pax *** 8
-CXA *** Xiamen Airlines *** CHN *** Pax *** 175
+CXA *** Xiamen Airlines *** CHN *** Pax *** 175 *** ZSAM ZSFZ
 TBA *** Xizang Airlines *** CHN *** Pax *** 53
 SYL *** Yakutia Airlines *** RUS *** Pax *** 9
 LLM *** Yamal Airlines *** RUS *** Pax *** 26

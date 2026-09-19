@@ -114,6 +114,11 @@ bool	WED_AirlineDirectory::EnsureLoaded(const string & db_path)
 
 		size_t fleet_start = sep4 + kSep.size();
 		string fleet_str = line.substr(fleet_start);
+		// The optional sixth column (hub ICAOs) is for the generator, not for WED -
+		// the coordinates it resolves to arrive through livery_index.txt. Cut it
+		// off here rather than letting atoi() stop at the separator by luck.
+		size_t sep5 = fleet_str.find(kSep);
+		if (sep5 != string::npos) fleet_str = fleet_str.substr(0, sep5);
 		size_t fe = fleet_str.find_last_not_of(" \t");
 		if (fe == string::npos) continue;
 		fleet_str = fleet_str.substr(0, fe + 1);

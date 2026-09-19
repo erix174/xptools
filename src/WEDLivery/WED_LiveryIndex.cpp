@@ -22,6 +22,7 @@
  */
 
 #include "WED_LiveryIndex.h"
+#include "GISUtils.h"			// LonLatDistMeters
 
 #include "WED_MandatoryHeader.h"
 #include "WED_PackageMgr.h"
@@ -156,7 +157,34 @@ bool	WED_LiveryIndex::EnsureLoaded(const string & index_path)
 		e.reg         = ToUpper(cells[3]);
 		e.reg_country = ToUpper(cells[4]);
 		e.note        = cells[5];				// free text - case preserved for display
-		e.obj_path    = cells[6];
+		// The path is ALWAYS the last cell, so a schema 1 row (7 cells) and a
+		// schema 2 row (9) both read here. The two optional cells sit between.
+		e.obj_path    = cells.back();
+		if (cells.size() >= 9)
+		{
+			e.range_km = atoi(cells[6].c_str());		// non-numeric -> 0 -> unknown
+			// "lat,lon lat,lon ..."; a pair that does not parse is dropped, not
+			// guessed - a hub at (0,0) would put every operator in the Atlantic.
+			const string & hs = cells[7];
+			size_t i = 0;
+			while (i < hs.size())
+			{
+				while (i < hs.size() && hs[i] == ' ') ++i;
+				size_t j = hs.find(' ', i);
+				if (j == string::npos) j = hs.size();
+				string tok = hs.substr(i, j - i);
+				size_t c = tok.find(',');
+				if (c != string::npos && c > 0 && c + 1 < tok.size())
+				{
+					char * end1 = NULL; char * end2 = NULL;
+					double la = strtod(tok.c_str(), &end1);
+					double lo = strtod(tok.c_str() + c + 1, &end2);
+					if (end1 == tok.c_str() + c && *end2 == 0 && la >= -90 && la <= 90 && lo >= -180 && lo <= 180)
+						e.hubs.push_back(make_pair(la, lo));
+				}
+				i = j;
+			}
+		}
 
 		// "????" is the generator's TODO marker, not a value. A row still
 		// carrying one is unfinished data; skip it rather than surfacing a
@@ -261,6 +289,18 @@ const WED_LiveryIndexEntry * WED_LiveryIndex::Lookup(const string & key) const
 {
 	std::unordered_map<string, const WED_LiveryIndexEntry *>::const_iterator i = mByKey.find(key);
 	return i == mByKey.end() ? NULL : i->second;
+}
+
+bool	WED_LiveryInRange(const WED_LiveryIndexEntry & e, double stand_lat, double stand_lon)
+{
+	if (e.range_km <= 0 || e.hubs.empty()) return true;		// unknown is never filtered
+	double best = 1e12;
+	for (size_t i = 0; i < e.hubs.size(); ++i)
+	{
+		double d = LonLatDistMeters(e.hubs[i].second, e.hubs[i].first, stand_lon, stand_lat);
+		if (d < best) best = d;
+	}
+	return best <= (double) e.range_km * 1000.0;
 }
 
 size_t	WED_LiveryIndex::CountAtClass(char size_class) const

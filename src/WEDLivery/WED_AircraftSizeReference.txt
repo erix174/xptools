@@ -9,7 +9,15 @@ I
 #   A: wingspan <15 m   B: 15-<24 m   C: 24-<36 m   D: 36-<52 m
 #   E: 52-<65 m         F: >=65 m (also covers outsized aircraft, e.g. An-225)
 #
-# FORMAT: <AIRCRAFT_ICAO> *** <SIZE_CLASS>
+# FORMAT: <AIRCRAFT_ICAO> *** <SIZE_CLASS> [*** <RANGE_KM>]
+#
+# RANGE_KM (optional third column): typical operating range at a realistic
+# payload, km - NOT the manufacturer's ferry figure, which is flown empty. Read
+# by gen_livery_index.py into livery_index.txt, where the sim uses it to skip a
+# livery whose operator has no hub within reach of the stand. A row without it
+# is "unknown", and unknown is never filtered - fail open. Filled only for the
+# types the shipped index actually uses; add a value when a type gains a livery,
+# not speculatively.
 #
 # SOURCE / METHOD: initial pass built from Wikipedia's "List of aircraft type
 # designators" (https://en.wikipedia.org/wiki/List_of_aircraft_type_designators),
@@ -40,7 +48,7 @@ A30B *** D
 A310 *** D
 A318 *** C
 A319 *** C
-A320 *** C
+A320 *** C *** 6100
 A321 *** C
 A332 *** E
 A333 *** E
@@ -68,9 +76,9 @@ AN32 *** C
 AN72 *** C
 AS21 *** B
 AT43 *** C
-AT45 *** C
+AT45 *** C *** 1500
 AT46 *** C
-AT72 *** C
+AT72 *** C *** 1500
 AT73 *** C
 AT75 *** C
 AT76 *** C
@@ -88,28 +96,28 @@ B703 *** D
 B712 *** C
 B720 *** D
 B721 *** C
-B722 *** C
+B722 *** C *** 4000
 B732 *** C
 B733 *** C
 B734 *** C
 B735 *** C
 B736 *** C
 B737 *** C
-B738 *** C
+B738 *** C *** 5700
 B739 *** C
 B741 *** E
 B742 *** E
 B743 *** E
-B744 *** E
+B744 *** E *** 13450
 B748 *** F
 B74R *** E
 B74S *** E
-B752 *** D
+B752 *** D *** 7200
 B753 *** D
 B762 *** D
-B763 *** D
+B763 *** D *** 11000
 B764 *** D
-B772 *** E
+B772 *** E *** 14000
 B773 *** E
 B778 *** F
 B779 *** F
@@ -152,17 +160,17 @@ C919 *** C
 CL2T *** C
 CL30 *** B
 CL35 *** B
-CL60 *** B
+CL60 *** B *** 7400
 CN35 *** C
-CRJ1 *** B
-CRJ2 *** B
+CRJ1 *** B *** 3000
+CRJ2 *** B *** 3000
 CRJ7 *** B
 CRJ9 *** C
 CRJX *** C
 CVLT *** C
 D228 *** B
-D328 *** B
-DC10 *** D
+D328 *** B *** 1850
+DC10 *** D *** 9600
 DC85 *** D
 DC86 *** D
 DC87 *** D
@@ -219,14 +227,14 @@ GLF5 *** C
 GLF6 *** C
 H25B *** A
 H25C *** B
-HDJT *** A
+HDJT *** A *** 2260
 I114 *** C
 IL18 *** D
 IL62 *** D
 IL76 *** D
 IL86 *** D
 IL96 *** E
-J328 *** B
+J328 *** B *** 1665
 JS31 *** B
 JS32 *** B
 JS41 *** B
@@ -238,7 +246,7 @@ LJ35 *** A
 LJ60 *** A
 MD11 *** D
 MD81 *** C
-MD82 *** C
+MD82 *** C *** 3800
 MD83 *** C
 MD87 *** C
 MD88 *** C
@@ -246,10 +254,10 @@ MD90 *** C
 MU2 *** A
 N262 *** B
 NOMA *** B
-P180 *** A
+P180 *** A *** 2800
 P8 *** D
 PAY2 *** A
-PC12 *** B
+PC12 *** B *** 3400
 PC24 *** B
 RJ1H *** C
 RJ70 *** C
@@ -311,7 +319,7 @@ A189 *** A
 AS50 *** A
 AS55 *** A
 AS65 *** A
-B06 *** A
+B06 *** A *** 700
 B06T *** A
 B1 *** D
 B2 *** E
@@ -343,7 +351,7 @@ BE4W *** A
 BE50 *** A
 BE55 *** A
 BE56 *** A
-BE58 *** A
+BE58 *** A *** 1700
 BE60 *** A
 BE65 *** A
 BE70 *** A
@@ -352,7 +360,7 @@ BE77 *** A
 BE80 *** A
 BE88 *** A
 BE95 *** A
-BE9L *** A
+BE9L *** A *** 2400
 BE9T *** A
 BL8 *** A
 BS60 *** A
@@ -365,7 +373,7 @@ C140 *** A
 C152 *** A
 C162 *** A
 C170 *** A
-C172 *** A
+C172 *** A *** 1270
 C175 *** A
 C177 *** A
 C180 *** A
@@ -409,7 +417,7 @@ EN28 *** A
 EN48 *** A
 EUFI *** A
 F117 *** A
-F15 *** A
+F15 *** A *** 3900
 F16 *** A
 F18H *** A
 F22 *** A
@@ -420,7 +428,7 @@ H43B *** A
 H47 *** B
 H500 *** A
 H53 *** C
-H60 *** B
+H60 *** B *** 830
 H64 *** A
 HA4T *** B
 HUCO *** A
@@ -447,7 +455,7 @@ M8 *** A
 M9 *** A
 MG29 *** A
 O1 *** A
-P28A *** A
+P28A *** A *** 1200
 P63 *** A
 PA14 *** A
 PA15 *** A
@@ -491,7 +499,7 @@ S62 *** A
 S64 *** B
 S92 *** B
 SA37 *** A
-SF50 *** A
+SF50 *** A *** 1800
 SGCD *** A
 SGEF *** A
 SR20 *** A
@@ -1122,7 +1130,7 @@ DWD2 ***
 DYH2 ***
 DYH3 ***
 E121 ***
-E2 *** C
+E2 *** C *** 2700
 E200 ***
 E230 ***
 E275 ***
@@ -1200,7 +1208,7 @@ F104 ***
 F13 ***
 F14 ***
 F156 ***
-F18S *** A
+F18S *** A *** 2300
 F1FV ***
 F2 ***
 F260 ***
@@ -1208,7 +1216,7 @@ F26T ***
 F30 ***
 F35 ***
 F3F ***
-F4 *** A
+F4 *** A *** 2600
 F402 ***
 F41E ***
 F421 ***
@@ -1934,7 +1942,7 @@ P337 ***
 P38 ***
 P39 ***
 P40 ***
-P46T *** A
+P46T *** A *** 3300
 P47 ***
 P4Y ***
 P50 ***
@@ -2183,7 +2191,7 @@ S522 ***
 S6 ***
 S65C ***
 S716 ***
-S76 *** A
+S76 *** A *** 760
 S900 ***
 S97 ***
 SA02 ***

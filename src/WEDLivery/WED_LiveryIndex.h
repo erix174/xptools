@@ -90,8 +90,19 @@ struct WED_LiveryIndexEntry {
 	std::string		reg;			// registration without the dash; may be empty
 	std::string		reg_country;	// IOC 3-letter code; empty when reg is empty
 	std::string		note;			// free text; "Default" means "no annotation"
+	// Schema 2. 0 / empty mean "unknown", and unknown is never filtered.
+	int				range_km;		// typical operating range of `type`
+	std::vector<std::pair<double,double> >	hubs;	// operator's hub positions, (lat, lon)
 	std::string		obj_path;		// relative to apt_aircraft/
+	WED_LiveryIndexEntry() : size_class(0), range_km(0) {}
 };
+
+// THE SPAWN RULE, as X-Plane applies it and as WED previews it: false when the
+// aircraft's range cannot cover the distance from the operator's nearest hub to
+// this stand. Unknown range or unknown hubs -> true, always - a missing fact must
+// never hide a livery. Both sides compute this from the same index row and the
+// same stand position, so nothing about it is stored anywhere.
+bool	WED_LiveryInRange(const WED_LiveryIndexEntry & e, double stand_lat, double stand_lon);
 
 class	WED_LiveryIndex {
 public:

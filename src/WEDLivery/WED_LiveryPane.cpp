@@ -36,7 +36,8 @@
 #include "WED_Messages.h"
 #include "WED_ToolUtils.h"		// WED_GetSelect, WED_GetParentAirport
 #include "WED_EnumSystem.h"		// ramp_operation_*, width_A..width_F
-#include "WED_LiveryIndex.h"		// WED_LiveryIndexDefaultPath()
+#include "WED_LiveryIndex.h"		// WED_LiveryIndexDefaultPath(), WED_LiveryInRange()
+#include "GISUtils.h"
 #include "WED_MandatoryHeader.h"	// WedDataFileDir() - where the loose .txt data files live
 #include "PlatformUtils.h"		// DIR_STR, GetApplicationPath()
 #include "FileUtils.h"			// FILE_get_dir_name()
@@ -1442,6 +1443,12 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 	vector<string> codes;
 	mLiveryIndex.GetAirlineCodes(codes);
 
+	// Where this stand IS, for the range rule below. Same number the sim reads
+	// off the 1300 row, so the two evaluate the identical predicate.
+	Point2 here;
+	ramp->GetLocation(gis_Geo, here);
+	mRangeHidden.clear();
+
 	for (size_t i = 0; i < codes.size(); ++i)
 	{
 		string code_uc = codes[i];
@@ -1476,6 +1483,18 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 				// frame in the cycle that can never draw anything.
 				string abs_path = WED_LiveryObjectPath(e->obj_path);
 				if (abs_path.empty()) continue;
+
+				// THE RANGE RULE. A livery whose operator has no hub within the
+				// aircraft's reach of this stand will not be spawned by the sim, so
+				// it is not offered here either - not greyed, not annotated, simply
+				// absent, exactly as it will be absent on the apron. What was
+				// removed is remembered so the readout can say so; otherwise the
+				// author sees United's card shrink to a 777 with no explanation.
+				if (!WED_LiveryInRange(*e, here.y(), here.x()))
+				{
+					mRangeHidden[code_uc].push_back(e->type);
+					continue;
+				}
 
 				card.abs_paths.push_back(abs_path);
 				card.types.push_back(e->type);
@@ -1802,6 +1821,14 @@ void	WED_LiveryPane::RecomputeCoverage(void)
 
 		set<string> codes = ParseCodes(ramp->GetAirlines());
 
+		// The readout must count what the sim will actually draw from, so the
+		// range rule applies here exactly as it does to the cards: an operator
+		// whose only class-C aircraft cannot reach this stand does not "fill"
+		// class C, and must not be reported as eligible. Same predicate, same
+		// stand position, so the percentage and the cards agree.
+		Point2 here;
+		ramp->GetLocation(gis_Geo, here);
+
 		int  filled_classes  = 0;
 		set<string> eligible;
 		for (int k = lo; k <= hi; ++k)
@@ -1812,7 +1839,10 @@ void	WED_LiveryPane::RecomputeCoverage(void)
 			{
 				vector<const WED_LiveryIndexEntry *> hits;
 				mLiveryIndex.GetForAirlineAndClass(*it, size_class, hits);
-				if (!hits.empty())
+				bool reachable = false;
+				for (size_t h = 0; h < hits.size() && !reachable; ++h)
+					reachable = WED_LiveryInRange(*hits[h], here.y(), here.x());
+				if (reachable)
 				{
 					any_here = true;
 					eligible.insert(*it);
@@ -4559,6 +4589,25 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			snprintf(detail, sizeof(detail),
 				"The other %d listed operators have no aircraft at size %s, so every aircraft on this stand is the same airline.",
 				mCoverage.airlines_listed - 1, rng);
+		}
+
+		// What the range rule removed at THIS stand, named. Without this the author
+		// sees United's card shrink to a 777 and has no way to know whether that is
+		// the index, the weights, or a bug. One clause per operator, types joined.
+		if (!mRangeHidden.empty())
+		{
+			string s = "   Beyond range from their hubs, so not offered here:";
+			int n = 0;
+			for (map<string, vector<string> >::const_iterator i = mRangeHidden.begin(); i != mRangeHidden.end(); ++i, ++n)
+			{
+				if (n == 4) { s += " ..."; break; }
+				s += (n ? "; " : " ") + i->first + " ";
+				for (size_t k = 0; k < i->second.size(); ++k)
+					s += (k ? "/" : "") + i->second[k];
+			}
+			s += ".";
+			size_t used = strlen(detail);
+			snprintf(detail + used, sizeof(detail) - used, "%s", s.c_str());
 		}
 
 		// §4.5: the readout MUST name what it resolved against. Appended rather

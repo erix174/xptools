@@ -1089,6 +1089,97 @@ them.
 
 ---
 
+### 6.7 Schema 2 — the range rule
+
+**The problem it answers.** Stage 3 chooses among an operator's liveries in the
+drawn class with nothing but `EXPORT_RATIO` to go on, so a stand at Beijing that
+lists United draws United's 737 as readily as its 777. The 737 cannot reach
+Beijing from anywhere United flies it. This is the one systematic absurdity the
+three-stage design still produced, and it is a property of the *aircraft and the
+operator*, not of the stand — so it does not belong in apt.dat, and R23/R25's
+argument applies again: the row that describes the livery is where the fact goes.
+
+**Two columns, inserted before `path`:**
+
+```
+<TYPE> *** <CLASS> *** <AIRLINE> *** <REG> *** <REG CTY> *** <NOTE> *** <RANGE_KM> *** <HUBS> *** <path>
+
+B738 *** C *** UAL *** N79521 *** USA *** Default ***  5700 *** 41.98,-87.91 29.98,-95.34 37.62,-122.38 *** jet/B738_UAL_Modern/...
+B744 *** E *** UAL ***        ***     *** Default *** 13450 *** 41.98,-87.91 29.98,-95.34 37.62,-122.38 *** heavy/B744_UAL/...
+```
+
+- `RANGE_KM` — typical operating range of `TYPE` at a realistic payload, in km.
+  Not the ferry figure. A physical constant; it is authored once in
+  `WED_AircraftSizeReference.txt` and never revisited.
+- `HUBS` — the operator's hub positions as `lat,lon` pairs, space separated,
+  two decimals. Resolved by the generator from hub ICAOs kept in
+  `WED_AirlineDirectory.txt` against Global Airports, so **the sim receives
+  numbers and needs no airport lookup at spawn time**, while the hand-edited file
+  keeps codes a human can check at a glance.
+- Either column empty means *unknown*, and **unknown is never filtered**.
+  Military and generic pseudo-codes have no hubs; a type without a researched
+  range has no figure. Both fall through the rule untouched. A missing fact must
+  never hide a livery (same posture as R4/R5: fail open).
+
+**The rule — R26.** At a stand, for each candidate row the drawn class and
+operator admit:
+
+```
+if RANGE_KM is empty or HUBS is empty        -> eligible
+d = min over HUBS of greatcircle(hub, stand)   -- stand from the 1300 row
+if d > RANGE_KM                              -> not a candidate
+else                                         -> eligible
+```
+
+If the filter empties an operator's set in the drawn class, stage 3 has nothing
+to choose and the stand stays empty for that draw — exactly the outcome R18
+already defines for an operator with no livery at that class. No new failure
+mode is introduced.
+
+**What is deliberately not in apt.dat.** Nothing. The inputs the rule needs are
+the stand's own position, which every `1300` row has always carried, and two
+facts about the livery, which live in the index. Every apt.dat in existence
+therefore gains the behaviour the day the index does, with no re-export — and
+there is no derived copy of the answer anywhere to go stale. (A per-airport
+"deny list" row was considered and rejected on exactly that ground: it is a
+cache of this computation written into tens of thousands of files that cannot
+be refreshed together. See 8.7.)
+
+**WED evaluates the same predicate.** `WED_LiveryInRange()` reads the same two
+columns and the same stand position (`GetLocation`, i.e. the number the `1300`
+row is written from) and removes the same rows from the preview cards and the
+coverage count. The two sides cannot disagree because there is no second copy
+of anything. The readout names what was removed — "Beyond range from their hubs,
+so not offered here: UAL B738/A320" — so the author is not left inferring why a
+card shrank.
+
+**Schema.** The header stamp is `# schema 2`. `path` is guaranteed to be the
+**last** column in every schema, which is what lets a schema 1 reader that takes
+the path from the end keep working, and lets a schema 2 reader accept a schema 1
+file (seven cells: both optional columns absent, nothing filtered).
+
+**What the rule is not.** It is a floor. It removes what cannot physically reach
+the stand and says nothing about what an operator *chooses* to fly there: a
+United A321neo (7,400 km) at London (7,155 km from Newark) passes. Encoding
+commercial choice needs a route network at (airport × operator × type)
+granularity, which changes every season and is a maintenance endpoint of a
+different order. This design does not attempt it, and should not be read as a
+partial attempt at it. A domestic operator needs no exemption: its nearest hub is
+close by definition.
+
+**Why not class as a proxy for range.** Because wingspan and fuel fraction are
+unrelated: in the shipped size reference class C spans the ATR-42 at 1,500 km
+and the Global 7500 at 14,260 km, and a class-B Challenger out-ranges most
+class-C airliners. Any class-level rule either strands domestic narrowbodies or
+admits everything. Measured, not assumed — see 8.7.
+
+**Why not the operator list on the stand.** Because the constraint is per
+(operator, type) and the `1301` list is per operator. United at a class-D stand
+in Beijing has a 757 that cannot reach (7,200 km) and a 767 that can (11,000 km)
+— both class D. No action on the operator as a whole keeps one and drops the
+other; the same holds for FedEx (757/DC-10 vs 767) and UPS. The test bench in
+`docs/livery_sample/` stands 24 and 26 exist to make this failure visible.
+
 ## 7. Evidence
 
 ### 7.1 Measurements
@@ -1433,6 +1524,40 @@ document, where the value is an XML attribute — travelled through `fprintf("%s
 Fixed on our side; R9 exists so it is not reintroduced in another field.
 
 ---
+
+### 8.7 Why the range rule lives in the index and nowhere else
+
+Six ways to keep United's 737 out of Beijing were tried against the shipped data
+before 6.7 was written. In the order they died:
+
+1. **Zero the stand's class-C weight.** Removes every class-C aircraft at the
+   stand, including the Chinese 737s that belong there. Cure worse than disease.
+2. **Class as a proxy for range.** Class C runs from 1,500 km (AT45) to
+   14,260 km (GL7T); a class-B Challenger out-ranges most class-C airliners.
+   Wingspan and fuel fraction are unrelated. Measured against
+   `WED_AircraftSizeReference.txt`, not assumed.
+3. **Remove the operator from the stand's `1301` list.** The constraint is per
+   (operator, type); the list is per operator. At a class-D stand United's 757
+   fails and its 767 passes — same class, same operator. Seven of the operators
+   actually listed at Beijing are mixed this way; on a single-class D stand,
+   five. No per-operator action is correct for any of them.
+4. **library.txt `REGION_RECT`.** Existing sim feature, no apt.dat change — but
+   not honoured for `apt_aircraft` today, and a rectangle is a geometric
+   approximation of a commercial fact that can never be made exact. Also
+   authored in a file the generator regenerates.
+5. **A per-stand `1312` deny row.** Draft 6's row, deleted in draft 7 (8.6) as
+   micromanagement; re-proposed as machine-owned and hidden. Still a copy of a
+   computed answer written into every stand.
+6. **A per-airport deny row.** Same, collapsed to one line per airport. Still a
+   cache of the rule's result in tens of thousands of files that cannot be
+   refreshed together; stale the day the index changes.
+
+What survives is the observation that every input the rule needs already exists
+on both sides: the stand position has always been in the `1300` row, and the
+index already carries the operator per livery. The two facts that were missing —
+range of the type, hubs of the operator — are properties of the livery row, so
+that is where they went. Nothing is derived, nothing is stored twice, and every
+existing apt.dat is covered the day the index is.
 
 ## 9. Open questions
 

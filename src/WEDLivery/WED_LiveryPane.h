@@ -263,6 +263,9 @@ private:
 		// alphabetically, so index 0 is the one a card shows at rest.
 	};
 	std::map<std::string, AirlineCard>	mAirlineCards;		// key: LOWERCASE icao, as rows carry it
+	// Liveries the range rule removed from a card at this stand, by UPPERCASE
+	// operator code - so the readout can name what will not spawn and why.
+	std::map<std::string, std::vector<std::string> >	mRangeHidden;
 	void								RebuildAirlineCards(void);
 	const AirlineCard *					CardFor(const std::string & icao_lower) const;
 	void								CardKeys(std::set<std::string> & out) const;

@@ -170,13 +170,61 @@ def _load_rows(path, ncol):
 # type -> wingspan class. A key present with a BLANK value is a deliberate
 # "not yet researched" marker (see that file's own header), so sizes_raw says
 # whether a designator exists at all and `sizes` only holds real classes.
-sizes_raw = {r[0]: r[1] for r in _load_rows(os.path.join(WEDL, "WED_AircraftSizeReference.txt"), 2)}
+_size_rows = _load_rows(os.path.join(WEDL, "WED_AircraftSizeReference.txt"), 2)
+sizes_raw = {r[0]: r[1] for r in _size_rows}
 sizes     = {k: v for k, v in sizes_raw.items() if v.strip()}
+# type -> typical operating range, km. Optional third column; absent = unknown,
+# and unknown is never filtered downstream - see that file's header.
+ranges    = {r[0]: r[2].strip() for r in _size_rows if len(r) >= 3 and r[2].strip().isdigit()}
 
 # code -> (name, IOC country, fleet size)
 airlines = {}
+hub_icaos = {}      # code -> [ICAO, ...]; optional sixth column
 for r in _load_rows(os.path.join(WEDL, "WED_AirlineDirectory.txt"), 5):
     airlines.setdefault(r[0], (r[1], r[2], r[4]))
+    if len(r) >= 6 and r[5].strip():
+        hub_icaos.setdefault(r[0], r[5].split())
+
+# ICAO -> (lat, lon) for every hub named above, read off the install's own Global
+# Airports apt.dat. Resolved HERE, once, so the sim receives numbers: it must not
+# need an airport lookup at spawn time, and the hand-edited directory must not
+# carry coordinates nobody can check at a glance. The datum row is preferred;
+# an airport without one gets the midpoint of its first runway.
+def resolve_hubs(xp_root, wanted):
+    path = os.path.join(xp_root, "Global Scenery", "Global Airports", "Earth nav data", "apt.dat")
+    out = {}
+    if not os.path.exists(path):
+        print(f"WARNING: no Global Airports apt.dat at {path} - hubs left unresolved")
+        return out
+    cur = None; lat = lon = None; rwy = None
+    def flush():
+        if cur in wanted and cur not in out:
+            if lat is not None:        out[cur] = (lat, lon)
+            elif rwy is not None:      out[cur] = rwy
+    with open(path, encoding="utf-8", errors="replace") as f:
+        for line in f:
+            if line.startswith("1 ") or line.startswith("1	"):
+                flush()
+                t = line.split(); cur = t[4] if len(t) > 4 else None
+                lat = lon = None; rwy = None
+            elif cur in wanted:
+                if line.startswith("1302 datum_lat"):   lat = float(line.split()[2])
+                elif line.startswith("1302 datum_lon"): lon = float(line.split()[2])
+                elif line.startswith("100 ") and rwy is None:
+                    t = line.split()
+                    try: rwy = ((float(t[9]) + float(t[18])) / 2, (float(t[10]) + float(t[19])) / 2)
+                    except (IndexError, ValueError): pass
+    flush()
+    return out
+
+_wanted = {i for v in hub_icaos.values() for i in v}
+hub_ll  = resolve_hubs(XP, _wanted)
+_unres  = sorted(_wanted - set(hub_ll))
+if _unres: print(f"WARNING: {len(_unres)} hub ICAO(s) not in Global Airports: {' '.join(_unres)}")
+
+def hubs_cell(airline):
+    """'lat,lon lat,lon ...' for the operator, or '' when nothing resolved."""
+    return " ".join("%.2f,%.2f" % hub_ll[i] for i in hub_icaos.get(airline, []) if i in hub_ll)
 
 # Asset filename stem -> ICAO type designator, for the assets whose own name is
 # not one. Everything else resolves from the folder or filename directly.
@@ -339,7 +387,8 @@ for dp, _dn, fn in os.walk(ROOT):
         if typ is None or airline is None or (reg and not confident) or ioc == "???":
             flagged.append((full, typ, airline, reg, ioc))
         cls = sizes.get(typ, "?") if typ else "?"
-        rows.append((typ or "????", cls, airline or "????", reg, ioc, note, rel))
+        rows.append((typ or "????", cls, airline or "????", reg, ioc, note,
+                     ranges.get(typ, "") if typ else "", hubs_cell(airline) if airline else "", rel))
 
 # --------------------------------------------------- obsolescence blast radius
 #
@@ -417,7 +466,7 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
     # This machine alone has 12.4.4-pnl5 with 376 static aircraft and 12.4.3-r2
     # with 298.
     o.write("I\n1 WED Aviation Database\n")
-    o.write("# schema 1\n")
+    o.write("# schema 2\n")
     o.write("# data %s-r1\n" % _dt.date.today().strftime("%Y%m%d"))
     o.write("# source X-Plane %s\n" % xplane_build(XP))
     o.write("# assets %d liveries under apt_aircraft/\n#\n" % len(rows))
@@ -443,7 +492,7 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
 # from here on it is edited by hand. Re-running the generator is a
 # diff-review, never a blind overwrite.
 #
-# FORMAT: <TYPE> *** <CLASS> *** <AIRLINE> *** <REG> *** <REG COUNTRY> *** <NOTE> *** <path>
+# FORMAT: <TYPE> *** <CLASS> *** <AIRLINE> *** <REG> *** <REG COUNTRY> *** <NOTE> *** <RANGE_KM> *** <HUBS> *** <path>
 #   TYPE        ICAO type designator (B738, A21N, ...).
 #   CLASS       ICAO wingspan class A-F - which ramp size this aircraft needs.
 #               Carried HERE rather than in a separate type->class file on
@@ -465,7 +514,28 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
 #               reader that validates this column against a list: the shipped
 #               data already carries Peony, Peacock, Panda, Mixue and Fictional,
 #               and the variants worth having are the ones nobody enumerated.
-#   path        Relative to apt_aircraft/.
+#   RANGE_KM    Typical operating range of TYPE at a realistic payload, km, from
+#               WED_AircraftSizeReference.txt. Empty = unknown = never filtered.
+#   HUBS        The operator's hub positions as "lat,lon" pairs, space separated,
+#               resolved by the generator from the hub ICAOs in
+#               WED_AirlineDirectory.txt against Global Airports. Numbers rather
+#               than codes so the sim needs no airport lookup at spawn time.
+#               Empty = unknown = never filtered.
+#   path        Relative to apt_aircraft/. ALWAYS THE LAST COLUMN - readers take
+#               it from the end, which is what let schema 2 add columns without
+#               breaking a schema 1 reader.
+#
+# SPAWN RULE, applied by X-Plane to each candidate row at a stand:
+#     if RANGE_KM is empty or HUBS is empty     -> eligible
+#     d = min over HUBS of greatcircle(hub, stand position from the 1300 row)
+#     if d > RANGE_KM                           -> skip this row
+#     otherwise                                 -> eligible
+# The rule is a floor, not a route network: it removes what cannot physically
+# reach the stand and says nothing about what an operator chooses to fly there.
+# A domestic operator needs no exemption - its nearest hub is close by definition.
+# WED evaluates the same rule from the same file and the same stand position for
+# its preview cards, so the two sides cannot disagree; nothing is written to
+# apt.dat for this.
 #
 # "????" in any column means the bootstrap could not determine it and a human
 # must. It is a TODO marker, not a value - nothing should ever ship with one.
