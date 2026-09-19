@@ -166,6 +166,7 @@ bool	WED_LiveryIndex::EnsureLoaded(const string & index_path)
 			// "lat,lon lat,lon ..."; a pair that does not parse is dropped, not
 			// guessed - a hub at (0,0) would put every operator in the Atlantic.
 			const string & hs = cells[7];
+			if (hs == "HOME") { e.home_only = true; }
 			size_t i = 0;
 			while (i < hs.size())
 			{

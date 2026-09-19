@@ -226,6 +226,16 @@ def hubs_cell(airline):
     """'lat,lon lat,lon ...' for the operator, or '' when nothing resolved."""
     return " ".join("%.2f,%.2f" % hub_ll[i] for i in hub_icaos.get(airline, []) if i in hub_ll)
 
+# Military and government rows that may only park on home soil - see that
+# file's header. The token goes in the HUBS column, which such rows never use
+# for coordinates, so schema 2 carries it without a new column.
+HOME_ONLY = set()
+_ho = os.path.join(os.path.dirname(os.path.abspath(__file__)), "livery_home_only.txt")
+if os.path.exists(_ho):
+    for l in open(_ho, encoding="utf-8"):
+        l = l.strip()
+        if l and not l.startswith("#"): HOME_ONLY.add(l.replace("\\", "/"))
+
 # Asset filename stem -> ICAO type designator, for the assets whose own name is
 # not one. Everything else resolves from the folder or filename directly.
 TYPE_ALIAS = {
@@ -412,7 +422,9 @@ for dp, _dn, fn in os.walk(ROOT):
                 airline = "XPGN"
 
         rows.append((typ or "????", cls, airline or "????", reg, ioc, note,
-                     ranges.get(typ, "") if typ else "", hubs_cell(airline) if airline else "", rel))
+                     ranges.get(typ, "") if typ else "",
+                     "HOME" if rel.replace("\\", "/") in HOME_ONLY else (hubs_cell(airline) if airline else ""),
+                     rel))
 
 # --------------------------------------------------- obsolescence blast radius
 #
@@ -541,6 +553,11 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
 #   RANGE_KM    Typical operating range of TYPE at a realistic payload, km, from
 #               WED_AircraftSizeReference.txt. Empty = unknown = never filtered.
 #   HUBS        The operator's hub positions as "lat,lon" pairs, space separated,
+#               OR the single token HOME on a military/government row, meaning
+#               "parks only where the operator's country is the airport's". Any
+#               other military row parks anywhere - most equipment is operated
+#               by many countries. Marked in livery_home_only.txt.
+#               Otherwise:
 #               resolved by the generator from the hub ICAOs in
 #               WED_AirlineDirectory.txt against Global Airports. Numbers rather
 #               than codes so the sim needs no airport lookup at spawn time.

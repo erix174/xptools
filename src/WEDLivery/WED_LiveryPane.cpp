@@ -1452,11 +1452,14 @@ WED_LiveryPane::Allow	WED_LiveryPane::LiveryAllowedHere(const WED_LiveryIndexEnt
 		// screenshot that prompted this. The airport's country unknown is the
 		// other way round - then nothing about the stand is known and the
 		// readout is already saying so, so do not also empty the list.
-		// A NAMED HOME IS STRICT; NO HOME IS DELIBERATE. An aircraft with a country
-		// on it parks only there. One with none - the directory does not say and
-		// the paint carries no registration - is the generic case: unmarked
-		// equipment that many countries operate, and it may stand anywhere. That
-		// is a data convention, not a gap: blank the country to say "anyone's".
+		// ANYWHERE BY DEFAULT; HOME SOIL ONLY WHEN MARKED. Most military equipment
+		// is operated by many countries - an F-15 or a Seahawk at a foreign base is
+		// unremarkable - so the default is global. The exception is equipment that
+		// identifies one operator so specifically it has no business abroad (a
+		// head-of-state 757, an air force's own-marked airliner), and those rows
+		// carry HOME in the index (livery_home_only.txt). Only then does the
+		// country matter: the directory's, else the registration's.
+		if (!e.home_only) return allow_Yes;
 		string home = (known && !d.country.empty()) ? d.country : e.reg_country;
 		if (home.empty() || mAirportCountry.empty()) return allow_Yes;
 		return home == mAirportCountry ? allow_Yes : allow_ForeignMilitary;
@@ -1546,7 +1549,7 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 	// and paints behind it. And nothing on a GA card is a picker - the sim draws
 	// GA from the library by size, not from a 1301 list - so ticking and the lock
 	// are switched off for them (see MouseUp), and the card is a preview only.
-	const bool by_type = (ramp_op == ramp_operation_GeneralAviation);
+	const bool by_type = (ramp_op == ramp_operation_GeneralAviation || ramp_op == ramp_operation_Military);
 	mCardsByType = by_type;
 
 	for (size_t i = 0; i < codes.size(); ++i)
@@ -1614,9 +1617,14 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 					tc.types.push_back(e->type);
 					// What distinguishes two PC-12s is the paint, so that is the label:
 					// the registration when there is one, the note otherwise.
-					string lab = !e->reg.empty() ? e->reg : e->note;
+					string lab = !e->reg.empty() ? e->reg
+							   : (e->note != "Default" ? e->note : string("Unmarked"));
 					if (!e->reg.empty() && !e->note.empty() && e->note != "Default")
 						lab += " (" + e->note + ")";
+					// A GA/military card is one type; the operator still tells two
+					// air forces' F-15s apart, so it goes on the label, not the face.
+					if (code_uc != "XPGA" && code_uc != "XPBZ" && code_uc != "XPMI")
+						lab += "  " + code_uc;
 					tc.labels.push_back(lab);
 					continue;
 				}
@@ -2892,7 +2900,10 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 	float text_x0    = card_x0 + (card.abs_paths.size() > 1 ? kTrayGutterW : 5.0f);
 	float left_avail = (cc_x - 6) - text_x0;
 
-	string head = card.icao + " - " + type_str;
+	// A per-type card (GA, military) is one type by construction, so its face is
+	// the type and the count - "PC12 (+11)". What differs between its entries is
+	// the paint, and that is what the tray is for.
+	string head = mCardsByType ? card.icao : card.icao + " - " + type_str;
 	string tail, tail_short;
 	if (card.abs_paths.size() > 1)
 	{

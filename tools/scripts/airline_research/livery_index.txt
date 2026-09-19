@@ -52,6 +52,11 @@ I
 #   RANGE_KM    Typical operating range of TYPE at a realistic payload, km, from
 #               WED_AircraftSizeReference.txt. Empty = unknown = never filtered.
 #   HUBS        The operator's hub positions as "lat,lon" pairs, space separated,
+#               OR the single token HOME on a military/government row, meaning
+#               "parks only where the operator's country is the airport's". Any
+#               other military row parks anywhere - most equipment is operated
+#               by many countries. Marked in livery_home_only.txt.
+#               Otherwise:
 #               resolved by the generator from the hub ICAOs in
 #               WED_AirlineDirectory.txt against Global Airports. Numbers rather
 #               than codes so the sim needs no airport lookup at spawn time.
@@ -126,7 +131,7 @@ B738 *** C *** CCD  *** B5639   *** CHN *** Default    *** 5700  *** 38.97,121.5
 B738 *** C *** CDG  *** B1438   *** CHN *** Default    *** 5700  *** 36.86,117.22 36.27,120.37                                                                                                      *** jet/B738_CDG/738_ShandongAirlines_B1438.obj
 B738 *** C *** CES  *** B1722   *** CHN *** Default    *** 5700  *** 31.14,121.79 31.20,121.33 29.72,106.64 34.45,108.75                                                                            *** jet/B738_CES/738_ChinaEastern_B1722.obj
 B738 *** C *** CJX  *** B5566   *** CHN *** Default    *** 5700  *** 28.86,115.90                                                                                                                   *** jet/B738_CJX/738_JiangxiAir_B5566.obj
-B738 *** C *** CKJ  *** B4000   *** CHN *** PLAAF Mil  *** 5700  ***                                                                                                                                *** jet/B738_PLAAF_Mil/738_PLAAF_B4000.obj
+B738 *** C *** CKJ  *** B4000   *** CHN *** PLAAF Mil  *** 5700  *** HOME                                                                                                                           *** jet/B738_PLAAF_Mil/738_PLAAF_B4000.obj
 B738 *** C *** CMP  ***         ***     *** Default    *** 5700  *** 9.07,-79.38                                                                                                                    *** jet/B738_CMP/738_CopaAirlines_HP1539CMP.obj
 B738 *** C *** CSN  *** B1410   *** CHN *** Default    *** 5700  *** 23.39,113.31 39.50,116.40 31.14,121.79 30.58,103.95                                                                            *** jet/B738_CSN/738_ChinaSouthern_B1410.obj
 B738 *** C *** CSZ  *** B5613   *** CHN *** Default    *** 5700  *** 22.64,113.81 23.39,113.31                                                                                                      *** jet/B738_CSZ/738_ShenzhenAirlines_B5613.obj
@@ -185,7 +190,7 @@ B738 *** C *** NOZ  ***         ***     *** Fictional  *** 5700  *** 60.20,11.08
 B738 *** C *** NOZ  *** LNENN   *** NOR *** Default    *** 5700  *** 60.20,11.08 55.62,12.66 59.65,17.92                                                                                            *** jet/B738_NOZ/738_Norwegian_LNENN.obj
 B738 *** C *** OKA  *** B1962   *** CHN *** Default    *** 5700  *** 39.12,117.34                                                                                                                   *** jet/B738_OKA/738_OKAir_B1962.obj
 B738 *** C *** OMA  *** A4OBAA  *** OMA *** Default    *** 5700  *** 23.61,58.28                                                                                                                    *** jet/B738_OMA/738_OmanAir_A4OBAA.obj
-B738 *** C *** PAF  ***         ***     *** Mil        *** 5700  ***                                                                                                                                *** jet/B738_PAF_Mil/738_PAF_0111.obj
+B738 *** C *** PAF  ***         ***     *** Mil        *** 5700  *** HOME                                                                                                                           *** jet/B738_PAF_Mil/738_PAF_0111.obj
 B738 *** C *** PBD  *** RA73240 *** RUS *** Default    *** 5700  *** 55.60,37.27                                                                                                                    *** jet/B738_PBD/738_Pobeda_RA73240.obj
 B738 *** C *** PGT  *** TCCPD   *** TUR *** Default    *** 5700  *** 40.90,29.31                                                                                                                    *** jet/B738_PGT/738_PegasusAirlines_TCCPD.obj
 B738 *** C *** QFA  *** VHXZE   *** AUS *** Default    *** 5700  *** -33.95,151.18 -37.67,144.84 -27.38,153.12                                                                                      *** jet/B738_QFA/B738_QFA_static.obj
@@ -230,7 +235,7 @@ B744 *** E *** CPA  ***         ***     *** Default    *** 13450 *** 22.31,113.9
 B744 *** E *** UAL  ***         ***     *** Default    *** 13450 *** 41.98,-87.91 29.98,-95.34 39.86,-104.67 37.62,-122.38 40.69,-74.17 38.95,-77.46 33.94,-118.41                                  *** heavy/B744_UAL/B744_UAL_static.obj
 B744 *** E *** VIR  ***         ***     *** Default    *** 13450 *** 51.48,-0.46                                                                                                                    *** heavy/B744_VIR/B744_VIR_static.obj
 B752 *** D *** AHY  *** 4KAZ11  *** AZE *** Default    *** 7200  *** 40.47,50.05                                                                                                                    *** jet/B752/757_Azerbaijan_4KAZ11.obj
-B752 *** D *** AIO  ***         ***     *** Default    *** 7200  ***                                                                                                                                *** jet/B752/757_C32A.obj
+B752 *** D *** AIO  ***         ***     *** Default    *** 7200  *** HOME                                                                                                                           *** jet/B752/757_C32A.obj
 B752 *** D *** ATN  *** N752CX  *** USA *** Default    *** 7200  *** 39.43,-83.79                                                                                                                   *** jet/B752/757_ATI_N752CX.obj
 B752 *** D *** AZV  *** RA73076 *** RUS *** Default    *** 7200  *** 55.41,37.91                                                                                                                    *** jet/B752/757_azurair_RA73076.obj
 B752 *** D *** BDA  *** VTBDM   *** IND *** Default    *** 7200  *** 12.99,80.18                                                                                                                    *** jet/B752/757_BlueDart_VTBDM.obj
@@ -243,14 +248,14 @@ B752 *** D *** DAL  *** N654DL  *** USA *** Default    *** 7200  *** 33.64,-84.4
 B752 *** D *** DAL  *** N695DL  *** USA *** Default    *** 7200  *** 33.64,-84.43 42.21,-83.35 44.88,-93.22 40.79,-111.98 40.64,-73.78 33.94,-118.41 47.45,-122.31 42.36,-71.01                     *** jet/B752/757_Delta_N695DL.obj
 B752 *** D *** DHK  *** DALES   *** GER *** Default    *** 7200  *** 52.83,-1.33                                                                                                                    *** jet/B752/757_DHL_DALES.obj
 B752 *** D *** DHK  *** GBMRB   *** GBR *** Default    *** 7200  *** 52.83,-1.33                                                                                                                    *** jet/B752/757_DHL_GBMRB.obj
-B752 *** D *** DOJ  *** N119NA  *** USA *** Default    *** 7200  ***                                                                                                                                *** jet/B752/757_USDOJ_N119NA.obj
+B752 *** D *** DOJ  *** N119NA  *** USA *** Default    *** 7200  *** HOME                                                                                                                           *** jet/B752/757_USDOJ_N119NA.obj
 B752 *** D *** EXS  *** GLSAJ   *** GBR *** Default    *** 7200  *** 59.57,2.23 53.87,-1.66 51.88,0.23                                                                                              *** jet/B752/757_Jet2_GLSAJ.obj
-B752 *** D *** FAG  ***         ***     *** Default    *** 7200  *** 35.39,-97.60                                                                                                                   *** jet/B752/757_FAA_ARG01.obj
+B752 *** D *** FAG  ***         ***     *** Default    *** 7200  *** HOME                                                                                                                           *** jet/B752/757_FAA_ARG01.obj
 B752 *** D *** FDX  *** N927FD  *** USA *** Default    *** 7200  *** 35.04,-89.98 39.72,-86.29 37.72,-122.22 32.99,-97.32 40.69,-74.17 43.68,-79.63 49.01,2.55 53.07,7.39 22.31,113.92 35.77,140.39 *** jet/B752/757_Fedex_N927FD.obj
 B752 *** D *** GEL  *** 4LGEG   *** GEO *** Default    *** 7200  *** 41.67,44.95                                                                                                                    *** jet/B752/757_Geosky_4LGEG.obj
 B752 *** D *** ICE  *** TFFIV   *** ISL *** Default    *** 7200  *** 63.98,-22.61                                                                                                                   *** jet/B752/757_Icelandair_TFFIV.obj
-B752 *** D *** KAF  ***         ***     *** Default    *** 7200  ***                                                                                                                                *** jet/B752/757_KAF_5701.obj
-B752 *** D *** KRC  *** NZ7571  *** USA *** Default    *** 7200  *** -40.21,175.39                                                                                                                  *** jet/B752/757_RNZAF_NZ7571.obj
+B752 *** D *** KAF  ***         ***     *** Default    *** 7200  *** HOME                                                                                                                           *** jet/B752/757_KAF_5701.obj
+B752 *** D *** KRC  *** NZ7571  *** USA *** Default    *** 7200  *** HOME                                                                                                                           *** jet/B752/757_RNZAF_NZ7571.obj
 B752 *** D *** MFX  *** UK75001 *** UZB *** Default    *** 7200  *** 41.26,69.28                                                                                                                    *** jet/B752/757_Myfrighter_UK75001.obj
 B752 *** D *** RGN  *** ECFTR   *** ESP *** Default    *** 7200  *** 40.47,-3.56                                                                                                                    *** jet/B752/757_CygusAir_ECFTR.obj
 B752 *** D *** RVF  *** N628NP  *** USA *** Default    *** 7200  *** 61.17,-150.00                                                                                                                  *** jet/B752/757_NewPacific_N628NP.obj
@@ -305,10 +310,10 @@ CRJ1 *** B *** AUA  *** OELRH   *** AUT *** Obsolete   *** 3000  *** 48.11,16.57
 CRJ2 *** B *** DAL  *** N8930E  *** USA *** Default    *** 3000  *** 33.64,-84.43 42.21,-83.35 44.88,-93.22 40.79,-111.98 40.64,-73.78 33.94,-118.41 47.45,-122.31 42.36,-71.01                     *** jet/CRJ2_DAL/CRJ2_DAL_static.obj
 D328 *** B *** LPV  *** OELKF   *** AUT *** Obsolete   *** 1850  *** 47.26,11.34                                                                                                                    *** turboprop/D328_LPV/D328_LPV_static.obj
 D328 *** B *** LPV  *** OELKF   *** AUT *** Default    *** 1850  *** 47.26,11.34                                                                                                                    *** turboprop/D328_LPV/Dornier_328_prop_Air_Alps.obj
-DC10 *** D *** AIO  ***         ***     *** Default    *** 9600  ***                                                                                                                                *** heavy/DC10_AIO/DC10_AIO_static.obj
+DC10 *** D *** AIO  ***         ***     *** Default    *** 9600  *** HOME                                                                                                                           *** heavy/DC10_AIO/DC10_AIO_static.obj
 DC10 *** D *** FDX  *** N360FE  *** USA *** Default    *** 9600  *** 35.04,-89.98 39.72,-86.29 37.72,-122.22 32.99,-97.32 40.69,-74.17 43.68,-79.63 49.01,2.55 53.07,7.39 22.31,113.92 35.77,140.39 *** heavy/DC10_FDX/DC10_FDX_static.obj
 DC10 *** D *** XPGN ***         ***     *** Unpainted  *** 9600  ***                                                                                                                                *** heavy/DC10_white/DC10_white_static.obj
-E2   *** C *** CNV  ***         ***     *** Default    *** 2700  ***                                                                                                                                *** turboprop/E2/E2_Hawkeye_static.obj
+E2   *** C *** CNV  ***         ***     *** Default    *** 2700  *** HOME                                                                                                                           *** turboprop/E2/E2_Hawkeye_static.obj
 F15  *** A *** AIO  ***         ***     *** Default    *** 3900  ***                                                                                                                                *** fighter/F15/F15EX_cft_usaf.obj
 F15  *** A *** AIO  ***         ***     *** Default    *** 3900  ***                                                                                                                                *** fighter/F15/F15EX_usaf.obj
 F18S *** A *** CNV  ***         ***     *** Default    *** 2300  ***                                                                                                                                *** fighter/F18/FA_18E_static.obj

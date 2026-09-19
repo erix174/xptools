@@ -93,8 +93,11 @@ struct WED_LiveryIndexEntry {
 	// Schema 2. 0 / empty mean "unknown", and unknown is never filtered.
 	int				range_km;		// typical operating range of `type`
 	std::vector<std::pair<double,double> >	hubs;	// operator's hub positions, (lat, lon)
+	// HUBS == "HOME": a military/government livery that parks only on home soil.
+	// Every other military row parks anywhere - see livery_home_only.txt.
+	bool			home_only;
 	std::string		obj_path;		// relative to apt_aircraft/
-	WED_LiveryIndexEntry() : size_class(0), range_km(0) {}
+	WED_LiveryIndexEntry() : size_class(0), range_km(0), home_only(false) {}
 };
 
 // THE SPAWN RULE, as X-Plane applies it and as WED previews it: false when the
