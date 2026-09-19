@@ -77,6 +77,7 @@ struct WED_LiveryDisplayRow
 	WED_LiveryDisplayRow() : kind(wed_Row_Airline), hidden_count(0) {}
 };
 
+struct	Point2;
 class	IResolver;
 class	WED_Archive;
 class	WED_RampPosition;
@@ -269,6 +270,10 @@ private:
 	std::map<std::string, std::vector<std::string> >	mRangeHidden;
 	// Whether an operator may appear on a stand of this operation type.
 	bool								OperatorMatchesRampOp(const std::string & code_uc, int ramp_op) const;
+	// Whether one livery may appear at this stand, and if not, why - see the .cpp.
+	enum Allow { allow_Yes, allow_OutOfRange, allow_ForeignMilitary };
+	Allow								LiveryAllowedHere(const WED_LiveryIndexEntry & e, const Point2 & here) const;
+	std::string							mAirportCountry;	// IOC, from the airport strip's lookup; empty when unknown
 	// Lines the coverage readout currently needs; see CoverageHeight().
 	int									mCoverageLineCount;
 	void								RebuildAirlineCards(void);

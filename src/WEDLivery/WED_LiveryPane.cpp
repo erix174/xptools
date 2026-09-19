@@ -1412,6 +1412,44 @@ void	WED_LiveryPane::EnsureRows(void)
 }
 
 
+
+// MAY THIS LIVERY APPEAR AT THIS STAND. Three answers, by operation class:
+//
+//   General aviation  - anywhere. A private turboprop's range is short and its
+//                       "hub" is wherever its owner lives; measuring either would
+//                       filter out exactly the aircraft that turn up at every
+//                       small field on earth. No range rule.
+//   Military and Gov  - ONLY on home soil. An F-15 does not park at Beijing and a
+//                       PLAAF 737 does not park at Denver, however far either can
+//                       fly; the constraint is sovereignty, not fuel. Operator
+//                       country (directory) must equal the airport's. Either
+//                       unknown -> allowed, fail open.
+//   Everything else   - the range rule, R26.
+//
+// The reason a livery was refused comes back so the readout can name it: only
+// range refusals go into mRangeHidden, because that is the line's subject.
+WED_LiveryPane::Allow	WED_LiveryPane::LiveryAllowedHere(const WED_LiveryIndexEntry & e, const Point2 & here) const
+{
+	const string & code = e.airline;
+
+	WED_AirlineDirectoryEntry d;
+	bool known = mAirlineDirectory.Lookup(code, d);
+
+	bool is_ga  = code == "XPGA" || code == "XPBZ" || (known && d.op_class == WED_AirlineDirectoryEntry::op_GA);
+	bool is_mil = code == "XPMI" || (known && (d.op_class == WED_AirlineDirectoryEntry::op_Military ||
+											   d.op_class == WED_AirlineDirectoryEntry::op_Gov));
+
+	if (is_ga) return allow_Yes;
+
+	if (is_mil)
+	{
+		if (!known || d.country.empty() || mAirportCountry.empty()) return allow_Yes;	// cannot tell - fail open
+		return d.country == mAirportCountry ? allow_Yes : allow_ForeignMilitary;
+	}
+
+	return WED_LiveryInRange(e, here.y(), here.x()) ? allow_Yes : allow_OutOfRange;
+}
+
 // Which operation classes a ramp's operation type admits. Pseudo-codes are the
 // index's own (see WED_LiveryIndex.h): XPGA generic GA, XPBZ business jets, XPMI
 // military, XPGN a generic unpainted airliner that any commercial stand may use.
@@ -1528,9 +1566,10 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 				// absent, exactly as it will be absent on the apron. What was
 				// removed is remembered so the readout can say so; otherwise the
 				// author sees United's card shrink to a 777 with no explanation.
-				if (!WED_LiveryInRange(*e, here.y(), here.x()))
+				Allow a = LiveryAllowedHere(*e, here);
+				if (a != allow_Yes)
 				{
-					mRangeHidden[code_uc].push_back(e->type);
+					if (a == allow_OutOfRange) mRangeHidden[code_uc].push_back(e->type);
 					continue;
 				}
 
@@ -1895,7 +1934,7 @@ void	WED_LiveryPane::RecomputeCoverage(void)
 				mLiveryIndex.GetForAirlineAndClass(*it, size_class, hits);
 				bool reachable = false;
 				for (size_t h = 0; h < hits.size() && !reachable; ++h)
-					reachable = WED_LiveryInRange(*hits[h], here.y(), here.x());
+					reachable = LiveryAllowedHere(*hits[h], here) == allow_Yes;
 				if (reachable)
 				{
 					any_here = true;
@@ -1943,7 +1982,7 @@ void	WED_LiveryPane::RecomputeCoverage(void)
 						// honestly, from different definitions of eligible.
 						bool reach = false;
 						for (size_t h = 0; h < hits.size() && !reach; ++h)
-							reach = WED_LiveryInRange(*hits[h], here.y(), here.x());
+							reach = LiveryAllowedHere(*hits[h], here) == allow_Yes;
 						if (reach) { fillable += wts[k]; break; }
 					}
 				}
@@ -3896,6 +3935,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		bool warn = false;
 		string flag_country;		// "" = no flag banner to show for this state
 		mCurrentAirportIcao.clear();	// only set below on a successful lookup - see the "Show Recommendation" button
+		mAirportCountry.clear();
 
 		if (!mSelectedRamps.empty())
 		{
@@ -3971,6 +4011,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 					info_text = apt_name + " (" + icao + ") - " + country;
 					flag_country = country;		// already an IOC-normalized code - see WED_AirportDatabase.cpp
 					mCurrentAirportIcao = icao;
+					mAirportCountry     = country;	// for the military rule - see LiveryAllowedHere()
 
 					// Specifically whether THIS airport has its own hand-researched Direct
 					// Hit entry in WED_AirportDatabase.txt - not the broader "commercially
