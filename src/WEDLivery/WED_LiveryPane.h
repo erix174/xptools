@@ -268,6 +268,9 @@ private:
 	// Liveries the range rule removed from a card at this stand, by UPPERCASE
 	// operator code - so the readout can name what will not spawn and why.
 	std::map<std::string, std::vector<std::string> >	mRangeHidden;
+	// True while the cards are grouped by aircraft type (GA stands) rather than
+	// by operator. Ticking and the lock are disabled in that mode.
+	bool								mCardsByType;
 	// Whether an operator may appear on a stand of this operation type.
 	bool								OperatorMatchesRampOp(const std::string & code_uc, int ramp_op) const;
 	// Whether one livery may appear at this stand, and if not, why - see the .cpp.

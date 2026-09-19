@@ -984,6 +984,7 @@ WED_LiveryPane::WED_LiveryPane(
 	mContentDragStartOffset(0),	// listed here anyway so all the "simple scalar" inits stay together
 	mCycleShow(0),
 	mRowsDirty(true),
+	mCardsByType(false),
 	mCoverageLineCount(3),
 	mLastAnimClock(0),
 	mTrayHoverIdx(-1),
@@ -1537,6 +1538,17 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 	// "None" leaves the list unfiltered, since it means the author has not said.
 	const int ramp_op = ramp->GetRampOperationType();
 
+	// GENERAL AVIATION HAS NO OPERATORS. "BTQ", "URF", "WML" are private owners
+	// the generator had to give a code to; grouping by them puts one PC-12 on a
+	// card of its own and eleven more, plus every Challenger and Cirrus, on the
+	// generic XPGA card - a shape that says nothing about what parks here. A GA
+	// stand groups by AIRCRAFT TYPE instead: one card per type, its registrations
+	// and paints behind it. And nothing on a GA card is a picker - the sim draws
+	// GA from the library by size, not from a 1301 list - so ticking and the lock
+	// are switched off for them (see MouseUp), and the card is a preview only.
+	const bool by_type = (ramp_op == ramp_operation_GeneralAviation);
+	mCardsByType = by_type;
+
 	for (size_t i = 0; i < codes.size(); ++i)
 	{
 		string code_uc = codes[i];
@@ -1549,6 +1561,9 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 		// what the card shows at rest, so at rest a card shows the largest aircraft
 		// that operator can park here - the most informative single frame, and a
 		// stable one, since it does not move when an unrelated class is weighted out.
+		// Per-operator grouping builds one card here; per-type grouping (GA) files
+		// each livery under its type's card instead, so the card is looked up per
+		// entry below rather than made once per operator.
 		AirlineCard card;
 		card.icao = code_uc;
 		for (int k = 5; k >= 0; --k)
@@ -1587,6 +1602,25 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 					continue;
 				}
 
+				if (by_type)
+				{
+					string tkey = e->type;
+					for (size_t c = 0; c < tkey.size(); ++c) tkey[c] = (char) tolower((unsigned char) tkey[c]);
+					AirlineCard & tc = mAirlineCards[tkey];
+					tc.icao = e->type;
+					tc.name = e->type;
+					if (tc.ioc_country.empty()) tc.ioc_country = e->reg_country;
+					tc.abs_paths.push_back(abs_path);
+					tc.types.push_back(e->type);
+					// What distinguishes two PC-12s is the paint, so that is the label:
+					// the registration when there is one, the note otherwise.
+					string lab = !e->reg.empty() ? e->reg : e->note;
+					if (!e->reg.empty() && !e->note.empty() && e->note != "Default")
+						lab += " (" + e->note + ")";
+					tc.labels.push_back(lab);
+					continue;
+				}
+
 				card.abs_paths.push_back(abs_path);
 				card.types.push_back(e->type);
 
@@ -1606,6 +1640,7 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 			}
 		}
 
+		if (by_type) continue;						// filed per type above
 		if (card.abs_paths.empty()) continue;		// nothing that fits - no card
 
 		// The friendly name if the directory knows the code, the code itself if it
@@ -2868,30 +2903,24 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 		tail_short = m;
 	}
 
-	// THE HEAD IS THE IDENTITY AND IS NEVER WHAT GETS DROPPED. Reserving the suffix
-	// first was exactly backwards: on a narrow card there was too little left for
-	// "AAL - B738", the ellipsis loop ate it down to nothing, and the card rendered
-	// as a bare "(and 2 more)" with no operator on it at all - while the
-	// single-livery cards beside it, which have no suffix to reserve, were fine.
-	//
-	// So the head is fitted first and the suffix is added only if it still fits.
-	// Losing it costs little: the arrow in the gutter already says there is more,
-	// and the hover tip names all of them.
+	// THE SUFFIX ALWAYS SURVIVES. It is the only thing on the face that says the
+	// card opens; a user who cannot see "(+8)" has no way to know eight more
+	// aircraft are behind it. So it is reserved FIRST - long form if it fits with
+	// the whole head, compact "(+N)" otherwise - and the head is cut to whatever
+	// is left, with an ellipsis. The earlier fitting order (head first, suffix if
+	// room) produced exactly the card this comment is written against: a full
+	// operator name and no hint at all that it was a stack.
 	float head_w = GUI_MeasureRange(font_UI_Basic, head.c_str(), head.c_str() + head.size());
 	float tail_w = tail.empty() ? 0.0f
 				 : GUI_MeasureRange(font_UI_Basic, tail.c_str(), tail.c_str() + tail.size());
-
-	// Long form, then the compact one, then nothing - degrading rather than
-	// overriding, so a card only loses the wording when it genuinely cannot hold it.
-	if (head_w + tail_w > left_avail)
+	if (!tail.empty() && head_w + tail_w > left_avail)
 	{
 		tail   = tail_short;
-		tail_w = tail.empty() ? 0.0f
-			   : GUI_MeasureRange(font_UI_Basic, tail.c_str(), tail.c_str() + tail.size());
-		if (head_w + tail_w > left_avail) tail.clear();		// the arrow carries it instead
+		tail_w = GUI_MeasureRange(font_UI_Basic, tail.c_str(), tail.c_str() + tail.size());
 	}
 
-	if (head_w > left_avail)
+	float head_avail = left_avail - tail_w;
+	if (head_w > head_avail)
 	{
 		const string ell = "...";
 		while (!head.empty())
@@ -2900,12 +2929,11 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 			while (!head.empty() && head[head.size() - 1] == ' ')
 				head.pop_back();			// no "Air ..." - tuck the dots up against the text
 			string probe = head + ell;
-			if (GUI_MeasureRange(font_UI_Basic, probe.c_str(), probe.c_str() + probe.size()) <= left_avail)
+			if (GUI_MeasureRange(font_UI_Basic, probe.c_str(), probe.c_str() + probe.size()) <= head_avail)
 				break;
 		}
 		head = head.empty() ? string() : head + ell;
 	}
-
 	string caption = head + tail;
 	if (!caption.empty())
 		GUI_FontDraw(state, font_UI_Basic, text_col, text_x0, text_y, caption.c_str());
@@ -3774,6 +3802,7 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 
 		if (x >= lr[0] && x <= lr[2] && y >= lr[1] && y <= lr[3])
 		{
+			if (mCardsByType) { mTrackRow = -1; return; }		// GA cards are previews - no lock
 			// Exclusive by construction: holding the lock is a single string, so
 			// taking it necessarily releases whoever had it.
 			mLockedAirline = (mLockedAirline == icao) ? string() : icao;
@@ -3810,7 +3839,8 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 		}
 	}
 
-	if (RowForXY(b, mRowIsCard, tray_h, x, y) == mTrackRow && mTrackRow < (int) mRows.size() && mRows[mTrackRow].kind == wed_Row_Airline)
+	if (RowForXY(b, mRowIsCard, tray_h, x, y) == mTrackRow && mTrackRow < (int) mRows.size() && mRows[mTrackRow].kind == wed_Row_Airline
+		&& !mCardsByType)		// GA cards are previews, not a picker - see RebuildAirlineCards
 	{
 		// SCROLL ANCHORING. Ticking a card can create or grow the "Selected"
 		// section ABOVE the viewport, and every row below it then slides down by
@@ -4750,11 +4780,9 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		// than given its own line, because on a correctly generated index it is
 		// reassurance, and on one carrying no stamps at all it is the only
 		// warning §6.4's silent mismatch will ever produce.
-		if (mCoverage.index_ready && !mCoverage.index_version.empty())
-		{
-			size_t used = strlen(detail);
-			snprintf(detail + used, sizeof(detail) - used, "   [%s]", mCoverage.index_version.c_str());
-		}
+		// The index version stamp used to be appended here. It is diagnostic, not
+		// guidance, and it doubled the length of every readout; it still goes to
+		// the log, which is where a build mismatch gets investigated anyway.
 
 		// Wrap to the width we actually have, then size the section to the result
 		// BEFORE laying it out - so the background, the lines and everything below
