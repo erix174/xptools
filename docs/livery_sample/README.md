@@ -191,7 +191,7 @@ has deleted it. They are position-independent.
 | 23-FOREIGN-WIDE | E | UAL DAL AAL BAW | UAL:B744, DAL:B772, AAL:B772, BAW:B772 | - |
 | 24-SPLIT-IN-CLASS | D | UAL UPS | UAL:B763, UPS:B763 | UAL:B752, UPS:B752 |
 | 25-MIXED-STAND | C+E | CCA UAL | CCA:A320, CCA:B738, UAL:B744 | UAL:A320, UAL:B738 |
-| 26-CARGO-SPLIT | D | FDX | FDX:B763 | FDX:B752, FDX:DC10 |
+| 26-CARGO-SPLIT | D | FDX | FDX:B763, FDX:B752, FDX:DC10 (FedEx has a Hong Kong hub, 2,000 km away) | - |
 | 27-DOMESTIC-FAR | C | CCA | CCA:A320, CCA:B738 | - |
 
 ### Why these eight
@@ -213,11 +213,15 @@ is only their narrowbodies that cannot reach.
 stand it has confused "this operator cannot reach" with "this aircraft cannot
 reach".
 
-**24 and 26 are the ones that kill the per-operator approach.** UAL's B752
-(7,200 km) cannot reach and its B763 (11,000 km) can - and BOTH ARE CLASS D. No
-action taken against the operator as a whole, and no adjustment of the stand's
-class weights, can keep one and drop the other. Same for FedEx, where B752 and
-DC10 fail while B763 passes, all three in class D.
+**24 is the one that kills the per-operator approach.** UAL's B752 (7,200 km)
+cannot reach and its B763 (11,000 km) can - and BOTH ARE CLASS D. No action
+taken against the operator as a whole, and no adjustment of the stand's class
+weights, can keep one and drop the other. UPS is the same.
+
+**26 shows why hubs beat country centroids.** Measured from the US centroid,
+FedEx's B752 and DC10 fail; measured from its nearest hub - Hong Kong - all three
+pass, and FedEx really does fly them into Beijing from there. The rule is only as
+good as the hub list, and the hub list is a fact, not an approximation.
 
 **25 is the mixed stand.** CCA's 737 and UAL's 744 are both correct here; UAL's
 737 is not. A filter working at stand or operator granularity has no move that
@@ -225,7 +229,8 @@ does not also break one of the two correct answers.
 
 ### Distances used
 
-Great-circle from the operator's country centroid to the stand, one way:
-USA 10,443 km, GBR 8,028 km, CHN 1,179 km. An operator whose country matches the
-airport's is exempt - a domestic flight is always plausible, and a country
-centroid is meaningless at that scale (Russia's is in Siberia).
+Great-circle (haversine) from the operator's NEAREST HUB to the stand, one way,
+hubs from the sixth column of WED_AirlineDirectory.txt resolved against Global
+Airports. United from KSFO 9,510 km; British Airways from EGLL 8,150 km; FedEx
+from VHHH 1,980 km; Air China from ZBAA ~0. No domestic exemption is needed - a
+domestic operator's nearest hub is close by definition.

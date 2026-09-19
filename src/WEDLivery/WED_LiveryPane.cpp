@@ -1880,7 +1880,15 @@ void	WED_LiveryPane::RecomputeCoverage(void)
 					{
 						vector<const WED_LiveryIndexEntry *> hits;
 						mLiveryIndex.GetForAirlineAndClass(*it, size_class, hits);
-						if (!hits.empty()) { fillable += wts[k]; break; }
+						// Same range rule as the cards and the flat loop above: a
+						// class is only "filled" by an aircraft that can reach the
+						// stand. Without this the weighted readout said "100% of the
+						// time, from 0 of 2 listed operators" - both halves computed
+						// honestly, from different definitions of eligible.
+						bool reach = false;
+						for (size_t h = 0; h < hits.size() && !reach; ++h)
+							reach = WED_LiveryInRange(*hits[h], here.y(), here.x());
+						if (reach) { fillable += wts[k]; break; }
 					}
 				}
 				c.weighted   = true;

@@ -22,7 +22,7 @@
  */
 
 #include "WED_LiveryIndex.h"
-#include "GISUtils.h"			// LonLatDistMeters
+#include <cmath>
 
 #include "WED_MandatoryHeader.h"
 #include "WED_PackageMgr.h"
@@ -291,16 +291,32 @@ const WED_LiveryIndexEntry * WED_LiveryIndex::Lookup(const string & key) const
 	return i == mByKey.end() ? NULL : i->second;
 }
 
+// Haversine on a 6371 km sphere. NOT LonLatDistMeters(): that is an
+// equirectangular approximation for the map - it scales the raw longitude
+// difference by the cosine of the mean latitude and never wraps it, so KSFO
+// (-122) to Beijing (+116) came out as 238 degrees of longitude and every
+// US operator failed the range check while Europe, at 116 degrees, passed.
+// A great-circle over an ocean is the one job that function was never for.
+static double GreatCircleKm(double lat1, double lon1, double lat2, double lon2)
+{
+	const double k = 0.017453292519943295;
+	double p1 = lat1 * k, p2 = lat2 * k;
+	double dp = (lat2 - lat1) * k, dl = (lon2 - lon1) * k;
+	double a  = sin(dp * 0.5) * sin(dp * 0.5) + cos(p1) * cos(p2) * sin(dl * 0.5) * sin(dl * 0.5);
+	if (a > 1.0) a = 1.0;
+	return 6371.0 * 2.0 * asin(sqrt(a));
+}
+
 bool	WED_LiveryInRange(const WED_LiveryIndexEntry & e, double stand_lat, double stand_lon)
 {
 	if (e.range_km <= 0 || e.hubs.empty()) return true;		// unknown is never filtered
 	double best = 1e12;
 	for (size_t i = 0; i < e.hubs.size(); ++i)
 	{
-		double d = LonLatDistMeters(e.hubs[i].second, e.hubs[i].first, stand_lon, stand_lat);
+		double d = GreatCircleKm(e.hubs[i].first, e.hubs[i].second, stand_lat, stand_lon);
 		if (d < best) best = d;
 	}
-	return best <= (double) e.range_km * 1000.0;
+	return best <= (double) e.range_km;
 }
 
 size_t	WED_LiveryIndex::CountAtClass(char size_class) const
