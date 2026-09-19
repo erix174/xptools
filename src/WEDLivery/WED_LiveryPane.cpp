@@ -1451,9 +1451,13 @@ WED_LiveryPane::Allow	WED_LiveryPane::LiveryAllowedHere(const WED_LiveryIndexEnt
 		// screenshot that prompted this. The airport's country unknown is the
 		// other way round - then nothing about the stand is known and the
 		// readout is already saying so, so do not also empty the list.
+		// A NAMED HOME IS STRICT; NO HOME IS DELIBERATE. An aircraft with a country
+		// on it parks only there. One with none - the directory does not say and
+		// the paint carries no registration - is the generic case: unmarked
+		// equipment that many countries operate, and it may stand anywhere. That
+		// is a data convention, not a gap: blank the country to say "anyone's".
 		string home = (known && !d.country.empty()) ? d.country : e.reg_country;
-		if (mAirportCountry.empty()) return allow_Yes;
-		if (home.empty())            return allow_ForeignMilitary;
+		if (home.empty() || mAirportCountry.empty()) return allow_Yes;
 		return home == mAirportCountry ? allow_Yes : allow_ForeignMilitary;
 	}
 

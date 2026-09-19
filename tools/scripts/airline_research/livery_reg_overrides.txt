@@ -184,7 +184,7 @@ jet/SF50_blue/SF50_blue_static.obj *** N163MV
 jet/SF50_gold/SF50_gold_static.obj *** N163MV
 prop/BE58/BE58_static.obj *** N45XS
 prop/C172/C172_static.obj *** N172SP
-prop/C172_olive/C172_olive_static.obj *** ETOEB
+prop/C172_olive/C172_olive_static.obj ***
 prop/C172_skyhawk/C172_skyhawk_static.obj *** N172SP
 prop/C172_waves/C172_waves_static.obj *** N172SP
 prop/C172_white/C172_white_static.obj *** N172SP
@@ -201,7 +201,7 @@ turboprop/P180/P180_avanti_white.obj *** ISERG
 turboprop/P180/P180_static.obj *** ISERG
 turboprop/P180_Ferrari/P180_avanti_ferrari.obj *** IFXRB
 turboprop/P180_Ferrari/P180_ferrari_static.obj *** IFXRB
-turboprop/PC12/PC12_US_Army.obj *** EIZOB
+turboprop/PC12/PC12_US_Army.obj ***
 
 # ---- not civil registrations (2026-09-17) ----------------------------------
 # These filenames carry an identifier where a registration would sit, and the

@@ -404,7 +404,7 @@ for dp, _dn, fn in os.walk(ROOT):
         elif stem == "757_KAF_5701":
             airline = "KAF"                        # Kazakhstan Air Force - a real operator, added to the directory
         if airline in ("XPGA", "XPGN", "XPBZ", "BOE"):
-            if "BBJ" in (note or "") or airline == "XPBZ" or (airline == "BOE" and cls in "AB"):
+            if "BBJ" in (note or "") or "BBJ" in stem.upper() or airline == "XPBZ" or (airline == "BOE" and cls in "AB"):
                 airline = "XPBZ"
             elif cls in "AB":
                 airline = "XPGA"
