@@ -92,6 +92,14 @@ bool	WED_AirlineDirectory::EnsureLoaded(const string & db_path)
 		if (p0 == string::npos) continue;			// blank line
 		if (line[p0] == '#') continue;				// comment line
 
+		// livery_index.txt (schema 3) carries the same record with an "OPERATOR"
+		// tag in front, so one file serves both readers - see the generator. The
+		// tag is dropped and the rest parses exactly as a directory row does. A
+		// livery row in that file never survives the service-column check below
+		// (its fourth cell is a registration), so nothing else has to change.
+		const string kTag = "OPERATOR *** ";
+		if (line.compare(p0, kTag.size(), kTag) == 0) p0 += kTag.size();
+
 		size_t sep1 = line.find(kSep, p0);
 		if (sep1 == string::npos) continue;
 		string code = line.substr(p0, sep1 - p0);

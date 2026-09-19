@@ -1610,6 +1610,30 @@ parser's signature or any other tool.
 
 ---
 
+### 6.7b Schema 3 — operator records: one file for both readers
+
+Everything WED used to fetch from its own `WED_AirlineDirectory.txt` at run
+time - operator name, country, operation class, fleet size, hub ICAOs - is now
+written into the index once per operator, ahead of the livery rows:
+
+```
+OPERATOR *** UAL  *** United Airlines        *** USA *** Pax      *** 1138 *** KORD KIAH KDEN KSFO KEWR KIAD KLAX
+OPERATOR *** FDX  *** FedEx Express          *** USA *** Cargo    ***  478 *** KMEM KIND KOAK ... VHHH RJAA
+OPERATOR *** AIO  *** United States Air Force *** USA *** Military ***    0 ***
+OPERATOR *** XPMI *** Generic - military     ***     *** Military ***    0 ***
+```
+
+One record per operator rather than the facts repeated on every livery row.
+The four pseudo-codes get records too, so the ramp's operation-type filter has
+one answer for everything in the file. A reader that does not know the record
+kind skips it: a livery reader skips `OPERATOR`, and the operator reader skips
+livery rows because their fourth cell is a registration, not a class.
+
+**The hand-edited files feed only the generator now.** `WED_AirlineDirectory.txt`,
+`WED_AircraftSizeReference.txt` and the three sidecars are inputs; the index is
+the only thing either program reads. WED falls back to its own directory file
+only for an index older than schema 3.
+
 ### 6.8 Authoring note — the weights mode is a property of the stand
 
 WED keeps two things per stand in its own document (`earth.wed.xml`), not one:

@@ -181,7 +181,7 @@ ranges    = {r[0]: r[2].strip() for r in _size_rows if len(r) >= 3 and r[2].stri
 airlines = {}
 hub_icaos = {}      # code -> [ICAO, ...]; optional sixth column
 for r in _load_rows(os.path.join(WEDL, "WED_AirlineDirectory.txt"), 5):
-    airlines.setdefault(r[0], (r[1], r[2], r[4]))
+    airlines.setdefault(r[0], (r[1], r[2], r[4], r[3]))     # name, IOC country, fleet, op class
     if len(r) >= 6 and r[5].strip():
         hub_icaos.setdefault(r[0], r[5].split())
 
@@ -502,7 +502,7 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
     # This machine alone has 12.4.4-pnl5 with 376 static aircraft and 12.4.3-r2
     # with 298.
     o.write("I\n1 WED Aviation Database\n")
-    o.write("# schema 2\n")
+    o.write("# schema 3\n")
     o.write("# data %s-r1\n" % _dt.date.today().strftime("%Y%m%d"))
     o.write("# source X-Plane %s\n" % xplane_build(XP))
     o.write("# assets %d liveries under apt_aircraft/\n#\n" % len(rows))
@@ -583,6 +583,32 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
 # ============================================================================
 
 """)
+    # ONE FILE FOR BOTH READERS. Everything WED used to fetch from
+    # WED_AirlineDirectory.txt at run time - name, country, operation class,
+    # fleet size - is written here per operator, so the sim and WED read the same
+    # facts from the same place and the hand-edited directory feeds only this
+    # generator. One record per operator rather than the facts repeated on every
+    # livery row; a reader that does not know the record kind skips it.
+    #
+    #   OPERATOR *** <CODE> *** <NAME> *** <IOC CTY> *** <Pax|Cargo|GA|Military|Gov> *** <FLEET> *** <HUB ICAOs>
+    #
+    # The pseudo-codes get records too, so the ramp's op-type filter has one
+    # answer for everything in the file.
+    PSEUDO = {"XPGA": ("Generic - light aircraft", "GA"), "XPBZ": ("Generic - business jet", "GA"),
+              "XPMI": ("Generic - military", "Military"), "XPGN": ("Generic - unpainted airliner", "Pax")}
+    o.write("# ---- operators -------------------------------------------------------------\n")
+    for code in sorted({r[2] for r in rows if r[2] != "????"}):
+        if code in PSEUDO:
+            name, opc = PSEUDO[code]; cty = ""; fleet = "0"; hubs = ""
+        elif code in airlines:
+            a = airlines[code]; name, cty, fleet = a[0], a[1], a[2]
+            opc  = a[3] if len(a) > 3 else "Pax"
+            hubs = " ".join(hub_icaos.get(code, []))
+        else:
+            name, cty, opc, fleet, hubs = code, "", "Pax", "0", ""   # in the index, unknown to the directory
+        o.write(" *** ".join(["OPERATOR", code, name, cty, opc, fleet, hubs]) + "\n")
+    o.write("\n# ---- liveries --------------------------------------------------------------\n")
+
     # Column-pad so the file is scannable by eye. Safe because the parser
     # tokenizes on "***" rather than matching a fixed " *** " separator, so the
     # extra spaces cost nothing - same convention as WED_AirportDatabase.cpp.

@@ -148,6 +148,7 @@ bool	WED_LiveryIndex::EnsureLoaded(const string & index_path)
 
 		SplitOnStars(line, cells);
 		if (cells.size() < 7) continue;			// not a data row
+		if (cells[0] == "OPERATOR") continue;	// schema 3 operator record - WED_AirlineDirectory reads those
 
 		WED_LiveryIndexEntry e;
 		e.type        = ToUpper(cells[0]);
