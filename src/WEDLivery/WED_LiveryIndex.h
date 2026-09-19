@@ -94,7 +94,7 @@ struct WED_LiveryIndexEntry {
 	int				range_km;		// typical operating range of `type`
 	std::vector<std::pair<double,double> >	hubs;	// operator's hub positions, (lat, lon)
 	// HUBS == "HOME": a military/government livery that parks only on home soil.
-	// Every other military row parks anywhere - see livery_home_only.txt.
+	// Every other military row parks anywhere; HOME is typed into the index row.
 	bool			home_only;
 	// Schema 3: the operator's operation class carried on the row as well, so a
 	// row is self-contained without the OPERATOR record - Pax, Cargo, GA,

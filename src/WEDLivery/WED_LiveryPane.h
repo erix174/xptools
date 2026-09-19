@@ -486,9 +486,10 @@ private:
 	// no local X-Plane install/apt.dat involved. See WED_AirportDatabase.h.
 	WED_AirportDatabase			mAirportDb;
 
-	// Global airline reference data (WED_AirlineDirectory.txt, shipped loose
-	// next to WED.exe like the two indexes above) - name/country/fleet size
-	// for every airline WED knows about, independent of any one airport. Used
+	// Global airline reference data - the OPERATOR records at the top of the
+	// install's livery_index.txt, the same file mLiveryIndex reads; nothing
+	// ships beside WED.exe for this. Name/country/op class/fleet size for
+	// every airline WED knows about, independent of any one airport. Used
 	// to resolve a friendly name for a recommended code that isn't one of
 	// WED_LiveryData.h's ~26 hardcoded placeholder entries. See
 	// WED_AirlineDirectory.h.

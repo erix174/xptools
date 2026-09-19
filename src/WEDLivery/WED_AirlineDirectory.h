@@ -30,9 +30,9 @@
 	airlines serve this specific airport" (that's WED_AirportDatabase, a
 	different, much smaller, per-airport hand-researched file).
 
-	Loaded from WED_AirportDatabase.txt's sibling WED_AirlineDirectory.txt, same
-	loose-file-next-to-WED.exe convention (see WED_AirportDatabase.h). Format, one
-	airline per line:
+	Loaded from the OPERATOR records at the top of the install's
+	livery_index.txt - the one file both WED and X-Plane read; there is no
+	WED-side copy and no fallback. Format, one airline per line:
 
 		<CODE> *** <Name> *** <IOC country> *** <Pax|Cargo> *** <Fleet count>
 

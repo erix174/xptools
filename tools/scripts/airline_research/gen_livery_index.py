@@ -579,17 +579,17 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
 #               reader that validates this column against a list: the shipped
 #               data already carries Peony, Peacock, Panda, Mixue and Fictional,
 #               and the variants worth having are the ones nobody enumerated.
-#   RANGE_KM    Typical operating range of TYPE at a realistic payload, km, from
-#               WED_AircraftSizeReference.txt. Empty = unknown = never filtered.
+#   RANGE_KM    Typical operating range of TYPE at a realistic payload, km.
+#               Empty = unknown = never filtered.
 #   HUBS        The operator's hub positions as "lat,lon" pairs, space separated,
 #               OR the single token HOME on a military/government row, meaning
 #               "parks only where the operator's country is the airport's". Any
 #               other military row parks anywhere - most equipment is operated
-#               by many countries. Marked in livery_home_only.txt.
-#               Otherwise:
-#               resolved by the generator from the hub ICAOs in
-#               WED_AirlineDirectory.txt against Global Airports. Numbers rather
-#               than codes so the sim needs no airport lookup at spawn time.
+#               by many countries. Otherwise: resolved by the generator from
+#               the ICAOs on the operator's OPERATOR record against Global
+#               Airports, on every run. Numbers rather than codes so the sim
+#               needs no airport lookup at spawn time. To move a hub, edit the
+#               OPERATOR record, not this cell.
 #               Empty = unknown = never filtered.
 #   OP          The operator's operation class - Pax, Cargo, GA, Military or
 #               Gov - repeated on the row so a row is self-contained. The ramp's

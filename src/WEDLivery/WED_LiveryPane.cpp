@@ -163,8 +163,8 @@ namespace
 		return string();
 	}
 
-	// Same idea as FindPlaceholderName(), but checked first against the ~1500-
-	// entry global WED_AirlineDirectory.txt (which is what actually knows most
+	// Same idea as FindPlaceholderName(), but checked first against the OPERATOR
+	// records of livery_index.txt (which is what actually knows most
 	// airlines' names) and only falls back to the small hardcoded placeholder
 	// table above for the handful of well-known majors it lists. "" if neither
 	// source has it - callers fall back to showing the bare code.
@@ -1463,7 +1463,7 @@ WED_LiveryPane::Allow	WED_LiveryPane::LiveryAllowedHere(const WED_LiveryIndexEnt
 		// unremarkable - so the default is global. The exception is equipment that
 		// identifies one operator so specifically it has no business abroad (a
 		// head-of-state 757, an air force's own-marked airliner), and those rows
-		// carry HOME in the index (livery_home_only.txt). Only then does the
+		// carry HOME in their HUBS cell. Only then does the
 		// country matter: the directory's, else the registration's.
 		if (!e.home_only) return allow_Yes;
 		string home = (known && !d.country.empty()) ? d.country : e.reg_country;

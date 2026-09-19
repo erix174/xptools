@@ -24,10 +24,9 @@
 /*
 	WED_MandatoryHeader - THEORY OF OPERATION
 
-	Every WED_Livery*.txt loose data file (WED_AirportDatabase.txt,
-	WED_AirlineDirectory.txt, and any future one - WED_AircraftSizeReference.txt,
-	WED_StaticLiveryDatabase.txt, etc.) starts
-	with this exact, identical two-line stamp:
+	Every hand-maintained data file WED reads (WED_AirportDatabase.txt beside
+	the executable, livery_index.txt in the X-Plane install, and any future
+	one) starts with this exact, identical two-line stamp:
 
 		I
 		1 WED Aviation Database
