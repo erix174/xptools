@@ -1443,8 +1443,18 @@ WED_LiveryPane::Allow	WED_LiveryPane::LiveryAllowedHere(const WED_LiveryIndexEnt
 
 	if (is_mil)
 	{
-		if (!known || d.country.empty() || mAirportCountry.empty()) return allow_Yes;	// cannot tell - fail open
-		return d.country == mAirportCountry ? allow_Yes : allow_ForeignMilitary;
+		// The operator's country from the directory; failing that, the paint's -
+		// an olive C172 registered ET- is Ethiopian whoever "XPMI" is. And this
+		// one FAILS CLOSED: the rule is "home soil only", and an aircraft whose
+		// home nobody can name has no home soil to be on. Fail-open here would put
+		// four unmarked military 757s on every apron in the world, which is the
+		// screenshot that prompted this. The airport's country unknown is the
+		// other way round - then nothing about the stand is known and the
+		// readout is already saying so, so do not also empty the list.
+		string home = (known && !d.country.empty()) ? d.country : e.reg_country;
+		if (mAirportCountry.empty()) return allow_Yes;
+		if (home.empty())            return allow_ForeignMilitary;
+		return home == mAirportCountry ? allow_Yes : allow_ForeignMilitary;
 	}
 
 	return WED_LiveryInRange(e, here.y(), here.x()) ? allow_Yes : allow_OutOfRange;

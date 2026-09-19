@@ -387,6 +387,30 @@ for dp, _dn, fn in os.walk(ROOT):
         if typ is None or airline is None or (reg and not confident) or ioc == "???":
             flagged.append((full, typ, airline, reg, ioc))
         cls = sizes.get(typ, "?") if typ else "?"
+
+        # GENERIC AND HOUSE LIVERIES ARE CLASSED BY THE AIRCRAFT, NOT THE FOLDER.
+        # The folder scan put four unmarked 757s under military, Piaggios under
+        # "generic airliner", BBJs and a white DC-10 under general aviation, and
+        # Boeing's three demonstrators on one "operator" card. The ramp's op-type
+        # filter reads these codes, so each has to mean what it says:
+        #   XPBZ  business jet / corporate    (BBJ, or a class-A/B jet or turboprop
+        #                                      already filed as corporate)
+        #   XPGA  light general aviation      (class A/B, everything else)
+        #   XPGN  generic / unpainted airliner (class C and up)
+        # Boeing's house aircraft are the definition of generic and go the same way.
+        stem = os.path.splitext(f)[0]
+        if stem in ("757PW_static", "757PW_winglet_static", "757RR_static", "757RR_winglet_static"):
+            airline = "XPGN"                       # unmarked airliners misfiled under military
+        elif stem == "757_KAF_5701":
+            airline = "KAF"                        # Kazakhstan Air Force - a real operator, added to the directory
+        if airline in ("XPGA", "XPGN", "XPBZ", "BOE"):
+            if "BBJ" in (note or "") or airline == "XPBZ" or (airline == "BOE" and cls in "AB"):
+                airline = "XPBZ"
+            elif cls in "AB":
+                airline = "XPGA"
+            else:
+                airline = "XPGN"
+
         rows.append((typ or "????", cls, airline or "????", reg, ioc, note,
                      ranges.get(typ, "") if typ else "", hubs_cell(airline) if airline else "", rel))
 

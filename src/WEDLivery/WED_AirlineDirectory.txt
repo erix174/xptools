@@ -1518,3 +1518,4 @@ URF *** Private (PC-12) *** USA *** GA *** 0 ***
 WLC *** Welcome Air *** AUT *** Pax *** 0 *** LOWI
 WML *** Private (CL60) *** USA *** GA *** 0 ***
 HNA *** Hainan Airlines *** CHN *** Pax *** 0 *** ZJHK ZBAA
+KAF *** Kazakhstan Air Force *** KAZ *** Military *** 0 ***
