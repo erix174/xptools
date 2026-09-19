@@ -61,6 +61,22 @@
 #include <set>
 #include <ctime>
 
+// ONE DISPLAYED ROW. At file scope rather than inside the .cpp's anonymous
+// namespace so the pane can CACHE the assembled list: rebuilding it - 150-odd
+// operators, filtered, sorted and shuffled - was happening on every Draw, and
+// Draw runs every frame for as long as a card is animating under the cursor.
+enum WED_LiveryRowKind { wed_Row_Airline, wed_Row_Header, wed_Row_Gap, wed_Row_Divider, wed_Row_Note };
+
+struct WED_LiveryDisplayRow
+{
+	WED_LiveryRowKind	kind;
+	std::string			icao;			// lowercase, matches WED_RampPosition::CorrectAirlinesString's convention - wed_Row_Airline only
+	std::string			name;			// display name if known, else empty (falls back to just the code) - wed_Row_Airline only
+	std::string			header_text;	// wed_Row_Header only
+	int					hidden_count;	// wed_Row_Header only: rows a collapse is holding back
+	WED_LiveryDisplayRow() : kind(wed_Row_Airline), hidden_count(0) {}
+};
+
 class	IResolver;
 class	WED_Archive;
 class	WED_RampPosition;
@@ -541,6 +557,23 @@ private:
 	// is where the sub-rects are known) and rendered after the clip is popped.
 	// Empty means no tip.
 	std::string					mHoverTipText;
+
+	// ---- the assembled row list, cached ----
+	// Everything that reads the list goes through EnsureRows(). Rebuilding it costs
+	// a directory pass over ~150 operators plus a sort, a search filter and the
+	// per-airport shuffle, and it was being paid on every Draw - which, while a
+	// card animates under the cursor, is every frame.
+	//
+	// INVALIDATED EXPLICITLY, by SetRowsDirty(), from each of the handful of places
+	// that can change what the list contains. A cache that guesses when to refresh
+	// is worse than none: the failure is a list that silently disagrees with the
+	// document, and the layout and every hit test are derived from it.
+	std::vector<WED_LiveryDisplayRow>	mRows;
+	std::vector<bool>					mRowIsCard;
+	std::vector<std::string>			mRowIcaos;
+	bool								mRowsDirty;
+	void								EnsureRows(void);
+	void								SetRowsDirty(void) { mRowsDirty = true; }
 	int							mCycleShow;			// which livery is on the face
 	float						mCycleAccum;		// seconds since the last step
 

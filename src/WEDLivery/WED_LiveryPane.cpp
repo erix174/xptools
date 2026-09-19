@@ -129,8 +129,6 @@ namespace
 	// "not researched", "filtered out by the search box" and "the airline
 	// directory failed to load" were all indistinguishable from each other and
 	// from the section simply not existing.
-	enum WED_LiveryRowKind { wed_Row_Airline, wed_Row_Header, wed_Row_Gap, wed_Row_Divider, wed_Row_Note };
-
 	// What AppendAirlineSection() did, so the caller can tell an empty tier apart
 	// from a missing one.
 	enum WED_SectionResult {
@@ -138,15 +136,6 @@ namespace
 		sect_NoData,		// nothing to show in this tier at all - emitted nothing
 		sect_AllShownAbove,	// every code here already appeared in a higher tier - emitted nothing
 		sect_FilteredOut	// had rows, the search box removed them all - emitted a header + note
-	};
-	struct WED_LiveryDisplayRow
-	{
-		WED_LiveryRowKind	kind;
-		string				icao;			// lowercase, matches WED_RampPosition::CorrectAirlinesString's convention - wed_Row_Airline only
-		string				name;			// display name if known, else empty (falls back to just the code) - wed_Row_Airline only
-		string				header_text;	// wed_Row_Header only
-		int					hidden_count;	// wed_Row_Header only: rows a collapse is holding back
-		WED_LiveryDisplayRow() : kind(wed_Row_Airline), hidden_count(0) {}
 	};
 
 	// Case-insensitive substring test. `needle_lower` must already be
@@ -993,6 +982,7 @@ WED_LiveryPane::WED_LiveryPane(
 	mContentDragStartX(-1),		// declared later in the header (after mCachedStatusLines) -
 	mContentDragStartOffset(0),	// listed here anyway so all the "simple scalar" inits stay together
 	mCycleShow(0),
+	mRowsDirty(true),
 	mLastAnimClock(0),
 	mTrayHoverIdx(-1),
 	mHoverX(0),
@@ -1291,6 +1281,7 @@ void	WED_LiveryPane::ReceiveMessage(
 	else if (inMsg == GUI_TEXT_FIELD_TEXT_CHANGED && inSrc == mSearchField)
 	{
 		mSearchField->GetDescriptor(mSearchQuery);
+		SetRowsDirty();			// the query filters the list
 		Refresh();
 	}
 }
@@ -1314,6 +1305,8 @@ void	WED_LiveryPane::RebuildSelection(void)
 	// risk leaving the user scrolled past a short "Recommended"/"Manual" section (or
 	// the whole list) for the new selection. An unrelated Draw() call caused by
 	// something else entirely (e.g. just moving the mouse) leaves this alone.
+	SetRowsDirty();		// a new selection is a new list, always
+
 	if (mSelectedRamps != old_selection)
 	{
 		mScrollOffset = 0;
@@ -1390,6 +1383,32 @@ void	WED_LiveryPane::RebuildSelection(void)
 //
 // Obsolete liveries need no filtering here. R25 keeps them out of the index's
 // lookup tables entirely, so a query cannot return one.
+
+static void	CardFlags(const vector<WED_LiveryDisplayRow> & rows, vector<bool> & out);
+static void	RowIcaos (const vector<WED_LiveryDisplayRow> & rows, vector<string> & out);
+
+void	WED_LiveryPane::EnsureRows(void)
+{
+	if (!mRowsDirty) return;
+	mRowsDirty = false;
+
+	mRows.clear();
+	mRowIsCard.clear();
+	mRowIcaos.clear();
+	if (mSelectedRamps.empty()) return;
+
+	mRows = BuildCurrentDisplayRows(mSelectedRamps[0], mSortDescending,
+				gShowLiveryRecommendation != 0, mAirportDb, mCurrentAirportIcao,
+				mSearchQuery, mAirlineDirectory, mPopularAirlinesShuffleCache, AllOperators());
+	{ set<string> have; CardKeys(have); DropCardless(mRows, have); }
+	PruneEmptySections(mRows);
+	PinSelected(mRows, ParseCodes(mSelectedRamps[0]->GetAirlines()));
+	ApplyCollapse(mRows, mCollapsedSections);
+
+	CardFlags(mRows, mRowIsCard);
+	RowIcaos(mRows, mRowIcaos);
+}
+
 void	WED_LiveryPane::RebuildAirlineCards(void)
 {
 	mAirlineCards.clear();
@@ -2127,7 +2146,7 @@ int		WED_LiveryPane::RowForXY(int bounds[4], const vector<bool> & is_card,
 	if ((float) y > ContentTop(bounds)) return -1;	// above the content area entirely
 
 	vector<RowSlot> slots;
-	LayoutRows(bounds, is_card, tray_h, slots);
+	LayoutRows(bounds, mRowIsCard, tray_h, slots);
 
 	for (size_t i = 0; i < slots.size(); ++i)
 	{
@@ -3000,6 +3019,14 @@ int		WED_LiveryPane::ScrollWheel(int x, int y, int dist, int axis)
 {
 	if (axis != 0) return 0;
 
+	// ONLY THE CARD LIST SCROLLS, and only when the cursor is actually over it.
+	// This pane answered the wheel anywhere in the tab, so rolling over the size
+	// slider or the weight bars - controls with nothing scrollable about them -
+	// moved the list underneath instead of doing nothing, and the whole tab felt
+	// like one scrolling surface when only its bottom section is one.
+	int b[4];  GetBounds(b);
+	if ((float) y > ContentTop(b) || y < b[1]) return 0;
+
 	float line_h = GUI_GetLineHeight(font_UI_Basic);
 	float row_h  = line_h + 4;
 
@@ -3009,22 +3036,14 @@ int		WED_LiveryPane::ScrollWheel(int x, int y, int dist, int axis)
 	// a list whose content (602px) is shorter than its viewport (636px), i.e. one
 	// that cannot scroll at all. That is the jerk: a repaint per notch, changing
 	// nothing.
-	int    b[4];  GetBounds(b);
 	float  max_scroll = 0.0f;
 	if (!mSelectedRamps.empty())
 	{
-		vector<WED_LiveryDisplayRow> rows = BuildCurrentDisplayRows(mSelectedRamps[0], mSortDescending,
-											gShowLiveryRecommendation != 0, mAirportDb, mCurrentAirportIcao,
-											mSearchQuery, mAirlineDirectory, mPopularAirlinesShuffleCache, AllOperators());
-		{ set<string> have; CardKeys(have); DropCardless(rows, have); }
-		PruneEmptySections(rows);
-		PinSelected(rows, ParseCodes(mSelectedRamps[0]->GetAirlines()));
-		ApplyCollapse(rows, mCollapsedSections);
+		EnsureRows();
 
-		vector<bool> is_card;  vector<string> row_icaos;  vector<float> tray_h;
-		CardFlags(rows, is_card);  RowIcaos(rows, row_icaos);  TrayHeights(row_icaos, tray_h);
+		vector<float> tray_h;  TrayHeights(mRowIcaos, tray_h);
 		vector<RowSlot> slots;
-		float content_h = LayoutRows(b, is_card, tray_h, slots);
+		float content_h = LayoutRows(b, mRowIsCard, tray_h, slots);
 		float visible_h = ContentTop(b) - (float) b[1];
 		if (content_h > visible_h) max_scroll = content_h - visible_h;
 	}
@@ -3150,16 +3169,10 @@ int		WED_LiveryPane::MouseMove(int x, int y)
 	int row = -1;
 	if (!mSelectedRamps.empty() && !over_sort && !over_recommend && !over_clear)
 	{
-		vector<WED_LiveryDisplayRow> rows = BuildCurrentDisplayRows(mSelectedRamps[0], mSortDescending,
-											gShowLiveryRecommendation != 0, mAirportDb, mCurrentAirportIcao, mSearchQuery, mAirlineDirectory, mPopularAirlinesShuffleCache, AllOperators());
-		{ set<string> have; CardKeys(have); DropCardless(rows, have); }
-	PruneEmptySections(rows);
-	PinSelected(rows, ParseCodes(mSelectedRamps[0]->GetAirlines()));
-		ApplyCollapse(rows, mCollapsedSections);
-		vector<bool> is_card;  vector<string> row_icaos;  vector<float> tray_h;
-		CardFlags(rows, is_card);  RowIcaos(rows, row_icaos);  TrayHeights(row_icaos, tray_h);
-		int r = RowForXY(b, is_card, tray_h, x, y);
-		row = (r >= 0 && r < (int) rows.size() && rows[r].kind == wed_Row_Airline) ? r : -1;
+		EnsureRows();
+		vector<float> tray_h;  TrayHeights(mRowIcaos, tray_h);
+		int r = RowForXY(b, mRowIsCard, tray_h, x, y);
+		row = (r >= 0 && r < (int) mRows.size() && mRows[r].kind == wed_Row_Airline) ? r : -1;
 
 		// Hovering a card starts it cycling; leaving stops it and drops the card
 		// back to index 0. Keyed by icao so the cycle survives the row list being
@@ -3167,8 +3180,8 @@ int		WED_LiveryPane::MouseMove(int x, int y)
 		mHoverX = x; mHoverY = y;
 
 		vector<RowSlot> hover_slots;
-		LayoutRows(b, is_card, tray_h, hover_slots);
-		int tray_row = TrayRowForXY(row_icaos, hover_slots, x, y);
+		LayoutRows(b, mRowIsCard, tray_h, hover_slots);
+		int tray_row = TrayRowForXY(mRowIcaos, hover_slots, x, y);
 		if (tray_row != mTrayHoverIdx)
 		{
 			// Leaving a tray row resumes the sequence FROM that aircraft, so
@@ -3177,7 +3190,7 @@ int		WED_LiveryPane::MouseMove(int x, int y)
 			mTrayHoverIdx = tray_row;
 			changed = true;
 		}
-		string want = (row >= 0) ? rows[row].icao : string();
+		string want = (row >= 0) ? mRows[row].icao : string();
 		if (want != mCycleAirline)
 		{
 			mCycleAirline = want;
@@ -3337,14 +3350,8 @@ int		WED_LiveryPane::MouseDown(int x, int y, int button)
 	// cards ARE the rows, so restricting the gesture to "the cards" would have
 	// meant restricting it to most of the list and then stopping arbitrarily at a
 	// section header.
-	vector<WED_LiveryDisplayRow> rows = BuildCurrentDisplayRows(mSelectedRamps[0], mSortDescending,
-										gShowLiveryRecommendation != 0, mAirportDb, mCurrentAirportIcao, mSearchQuery, mAirlineDirectory, mPopularAirlinesShuffleCache, AllOperators());
-	{ set<string> have; CardKeys(have); DropCardless(rows, have); }
-	PruneEmptySections(rows);
-	PinSelected(rows, ParseCodes(mSelectedRamps[0]->GetAirlines()));
-	ApplyCollapse(rows, mCollapsedSections);
-	vector<bool> is_card;  vector<string> row_icaos;  vector<float> tray_h;
-	CardFlags(rows, is_card);  RowIcaos(rows, row_icaos);  TrayHeights(row_icaos, tray_h);
+	EnsureRows();
+	vector<float> tray_h;  TrayHeights(mRowIcaos, tray_h);
 
 	if (y <= ContentTop(b))
 	{
@@ -3353,9 +3360,9 @@ int		WED_LiveryPane::MouseDown(int x, int y, int button)
 		mContentDragStartOffset = mScrollOffset;
 	}
 
-	int row = RowForXY(b, is_card, tray_h, x, y);
-	mTrackRow = (row >= 0 && row < (int) rows.size() &&
-				(rows[row].kind == wed_Row_Airline || rows[row].kind == wed_Row_Header)) ? row : -1;
+	int row = RowForXY(b, mRowIsCard, tray_h, x, y);
+	mTrackRow = (row >= 0 && row < (int) mRows.size() &&
+				(mRows[row].kind == wed_Row_Airline || mRows[row].kind == wed_Row_Header)) ? row : -1;
 	Refresh();
 	return 1;
 }
@@ -3518,6 +3525,7 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 		SortButtonRect(b, r);
 		if (x >= r[0] && x <= r[2] && y >= r[1] && y <= r[3])
 			mSortDescending = !mSortDescending;
+			SetRowsDirty();
 		mTrackSortButton = false;
 		Refresh();
 		return;
@@ -3531,6 +3539,7 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 			&& AirportIsCommercial(mAirportDb, mCurrentAirportIcao))
 		{
 			gShowLiveryRecommendation = !gShowLiveryRecommendation;
+			SetRowsDirty();
 		}
 		mTrackRecommendButton = false;
 		Refresh();
@@ -3563,23 +3572,18 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 		return;
 	}
 
-	vector<WED_LiveryDisplayRow> rows = BuildCurrentDisplayRows(mSelectedRamps[0], mSortDescending,
-										gShowLiveryRecommendation != 0, mAirportDb, mCurrentAirportIcao, mSearchQuery, mAirlineDirectory, mPopularAirlinesShuffleCache, AllOperators());
-	{ set<string> have; CardKeys(have); DropCardless(rows, have); }
-	PruneEmptySections(rows);
-	PinSelected(rows, ParseCodes(mSelectedRamps[0]->GetAirlines()));
-	ApplyCollapse(rows, mCollapsedSections);
-	vector<bool> is_card;  vector<string> row_icaos;  vector<float> tray_h;
-	CardFlags(rows, is_card);  RowIcaos(rows, row_icaos);  TrayHeights(row_icaos, tray_h);
+	EnsureRows();
+	vector<float> tray_h;  TrayHeights(mRowIcaos, tray_h);
 
-	if (RowForXY(b, is_card, tray_h, x, y) == mTrackRow &&
-		mTrackRow >= 0 && mTrackRow < (int) rows.size() && rows[mTrackRow].kind == wed_Row_Header)
+	if (RowForXY(b, mRowIsCard, tray_h, x, y) == mTrackRow &&
+		mTrackRow >= 0 && mTrackRow < (int) mRows.size() && mRows[mTrackRow].kind == wed_Row_Header)
 	{
-		const string & h = rows[mTrackRow].header_text;
+		const string & h = mRows[mTrackRow].header_text;
 		if (!h.empty() && h != "Selected")		// see the draw side - not a collapsible tier
 		{
 			if (mCollapsedSections.count(h)) mCollapsedSections.erase(h);
 			else                             mCollapsedSections.insert(h);
+			SetRowsDirty();
 		}
 		mTrackRow = -1;
 		Refresh();
@@ -3588,12 +3592,12 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 
 	// The lock badge and the tray tab sit ON the card, so they are tested first -
 	// otherwise either one would also toggle the operator underneath it.
-	if (RowForXY(b, is_card, tray_h, x, y) == mTrackRow &&
-		mTrackRow >= 0 && mTrackRow < (int) rows.size() && rows[mTrackRow].kind == wed_Row_Airline)
+	if (RowForXY(b, mRowIsCard, tray_h, x, y) == mTrackRow &&
+		mTrackRow >= 0 && mTrackRow < (int) mRows.size() && mRows[mTrackRow].kind == wed_Row_Airline)
 	{
 		vector<RowSlot> slots;
-		LayoutRows(b, is_card, tray_h, slots);
-		const string & icao = rows[mTrackRow].icao;
+		LayoutRows(b, mRowIsCard, tray_h, slots);
+		const string & icao = mRows[mTrackRow].icao;
 		const AirlineCard * tc = CardFor(icao);
 		size_t ac_livery_count = tc ? tc->abs_paths.size() : 0;
 		float lr[4], tr[4];
@@ -3643,7 +3647,7 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 		}
 	}
 
-	if (RowForXY(b, is_card, tray_h, x, y) == mTrackRow && mTrackRow < (int) rows.size() && rows[mTrackRow].kind == wed_Row_Airline)
+	if (RowForXY(b, mRowIsCard, tray_h, x, y) == mTrackRow && mTrackRow < (int) mRows.size() && mRows[mTrackRow].kind == wed_Row_Airline)
 	{
 		// SCROLL ANCHORING. Ticking a card can create or grow the "Selected"
 		// section ABOVE the viewport, and every row below it then slides down by
@@ -3656,31 +3660,25 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 		// the list change, then shift the scroll offset by however far that same
 		// card moved. It ends up exactly where it was, whatever happened above it.
 		vector<RowSlot> before;
-		LayoutRows(b, is_card, tray_h, before);
-		const string anchor_icao = rows[mTrackRow].icao;
+		LayoutRows(b, mRowIsCard, tray_h, before);
+		const string anchor_icao = mRows[mTrackRow].icao;
 		const float  anchor_y    = before[mTrackRow].top;
 
 		ToggleCode(anchor_icao);
+		SetRowsDirty();
 
-		vector<WED_LiveryDisplayRow> rows2 = BuildCurrentDisplayRows(mSelectedRamps[0], mSortDescending,
-											gShowLiveryRecommendation != 0, mAirportDb, mCurrentAirportIcao,
-											mSearchQuery, mAirlineDirectory, mPopularAirlinesShuffleCache, AllOperators());
-		{ set<string> have; CardKeys(have); DropCardless(rows2, have); }
-		PruneEmptySections(rows2);
-		PinSelected(rows2, ParseCodes(mSelectedRamps[0]->GetAirlines()));
-		ApplyCollapse(rows2, mCollapsedSections);
+		EnsureRows();
 
-		vector<bool> is_card2;  vector<string> icaos2;  vector<float> tray2;
-		CardFlags(rows2, is_card2);  RowIcaos(rows2, icaos2);  TrayHeights(icaos2, tray2);
+		vector<float> tray2;  TrayHeights(mRowIcaos, tray2);
 		vector<RowSlot> after;
-		LayoutRows(b, is_card2, tray2, after);
+		LayoutRows(b, mRowIsCard, tray2, after);
 
 		// The LAST match, not the first: ticking mirrors a copy into "Selected" at
 		// the top, and the card the user actually clicked is the original further
 		// down. Anchoring on the copy would jump the list to the top instead.
 		int found = -1;
-		for (size_t i = 0; i < rows2.size(); ++i)
-			if (rows2[i].kind == wed_Row_Airline && rows2[i].icao == anchor_icao) found = (int) i;
+		for (size_t i = 0; i < mRows.size(); ++i)
+			if (mRows[i].kind == wed_Row_Airline && mRows[i].icao == anchor_icao) found = (int) i;
 
 		if (found >= 0)
 		{
@@ -4404,7 +4402,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		// One flag drives both. The cards and the readout are answers to the
 		// same query, so recomputing one without the other is exactly how they
 		// would drift back into contradicting each other.
-		if (mCoverageDirty) { RecomputeCoverage(); RebuildAirlineCards(); }
+		if (mCoverageDirty) { RecomputeCoverage(); RebuildAirlineCards(); SetRowsDirty(); }
 
 		// zone background, matching the slider's so the two read as one stack
 		state->SetState(0,0,0,0,0,0,0);
@@ -4825,12 +4823,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		}
 		else
 		{
-			vector<WED_LiveryDisplayRow> rows = BuildCurrentDisplayRows(mSelectedRamps[0], mSortDescending,
-												gShowLiveryRecommendation != 0, mAirportDb, mCurrentAirportIcao, mSearchQuery, mAirlineDirectory, mPopularAirlinesShuffleCache, AllOperators());
-			{ set<string> have; CardKeys(have); DropCardless(rows, have); }
-	PruneEmptySections(rows);
-	PinSelected(rows, ParseCodes(mSelectedRamps[0]->GetAirlines()));
-			ApplyCollapse(rows, mCollapsedSections);
+			EnsureRows();
 			// How many of the selected ramps carry each code, computed ONCE per draw.
 			// Asking per row would be O(rows x ramps) every frame - a few hundred
 			// ramps against a few hundred rows is tens of thousands of string
@@ -4852,26 +4845,21 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			// away most of it) just as easily as a resize can. Airline rows are
 			// cards and are several lines tall, so the total comes from the layout
 			// pass rather than from a row count times a row height.
-			vector<bool>  is_card;
-			vector<float> tray_h;
-			vector<string> row_icaos;
-			CardFlags(rows, is_card);
-			RowIcaos(rows, row_icaos);
-			TrayHeights(row_icaos, tray_h);
+			vector<float> tray_h;  TrayHeights(mRowIcaos, tray_h);
 
 			vector<RowSlot> slots;
-			float content_h  = LayoutRows(b, is_card, tray_h, slots);
+			float content_h  = LayoutRows(b, mRowIsCard, tray_h, slots);
 			float visible_h  = top - (float) b[1];
 			float max_scroll = (content_h > visible_h) ? (content_h - visible_h) : 0.0f;
 			if (mScrollOffset < 0)          mScrollOffset = 0;
 			if (mScrollOffset > max_scroll)
 			{
 				LOG_MSG("I/LiveryScroll clamp %.0f -> %.0f  (content=%.0f visible=%.0f rows=%d)\n",
-						mScrollOffset, max_scroll, content_h, visible_h, (int) rows.size());
+						mScrollOffset, max_scroll, content_h, visible_h, (int) mRows.size());
 				mScrollOffset = max_scroll;
 			}
 			if (mScrollOffset != 0.0f)		// the clamp may have moved it - relay out
-				content_h = LayoutRows(b, is_card, tray_h, slots);
+				content_h = LayoutRows(b, mRowIsCard, tray_h, slots);
 
 			// Thumbnails are rendered at most kMaxRendersPerFrame per frame and
 			// everything NOT on screen is evicted at the end, so scrolling a long
@@ -4928,12 +4916,12 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			{
 				float keep_hi = top + kOffscreenMargin;
 				float keep_lo = (float) b[1] - kOffscreenMargin;
-				for (size_t vi = 0; vi < rows.size(); ++vi)
+				for (size_t vi = 0; vi < mRows.size(); ++vi)
 				{
-					if (rows[vi].kind != wed_Row_Airline)  continue;
+					if (mRows[vi].kind != wed_Row_Airline)  continue;
 					if (slots[vi].bot > keep_hi)           continue;
 					if (slots[vi].top < keep_lo)           break;		// everything below is further away
-					const AirlineCard * ac = CardFor(rows[vi].icao);
+					const AirlineCard * ac = CardFor(mRows[vi].icao);
 					if (!ac || ac->abs_paths.empty()) continue;
 
 					// EVERY livery of the card being cycled, not just the one on its
@@ -4942,7 +4930,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 					// wrapping round re-rendered it - 44 renders for 12 objects in one
 					// short session. The parse is cached by then, but the texture
 					// allocation and the offscreen pass are not.
-					if (rows[vi].icao == mCycleAirline)
+					if (mRows[vi].icao == mCycleAirline)
 						for (size_t k = 0; k < ac->abs_paths.size(); ++k)
 							keep_alive_paths.insert(ac->abs_paths[k]);
 					else
@@ -4950,9 +4938,9 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 				}
 			}
 
-			for (size_t vi = 0; vi < rows.size(); ++vi)
+			for (size_t vi = 0; vi < mRows.size(); ++vi)
 			{
-				const WED_LiveryDisplayRow & row = rows[vi];
+				const WED_LiveryDisplayRow & row = mRows[vi];
 				float row_top = slots[vi].top;
 				float row_bot = slots[vi].bot;
 				// OVERLAP, not containment. Testing "is it entirely inside" made a
@@ -5034,8 +5022,8 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 					}
 
 					keep_alive_paths.insert(ac->abs_paths[show]);
-					float tray_frac = (rows[vi].icao == mTrayAirline)    ? mTrayOpen
-									: (rows[vi].icao == mTrayClosing)    ? mTrayClosingOpen
+					float tray_frac = (mRows[vi].icao == mTrayAirline)    ? mTrayOpen
+									: (mRows[vi].icao == mTrayClosing)    ? mTrayClosingOpen
 									: 0.0f;
 
 					DrawAirlineCard(state, slots[vi], *ac, show,
@@ -5178,7 +5166,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			// moves, so an idle pane goes quiet.
 			if (StepAnimation()) Refresh();
 
-			if (rows.empty())
+			if (mRows.empty())
 			{
 				// Name the actual reason. One fixed sentence about operation types
 				// used to be shown for every empty list, including one the user had
