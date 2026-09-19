@@ -598,6 +598,52 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
 #               it from the end, which is what let schema 2 add columns without
 #               breaking a schema 1 reader.
 #
+# OPERATOR RECORD, one per operator, in the block ahead of the livery rows:
+#     OPERATOR *** <CODE> *** <NAME> *** <IOC CTY> *** <Pax|Cargo|GA|Military|Gov> *** <FLEET> *** <HUB ICAOs>
+# The block is the operator directory BOTH programs read - WED's recommendation
+# tiers (Popular, Same Country) and the ramp's operation-type filter come from
+# here - so it carries operators the sim has no paint for yet. A record without
+# a livery row is normal and is kept across regeneration.
+#   CODE        See the code conventions below.
+#   IOC CTY     Country the operator is registered in, IOC 3-letter code.
+#   FLEET       Aircraft in service; 0 means "not researched", not "none". It
+#               only ranks the Popular tier, so an approximate number is fine.
+#   HUB ICAOs   The operator's hubs and main bases as ICAO codes, space
+#               separated - ALL of the big ones, not just the largest. The
+#               generator resolves them against the install's Global Airports
+#               apt.dat and writes the coordinates into the HUBS column of that
+#               operator's livery rows; this is the only place to edit them.
+#               Empty = unknown = that operator is never range-filtered.
+#               A hub belongs in the operator's own country in almost every
+#               case. Where it does not, check you have the right company:
+#               subsidiaries and franchises (Jetstar Asia/Japan, Tigerair
+#               Taiwan, Spring Japan, Ryanair's Malta Air and Buzz AOCs,
+#               Atlas Air's customer brands) hold their OWN code and their own
+#               base, and the parent's hub is the classic wrong answer.
+#
+# CODE CONVENTIONS - a code's SHAPE says where it came from, so a human
+# skimming the file can tell a researched code from a placeholder at a glance:
+#   XXX     3 letters. The operator's real ICAO airline designator.
+#   XXX_F   5 chars. The all-cargo division of XXX, which in the real world
+#           flies under the PARENT's designator and so has no code of its own:
+#           AFR_F Air France Cargo, KLM_F, SVA_F Saudia Cargo, ICE_F, ASA_F.
+#           This file needs one record per distinct livery-bearing brand, and
+#           a shared designator would otherwise collapse two of them into one.
+#   XXX_1   5 chars, _1 _2 _3 ... A numbered sibling of XXX: a separate brand
+#   XXX_2   flying on XXX's designator where _F does not fit - a regional
+#           brand (DTR_1 DAT Volidellemarche, DTR_2 DAT Volidisicilia) or an
+#           e-commerce/wet-lease customer whose paint rides on the operating
+#           carrier's code (GTI_1 Flexport on Atlas Air, HUA_1 ZTO Express).
+#           The digit is allocation order within that parent, nothing more.
+#   XPnn    4 chars, XPA0..XPA9, XPB0..XPB9, XPC0... A real operator for which
+#           no ICAO designator could be confirmed. Allocated sequentially as
+#           assets arrive, so the digits carry no meaning; the moment a real
+#           code is confirmed, replace the code here and in every livery row.
+#   XPGA    The four RESERVED generic pseudo-operators - not companies, and
+#   XPBZ    never to be renumbered: XPGA light aircraft, XPBZ business jet,
+#   XPMI    XPMI military, XPGN unpainted/house-colours airliner. They exist so
+#   XPGN    every asset in the file has an operator record and therefore an
+#           answer for the ramp's operation-type filter.
 # SPAWN RULE, applied by X-Plane to each candidate row at a stand:
 #     if RANGE_KM is empty or HUBS is empty     -> eligible
 #     d = min over HUBS of greatcircle(hub, stand position from the 1300 row)
