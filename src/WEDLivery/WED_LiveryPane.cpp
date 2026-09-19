@@ -4553,7 +4553,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 						snprintf(head, sizeof(head), "This stand parks nothing - nothing listed can reach it");
 						head_col = col_warn;
 						snprintf(detail, sizeof(detail),
-							"The %d listed operators do fly size %s, but none of those aircraft has the range to get here from a hub. List an operator based nearer.",
+							"The %d listed operators fly size %s, but none can reach here from a hub. List one based nearer.",
 							mCoverage.airlines_listed, range);
 						break;
 
@@ -4634,20 +4634,29 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		// What the range rule removed at THIS stand, named. Without this the author
 		// sees United's card shrink to a 777 and has no way to know whether that is
 		// the index, the weights, or a bug. One clause per operator, types joined.
+		// Only the operators LISTED ON THIS STAND. mRangeHidden is filled for every
+		// card the pane builds - the whole index - so unfiltered it opened with
+		// American and Cargojet on a stand that lists Southwest and easyJet. The
+		// line exists to explain why a listed operator's card shrank or vanished;
+		// what happened to operators the author never chose is not its business.
 		string range_line;
-		if (!mRangeHidden.empty())
+		if (!mRangeHidden.empty() && mSelectedRamps.size() == 1)
 		{
-			string s = "Beyond range from their hubs, so not offered here:";
+			set<string> listed_lc = ParseCodes(mSelectedRamps[0]->GetAirlines());
+			string s;
 			int n = 0;
-			for (map<string, vector<string> >::const_iterator i = mRangeHidden.begin(); i != mRangeHidden.end(); ++i, ++n)
+			for (map<string, vector<string> >::const_iterator i = mRangeHidden.begin(); i != mRangeHidden.end(); ++i)
 			{
+				string lc = i->first;
+				for (size_t c = 0; c < lc.size(); ++c) lc[c] = (char) tolower((unsigned char) lc[c]);
+				if (!listed_lc.count(lc)) continue;
 				if (n == 4) { s += " ..."; break; }
-				s += (n ? "; " : " ") + i->first + " ";
+				s += (n ? "; " : "") + i->first + " ";
 				for (size_t k = 0; k < i->second.size(); ++k)
 					s += (k ? "/" : "") + i->second[k];
+				++n;
 			}
-			s += ".";
-			range_line = s;		// its own line - appended to detail it ran off the right edge
+			if (n) range_line = "Out of range from their hubs, not offered: " + s + ".";
 		}
 
 		// §4.5: the readout MUST name what it resolved against. Appended rather
