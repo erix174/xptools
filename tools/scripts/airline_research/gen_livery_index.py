@@ -650,7 +650,11 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
     PSEUDO = {"XPGA": ("Generic - light aircraft", "GA"), "XPBZ": ("Generic - business jet", "GA"),
               "XPMI": ("Generic - military", "Military"), "XPGN": ("Generic - unpainted airliner", "Pax")}
     o.write("# ---- operators -------------------------------------------------------------\n")
-    for code in sorted({r[2] for r in rows if r[2] != "????"}):
+    # Every operator already in the file survives the merge whether or not a
+    # livery row names it: the section is the global operator directory the
+    # ramp's recommendation tiers (Popular, Same Country) draw from, and a
+    # record is worth keeping for an airline the sim has no paint for yet.
+    for code in sorted({r[2] for r in rows if r[2] != "????"} | set(existing_ops)):
         if code in existing_ops:
             rec = existing_ops[code]
             o.write(fmt_operator([code] + rec))
