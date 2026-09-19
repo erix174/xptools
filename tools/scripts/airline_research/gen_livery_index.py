@@ -330,7 +330,7 @@ for dp, _dn, fn in os.walk(ROOT):
                               ("corporate_biz", "XPGA")):
                 if c in cats: airline = pseudo; break
             else:
-                if cats: airline = "XPGN"      # generic/unpainted airliner or cargo
+                if cats: airline = "XPZZ"      # generic/unpainted airliner or cargo
 
         m = REG.search(f)
         reg = m.group(1) if m else ""
@@ -385,20 +385,23 @@ for dp, _dn, fn in os.walk(ROOT):
         #   XPGA  general aviation            (light aircraft AND business jets -
         #                                      the ramp has one GA operation type,
         #                                      so splitting them bought nothing)
-        #   XPGN  generic / unpainted airliner (class C and up, no BBJ marking)
+        #   XPZZ  generic / unpainted airliner (class C and up, no BBJ marking)
+        # An UNPAINTED airframe goes to the pseudo-operator matching what it IS,
+        # not to one "white" bucket: a white light aircraft is XPGA, a white
+        # airliner is XPZZ, a bare military airframe is XPMI.
         # Boeing's house aircraft are the definition of generic and go the same way.
         stem = os.path.splitext(f)[0]
         if stem in ("757PW_static", "757PW_winglet_static", "757RR_static", "757RR_winglet_static"):
-            airline = "XPGN"                       # unmarked airliners misfiled under military
+            airline = "XPZZ"                       # unmarked airliners misfiled under military
         elif stem == "757_KAF_5701":
             airline = "KAF"                        # Kazakhstan Air Force - a real operator, added to the directory
-        if airline in ("XPGA", "XPGN", "BOE"):
+        if airline in ("XPGA", "XPZZ", "BOE"):
             if "BBJ" in (note or "") or "BBJ" in stem.upper() or (airline == "BOE" and cls in "AB"):
                 airline = "XPGA"
             elif cls in "AB":
                 airline = "XPGA"
             else:
-                airline = "XPGN"
+                airline = "XPZZ"
 
         rows.append((typ or "????", cls, airline or "????", reg, ioc, note,
                      ranges.get(typ, "") if typ else "",
@@ -489,7 +492,7 @@ def op_class_for(code):
     a = airlines.get(code)
     return (a[3] if a and len(a) > 3 and a[3] else "Pax")
 
-PSEUDO_OP = {"XPGA": "GA", "XPMI": "Military", "XPGN": "Pax"}
+PSEUDO_OP = {"XPGA": "GA", "XPMI": "Military", "XPZZ": "Pax"}
 
 merged, kept, added = [], 0, 0
 for r in rows:
@@ -640,12 +643,20 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
 #           assets arrive, so the digits carry no meaning; the moment a real
 #           code is confirmed, replace the code here and in every livery row.
 #   XPGA    The three RESERVED generic pseudo-operators - not companies, and
-#   XPMI    never to be renumbered: XPGA general aviation, XPMI military, XPGN
-#   XPGN    unpainted/house-colours airliner. They exist so every asset in the
-#           file has an operator record and therefore an answer for the ramp's
-#           operation-type filter. They are also the only records with no
+#   XPMI    never to be renumbered: XPGA general aviation, XPMI military,
+#   XPZZ    XPZZ unpainted/house-colours airliner. They exist so every asset in
+#           the file has an operator record and therefore an answer for the
+#           ramp's operation-type filter. They are also the only records with no
 #           country: a generic has no nationality, which is why the reader
-#           exempts an XP code from the country requirement.
+#           exempts these three codes from the country requirement.
+#           An unpainted airframe takes the code for what it IS - a white light
+#           aircraft is XPGA, a white airliner XPZZ, a bare military airframe
+#           XPMI - so the operation-type filter still answers correctly.
+#           XPZZ IS NEVER PLACED AUTOMATICALLY. It sorts last everywhere it
+#           appears, and any auto-fill pass must skip it: it exists so a human
+#           can deliberately park a white airframe, and if a machine could pick
+#           it, every airport in the world would sprout white 757s. The Z's are
+#           the reminder - the code sorts last on purpose.
 #           There was a fourth, XPBZ for business jets, retired 2026-09-19:
 #           the ramp offers one General Aviation operation type, so a light
 #           aircraft and a business jet were never treated differently.
@@ -699,7 +710,7 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
             out += "***\t"; col += 4
         return (out + cells[5] if cells[5] else out[:-1]) + "\n"
     PSEUDO = {"XPGA": ("Generic - general aviation", "GA"),
-              "XPMI": ("Generic - military", "Military"), "XPGN": ("Generic - unpainted airliner", "Pax")}
+              "XPMI": ("Generic - military", "Military"), "XPZZ": ("Generic - unpainted airliner", "Pax")}
     o.write("# ---- operators -------------------------------------------------------------\n")
     # Every operator already in the file survives the merge whether or not a
     # livery row names it: the section is the global operator directory the

@@ -1635,6 +1635,39 @@ one answer for everything in the file. A reader that does not know the record
 kind skips it: a livery reader skips `OPERATOR`, and the operator reader skips
 livery rows because their fourth cell is a registration, not a class.
 
+### 6.7c Reserved pseudo-operators, and the one that is never placed for you
+
+Three codes stand in for an operator that does not exist, so that every asset
+in the file still has an operator record and therefore an answer for the ramp's
+operation-type filter:
+
+| code | stands for | op class |
+|------|------------|----------|
+| `XPGA` | general aviation - light aircraft and business jets alike | GA |
+| `XPMI` | military | Military |
+| `XPZZ` | unpainted / house-colours airliner | Pax |
+
+They are the only records with an empty country, because a generic has no
+nationality; the reader exempts exactly these three from the country
+requirement, and nothing else.
+
+An **unpainted** airframe takes the code for what it *is*, not a single "white"
+bucket: a white light aircraft is `XPGA`, a white airliner `XPZZ`, a bare
+military airframe `XPMI`. Otherwise a white Cessna would answer the Airline
+filter and a white 757 the GA one.
+
+**`XPZZ` is never placed automatically.** It sorts below every other operator
+in the picker whichever way the sort arrow points, and any auto-fill pass that
+populates stands must skip it. It exists so a person can deliberately park an
+unpainted airframe. If a machine could pick it, every airport in the world
+would sprout white 757s - the fallback would become the most common aircraft
+in the sim. The Z's are the mnemonic: the code sorts last on purpose.
+
+`XPBZ`, a fourth code for business jets, was retired 2026-09-19. The ramp
+offers one General Aviation operation type, so a light aircraft and a business
+jet were never once treated differently - the split cost a code to remember and
+bought nothing.
+
 **The index is the only file either program reads, and it is the file that is
 maintained.** There is no WED-side directory and no fallback: a second source
 that only kicks in when the first is missing rots between releases unnoticed.

@@ -180,10 +180,22 @@ namespace
 		return a.icao < b.icao;
 	}
 
+	// XPZZ, the unpainted airliner, sinks to the bottom of every list whichever
+	// way the sort arrow points. It is a fallback, not a choice - offering a
+	// white 757 above a real operator is the picker answering the wrong
+	// question first, and at a busy airport it would be the first thing seen.
+	// The rows carry the code lowercased (see r.icao above).
+	bool NotTheUnpaintedAirliner(const WED_LiveryDisplayRow & r)
+	{
+		return r.icao != "xpzz";
+	}
+
 	void SortAirlineRows(vector<WED_LiveryDisplayRow> & rows, bool descending)
 	{
 		std::sort(rows.begin(), rows.end(), CompareRowsByIcao);
 		if (descending) std::reverse(rows.begin(), rows.end());
+		// stable_partition, so both groups keep the order the sort just gave them
+		std::stable_partition(rows.begin(), rows.end(), NotTheUnpaintedAirliner);
 	}
 
 
@@ -1477,7 +1489,7 @@ WED_LiveryPane::Allow	WED_LiveryPane::LiveryAllowedHere(const WED_LiveryIndexEnt
 // Which operation classes a ramp's operation type admits. Pseudo-codes are the
 // index's own (see WED_LiveryIndex.h): XPGA general aviation - light aircraft
 // and business jets alike, since the ramp draws no distinction between them -
-// XPMI military, and XPGN a generic unpainted airliner any commercial stand may
+// XPMI military, and XPZZ a generic unpainted airliner any commercial stand may
 // use. A code this function does not know still gets an answer from its
 // operator record's OP column, so retiring a pseudo-code costs nothing.
 bool	WED_LiveryPane::OperatorMatchesRampOp(const string & code_uc, int ramp_op) const
@@ -1486,7 +1498,7 @@ bool	WED_LiveryPane::OperatorMatchesRampOp(const string & code_uc, int ramp_op) 
 
 	if (code_uc == "XPGA")                      return ramp_op == ramp_operation_GeneralAviation;
 	if (code_uc == "XPMI")                      return ramp_op == ramp_operation_Military;
-	if (code_uc == "XPGN")                      return ramp_op == ramp_operation_Airline || ramp_op == ramp_operation_Cargo;
+	if (code_uc == "XPZZ")                      return ramp_op == ramp_operation_Airline || ramp_op == ramp_operation_Cargo;
 
 	WED_AirlineDirectoryEntry e;
 	if (!mAirlineDirectory.Lookup(code_uc, e))
