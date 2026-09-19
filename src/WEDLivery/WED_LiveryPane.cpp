@@ -1315,7 +1315,19 @@ void	WED_LiveryPane::RebuildSelection(void)
 	// the whole list) for the new selection. An unrelated Draw() call caused by
 	// something else entirely (e.g. just moving the mouse) leaves this alone.
 	if (mSelectedRamps != old_selection)
+	{
 		mScrollOffset = 0;
+
+		// The lock, the open tray and the running slideshow are all statements
+		// about the stand being edited, not about the document. Carrying them to a
+		// different stand would dim a list the user has not touched yet, and the
+		// lock in particular would arrive with no indication of where it came from.
+		mLockedAirline.clear();
+		mTrayAirline.clear();   mTrayOpen = 0.0f;
+		mTrayClosing.clear();   mTrayClosingOpen = 0.0f;
+		mCycleAirline.clear();  mCycleShow = 0;  mCycleAccum = 0.0f;
+		mTrayHoverIdx = -1;
+	}
 
 	// No more SetPaneEnabled() lock - the tab stays clickable even with
 	// nothing selected (the greyed-out mask + warning text in Draw() carries
@@ -2399,29 +2411,19 @@ void	WED_LiveryPane::DrawHoverTip(GUI_GraphState * state, int b[4])
 // -1 when no tray is open, when the point is elsewhere, or while the tray is
 // still moving: a target sliding under the cursor is not a target, and treating
 // it as one makes the preview flicker between aircraft as the drawer extends.
-int		WED_LiveryPane::TrayRowForXY(int bounds[4], int x, int y)
+// Takes the caller's layout rather than building its own. MouseMove had already
+// assembled the row list - 150-odd operators, sorted and filtered - and this
+// rebuilt the identical thing a second time on every single mouse move.
+int		WED_LiveryPane::TrayRowForXY(const vector<string> & row_icaos,
+									 const vector<RowSlot> & slots, int x, int y)
 {
 	if (mTrayAirline.empty() || mTrayOpen < 1.0f) return -1;
 	const AirlineCard * ac = CardFor(mTrayAirline);
 	if (!ac) return -1;
 
-	if (mSelectedRamps.empty()) return -1;
-	vector<WED_LiveryDisplayRow> rows = BuildCurrentDisplayRows(mSelectedRamps[0], mSortDescending,
-										gShowLiveryRecommendation != 0, mAirportDb, mCurrentAirportIcao,
-										mSearchQuery, mAirlineDirectory, mPopularAirlinesShuffleCache, AllOperators());
-	{ set<string> have; CardKeys(have); DropCardless(rows, have); }
-	PruneEmptySections(rows);
-	PinSelected(rows, ParseCodes(mSelectedRamps[0]->GetAirlines()));
-	ApplyCollapse(rows, mCollapsedSections);
-
-	vector<bool> is_card;  vector<string> row_icaos;  vector<float> tray_h;
-	CardFlags(rows, is_card);  RowIcaos(rows, row_icaos);  TrayHeights(row_icaos, tray_h);
-	vector<RowSlot> slots;
-	LayoutRows(bounds, is_card, tray_h, slots);
-
-	for (size_t vi = 0; vi < rows.size(); ++vi)
+	for (size_t vi = 0; vi < row_icaos.size() && vi < slots.size(); ++vi)
 	{
-		if (rows[vi].kind != wed_Row_Airline || rows[vi].icao != mTrayAirline) continue;
+		if (row_icaos[vi] != mTrayAirline) continue;
 		const RowSlot & sl = slots[vi];
 		if ((float) x < sl.x0 || (float) x > sl.x1) continue;
 
@@ -3164,7 +3166,9 @@ int		WED_LiveryPane::MouseMove(int x, int y)
 		// rebuilt underneath it, which happens on this very call.
 		mHoverX = x; mHoverY = y;
 
-		int tray_row = TrayRowForXY(b, x, y);
+		vector<RowSlot> hover_slots;
+		LayoutRows(b, is_card, tray_h, hover_slots);
+		int tray_row = TrayRowForXY(row_icaos, hover_slots, x, y);
 		if (tray_row != mTrayHoverIdx)
 		{
 			// Leaving a tray row resumes the sequence FROM that aircraft, so
@@ -3633,7 +3637,6 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 				if (!mTrayAirline.empty()) { mTrayClosing = mTrayAirline; mTrayClosingOpen = mTrayOpen; }
 				mTrayAirline = icao;  mTrayOpen = 0.0f;
 			}
-			Refresh();
 			mTrackRow = -1;
 			Refresh();
 			return;
@@ -3641,7 +3644,50 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 	}
 
 	if (RowForXY(b, is_card, tray_h, x, y) == mTrackRow && mTrackRow < (int) rows.size() && rows[mTrackRow].kind == wed_Row_Airline)
-		ToggleCode(rows[mTrackRow].icao);
+	{
+		// SCROLL ANCHORING. Ticking a card can create or grow the "Selected"
+		// section ABOVE the viewport, and every row below it then slides down by
+		// that much - so the card you just clicked walks out from under the cursor
+		// and the whole page appears to jump. The height change is real and wanted;
+		// what is not wanted is the viewport staying still while the content moves
+		// past it.
+		//
+		// So the clicked card is the anchor: remember where it sits on screen, let
+		// the list change, then shift the scroll offset by however far that same
+		// card moved. It ends up exactly where it was, whatever happened above it.
+		vector<RowSlot> before;
+		LayoutRows(b, is_card, tray_h, before);
+		const string anchor_icao = rows[mTrackRow].icao;
+		const float  anchor_y    = before[mTrackRow].top;
+
+		ToggleCode(anchor_icao);
+
+		vector<WED_LiveryDisplayRow> rows2 = BuildCurrentDisplayRows(mSelectedRamps[0], mSortDescending,
+											gShowLiveryRecommendation != 0, mAirportDb, mCurrentAirportIcao,
+											mSearchQuery, mAirlineDirectory, mPopularAirlinesShuffleCache, AllOperators());
+		{ set<string> have; CardKeys(have); DropCardless(rows2, have); }
+		PruneEmptySections(rows2);
+		PinSelected(rows2, ParseCodes(mSelectedRamps[0]->GetAirlines()));
+		ApplyCollapse(rows2, mCollapsedSections);
+
+		vector<bool> is_card2;  vector<string> icaos2;  vector<float> tray2;
+		CardFlags(rows2, is_card2);  RowIcaos(rows2, icaos2);  TrayHeights(icaos2, tray2);
+		vector<RowSlot> after;
+		LayoutRows(b, is_card2, tray2, after);
+
+		// The LAST match, not the first: ticking mirrors a copy into "Selected" at
+		// the top, and the card the user actually clicked is the original further
+		// down. Anchoring on the copy would jump the list to the top instead.
+		int found = -1;
+		for (size_t i = 0; i < rows2.size(); ++i)
+			if (rows2[i].kind == wed_Row_Airline && rows2[i].icao == anchor_icao) found = (int) i;
+
+		if (found >= 0)
+		{
+			mScrollOffset += anchor_y - after[found].top;
+			if (mScrollOffset < 0) mScrollOffset = 0;	// Draw() owns the upper clamp
+		}
+	}
 
 	mTrackRow = -1;
 }
@@ -4833,6 +4879,16 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			// hold the SAME strings GetThumbnail() is called with or every entry
 			// evicts and re-renders every frame - which looks like a performance
 			// mystery rather than a mismatch.
+			// A LOCK MUST NOT OUTLIVE ITS CARD. The badge is the only way to
+			// release it, so if its operator drops out of the list - a search term,
+			// a weight drag that removes its class, a different X-Plane folder -
+			// every other card stays dimmed forever with nothing left to click. The
+			// same goes for a tray left open on a card that is no longer drawn.
+			if (!mLockedAirline.empty() && !CardFor(mLockedAirline))  mLockedAirline.clear();
+			if (!mTrayAirline.empty()   && !CardFor(mTrayAirline))    { mTrayAirline.clear();  mTrayOpen = 0.0f; }
+			if (!mTrayClosing.empty()   && !CardFor(mTrayClosing))    { mTrayClosing.clear();  mTrayClosingOpen = 0.0f; }
+			if (!mCycleAirline.empty()  && !CardFor(mCycleAirline))   mCycleAirline.clear();
+
 			int         renders_this_frame = 0;
 			set<string> keep_alive_paths;
 			mHoverTipText.clear();		// re-decided below, per frame, by whatever is under the cursor

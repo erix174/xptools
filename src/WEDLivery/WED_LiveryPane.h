@@ -316,7 +316,8 @@ private:
 	// Which tray row (if any) the point is over. -1 when no tray is open, when the
 	// point is elsewhere, or while the tray is still sliding - a target that moves
 	// under the cursor is not a target.
-	int					TrayRowForXY(int bounds[4], int x, int y);
+	int					TrayRowForXY(const std::vector<std::string> & row_icaos,
+									 const std::vector<RowSlot> & slots, int x, int y);
 	// Takes the rows' icao codes, not the rows: WED_LiveryDisplayRow lives in the
 	// .cpp's anonymous namespace and cannot be named here. An empty string means
 	// "not an airline row".
