@@ -86,6 +86,10 @@ struct WED_AirlineDirectoryEntry
 	std::string	name;
 	std::string	country;	// IOC 3-letter code, uppercase
 	bool		is_cargo;	// true for the "Cargo" column value - see the Pax/Cargo doc above
+	// The fourth column, which the ramp's operation-type filter matches against.
+	// Pax -> Airline, Cargo -> Cargo, GA -> GA, Military and Gov -> Military.
+	enum OpClass { op_Pax, op_Cargo, op_GA, op_Military, op_Gov };
+	OpClass		op_class;
 	int			fleet;
 };
 

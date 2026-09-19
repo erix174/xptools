@@ -110,7 +110,13 @@ bool	WED_AirlineDirectory::EnsureLoaded(const string & db_path)
 		size_t sep4 = line.find(kSep, service_start);
 		if (sep4 == string::npos) continue;
 		string service = line.substr(service_start, sep4 - service_start);
-		if (service != "Pax" && service != "Cargo") continue;		// not one of the two documented values - malformed
+		WED_AirlineDirectoryEntry::OpClass op;
+		if      (service == "Pax")      op = WED_AirlineDirectoryEntry::op_Pax;
+		else if (service == "Cargo")    op = WED_AirlineDirectoryEntry::op_Cargo;
+		else if (service == "GA")       op = WED_AirlineDirectoryEntry::op_GA;
+		else if (service == "Military") op = WED_AirlineDirectoryEntry::op_Military;
+		else if (service == "Gov")      op = WED_AirlineDirectoryEntry::op_Gov;
+		else continue;										// not a documented value - malformed
 
 		size_t fleet_start = sep4 + kSep.size();
 		string fleet_str = line.substr(fleet_start);
@@ -130,6 +136,7 @@ bool	WED_AirlineDirectory::EnsureLoaded(const string & db_path)
 		e.name     = name;
 		e.country  = ToUpper(country);
 		e.is_cargo = (service == "Cargo");
+		e.op_class = op;
 		e.fleet    = atoi(fleet_str.c_str());
 
 		mByCode[ToUpper(code)] = (int) mEntries.size();

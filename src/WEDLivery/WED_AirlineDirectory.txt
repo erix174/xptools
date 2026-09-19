@@ -1,6 +1,11 @@
 I
 1 WED Aviation Database
-# Format: <CODE> *** <Name> *** <IOC country> *** <Pax|Cargo> *** <Fleet count> [*** <HUBS>]
+# Format: <CODE> *** <Name> *** <IOC country> *** <Pax|Cargo|GA|Military|Gov> *** <Fleet count> [*** <HUBS>]
+# The fourth column is the OPERATION CLASS the ramp's None/GA/Airline/Cargo/
+# Military filter matches against: Pax -> Airline, Cargo -> Cargo, GA -> GA,
+# Military and Gov -> Military. Rows added 2026-09-18 for operators the livery
+# index carries but this file did not (military, government, corporate and a
+# few defunct or charter airlines); fleet 0 = not researched, not "none".
 # HUBS (optional sixth column): the operator's primary hubs as ICAO codes, space
 # separated. gen_livery_index.py resolves them to coordinates against the global
 # apt.dat and bakes those into livery_index.txt; the sim then skips a livery
@@ -1488,3 +1493,28 @@ TZP *** ZIPAIR *** JPN *** Pax *** 8
 ZOM *** Zoom Air *** IND *** Pax *** 5
 HUA_1 *** ZTO Express *** CHN *** Pax *** 1
 MZT *** ZYB Lily Jet *** CHN *** Pax *** 5
+
+# ---- operators present in livery_index.txt, added 2026-09-18 ----
+AIO *** United States Air Force *** USA *** Military *** 0 ***
+AWE *** America West Airlines *** USA *** Pax *** 0 *** KPHX KLAS
+AZA *** Alitalia *** ITA *** Pax *** 0 *** LIRF LIMC
+BOE *** Boeing Company *** USA *** GA *** 0 *** KBFI KPAE
+BTQ *** Private (PC-12) *** USA *** GA *** 0 ***
+CKJ *** PLA Air Force *** CHN *** Military *** 0 ***
+CNV *** United States Navy *** USA *** Military *** 0 ***
+CYH *** China Eastern Yunnan *** CHN *** Pax *** 0 *** ZPPP
+DOJ *** US Department of Justice *** USA *** Gov *** 0 ***
+EGF *** American Eagle (Envoy Air) *** USA *** Pax *** 0 *** KDFW KORD KMIA
+FAG *** Federal Aviation Administration *** USA *** Gov *** 0 *** KOKC
+GOL *** GOL Linhas Aereas *** BRA *** Pax *** 0 *** SBGR SBSP SBGL
+KRC *** Royal New Zealand Air Force *** NZL *** Military *** 0 *** NZOH
+LPV *** Air Alps *** AUT *** Pax *** 0 *** LOWI
+PAF *** Pakistan Air Force *** PAK *** Military *** 0 ***
+RUS *** Cirrus Airlines *** GER *** Pax *** 0 *** EDDN
+RVF *** New Pacific Airlines *** USA *** Pax *** 0 *** PANC
+SWG *** Sunwing Airlines *** CAN *** Pax *** 0 *** CYYZ CYUL
+SWQ *** iAero Airways *** USA *** Pax *** 0 *** KMIA
+URF *** Private (PC-12) *** USA *** GA *** 0 ***
+WLC *** Welcome Air *** AUT *** Pax *** 0 *** LOWI
+WML *** Private (CL60) *** USA *** GA *** 0 ***
+HNA *** Hainan Airlines *** CHN *** Pax *** 0 *** ZJHK ZBAA

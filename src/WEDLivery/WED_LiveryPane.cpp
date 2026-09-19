@@ -984,6 +984,7 @@ WED_LiveryPane::WED_LiveryPane(
 	mContentDragStartOffset(0),	// listed here anyway so all the "simple scalar" inits stay together
 	mCycleShow(0),
 	mRowsDirty(true),
+	mCoverageLineCount(3),
 	mLastAnimClock(0),
 	mTrayHoverIdx(-1),
 	mHoverX(0),
@@ -1410,6 +1411,33 @@ void	WED_LiveryPane::EnsureRows(void)
 	RowIcaos(mRows, mRowIcaos);
 }
 
+
+// Which operation classes a ramp's operation type admits. Pseudo-codes are the
+// index's own (see WED_LiveryIndex.h): XPGA generic GA, XPBZ business jets, XPMI
+// military, XPGN a generic unpainted airliner that any commercial stand may use.
+bool	WED_LiveryPane::OperatorMatchesRampOp(const string & code_uc, int ramp_op) const
+{
+	if (ramp_op == ramp_operation_None) return true;			// not stated - offer everything
+
+	if (code_uc == "XPGA" || code_uc == "XPBZ") return ramp_op == ramp_operation_GeneralAviation;
+	if (code_uc == "XPMI")                      return ramp_op == ramp_operation_Military;
+	if (code_uc == "XPGN")                      return ramp_op == ramp_operation_Airline || ramp_op == ramp_operation_Cargo;
+
+	WED_AirlineDirectoryEntry e;
+	if (!mAirlineDirectory.Lookup(code_uc, e))
+		return ramp_op == ramp_operation_Airline;			// unknown to the directory: assume airline, fail open
+
+	switch (e.op_class)
+	{
+	case WED_AirlineDirectoryEntry::op_Pax:      return ramp_op == ramp_operation_Airline;
+	case WED_AirlineDirectoryEntry::op_Cargo:    return ramp_op == ramp_operation_Cargo;
+	case WED_AirlineDirectoryEntry::op_GA:       return ramp_op == ramp_operation_GeneralAviation;
+	case WED_AirlineDirectoryEntry::op_Military:
+	case WED_AirlineDirectoryEntry::op_Gov:      return ramp_op == ramp_operation_Military;
+	}
+	return true;
+}
+
 void	WED_LiveryPane::RebuildAirlineCards(void)
 {
 	mAirlineCards.clear();
@@ -1449,11 +1477,21 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 	ramp->GetLocation(gis_Geo, here);
 	mRangeHidden.clear();
 
+	// THE RAMP'S OPERATION TYPE IS A FILTER, not a label. A cargo stand offers
+	// cargo operators; a GA stand the generic GA pseudo-code and the private and
+	// corporate operators; a military stand the forces and the government fleets.
+	// The class is the directory's fourth column. An operator the directory does
+	// not know is treated as an airline - fail open, like the range rule - and
+	// "None" leaves the list unfiltered, since it means the author has not said.
+	const int ramp_op = ramp->GetRampOperationType();
+
 	for (size_t i = 0; i < codes.size(); ++i)
 	{
 		string code_uc = codes[i];
 		for (size_t ci = 0; ci < code_uc.size(); ++ci)
 			code_uc[ci] = (char) toupper((unsigned char) code_uc[ci]);
+
+		if (!OperatorMatchesRampOp(code_uc, ramp_op)) continue;
 
 		// BIGGEST CLASS FIRST, and reverse-alphabetically inside a class. Index 0 is
 		// what the card shows at rest, so at rest a card shows the largest aircraft
@@ -1746,7 +1784,8 @@ void	WED_LiveryPane::WeightButtonRect(int bounds[4], float b_out[4]) const
 	// author is when they decide this stand needs a distribution rather than a
 	// range. Same derive-from-the-section idiom as SortButtonRect().
 	float top, bot;
-	SliderYRange(bounds, top, bot);
+	if (SelectionHasWeights()) WeightsYRange(bounds, top, bot);	// the slider has collapsed - see SliderHeight()
+	else                       SliderYRange(bounds, top, bot);
 	const float pad = 4;
 	const float w   = 124;
 
@@ -2011,6 +2050,11 @@ float	WED_LiveryPane::FilterRowHeight(void) const
 
 float	WED_LiveryPane::SliderHeight(void) const
 {
+	// Gone entirely once the stand has weights: the six bars ARE the size control
+	// then, and a greyed slider saying "derived from the weights below" was a row
+	// of dead space explaining its own absence. The Simple Mode button moves onto
+	// the weights section's title row - see WeightButtonRect().
+	if (SelectionHasWeights()) return 0;
 	// title row + A-F label row + track/ball row, plus padding
 	return GUI_GetLineHeight(font_UI_Basic) * 3 + 16;
 }
@@ -2032,9 +2076,13 @@ float	WED_LiveryPane::CoverageHeight(void) const
 	// content-derived so the sections below it never shift as the numbers change -
 	// a readout that moves the airline list every time you tick a checkbox is
 	// worse than no readout.
-	// ...plus a third line for what the range rule removed, reserved even when
-	// blank for the same reason: the list below must never shift.
-	return GUI_GetLineHeight(font_UI_Basic) * 3 + 10;
+	// Content-derived after all: the detail and the range clause wrap to the
+	// pane's width, so a narrow panel needs more lines than a wide one and a
+	// fixed count either clipped or wasted. mCoverageLineCount is set by Draw()
+	// from the wrapped text BEFORE it lays the section out, so there is no frame
+	// of lag. The list below does move when the count changes; that is the price
+	// of legible text, and it changes only when the stand's situation does.
+	return GUI_GetLineHeight(font_UI_Basic) * mCoverageLineCount + 10;
 }
 
 float	WED_LiveryPane::ListToolbarHeight(void) const
@@ -4181,6 +4229,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 	}
 
 	// --- size range slider ---
+	if (SliderHeight() > 0)		// collapsed to nothing while the stand has weights
 	{
 		float handle_r = line_h * 0.5f;
 		float slider_top, slider_bot;
@@ -4466,23 +4515,6 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		// would drift back into contradicting each other.
 		if (mCoverageDirty) { RecomputeCoverage(); RebuildAirlineCards(); SetRowsDirty(); }
 
-		// zone background, matching the slider's so the two read as one stack
-		state->SetState(0,0,0,0,0,0,0);
-		glColor4f(0.14f, 0.14f, 0.14f, 1.0f);
-		glBegin(GL_QUADS);
-			glVertex2f((float) b[0] + 1, cov_bot);
-			glVertex2f((float) b[2] - 1, cov_bot);
-			glVertex2f((float) b[2] - 1, cov_top);
-			glVertex2f((float) b[0] + 1, cov_top);
-		glEnd();
-		glColor4f(0.40f, 0.40f, 0.40f, 1.0f);
-		glBegin(GL_LINE_LOOP);
-			glVertex2f((float) b[0] + 1, cov_bot);
-			glVertex2f((float) b[2] - 1, cov_bot);
-			glVertex2f((float) b[2] - 1, cov_top);
-			glVertex2f((float) b[0] + 1, cov_top);
-		glEnd();
-
 		float col_warn[4]  = { 1.00f, 0.45f, 0.35f, 1.0f };	// a stand that parks nothing
 		float col_good[4]  = { 0.55f, 0.85f, 0.55f, 1.0f };
 		float col_muted[4] = { 0.62f, 0.62f, 0.62f, 1.0f };
@@ -4669,10 +4701,41 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			snprintf(detail + used, sizeof(detail) - used, "   [%s]", mCoverage.index_version.c_str());
 		}
 
-		GUI_FontDraw(state, font_UI_Basic, head_col,  b[0] + pad, cov_top - line_h * 0.9f, head);
-		GUI_FontDraw(state, font_UI_Basic, col_muted, b[0] + pad, cov_top - line_h * 1.9f, detail);
+		// Wrap to the width we actually have, then size the section to the result
+		// BEFORE laying it out - so the background, the lines and everything below
+		// agree on this frame. (One long line ran off the right edge on every
+		// stand that had anything to say.)
+		float avail_w = (float) (b[2] - b[0]) - pad * 2;
+		vector<string> body = WrapText(font_UI_Basic, detail, avail_w);
 		if (!range_line.empty())
-			GUI_FontDraw(state, font_UI_Basic, col_muted, b[0] + pad, cov_top - line_h * 2.9f, range_line.c_str());
+		{
+			vector<string> more = WrapText(font_UI_Basic, range_line, avail_w);
+			body.insert(body.end(), more.begin(), more.end());
+		}
+		mCoverageLineCount = 1 + (int) body.size();
+		CoverageYRange(b, cov_top, cov_bot);
+
+		// zone background, matching the slider's so the two read as one stack
+		state->SetState(0,0,0,0,0,0,0);
+		glColor4f(0.14f, 0.14f, 0.14f, 1.0f);
+		glBegin(GL_QUADS);
+			glVertex2f((float) b[0] + 1, cov_bot);
+			glVertex2f((float) b[2] - 1, cov_bot);
+			glVertex2f((float) b[2] - 1, cov_top);
+			glVertex2f((float) b[0] + 1, cov_top);
+		glEnd();
+		glColor4f(0.40f, 0.40f, 0.40f, 1.0f);
+		glBegin(GL_LINE_LOOP);
+			glVertex2f((float) b[0] + 1, cov_bot);
+			glVertex2f((float) b[2] - 1, cov_bot);
+			glVertex2f((float) b[2] - 1, cov_top);
+			glVertex2f((float) b[0] + 1, cov_top);
+		glEnd();
+
+		GUI_FontDraw(state, font_UI_Basic, head_col,  b[0] + pad, cov_top - line_h * 0.9f, head);
+		for (size_t li = 0; li < body.size(); ++li)
+			GUI_FontDraw(state, font_UI_Basic, col_muted, b[0] + pad,
+						 cov_top - line_h * (1.9f + (float) li), body[li].c_str());
 	}
 
 	// --- airline list workspace: toolbar row (Show Recommendation + Sort) boxed
