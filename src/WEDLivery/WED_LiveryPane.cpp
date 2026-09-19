@@ -1442,7 +1442,7 @@ WED_LiveryPane::Allow	WED_LiveryPane::LiveryAllowedHere(const WED_LiveryIndexEnt
 	WED_AirlineDirectoryEntry d;
 	bool known = mAirlineDirectory.Lookup(code, d);
 
-	bool is_ga  = code == "XPGA" || code == "XPBZ" || (known && d.op_class == WED_AirlineDirectoryEntry::op_GA);
+	bool is_ga  = code == "XPGA" || (known && d.op_class == WED_AirlineDirectoryEntry::op_GA);
 	bool is_mil = code == "XPMI" || (known && (d.op_class == WED_AirlineDirectoryEntry::op_Military ||
 											   d.op_class == WED_AirlineDirectoryEntry::op_Gov));
 
@@ -1475,13 +1475,16 @@ WED_LiveryPane::Allow	WED_LiveryPane::LiveryAllowedHere(const WED_LiveryIndexEnt
 }
 
 // Which operation classes a ramp's operation type admits. Pseudo-codes are the
-// index's own (see WED_LiveryIndex.h): XPGA generic GA, XPBZ business jets, XPMI
-// military, XPGN a generic unpainted airliner that any commercial stand may use.
+// index's own (see WED_LiveryIndex.h): XPGA general aviation - light aircraft
+// and business jets alike, since the ramp draws no distinction between them -
+// XPMI military, and XPGN a generic unpainted airliner any commercial stand may
+// use. A code this function does not know still gets an answer from its
+// operator record's OP column, so retiring a pseudo-code costs nothing.
 bool	WED_LiveryPane::OperatorMatchesRampOp(const string & code_uc, int ramp_op) const
 {
 	if (ramp_op == ramp_operation_None) return true;			// not stated - offer everything
 
-	if (code_uc == "XPGA" || code_uc == "XPBZ") return ramp_op == ramp_operation_GeneralAviation;
+	if (code_uc == "XPGA")                      return ramp_op == ramp_operation_GeneralAviation;
 	if (code_uc == "XPMI")                      return ramp_op == ramp_operation_Military;
 	if (code_uc == "XPGN")                      return ramp_op == ramp_operation_Airline || ramp_op == ramp_operation_Cargo;
 
@@ -1629,7 +1632,7 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 						lab += " (" + e->note + ")";
 					// A GA/military card is one type; the operator still tells two
 					// air forces' F-15s apart, so it goes on the label, not the face.
-					if (code_uc != "XPGA" && code_uc != "XPBZ" && code_uc != "XPMI")
+					if (code_uc != "XPGA" && code_uc != "XPMI")
 						lab += "  " + code_uc;
 					tc.labels.push_back(lab);
 					continue;

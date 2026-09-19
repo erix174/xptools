@@ -151,7 +151,17 @@ bool	WED_AirlineDirectory::EnsureLoaded(const string & db_path)
 		// coordinates it resolves to arrive on the livery rows of the same file.
 		const string & fleet_str = cells[4];
 
-		if (code.empty() || name.empty() || country.empty() || fleet_str.empty()) continue;
+		// A country is required of a real operator and impossible for a generic
+		// pseudo-operator, which belongs to no country by definition. Demanding
+		// one dropped every XP* record on the floor, and with it the operation
+		// class of the unpainted airliner - the one thing the OP column exists
+		// to answer. Pseudo-codes are exempt; everything else still must say.
+		// Exactly the three reserved generics, not every XP code: XPA0..XPC4 are
+		// real operators whose ICAO code could not be confirmed, and they do
+		// have a country.
+		const bool is_pseudo = (code == "XPGA" || code == "XPMI" || code == "XPGN");
+		if (code.empty() || name.empty() || fleet_str.empty()) continue;
+		if (country.empty() && !is_pseudo) continue;
 
 		WED_AirlineDirectoryEntry e;
 		e.code     = code;
