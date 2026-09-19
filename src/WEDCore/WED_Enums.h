@@ -831,8 +831,8 @@ ENUM_DOMAIN(ATCIcaoWidth,"Width")
 
 ENUM_DOMAIN(RampOperationType,			"Ramp Operation Type")
 	ENUM(ramp_operation_None,				"None", ramp_operation_none)
-	ENUM(ramp_operation_GeneralAviation,	"General Aviation", ramp_operation_general_aviation)
-	ENUM(ramp_operation_Airline,			"Airline", ramp_operation_airline)
+	ENUM(ramp_operation_GeneralAviation,	"Private/BizJet", ramp_operation_general_aviation)
+	ENUM(ramp_operation_Airline,			"Passenger", ramp_operation_airline)
 	ENUM(ramp_operation_Cargo,				"Cargo", ramp_operation_cargo)
 	ENUM(ramp_operation_Military,			"Military", ramp_operation_military)
 

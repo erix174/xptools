@@ -230,12 +230,31 @@ int					ENUM_ExportSet(const set<int>& members)
 //									return -1;
 //}
 
+// An enum's DESCRIPTION is what gets written into a .wed.xml - WED_PropIntEnum
+// serialises with ENUM_Desc and reads it back with ENUM_LookupDesc below. So
+// renaming one for the UI orphans every project already saved with the old
+// spelling: the lookup misses, -1 lands in the property, and the object quietly
+// loses that setting with no error shown anywhere. A rename therefore leaves its
+// old spelling behind here, permanently. NEVER DELETE A ROW FROM THIS TABLE -
+// it is the only thing keeping files written by an older WED readable.
+struct legacy_enum_desc_t { int domain; const char * old_desc; int value; };
+static const legacy_enum_desc_t kLegacyEnumDescs[] = {
+	// 2026-09-19: the ramp labels were renamed to name the OPERATION rather than
+	// the aircraft, so a business jet at a private stand stops reading as a
+	// mistake. apt.dat still exports general_aviation / airline and always will.
+	{ RampOperationType, "General Aviation", ramp_operation_GeneralAviation },
+	{ RampOperationType, "Airline",          ramp_operation_Airline         },
+};
+
 int					ENUM_LookupDesc(int domain, const char * value)
 {
 	string v(value);
 	map<pair<int,string>, int>::iterator i = sEnumsReverse.find(pair<int,string>(domain,v));
-	if (i == sEnumsReverse.end())	
+	if (i == sEnumsReverse.end())
 	{
+		for (size_t k = 0; k < sizeof(kLegacyEnumDescs) / sizeof(kLegacyEnumDescs[0]); ++k)
+			if (kLegacyEnumDescs[k].domain == domain && v == kLegacyEnumDescs[k].old_desc)
+				return kLegacyEnumDescs[k].value;
 #if DEV && !GATEWAY_IMPORT_MODE
 		printf("Cannot find enum '%s' in domain %d\n",value, domain);
 #endif

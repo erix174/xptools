@@ -500,6 +500,16 @@ def op_class_for(code):
 
 PSEUDO_OP = {"XPGA": "GA", "XPMI": "Military", "XPZZ": "Pax"}
 
+# Both sections are grouped by operation class before anything else, in the
+# order a person looks for them: the airlines that fill most stands, then the
+# freighters, then general aviation, then the military, then whatever is left
+# (today: government). Alphabetical inside each group. The two sections are
+# sorted the same way but stay physically separate - operators first, liveries
+# after - so the groups never interleave across the section boundary.
+CLASS_ORDER = {"Pax": 0, "Cargo": 1, "GA": 2, "Military": 3}
+def class_rank(op):
+    return CLASS_ORDER.get(op, 4)
+
 merged, kept, added = [], 0, 0
 for r in rows:
     rel = r[-1].replace("\\", "/")
@@ -525,7 +535,7 @@ rows = merged
 # The path is the last key so the order is TOTAL: without it, rows that tie on
 # type, operator and range fell back to the order the filesystem happened to
 # hand them over, which is not reproducible and made the file diff noisily.
-rows.sort(key=lambda r: (r[0], r[2], r[6], r[-1]))
+rows.sort(key=lambda r: (class_rank(r[8]), r[0], r[2], r[6], r[-1]))
 print(f"merge: kept {kept}, new {added}, dropped {dropped} (assets no longer on disk)")
 
 with open(OUT, "w", encoding="utf-8", newline="\n") as o:
@@ -741,6 +751,7 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
             name, cty, opc, fleet, hubs = code, "", "Pax", "0", ""   # in the index, unknown to the directory
         op_records.append([code, name, cty, opc, fleet, hubs])
     op_records = [(r + [""] * 6)[:6] for r in op_records]
+    op_records.sort(key=lambda r: (class_rank(r[3]), r[0]))
 
     OP_STOPS = []                                   # column of the "***" after CODE, NAME, CTY, OP, FLEET
     _col = 16                                       # past "OPERATOR" + tab + "***" + tab

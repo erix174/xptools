@@ -84,7 +84,15 @@ static set<string> ParseCodes(const string & airlines);
 namespace
 {
 	const int kFilterEnumTable[5]  = { ramp_operation_None, ramp_operation_GeneralAviation, ramp_operation_Airline, ramp_operation_Cargo, ramp_operation_Military };
-	const char * kFilterLabels[5]  = { "None", "GA", "Airline", "Cargo", "Military" };
+	// These name the OPERATION at the stand, not the aircraft - that is what the
+	// Equipment Type list is for. A PC-12 flying a scheduled service is Passenger;
+	// a 737 BBJ is Private/BizJet. UI ONLY: apt.dat still writes none /
+	// general_aviation / airline / cargo / military, and always will.
+	//   Private/BizJet <- general_aviation      Passenger <- airline
+	// The short forms are drawn when a chip is too narrow for the full label,
+	// which at a fifth of the pane width "Private/BizJet" often is.
+	const char * kFilterLabels[5]      = { "None", "Private/BizJet", "Passenger", "Cargo", "Military" };
+	const char * kFilterLabelsShort[5] = { "None", "Private",        "Passenger", "Cargo", "Military" };
 	const int kWidthOrder[6]       = { width_A, width_B, width_C, width_D, width_E, width_F };
 	const char * kWidthLabels[6]   = { "A", "B", "C", "D", "E", "F" };
 
@@ -4329,8 +4337,14 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			}
 
 			float * txt_col = WED_Color_RGBA(wed_Table_Text);
-			float tw = GUI_MeasureRange(font_UI_Basic, kFilterLabels[i], kFilterLabels[i] + strlen(kFilterLabels[i]));
-			GUI_FontDraw(state, font_UI_Basic, txt_col, cx0 + (chip_w - tw) * 0.5f, (chip_top + chip_bot) * 0.5f - line_h * 0.35f, kFilterLabels[i]);
+			const char * lbl = kFilterLabels[i];
+			float tw = GUI_MeasureRange(font_UI_Basic, lbl, lbl + strlen(lbl));
+			if (tw > chip_w - 6.0f)			// too tight - fall back to the short form
+			{
+				lbl = kFilterLabelsShort[i];
+				tw  = GUI_MeasureRange(font_UI_Basic, lbl, lbl + strlen(lbl));
+			}
+			GUI_FontDraw(state, font_UI_Basic, txt_col, cx0 + (chip_w - tw) * 0.5f, (chip_top + chip_bot) * 0.5f - line_h * 0.35f, lbl);
 		}
 	}
 
