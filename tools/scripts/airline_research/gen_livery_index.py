@@ -210,7 +210,13 @@ def resolve_hubs(xp_root, wanted):
             elif rwy is not None:      out[cur] = rwy
     with open(path, encoding="utf-8", errors="replace") as f:
         for line in f:
-            if line.startswith("1 ") or line.startswith("1	"):
+            # 1 land airport, 16 seaplane base, 17 heliport. All three start a
+            # new airport block, and missing 16/17 was a real bug: cur stayed on
+            # the previous airport, so a heliport's datum row overwrote ITS
+            # coordinates (EDDK Cologne came out 250 km north), and a hub that is
+            # itself a heliport or seaplane base was never resolved at all.
+            head = line.split(None, 1)[0] if line[:1].isdigit() else ""
+            if head in ("1", "16", "17"):
                 flush()
                 t = line.split(); cur = t[4] if len(t) > 4 else None
                 lat = lon = None; rwy = None
@@ -512,6 +518,14 @@ for r in rows:
         merged.append(tuple(r)); added += 1
 dropped = len(existing_rows) - kept
 rows = merged
+# Sort AFTER the merge, not before. The pre-merge sort ran on the code read off
+# the folder name, so a row whose operator was corrected in the index - a
+# B738_HNA folder now filed under CHH - kept its old alphabetical slot and the
+# file could never round-trip through the generator unchanged.
+# The path is the last key so the order is TOTAL: without it, rows that tie on
+# type, operator and range fell back to the order the filesystem happened to
+# hand them over, which is not reproducible and made the file diff noisily.
+rows.sort(key=lambda r: (r[0], r[2], r[6], r[-1]))
 print(f"merge: kept {kept}, new {added}, dropped {dropped} (assets no longer on disk)")
 
 with open(OUT, "w", encoding="utf-8", newline="\n") as o:
@@ -692,35 +706,31 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
     # TAB-ALIGNED, unlike the space-padded livery rows below: the record has a
     # wide free-text NAME cell and people read this section far more often than
     # they read the rows, so it is laid out as a table for a tab width of 4 (the
-    # VS Code / Notepad++ default). Legal because every reader - this script,
+    # VS Code / Notepad++ default). The stops come from the widest value in each
+    # column, recomputed every run. Legal because every reader - this script,
     # WED_LiveryIndex.cpp, WED_AirlineDirectory.cpp - splits on "***" and strips
     # spaces AND tabs; a reader matching a literal " *** " would drop every
     # record. Column stops (tab=4):
     #   OPERATOR  ***  CODE  ***  NAME  ***  CTY  ***  OP  ***  FLEET  ***  HUBS
     #   0         12   16    24   28    60   64   68   72  84   88     96   100
-    OP_TAB   = 4
-    OP_STOPS = (24, 60, 68, 84, 96)     # column of the "***" after CODE, NAME, CTY, OP, FLEET
-    def fmt_operator(cells):
-        cells = list(cells) + [""] * (6 - len(cells))    # code name cty op fleet hubs
-        out = "OPERATOR\t***\t"; col = 16
-        for cell, stop in zip(cells[:5], OP_STOPS):
-            out += cell; col += len(cell); n = 0
-            while col < stop or n == 0:                  # at least one tab, then up to the stop
-                col = (col // OP_TAB + 1) * OP_TAB; out += "\t"; n += 1
-            out += "***\t"; col += 4
-        return (out + cells[5] if cells[5] else out[:-1]) + "\n"
+    TAB = chr(9)
+    OP_TAB = 4
     PSEUDO = {"XPGA": ("Generic - general aviation", "GA"),
               "XPMI": ("Generic - military", "Military"), "XPZZ": ("Generic - unpainted airliner", "Pax")}
-    o.write("# ---- operators -------------------------------------------------------------\n")
+
+    # Build every record first, because the column stops come from the DATA, not
+    # from constants: one long name widens its own column instead of shoving
+    # every field after it a tab to the right, which is what made a record like
+    # "Gagarin Research & Test Cosmonaut Center" look like it had broken rank.
+    # Recomputed on every run, so a longer name arriving later just widens it again.
     # Every operator already in the file survives the merge whether or not a
     # livery row names it: the section is the global operator directory the
     # ramp's recommendation tiers (Popular, Same Country) draw from, and a
     # record is worth keeping for an airline the sim has no paint for yet.
+    op_records = []
     for code in sorted({r[2] for r in rows if r[2] != "????"} | set(existing_ops)):
         if code in existing_ops:
-            rec = existing_ops[code]
-            o.write(fmt_operator([code] + rec))
-            continue
+            op_records.append([code] + list(existing_ops[code])); continue
         if code in PSEUDO:
             name, opc = PSEUDO[code]; cty = ""; fleet = "0"; hubs = ""
         elif code in airlines:
@@ -729,7 +739,29 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
             hubs = " ".join(hub_icaos.get(code, []))
         else:
             name, cty, opc, fleet, hubs = code, "", "Pax", "0", ""   # in the index, unknown to the directory
-        o.write(fmt_operator([code, name, cty, opc, fleet, hubs]))
+        op_records.append([code, name, cty, opc, fleet, hubs])
+    op_records = [(r + [""] * 6)[:6] for r in op_records]
+
+    OP_STOPS = []                                   # column of the "***" after CODE, NAME, CTY, OP, FLEET
+    _col = 16                                       # past "OPERATOR" + tab + "***" + tab
+    for _j in range(5):
+        _w = max(len(r[_j]) for r in op_records)
+        _col = ((_col + _w) // OP_TAB + 1) * OP_TAB  # at least one tab clear of the longest field
+        OP_STOPS.append(_col); _col += 4             # the separator that follows
+
+    def fmt_operator(cells):
+        cells = list(cells) + [""] * (6 - len(cells))    # code name cty op fleet hubs
+        out = "OPERATOR" + TAB + "***" + TAB; col = 16
+        for cell, stop in zip(cells[:5], OP_STOPS):
+            out += cell; col += len(cell); n = 0
+            while col < stop or n == 0:                  # at least one tab, then up to the stop
+                col = (col // OP_TAB + 1) * OP_TAB; out += TAB; n += 1
+            out += "***" + TAB; col += 4
+        return (out + cells[5] if cells[5] else out[:-1]) + "\n"
+
+    o.write("# ---- operators -------------------------------------------------------------\n")
+    for rec in op_records:
+        o.write(fmt_operator(rec))
     o.write("\n# ---- liveries --------------------------------------------------------------\n")
 
     # Column-pad so the file is scannable by eye. Safe because the parser
