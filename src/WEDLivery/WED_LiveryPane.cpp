@@ -91,8 +91,19 @@ namespace
 	//   Private/BizJet <- general_aviation      Passenger <- airline
 	// The short forms are drawn when a chip is too narrow for the full label,
 	// which at a fifth of the pane width "Private/BizJet" often is.
-	const char * kFilterLabels[5]      = { "None", "Private/BizJet", "Passenger", "Cargo", "Military" };
-	const char * kFilterLabelsShort[5] = { "None", "Private",        "Passenger", "Cargo", "Military" };
+	const char * kFilterLabels[5]      = { "None", "Private/BizJet", "Passenger", "Cargo", "Military/Gov" };
+	const char * kFilterLabelsShort[5] = { "None", "Private",        "Passenger", "Cargo", "Military"     };
+
+	// The label and the file no longer say the same word, so each chip names the
+	// apt.dat token it writes. A divergence nobody can see is the kind that gets
+	// rediscovered at 2am by someone diffing a .dat.
+	const char * kFilterTips[5] = {
+		"Stand does not say - everything is offered   |   apt.dat: none",
+		"Private and business aviation   |   apt.dat: general_aviation",
+		"Scheduled and charter passenger service   |   apt.dat: airline",
+		"Freight   |   apt.dat: cargo",
+		"Air forces, and state flights that are not military   |   apt.dat: military",
+	};
 	const int kWidthOrder[6]       = { width_A, width_B, width_C, width_D, width_E, width_F };
 	const char * kWidthLabels[6]   = { "A", "B", "C", "D", "E", "F" };
 
@@ -5161,6 +5172,13 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			int         renders_this_frame = 0;
 			set<string> keep_alive_paths;
 			mHoverTipText.clear();		// re-decided below, per frame, by whatever is under the cursor
+
+			// The operation chips sit above the card list and are drawn elsewhere,
+			// so their tip has to be claimed here, before the cards get a chance.
+			{
+				int chip = FilterChipForXY(b, mHoverX, mHoverY);
+				if (chip >= 0 && chip < 5) mHoverTipText = kFilterTips[chip];
+			}
 
 			// Clip to the content viewport. GUI_Pane::InternalDraw() only scissors to
 			// the WHOLE PANE's bounds, not this section's, so without this a card

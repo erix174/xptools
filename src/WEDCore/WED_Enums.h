@@ -834,7 +834,7 @@ ENUM_DOMAIN(RampOperationType,			"Ramp Operation Type")
 	ENUM(ramp_operation_GeneralAviation,	"Private/BizJet", ramp_operation_general_aviation)
 	ENUM(ramp_operation_Airline,			"Passenger", ramp_operation_airline)
 	ENUM(ramp_operation_Cargo,				"Cargo", ramp_operation_cargo)
-	ENUM(ramp_operation_Military,			"Military", ramp_operation_military)
+	ENUM(ramp_operation_Military,			"Military/Gov", ramp_operation_military)
 
 ENUM_DOMAIN(RoadSubType, "Road Type")
 	ENUM(road_Highway,				"Highway",			1)

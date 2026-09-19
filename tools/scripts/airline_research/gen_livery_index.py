@@ -510,6 +510,13 @@ CLASS_ORDER = {"Pax": 0, "Cargo": 1, "GA": 2, "Military": 3}
 def class_rank(op):
     return CLASS_ORDER.get(op, 4)
 
+def class_banner(op):
+    """Group header inside a section. A comment line, so every reader already
+    skips it; it exists purely so a human can find the freighters without
+    scrolling past a thousand airlines."""
+    label = op or "(unclassified)"
+    return "# -- " + label + " " + "-" * max(1, 74 - len(label)) + "\n"
+
 merged, kept, added = [], 0, 0
 for r in rows:
     rel = r[-1].replace("\\", "/")
@@ -771,7 +778,13 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
         return (out + cells[5] if cells[5] else out[:-1]) + "\n"
 
     o.write("# ---- operators -------------------------------------------------------------\n")
+    # A banner between class groups. 1496 records is too many to scan without
+    # one, and a reader that does not know the convention just sees a comment.
+    _seen = None
     for rec in op_records:
+        if rec[3] != _seen:
+            _seen = rec[3]
+            o.write(class_banner(_seen))
         o.write(fmt_operator(rec))
     o.write("\n# ---- liveries --------------------------------------------------------------\n")
 
@@ -779,7 +792,11 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
     # tokenizes on "***" rather than matching a fixed " *** " separator, so the
     # extra spaces cost nothing - same convention as WED_AirportDatabase.cpp.
     widths = [max(len(r[i]) for r in rows) for i in range(len(rows[0]) - 1)]
+    _seen = None
     for r in rows:
+        if r[8] != _seen:
+            _seen = r[8]
+            o.write(class_banner(_seen))
         cells = [r[i].ljust(widths[i]) for i in range(len(widths))] + [r[-1]]
         o.write(" *** ".join(cells) + "\n")
 

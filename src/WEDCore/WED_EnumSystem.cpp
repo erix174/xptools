@@ -244,6 +244,7 @@ static const legacy_enum_desc_t kLegacyEnumDescs[] = {
 	// mistake. apt.dat still exports general_aviation / airline and always will.
 	{ RampOperationType, "General Aviation", ramp_operation_GeneralAviation },
 	{ RampOperationType, "Airline",          ramp_operation_Airline         },
+	{ RampOperationType, "Military",         ramp_operation_Military        },
 };
 
 int					ENUM_LookupDesc(int domain, const char * value)
