@@ -626,13 +626,34 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
     #
     # The pseudo-codes get records too, so the ramp's op-type filter has one
     # answer for everything in the file.
+    #
+    # TAB-ALIGNED, unlike the space-padded livery rows below: the record has a
+    # wide free-text NAME cell and people read this section far more often than
+    # they read the rows, so it is laid out as a table for a tab width of 4 (the
+    # VS Code / Notepad++ default). Legal because every reader - this script,
+    # WED_LiveryIndex.cpp, WED_AirlineDirectory.cpp - splits on "***" and strips
+    # spaces AND tabs; a reader matching a literal " *** " would drop every
+    # record. Column stops (tab=4):
+    #   OPERATOR  ***  CODE  ***  NAME  ***  CTY  ***  OP  ***  FLEET  ***  HUBS
+    #   0         12   16    24   28    60   64   68   72  84   88     96   100
+    OP_TAB   = 4
+    OP_STOPS = (24, 60, 68, 84, 96)     # column of the "***" after CODE, NAME, CTY, OP, FLEET
+    def fmt_operator(cells):
+        cells = list(cells) + [""] * (6 - len(cells))    # code name cty op fleet hubs
+        out = "OPERATOR\t***\t"; col = 16
+        for cell, stop in zip(cells[:5], OP_STOPS):
+            out += cell; col += len(cell); n = 0
+            while col < stop or n == 0:                  # at least one tab, then up to the stop
+                col = (col // OP_TAB + 1) * OP_TAB; out += "\t"; n += 1
+            out += "***\t"; col += 4
+        return (out + cells[5] if cells[5] else out[:-1]) + "\n"
     PSEUDO = {"XPGA": ("Generic - light aircraft", "GA"), "XPBZ": ("Generic - business jet", "GA"),
               "XPMI": ("Generic - military", "Military"), "XPGN": ("Generic - unpainted airliner", "Pax")}
     o.write("# ---- operators -------------------------------------------------------------\n")
     for code in sorted({r[2] for r in rows if r[2] != "????"}):
         if code in existing_ops:
             rec = existing_ops[code]
-            o.write(" *** ".join(["OPERATOR", code] + rec) + "\n")
+            o.write(fmt_operator([code] + rec))
             continue
         if code in PSEUDO:
             name, opc = PSEUDO[code]; cty = ""; fleet = "0"; hubs = ""
@@ -642,7 +663,7 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
             hubs = " ".join(hub_icaos.get(code, []))
         else:
             name, cty, opc, fleet, hubs = code, "", "Pax", "0", ""   # in the index, unknown to the directory
-        o.write(" *** ".join(["OPERATOR", code, name, cty, opc, fleet, hubs]) + "\n")
+        o.write(fmt_operator([code, name, cty, opc, fleet, hubs]))
     o.write("\n# ---- liveries --------------------------------------------------------------\n")
 
     # Column-pad so the file is scannable by eye. Safe because the parser

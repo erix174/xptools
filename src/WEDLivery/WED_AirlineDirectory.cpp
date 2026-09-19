@@ -45,6 +45,37 @@ namespace
 	{
 		return a.fleet > b.fleet;
 	}
+
+	string Trim(const string & s)
+	{
+		size_t b = s.find_first_not_of(" \t");
+		if (b == string::npos) return string();
+		size_t e = s.find_last_not_of(" \t");
+		return s.substr(b, e - b + 1);
+	}
+
+	// Splits a record on "***" separators, tolerating any run of spaces or tabs
+	// around them - the same rule WED_LiveryIndex.cpp's SplitOnStars applies to
+	// livery rows. The operator section of livery_index.txt is TAB-aligned (the
+	// generator lays it out for a tab width of 4) while the livery rows are
+	// space-padded, so a reader that matches a literal " *** " - as this one did
+	// until 2026-09-19 - drops every operator record without a word.
+	void SplitOnStars(const string & line, vector<string> & out)
+	{
+		out.clear();
+		size_t pos = 0;
+		while (true)
+		{
+			size_t star = line.find("***", pos);
+			if (star == string::npos)
+			{
+				out.push_back(Trim(line.substr(pos)));
+				return;
+			}
+			out.push_back(Trim(line.substr(pos, star - pos)));
+			pos = star + 3;
+		}
+	}
 }
 
 WED_AirlineDirectory::WED_AirlineDirectory() :
@@ -78,12 +109,14 @@ bool	WED_AirlineDirectory::EnsureLoaded(const string & db_path)
 	// what the CODE column's 3/4/5-char length means):
 	//   line 1-2:  mandatory header, already consumed/validated above
 	//   line 3+:   blank or "#"-prefixed lines are comments, ignored
-	//              otherwise: <CODE> *** <Name> *** <IOC country> *** <Pax|Cargo> *** <Fleet count>
+	//              otherwise: OPERATOR *** <CODE> *** <Name> *** <IOC country> *** <Pax|Cargo|GA|Military|Gov> *** <Fleet count> *** <hub ICAOs>
+	// Cells are split on "***" and trimmed of spaces and tabs (see SplitOnStars
+	// above) - the whitespace between cells is layout, never data.
 	// Any line that doesn't match that shape is skipped rather than causing a
 	// parse failure - a malformed row should never prevent every OTHER row in
 	// the file from loading, let alone crash WED.
-	const string kSep = " *** ";
 	string line;
+	vector<string> cells;
 	while (std::getline(f, line))
 	{
 		if (!line.empty() && line.back() == '\r') line.pop_back();		// tolerate a CRLF-saved file
@@ -92,32 +125,20 @@ bool	WED_AirlineDirectory::EnsureLoaded(const string & db_path)
 		if (p0 == string::npos) continue;			// blank line
 		if (line[p0] == '#') continue;				// comment line
 
-		// livery_index.txt (schema 3) carries the same record with an "OPERATOR"
-		// tag in front, so one file serves both readers - see the generator. The
-		// tag is dropped and the rest parses exactly as a directory row does. A
-		// livery row in that file never survives the service-column check below
-		// (its fourth cell is a registration), so nothing else has to change.
-		const string kTag = "OPERATOR *** ";
-		if (line.compare(p0, kTag.size(), kTag) == 0) p0 += kTag.size();
+		SplitOnStars(line, cells);
 
-		size_t sep1 = line.find(kSep, p0);
-		if (sep1 == string::npos) continue;
-		string code = line.substr(p0, sep1 - p0);
+		// livery_index.txt (schema 3) carries the record with an "OPERATOR" tag in
+		// front, so one file serves both readers - see the generator. The tag is
+		// dropped and the rest parses exactly as a directory row does. A livery
+		// row in that file never survives the service-column check below (its
+		// fourth cell is a registration), so nothing else has to change.
+		if (!cells.empty() && cells[0] == "OPERATOR") cells.erase(cells.begin());
+		if (cells.size() < 5) continue;
 
-		size_t name_start = sep1 + kSep.size();
-		size_t sep2 = line.find(kSep, name_start);
-		if (sep2 == string::npos) continue;
-		string name = line.substr(name_start, sep2 - name_start);
-
-		size_t country_start = sep2 + kSep.size();
-		size_t sep3 = line.find(kSep, country_start);
-		if (sep3 == string::npos) continue;
-		string country = line.substr(country_start, sep3 - country_start);
-
-		size_t service_start = sep3 + kSep.size();
-		size_t sep4 = line.find(kSep, service_start);
-		if (sep4 == string::npos) continue;
-		string service = line.substr(service_start, sep4 - service_start);
+		const string & code    = cells[0];
+		const string & name    = cells[1];
+		const string & country = cells[2];
+		const string & service = cells[3];
 		WED_AirlineDirectoryEntry::OpClass op;
 		if      (service == "Pax")      op = WED_AirlineDirectoryEntry::op_Pax;
 		else if (service == "Cargo")    op = WED_AirlineDirectoryEntry::op_Cargo;
@@ -126,16 +147,9 @@ bool	WED_AirlineDirectory::EnsureLoaded(const string & db_path)
 		else if (service == "Gov")      op = WED_AirlineDirectoryEntry::op_Gov;
 		else continue;										// not a documented value - malformed
 
-		size_t fleet_start = sep4 + kSep.size();
-		string fleet_str = line.substr(fleet_start);
-		// The optional sixth column (hub ICAOs) is for the generator, not for WED -
-		// the coordinates it resolves to arrive through livery_index.txt. Cut it
-		// off here rather than letting atoi() stop at the separator by luck.
-		size_t sep5 = fleet_str.find(kSep);
-		if (sep5 != string::npos) fleet_str = fleet_str.substr(0, sep5);
-		size_t fe = fleet_str.find_last_not_of(" \t");
-		if (fe == string::npos) continue;
-		fleet_str = fleet_str.substr(0, fe + 1);
+		// cells[5], the hub ICAOs, is for the generator, not for WED - the
+		// coordinates it resolves to arrive on the livery rows of the same file.
+		const string & fleet_str = cells[4];
 
 		if (code.empty() || name.empty() || country.empty() || fleet_str.empty()) continue;
 

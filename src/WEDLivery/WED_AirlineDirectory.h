@@ -34,7 +34,10 @@
 	livery_index.txt - the one file both WED and X-Plane read; there is no
 	WED-side copy and no fallback. Format, one airline per line:
 
-		<CODE> *** <Name> *** <IOC country> *** <Pax|Cargo> *** <Fleet count>
+		OPERATOR *** <CODE> *** <Name> *** <IOC country> *** <Pax|Cargo|GA|Military|Gov> *** <Fleet count> *** <hub ICAOs>
+
+	Cells are split on "***" and trimmed of spaces and tabs; the section is
+	tab-aligned for reading (tab width 4), so the whitespace is layout, not data.
 
 	CODE's length tells you how it was determined - this is deliberate, so a
 	human skimming the raw text file (or code reading it) can tell at a glance

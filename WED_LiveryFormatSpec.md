@@ -1617,11 +1617,17 @@ time - operator name, country, operation class, fleet size, hub ICAOs - is now
 written into the index once per operator, ahead of the livery rows:
 
 ```
-OPERATOR *** UAL  *** United Airlines        *** USA *** Pax      *** 1138 *** KORD KIAH KDEN KSFO KEWR KIAD KLAX
-OPERATOR *** FDX  *** FedEx Express          *** USA *** Cargo    ***  478 *** KMEM KIND KOAK ... VHHH RJAA
-OPERATOR *** AIO  *** United States Air Force *** USA *** Military ***    0 ***
-OPERATOR *** XPMI *** Generic - military     ***     *** Military ***    0 ***
+OPERATOR	***	UAL		***	United Airlines				***	USA	***	Pax			***	1138	***	KORD KIAH KDEN KSFO KEWR KIAD KLAX
+OPERATOR	***	FDX		***	FedEx Express				***	USA	***	Cargo		***	478		***	KMEM KIND KOAK ... VHHH RJAA
+OPERATOR	***	AIO		***	United States Air Force		***	USA	***	Military	***	0		***
+OPERATOR	***	XPMI	***	Generic - military			***		***	Military	***	0		***
 ```
+
+The operator section is **tab-aligned** (laid out by the generator for a tab
+width of 4), unlike the space-padded livery rows: it has a wide free-text NAME
+cell and is the part of the file people actually read. Every reader splits on
+`***` and strips spaces *and* tabs, so the whitespace between cells is layout,
+never data - a reader that matches a literal `" *** "` drops every record.
 
 One record per operator rather than the facts repeated on every livery row.
 The four pseudo-codes get records too, so the ramp's operation-type filter has
