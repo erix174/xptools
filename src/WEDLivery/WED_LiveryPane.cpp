@@ -361,24 +361,32 @@ namespace
 		}
 		const vector<string> & shuffle_order = cache_it->second;
 
-		vector<string> pinned;
-		for (int i = 0; i < pool_n; ++i)
+		// A CHECKED OPERATOR IS KEPT, NOT PROMOTED. It used to be hoisted to the
+		// front of this tier, so ticking a card made it jump to the top of its own
+		// section - the list rearranging itself under the cursor on every click,
+		// which is the same complaint the "Selected" section already answers by
+		// mirroring rather than moving.
+		//
+		// The reason the special case existed is still real: this tier shows ten of
+		// thirty and a reshuffle could drop a checked operator out of view
+		// entirely. So a checked one is admitted past the slot limit, but only ever
+		// at its own place in the shuffle - the order never changes, it only gets
+		// longer.
+		vector<string> result;
+		set<string>    result_set;
+		for (size_t i = 0; i < shuffle_order.size(); ++i)
 		{
-			string lower = by_fleet[i].code;
+			string lower = shuffle_order[i];
 			for (string::iterator c = lower.begin(); c != lower.end(); ++c)
 				*c = (char) tolower((unsigned char) *c);
-			if (checked_lower.count(lower))
-				pinned.push_back(by_fleet[i].code);
-		}
 
-		vector<string> result = pinned;
-		set<string> result_set(pinned.begin(), pinned.end());
-		for (size_t i = 0; i < shuffle_order.size() && (int) result.size() < kDisplaySlots; ++i)
-			if (!result_set.count(shuffle_order[i]))
+			bool keep = checked_lower.count(lower) != 0 || (int) result.size() < kDisplaySlots;
+			if (keep && !result_set.count(shuffle_order[i]))
 			{
 				result.push_back(shuffle_order[i]);
 				result_set.insert(shuffle_order[i]);
 			}
+		}
 
 		return result;
 	}
@@ -2346,16 +2354,8 @@ void	WED_LiveryPane::TrayHeights(const vector<string> & row_icaos, vector<float>
 // near the bottom of the list has nowhere else to put it.
 void	WED_LiveryPane::DrawHoverTip(GUI_GraphState * state, int b[4])
 {
-	if (mCycleAirline.empty()) return;
-	const AirlineCard * ac = CardFor(mCycleAirline);
-	if (!ac || ac->labels.size() < 2) return;		// one aircraft explains itself
-
-	string text = ac->name + ": ";
-	for (size_t i = 0; i < ac->labels.size(); ++i)
-	{
-		if (i) text += ", ";
-		text += ac->labels[i];
-	}
+	if (mHoverTipText.empty()) return;
+	const string & text = mHoverTipText;
 
 	float line_h = GUI_GetLineHeight(font_UI_Basic);
 	float tw     = GUI_MeasureRange(font_UI_Basic, text.c_str(), text.c_str() + text.size());
@@ -4835,6 +4835,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			// mystery rather than a mismatch.
 			int         renders_this_frame = 0;
 			set<string> keep_alive_paths;
+			mHoverTipText.clear();		// re-decided below, per frame, by whatever is under the cursor
 
 			// Clip to the content viewport. GUI_Pane::InternalDraw() only scissors to
 			// the WHOLE PANE's bounds, not this section's, so without this a card
@@ -4935,6 +4936,46 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 
 					const bool locked = (!mLockedAirline.empty() && row.icao == mLockedAirline);
 					const bool dimmed = (!mLockedAirline.empty() && row.icao != mLockedAirline);
+
+					// WHAT THE TIP SAYS, decided here because this is where the
+					// card's sub-rectangles are known. Most specific target wins:
+					// the lock and the tray tab both sit on the card, so a generic
+					// "here is what they fly" would otherwise shadow the two
+					// controls the cursor is actually on.
+					if ((int) vi == mHoverRow)
+					{
+						float lr[4], tr[4];
+						LockIconRect(slots[vi], lr);
+						TrayTabRect (slots[vi], tr);
+
+						// A lock badge is small, so its target is grown by a few
+						// percent of the card - enough to forgive a near miss
+						// without reaching the tray tab below it.
+						float grow = (std::max)(3.0f, (slots[vi].x1 - slots[vi].x0) * 0.03f);
+
+						if (mHoverX >= lr[0] - grow && mHoverX <= lr[2] + grow &&
+							mHoverY >= lr[1] - grow && mHoverY <= lr[3] + grow)
+						{
+							mHoverTipText = locked ? "Spawn every listed operator again"
+												   : "Spawn this operator only";
+						}
+						else if (mHoverX >= tr[0] && mHoverX <= tr[2] &&
+								 mHoverY >= tr[1] && mHoverY <= tr[3] &&
+								 ac->labels.size() > 1)
+						{
+							mHoverTipText = "Show all of this operator's aircraft";
+						}
+						else if (ac->labels.size() > 1)
+						{
+							string t = ac->name + ": ";
+							for (size_t k = 0; k < ac->labels.size(); ++k)
+							{
+								if (k) t += ", ";
+								t += ac->labels[k];
+							}
+							mHoverTipText = t;
+						}
+					}
 
 					keep_alive_paths.insert(ac->abs_paths[show]);
 					float tray_frac = (rows[vi].icao == mTrayAirline)    ? mTrayOpen

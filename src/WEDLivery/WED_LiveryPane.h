@@ -536,6 +536,10 @@ private:
 	// got to - so pointing at one aircraft to look at it does not cost you your
 	// place in the sequence.
 	int							mTrayHoverIdx;
+	// What the tip should say this frame, decided while the cards are drawn (that
+	// is where the sub-rects are known) and rendered after the clip is popped.
+	// Empty means no tip.
+	std::string					mHoverTipText;
 	int							mCycleShow;			// which livery is on the face
 	float						mCycleAccum;		// seconds since the last step
 
