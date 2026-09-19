@@ -1819,6 +1819,21 @@ void	WED_LiveryPane::RecomputeCoverage(void)
 		int hi = WidthEnumToIndex(ramp->GetWidth());
 		if (lo > hi) std::swap(lo, hi);		// defensive; the slider cannot produce it
 
+		// With a 1313 row the size letter is DERIVED - R23 writes only the largest
+		// weighted class into 1301 - so width_min..width collapses to one class
+		// and the eligibility scan below missed every operator whose aircraft sit
+		// lower. A C+E stand listing Air China (737) and United (747) reported
+		// "Only UAL will ever park here". Scan what the weights actually open.
+		{
+			int w[6];
+			if (ramp->GetClassWeights(w))
+			{
+				int wlo = -1, whi = -1;
+				for (int k = 0; k < 6; ++k) if (w[k] > 0) { if (wlo < 0) wlo = k; whi = k; }
+				if (wlo >= 0) { lo = wlo; hi = whi; }
+			}
+		}
+
 		set<string> codes = ParseCodes(ramp->GetAirlines());
 
 		// The readout must count what the sim will actually draw from, so the
@@ -1869,6 +1884,7 @@ void	WED_LiveryPane::RecomputeCoverage(void)
 			{
 				int  fillable        = 0;
 				bool any_art_at_all  = false;	// does the LIBRARY have anything at a weighted class?
+				bool listed_have_art = false;	// do the LISTED operators, range aside?
 				for (int k = 0; k < 6; ++k)
 				{
 					if (wts[k] == 0) continue;
@@ -1880,6 +1896,7 @@ void	WED_LiveryPane::RecomputeCoverage(void)
 					{
 						vector<const WED_LiveryIndexEntry *> hits;
 						mLiveryIndex.GetForAirlineAndClass(*it, size_class, hits);
+						if (!hits.empty()) listed_have_art = true;
 						// Same range rule as the cards and the flat loop above: a
 						// class is only "filled" by an aircraft that can reach the
 						// stand. Without this the weighted readout said "100% of the
@@ -1897,8 +1914,13 @@ void	WED_LiveryPane::RecomputeCoverage(void)
 				if (fillable == 0)
 					// R14's distinction, and it decides whether the author is
 					// being told they made a mistake or told they are early.
-					c.empty_cause = any_art_at_all ? Coverage::empty_Unfillable
-												   : Coverage::empty_NoArtYet;
+					// The third case is the range rule's: the aircraft exist and the
+					// operators fly them, they just cannot get here. Saying "no
+					// aircraft at size C" for that sends the author to the size
+					// slider, the one control that cannot fix it.
+					c.empty_cause = !any_art_at_all  ? Coverage::empty_NoArtYet
+									: listed_have_art ? Coverage::empty_OutOfRange
+													  : Coverage::empty_Unfillable;
 			}
 			else
 			{
@@ -2010,7 +2032,9 @@ float	WED_LiveryPane::CoverageHeight(void) const
 	// content-derived so the sections below it never shift as the numbers change -
 	// a readout that moves the airline list every time you tick a checkbox is
 	// worse than no readout.
-	return GUI_GetLineHeight(font_UI_Basic) * 2 + 10;
+	// ...plus a third line for what the range rule removed, reserved even when
+	// blank for the same reason: the list below must never shift.
+	return GUI_GetLineHeight(font_UI_Basic) * 3 + 10;
 }
 
 float	WED_LiveryPane::ListToolbarHeight(void) const
@@ -4525,6 +4549,14 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 							"X-Plane ships no aircraft at all at this size. The stand starts working the day one does, with no edit here.");
 						break;
 
+					case Coverage::empty_OutOfRange:
+						snprintf(head, sizeof(head), "This stand parks nothing - nothing listed can reach it");
+						head_col = col_warn;
+						snprintf(detail, sizeof(detail),
+							"The %d listed operators do fly size %s, but none of those aircraft has the range to get here from a hub. List an operator based nearer.",
+							mCoverage.airlines_listed, range);
+						break;
+
 					default:
 						snprintf(head, sizeof(head), "This stand parks nothing - and that looks unintended");
 						head_col = col_warn;
@@ -4602,9 +4634,10 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		// What the range rule removed at THIS stand, named. Without this the author
 		// sees United's card shrink to a 777 and has no way to know whether that is
 		// the index, the weights, or a bug. One clause per operator, types joined.
+		string range_line;
 		if (!mRangeHidden.empty())
 		{
-			string s = "   Beyond range from their hubs, so not offered here:";
+			string s = "Beyond range from their hubs, so not offered here:";
 			int n = 0;
 			for (map<string, vector<string> >::const_iterator i = mRangeHidden.begin(); i != mRangeHidden.end(); ++i, ++n)
 			{
@@ -4614,8 +4647,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 					s += (k ? "/" : "") + i->second[k];
 			}
 			s += ".";
-			size_t used = strlen(detail);
-			snprintf(detail + used, sizeof(detail) - used, "%s", s.c_str());
+			range_line = s;		// its own line - appended to detail it ran off the right edge
 		}
 
 		// §4.5: the readout MUST name what it resolved against. Appended rather
@@ -4630,6 +4662,8 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 
 		GUI_FontDraw(state, font_UI_Basic, head_col,  b[0] + pad, cov_top - line_h * 0.9f, head);
 		GUI_FontDraw(state, font_UI_Basic, col_muted, b[0] + pad, cov_top - line_h * 1.9f, detail);
+		if (!range_line.empty())
+			GUI_FontDraw(state, font_UI_Basic, col_muted, b[0] + pad, cov_top - line_h * 2.9f, range_line.c_str());
 	}
 
 	// --- airline list workspace: toolbar row (Show Recommendation + Sort) boxed

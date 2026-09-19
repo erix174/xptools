@@ -217,7 +217,8 @@ private:
 			empty_None = 0,		// something spawns
 			empty_ByChoice,		// all six weights zero - the author said so (§4.2)
 			empty_Unfillable,	// the listed operators have nothing at a weighted class
-			empty_NoArtYet		// NOTHING in the library has anything at those classes
+			empty_NoArtYet,		// NOTHING in the library has anything at those classes
+			empty_OutOfRange	// they have it, but no hub is within the aircraft's range (R26)
 		};
 		int		empty_cause;
 		// Single-stand detail. Meaningless (and not drawn) when stands != 1.
