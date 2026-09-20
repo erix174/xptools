@@ -406,8 +406,9 @@ somewhere. Whatever expressiveness feels missing here has nowhere else to go.
 **Index data review — Eric's, and it is his job at Laminar, not something to design
 around.** 114 registrations came from an OCR pass at 69% raw accuracy and are marked
 "NOT YET EYEBALLED"; 10 are self-flagged. Obvious noise (`DELTA`, `FEDEX`, `JAPAN`,
-`BRASIL`) is still in there. Edit
-`tools/scripts/airline_research/livery_reg_overrides.txt`, never the generated index.
+`BRASIL`) is still in there. Edit the REG column of the row itself in
+`tools/scripts/airline_research/livery_index.txt` - the file is hand-maintained
+and the generator merges into it, so the edit stands.
 Must be clean before ship.
 
 **Six rows the generator cannot name, and should not try to.** `jet/B752/` ships

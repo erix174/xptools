@@ -203,3 +203,7 @@ nohup.out
 # Cristiano files
 MIEI
 /vs_build
+
+# python build artefacts - never belonged in the tree
+__pycache__/
+*.pyc

@@ -230,7 +230,7 @@ does not also break one of the two correct answers.
 ### Distances used
 
 Great-circle (haversine) from the operator's NEAREST HUB to the stand, one way,
-hubs from the sixth column of WED_AirlineDirectory.txt resolved against Global
+hubs from the HUB ICAOs on the operator's OPERATOR record, resolved against Global
 Airports. United from KSFO 9,510 km; British Airways from EGLL 8,150 km; FedEx
 from VHHH 1,980 km; Air China from ZBAA ~0. No domestic exemption is needed - a
 domestic operator's nearest hub is close by definition.

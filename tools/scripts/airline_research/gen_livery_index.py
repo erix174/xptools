@@ -642,6 +642,8 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
 #   IOC CTY     Country the operator is registered in, IOC 3-letter code.
 #   FLEET       Aircraft in service; 0 means "not researched", not "none". It
 #               only ranks the Popular tier, so an approximate number is fine.
+#               It does NOT apply to a military, government or generic record -
+#               those are 0 by definition and nobody should go looking.
 #   HUB ICAOs   The operator's hubs and main bases as ICAO codes, space
 #               separated - ALL of the big ones, not just the largest. The
 #               generator resolves them against the install's Global Airports

@@ -1064,10 +1064,10 @@ does both at once.
    why earlier drafts needed a per-stand `-ual:B744` at every 747-era gate. The
    mark states the fact once, globally, where it is true.
 
-**Marks live in `livery_obsolete.txt`, never in the index directly.** The index is
-generated; a hand edit to it is wiped on the next regeneration. The sidecar is
-keyed by object path and merged by the generator, exactly as
-`livery_reg_overrides.txt` already does for hand-read registrations.
+**A mark is the word `Obsolete` in the row's own NOTE column.** There is no
+sidecar and no second file: the index is hand-maintained and the generator
+merges into it rather than overwriting it, so the mark survives a regeneration
+because it is simply still there.
 
 **A mark's blast radius must be read before it is made.** Withdrawing a livery is
 global and has no per-stand undo, and an (airline, class) pair left with no asset
@@ -1113,7 +1113,7 @@ B744 *** E *** UAL ***        ***     *** Default *** 13450 *** 41.98,-87.91 29.
   `WED_AircraftSizeReference.txt` and never revisited.
 - `HUBS` — the operator's hub positions as `lat,lon` pairs, space separated,
   two decimals. Resolved by the generator from hub ICAOs kept in
-  `WED_AirlineDirectory.txt` against Global Airports, so **the sim receives
+  the operator's own OPERATOR record against Global Airports, so **the sim receives
   numbers and needs no airport lookup at spawn time**, while the hand-edited file
   keeps codes a human can check at a glance.
 - Either column empty means *unknown*, and **unknown is never filtered**.
@@ -1612,9 +1612,8 @@ parser's signature or any other tool.
 
 ### 6.7b Schema 3 — operator records: one file for both readers
 
-Everything WED used to fetch from its own `WED_AirlineDirectory.txt` at run
-time - operator name, country, operation class, fleet size, hub ICAOs - is now
-written into the index once per operator, ahead of the livery rows:
+Every fact about an operator - name, country, operation class, fleet size, hub
+ICAOs - is written into the index once per operator, ahead of the livery rows:
 
 ```
 OPERATOR	***	UAL		***	United Airlines				***	USA	***	Pax			***	1138	***	KORD KIAH KDEN KSFO KEWR KIAD KLAX
@@ -1707,8 +1706,8 @@ work:
   maintained by hand.
 - **The Liveries tab** — airline selection with tri-state multi-select, the size
   range control, the flag pipeline, and the airport recommendation list. These
-  read `WED_AirlineDirectory.txt` and `WED_AirportDatabase.txt`, both of which are
-  loaded and queried on every selection change.
+  read `livery_index.txt` (liveries and operator records alike) and
+  `WED_AirportDatabase.txt`, both loaded and queried on every selection change.
 - **Round-tripping of `1301`** — size letter, operation type and airline list are
   edited on the tab and survive import and export through the existing path.
 

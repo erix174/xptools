@@ -58,9 +58,8 @@ so one bad row can't take out the file.
 | file | loader | notes |
 |---|---|---|
 | `WED_AirportDatabase.txt` | yes | ICAO → country + airlines |
-| `WED_AirlineDirectory.txt` | yes | code → name, IOC country, Pax/Cargo, fleet size |
+| `livery_index.txt` | yes | liveries AND operator records - code → name, IOC country, operation class, fleet size, hubs. Lives in the X-Plane install, not beside WED.exe, because the sim reads the same file. |
 | `WED_AircraftSizeReference.txt` | **no** | type → ICAO wingspan class. Data-only; the generator bakes the class into the index, so WED never loads this at runtime. 2619 rows but only ~468 carry a class — the blank ones are a deliberate TODO convention, not corruption. |
-| `_deprecated_WED_StaticLiveryDatabase.txt` | no | superseded before it held data; see its own header |
 
 **Known bug:** the `.txt` POST_BUILD copies in `cmake/WED.cmake:810-828` are
 Windows-only. Mac (`:835`) and Linux (`:881`) deploy `WED_RESOURCE_FILES`, which does
@@ -130,7 +129,7 @@ B772 ×5) and livery variant. Those two axes are exactly what our index adds.
 `B738_CCA_Peony_*` (5 tail numbers), `B738_RYR_9H/EI/G/SP`.
 
 **Ryanair's four folders are four companies, not four liveries** — each has its own ICAO
-code in `WED_AirlineDirectory.txt`: `RYR` Ryanair, `RUK` Ryanair UK, `RYS` Buzz,
+code and its own OPERATOR record in the index: `RYR` Ryanair, `RUK` Ryanair UK, `RYS` Buzz,
 `MAY` Malta Air. Both generators share one `AIRLINE_REMAP` table so they can't drift.
 
 **Resource-library defects the index surfaced** (Laminar's to fix, not ours):
