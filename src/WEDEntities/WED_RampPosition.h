@@ -80,6 +80,8 @@ public:
 	void	SetWeightsInUse(bool in_use);
 	bool	HasStoredWeights(int out_w[6]) const;
 
+	virtual void	SetNthProperty(int n, const PropertyVal_t& val);
+
 	static string CorrectAirlinesString(const string &a);
 	// One 1301 airline code, as CorrectAirlinesString leaves it (lower case):
 	// 3 or 4 letters or digits, optionally "_" and 1 to 6 more. The base is the

@@ -31,8 +31,11 @@
 #include "WED_LibraryMgr.h"		// WED_clean_rpath - separator normalisation, see WED_LiveryObjectPath()
 
 #include <fstream>
+#include <sstream>
 #include <algorithm>
-#include <cstring>			// strncmp / strlen, for the header stamps
+#include <chrono>
+#include <map>
+#include <cstring>			// strncmp / strlen / memchr
 
 using std::string;
 using std::vector;
@@ -87,6 +90,122 @@ static void SplitOnStars(const string & line, vector<string> & out)
 	}
 }
 
+static bool IsXPlaneRoot(const string & root);
+
+// <X-Plane root>/Global Scenery/Global Airports/Earth nav data/apt.dat, or "".
+static string GlobalAirportsAptDat(void)
+{
+	if (gPackageMgr == NULL) return string();
+	string root;
+	if (!gPackageMgr->GetXPlaneFolder(root) || !IsXPlaneRoot(root)) return string();
+	return root + DIR_STR "Global Scenery" DIR_STR "Global Airports" DIR_STR "Earth nav data" DIR_STR "apt.dat";
+}
+
+// Splits [b, e) on spaces and tabs into at most max_tok tokens.
+static void SplitLine(const char * b, const char * e, vector<string> & out, size_t max_tok)
+{
+	out.clear();
+	while (b < e && out.size() < max_tok)
+	{
+		while (b < e && (*b == ' ' || *b == '\t')) ++b;
+		const char * t = b;
+		while (b < e && *b != ' ' && *b != '\t') ++b;
+		if (b > t) out.push_back(string(t, b));
+	}
+}
+
+// Hub ICAO -> (lat, lon) for every code in `wanted`, read off Global Airports -
+// the same airports the sim has loaded, so WED and the sim measure R26 from the
+// same point. The index names hubs by ICAO on its OPERATOR records and nowhere
+// carries a coordinate: a column of numbers nobody can check by eye is a column
+// nobody maintains.
+//
+// Where an airport is: its 1302 datum, else the midpoint of its first runway.
+// Which airport a code means: the one whose 1302 icao_code says so, else the one
+// whose header ident is that code. The metadata wins because the ident is not
+// always the ICAO code - Ezhou (ZHEC) and Chengdu Tianfu (ZUTF) are filed under
+// placeholder idents, and ZSQD the ident is the closed Liuting while ZSQD the
+// icao_code is the new Jiaodong.
+static void ResolveHubIcaos(const string & apt_dat, const set<string> & wanted,
+							std::map<string, std::pair<double,double> > & out)
+{
+	out.clear();
+	if (wanted.empty() || apt_dat.empty()) return;
+	MFMemFile * f = MemFile_Open(apt_dat.c_str());
+	if (!f)
+	{
+		LOG_MSG("W/LiveryIndex cannot open %s - hubs unresolved, range rule off\n", apt_dat.c_str());
+		return;
+	}
+
+	std::map<string, std::pair<double,double> > by_ident, by_code;
+	string ident, code;
+	double lat = 0, lon = 0, rlat = 0, rlon = 0;
+	bool has_lat = false, has_lon = false, has_rwy = false;
+
+	auto flush = [&]() {
+		bool want_i = !ident.empty() && wanted.count(ident);
+		bool want_c = !code.empty()  && wanted.count(code);
+		if (!want_i && !want_c) return;
+		std::pair<double,double> ll;
+		if (has_lat && has_lon)	ll = std::make_pair(lat, lon);
+		else if (has_rwy)		ll = std::make_pair(rlat, rlon);
+		else					return;
+		if (want_c && !by_code.count(code))    by_code[code] = ll;
+		if (want_i && !by_ident.count(ident))  by_ident[ident] = ll;
+	};
+
+	vector<string> tok;
+	const char * p = MemFile_GetBegin(f);
+	const char * end = MemFile_GetEnd(f);
+	while (p < end)
+	{
+		const char * eol = (const char *) memchr(p, '\n', end - p);
+		if (!eol) eol = end;
+		const char * le = eol;
+		if (le > p && le[-1] == '\r') --le;
+
+		// 1 land airport, 16 seaplane base, 17 heliport: each starts a new block.
+		bool header = (le - p >= 2 && p[0] == '1' && (p[1] == ' ' || p[1] == '\t')) ||
+					  (le - p >= 3 && p[0] == '1' && (p[1] == '6' || p[1] == '7') && (p[2] == ' ' || p[2] == '\t'));
+		if (header)
+		{
+			flush();
+			SplitLine(p, le, tok, 5);
+			ident = tok.size() > 4 ? tok[4] : string();
+			code.clear();
+			has_lat = has_lon = has_rwy = false;
+		}
+		else if (!ident.empty() && le - p > 5 && strncmp(p, "1302 ", 5) == 0)
+		{
+			SplitLine(p, le, tok, 3);
+			if (tok.size() == 3)
+			{
+				if      (tok[1] == "icao_code") code = ToUpper(tok[2]);
+				else if (tok[1] == "datum_lat") { lat = atof(tok[2].c_str()); has_lat = true; }
+				else if (tok[1] == "datum_lon") { lon = atof(tok[2].c_str()); has_lon = true; }
+			}
+		}
+		else if (!ident.empty() && !has_rwy && le - p > 4 && strncmp(p, "100 ", 4) == 0)
+		{
+			SplitLine(p, le, tok, 20);
+			if (tok.size() >= 20)
+			{
+				rlat = (atof(tok[9].c_str())  + atof(tok[18].c_str())) * 0.5;
+				rlon = (atof(tok[10].c_str()) + atof(tok[19].c_str())) * 0.5;
+				has_rwy = true;
+			}
+		}
+		p = eol + 1;
+	}
+	flush();
+	MemFile_Close(f);
+
+	out.swap(by_ident);
+	for (std::map<string, std::pair<double,double> >::const_iterator i = by_code.begin(); i != by_code.end(); ++i)
+		out[i->first] = i->second;
+}
+
 WED_LiveryIndex::WED_LiveryIndex() :
 	mUsable(0),
 	mLoadAttempted(false),
@@ -132,6 +251,7 @@ bool	WED_LiveryIndex::EnsureLoaded(const string & index_path)
 	vector<string> cells;
 	string line;
 	vector<WED_LiveryIndexEntry> parsed;
+	std::map<string, vector<string> > op_hubs;		// operator code -> hub ICAOs
 
 	while (std::getline(f, line))
 	{
@@ -148,7 +268,20 @@ bool	WED_LiveryIndex::EnsureLoaded(const string & index_path)
 
 		SplitOnStars(line, cells);
 		if (cells.size() < 7) continue;			// not a data row
-		if (cells[0] == "OPERATOR") continue;	// schema 3 operator record - WED_AirlineDirectory reads those
+		if (cells[0] == "OPERATOR")
+		{
+			// WED_AirlineDirectory reads the rest of the record; the hub ICAOs
+			// are the index's, for the range rule.
+			//   OPERATOR *** CODE *** NAME *** CTY *** OP *** FLEET *** HUB ICAOs
+			if (cells.size() >= 7)
+			{
+				std::istringstream hs(cells[6]);
+				string icao;
+				vector<string> & dst = op_hubs[ToUpper(cells[1])];
+				while (hs >> icao) dst.push_back(ToUpper(icao));
+			}
+			continue;
+		}
 
 		WED_LiveryIndexEntry e;
 		e.type        = ToUpper(cells[0]);
@@ -165,28 +298,10 @@ bool	WED_LiveryIndex::EnsureLoaded(const string & index_path)
 		if (cells.size() >= 9)
 		{
 			e.range_km = atoi(cells[6].c_str());		// non-numeric -> 0 -> unknown
-			// "lat,lon lat,lon ..."; a pair that does not parse is dropped, not
-			// guessed - a hub at (0,0) would put every operator in the Atlantic.
-			const string & hs = cells[7];
-			if (hs == "HOME") { e.home_only = true; }
-			size_t i = 0;
-			while (i < hs.size())
-			{
-				while (i < hs.size() && hs[i] == ' ') ++i;
-				size_t j = hs.find(' ', i);
-				if (j == string::npos) j = hs.size();
-				string tok = hs.substr(i, j - i);
-				size_t c = tok.find(',');
-				if (c != string::npos && c > 0 && c + 1 < tok.size())
-				{
-					char * end1 = NULL; char * end2 = NULL;
-					double la = strtod(tok.c_str(), &end1);
-					double lo = strtod(tok.c_str() + c + 1, &end2);
-					if (end1 == tok.c_str() + c && *end2 == 0 && la >= -90 && la <= 90 && lo >= -180 && lo <= 180)
-						e.hubs.push_back(make_pair(la, lo));
-				}
-				i = j;
-			}
+			// SCOPE: HOME on a military or government row, else empty. Schema 3
+			// kept hub coordinates in this cell; they are ignored now, since the
+			// hubs come from the OPERATOR record (below), which that file has too.
+			e.home_only = (cells[7] == "HOME");
 		}
 
 		// "????" is the generator's TODO marker, not a value. A row still
@@ -198,6 +313,38 @@ bool	WED_LiveryIndex::EnsureLoaded(const string & index_path)
 		if (e.note.empty()) e.note = kDefaultNote;
 
 		parsed.push_back(e);
+	}
+
+	// Hubs, for R26: the operator's ICAOs, placed by Global Airports. A code that
+	// does not resolve is dropped, not guessed, and an operator left with none is
+	// never range-filtered - unknown fails open, as it always has.
+	{
+		set<string> wanted;
+		for (std::map<string, vector<string> >::const_iterator i = op_hubs.begin(); i != op_hubs.end(); ++i)
+			wanted.insert(i->second.begin(), i->second.end());
+		std::map<string, std::pair<double,double> > pos;
+		const string apt_dat = GlobalAirportsAptDat();
+		auto t0 = std::chrono::steady_clock::now();
+		ResolveHubIcaos(apt_dat, wanted, pos);
+		long ms = (long) std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
+
+		string missing;
+		for (set<string>::const_iterator i = wanted.begin(); i != wanted.end(); ++i)
+			if (!pos.count(*i)) missing += " " + *i;
+		LOG_MSG("I/LiveryIndex hubs: %d of %d ICAOs placed from %s in %ld ms%s%s\n",
+				(int) pos.size(), (int) wanted.size(), apt_dat.c_str(), ms,
+				missing.empty() ? "" : "; not found:", missing.c_str());
+
+		for (size_t i = 0; i < parsed.size(); ++i)
+		{
+			std::map<string, vector<string> >::const_iterator h = op_hubs.find(parsed[i].airline);
+			if (h == op_hubs.end()) continue;
+			for (size_t k = 0; k < h->second.size(); ++k)
+			{
+				std::map<string, std::pair<double,double> >::const_iterator p = pos.find(h->second[k]);
+				if (p != pos.end()) parsed[i].hubs.push_back(p->second);
+			}
+		}
 	}
 
 	// Build the indices only after the vector has stopped growing - it holds the

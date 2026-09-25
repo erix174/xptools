@@ -168,8 +168,12 @@ A reader that has to defend against all of these is a reader nobody implements
 correctly.
 
 - **R9** — No whitespace other than a single U+0020 SPACE inside any field.
-- **R10** — Airline codes match `[A-Z0-9]{3,5}`. Anything else is dropped by the
-  writer, not emitted for the reader to police.
+- **R10** — An airline code is 3 or 4 letters or digits, optionally followed by
+  `_` and 1 to 6 more: `[A-Z0-9]{3,4}(_[A-Z0-9]{1,6})?`, written lower case in
+  `1301`. The base is an ICAO designator or an index code (`dal`, `xpa0`); the
+  suffix names a division flying on that designator (`afr_f`, `ryr_1`) or, for
+  the generic airliners, the type (`xpzz_b752`). WED's validator checks each
+  code against this shape; a code outside it is an error, not silently dropped.
 - **R11** — Weights are non-negative integers in `0..1000`.
 - **R14** — A writer MUST NOT emit weights pointing exclusively at classes that no
   listed airline can fill. WED treats this as a hard export error (§4.5).
@@ -1122,11 +1126,16 @@ B744 *** E *** UAL ***        ***     *** Default *** 13450 *** 41.98,-87.91 29.
 - `RANGE_KM` — typical operating range of `TYPE` at a realistic payload, in km.
   Not the ferry figure. A physical constant; it is authored once in
   `WED_AircraftSizeReference.txt` and never revisited.
-- `HUBS` — the operator's hub positions as `lat,lon` pairs, space separated,
-  two decimals. Resolved by the generator from hub ICAOs kept in
-  the operator's own OPERATOR record against Global Airports, so **the sim receives
-  numbers and needs no airport lookup at spawn time**, while the hand-edited file
-  keeps codes a human can check at a glance.
+- `HUBS` — **since schema 4, not a column.** The hubs are the ICAO codes on the
+  operator's OPERATOR record (§6.7b), and each reader places them itself when it
+  loads the index, from the install's Global Airports: the airport whose `1302
+  icao_code` is the hub, else the one whose header ident is; its `1302` datum,
+  else the midpoint of its first runway. The metadata wins because the ident is
+  not always the ICAO code - Ezhou (ZHEC) and Chengdu Tianfu (ZUTF) sit under
+  placeholder idents, and the ident ZSQD is the closed Liuting while `icao_code
+  ZSQD` is the new Jiaodong. Schema 2 and 3 wrote the resolved `lat,lon` pairs
+  into the row instead; nobody could check them by eye, so nobody could maintain
+  them. The row's eighth cell is now `SCOPE` (§6.7d).
 - Either column empty means *unknown*, and **unknown is never filtered**.
   Military and generic pseudo-codes have no hubs; a type without a researched
   range has no figure. Both fall through the rule untouched. A missing fact must
@@ -1136,11 +1145,15 @@ B744 *** E *** UAL ***        ***     *** Default *** 13450 *** 41.98,-87.91 29.
 operator admit:
 
 ```
-if RANGE_KM is empty or HUBS is empty        -> eligible
-d = min over HUBS of greatcircle(hub, stand)   -- stand from the 1300 row
+if OP is Military or Gov                     -> eligible (R27 decides where)
+if RANGE_KM is empty or no hub was placed    -> eligible
+d = min over hubs of greatcircle(hub, stand)   -- stand from the 1300 row
 if d > RANGE_KM                              -> not a candidate
 else                                         -> eligible
 ```
+
+Military and government rows are exempt: they park at home (R27) or anywhere,
+and no country is wide enough for range to matter at home.
 
 If the filter empties an operator's set in the drawn class, stage 3 has nothing
 to choose and the stand stays empty for that draw — exactly the outcome R18
@@ -1609,8 +1622,14 @@ runs it on submission (`WED_GatewayExport.cpp:498`). But a duplicate row is gone
 by the time that validator sees anything: the parser took the first and the
 second never became a value.
 
-So the honest statement is: hand-write two `1313` rows and one of them vanishes
-without a word. That is a deliberate trade, not a gap. The person who wrote them
+So the honest statement was: hand-write two `1313` rows and one of them vanishes
+without a word. **Superseded 2026-09-25:** the reader now records every row it
+skips - an unknown row code, a duplicate or malformed `1313` - on the airport
+it belongs to (`AptInfo_t::discarded_rows`), without changing any function
+signature, so MeshTool, DSF2Text and RenderFarm are untouched. WED lists them
+after the import and once more before the first save, which is what makes the
+loss permanent. The file still loads, as it must. The rest of this paragraph is
+the reasoning as it stood, kept for the record. That was a deliberate trade, not a gap. The person who wrote them
 went around the editor and knows it; the next author will never see that anything
 was dropped; and nothing propagates, because a Gateway submission is re-emitted
 from WED's object model rather than forwarded as the author's bytes (§8.5).
@@ -1655,18 +1674,20 @@ operation-type filter:
 |------|------------|----------|
 | `XPGA` | general aviation - light aircraft and business jets alike | GA |
 | `XPMI` | military | Military |
-| `XPZZ` | unpainted / house-colours airliner | Pax |
+| `XPZZ_<TYPE>` | unpainted / house-colours airliner of that type (`XPZZ_B752`, `XPZZ_DC10`) | Pax |
 
 They are the only records with an empty country, because a generic has no
-nationality; the reader exempts exactly these three from the country
-requirement, and nothing else.
+nationality; the reader exempts exactly these from the country requirement, and
+nothing else. The generic airliner is one code per type (schema 4) so a stand can
+list the one white airframe it means, and `1301` carries it like any other code
+(R10). A bare `XPZZ` from an older index is still recognised.
 
 An **unpainted** airframe takes the code for what it *is*, not a single "white"
-bucket: a white light aircraft is `XPGA`, a white airliner `XPZZ`, a bare
+bucket: a white light aircraft is `XPGA`, a white airliner `XPZZ_<TYPE>`, a bare
 military airframe `XPMI`. Otherwise a white Cessna would answer the Airline
 filter and a white 757 the GA one.
 
-**`XPZZ` is never placed automatically.** It sorts below every other operator
+**`XPZZ_*` is never placed automatically.** It sorts below every other operator
 in the picker whichever way the sort arrow points, and any auto-fill pass that
 populates stands must skip it. It exists so a person can deliberately park an
 unpainted airframe. If a machine could pick it, every airport in the world
@@ -1688,6 +1709,28 @@ operator record already in the file exactly as written, drops rows whose asset
 is gone, and adds a guessed row only for a genuinely new asset, using two
 bootstrap tables under `tools/scripts/airline_research/bootstrap/` that nothing
 at run time reads.
+
+### 6.7d Schema 4 — hubs by ICAO, and `SCOPE`
+
+A livery row keeps ten cells; the eighth changes meaning:
+
+```
+<TYPE> *** <CLASS> *** <AIRLINE> *** <REG> *** <REG CTY> *** <NOTE> *** <RANGE_KM> *** <SCOPE> *** <OP> *** <path>
+```
+
+- `SCOPE` — `HOME` or empty. See R27.
+- Hub positions are not in the file (§6.7). A schema 3 file still reads: its
+  eighth cell is `HOME` or coordinates, and coordinates are ignored, because the
+  same file's OPERATOR records carry the ICAOs they were computed from.
+- Military and government OPERATOR records carry no hubs: R26 never reads them.
+
+- **R27** — A row whose `SCOPE` is `HOME` is a candidate only at an airport in
+  the operator's own country: the country on its OPERATOR record, else the
+  row's `REG CTY`. The airport's country comes from the airport, not from a
+  distance. If either country is unknown the row stays a candidate (fail open,
+  as R26). A military or government row without `HOME` parks anywhere.
+
+The header stamp is `# schema 4`.
 
 ### 6.8 Authoring note — the weights mode is a property of the stand
 

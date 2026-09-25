@@ -159,7 +159,7 @@ bool	WED_AirlineDirectory::EnsureLoaded(const string & db_path)
 		// Exactly the three reserved generics, not every XP code: XPA0..XPC4 are
 		// real operators whose ICAO code could not be confirmed, and they do
 		// have a country.
-		const bool is_pseudo = (code == "XPGA" || code == "XPMI" || code == "XPZZ");
+		const bool is_pseudo = (code == "XPGA" || code == "XPMI" || WED_IsGenericAirlinerCode(code));
 		if (code.empty() || name.empty() || fleet_str.empty()) continue;
 		if (country.empty() && !is_pseudo) continue;
 

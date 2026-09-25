@@ -32,13 +32,17 @@ TRIVIAL_COPY(WED_RampPosition, WED_GISPoint_Heading)
 WED_RampPosition::WED_RampPosition(WED_Archive * a, int i) : WED_GISPoint_Heading(a,i),
 	ramp_type	(this,PROP_Name("Ramp Start Type",     XML_Name("ramp_start","type"   )), ATCRampType, atc_Ramp_Misc),
 	equip_type	(this,PROP_Name("Equipment Type",      XML_Name("ramp_start","traffic")), ATCTrafficType, 0),
-	// Size / Ramp Operation Type / Airlines are edited on the dedicated "Liveries" tab now (WED_LiveryPane) -
-	// the leading "." hides them from the generic property grid (see WED_PropertyTable::RecalculateColumns).
+	// Size is edited on the "Liveries" tab (WED_LiveryPane) - it is a range with
+	// optional class weights now, which one letter in the grid cannot show. The
+	// leading "." hides it from the generic property grid (see
+	// WED_PropertyTable::RecalculateColumns). Ramp Operation Type and Airlines stay
+	// in the grid as well: 1301's airline list also drives ATC and AI parking, so
+	// it must be typeable without an index, and for an operator with no livery.
 	// XML tag names are unchanged, so old documents still round-trip.
 	width		(this,PROP_Name(".Size",                XML_Name("ramp_start","width")), ATCIcaoWidth, width_C),
 	width_min	(this,PROP_Name(".Size Min",             XML_Name("ramp_start","width_min")), ATCIcaoWidth, width_A),
-	ramp_op_type(this,PROP_Name(".Ramp Operation Type", XML_Name("ramp_start","ramp_op_type")), RampOperationType, ramp_operation_None),
-	airlines	(this,PROP_Name(".Airlines",            XML_Name("ramp_start","airlines")),""),
+	ramp_op_type(this,PROP_Name("Ramp Operation Type",  XML_Name("ramp_start","ramp_op_type")), RampOperationType, ramp_operation_None),
+	airlines	(this,PROP_Name("Airlines",             XML_Name("ramp_start","airlines")),""),
 	class_weights(this,PROP_Name(".Class Weights",      XML_Name("ramp_start","weights")),""),
 	weights_mode (this,PROP_Name(".Weights Mode",       XML_Name("ramp_start","weights_mode")), 0),
 	mLegacyWidthOnly(false)
@@ -261,6 +265,20 @@ bool	WED_RampPosition::IsValidAirlineCode(const string &code)
 		if (!((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9'))) return false;
 	}
 	return true;
+}
+
+// The grid writes the property directly; normalise it the same way SetAirlines
+// does, or a code typed as "DAL" reads as unchecked on the Liveries tab.
+void	WED_RampPosition::SetNthProperty(int n, const PropertyVal_t& val)
+{
+	if (n == PropertyItemNumber(&airlines) && val.prop_kind == prop_String)
+	{
+		PropertyVal_t v(val);
+		v.string_val = CorrectAirlinesString(val.string_val);
+		WED_GISPoint_Heading::SetNthProperty(n, v);
+		return;
+	}
+	WED_GISPoint_Heading::SetNthProperty(n, val);
 }
 
 void	WED_RampPosition::SetAirlines(const string &a)

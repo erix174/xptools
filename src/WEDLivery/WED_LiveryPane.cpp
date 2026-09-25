@@ -81,6 +81,18 @@ using std::map;
 // current ramp's already-checked codes.
 static set<string> ParseCodes(const string & airlines);
 
+// What the pane says when livery_index.txt did not load. A missing file is the
+// normal state of an X-Plane older than 12.5 and is worded as such, not as an
+// error; a file that is there but unreadable is a fault and says so. Either
+// way the author is told where airline codes can still be typed.
+static string NoIndexSentence(WedDataFileError err)
+{
+	if (err == wed_data_no_file || err == wed_data_ok)
+		return "Livery previews need X-Plane 12.5 or later. Airlines can still be typed in the Selection tab.";
+	return string("livery_index.txt could not be used (") + WedDataFileErrorText(err) +
+		   "). Airlines can still be typed in the Selection tab.";
+}
+
 namespace
 {
 	const int kFilterEnumTable[5]  = { ramp_operation_None, ramp_operation_GeneralAviation, ramp_operation_Airline, ramp_operation_Cargo, ramp_operation_Military };
@@ -199,14 +211,14 @@ namespace
 		return a.icao < b.icao;
 	}
 
-	// XPZZ, the unpainted airliner, sinks to the bottom of every list whichever
+	// XPZZ_<TYPE>, the unpainted airliners, sink to the bottom of every list whichever
 	// way the sort arrow points. It is a fallback, not a choice - offering a
 	// white 757 above a real operator is the picker answering the wrong
 	// question first, and at a busy airport it would be the first thing seen.
 	// The rows carry the code lowercased (see r.icao above).
 	bool NotTheUnpaintedAirliner(const WED_LiveryDisplayRow & r)
 	{
-		return r.icao != "xpzz";
+		return !WED_IsGenericAirlinerCode(r.icao);
 	}
 
 	void SortAirlineRows(vector<WED_LiveryDisplayRow> & rows, bool descending)
@@ -775,27 +787,16 @@ namespace
 			const string dir_path = WED_LiveryIndexDefaultPath();
 			if (dir_path.empty() || !directory.EnsureLoaded(dir_path) || directory.Count() == 0)
 			{
-				// Say so, once. Without the directory the tab still works, but
-				// airlines render as bare ICAO codes and the "Popular Airlines" and
-				// "Same Country" sections vanish outright - a degraded result that
-				// looks exactly like a normal, short list. Silently handing that to
-				// an author is worse than one alert they dismiss.
-				//
-				// Once per SESSION, not per failure: this sits on the path Draw()
-				// takes, and the alert is modal, so it would otherwise reopen the
-				// instant it was dismissed.
-				static bool s_warned = false;
-				if (!s_warned)
+				// Logged, not alerted. This runs on the Draw path, and a missing
+				// index is not a fault: an X-Plane older than 12.5 simply does not
+				// ship one. The pane says so in place (NoIndexSentence) and the
+				// Airlines field on the Selection tab still takes codes by hand.
+				static bool s_logged = false;
+				if (!s_logged)
 				{
-					s_warned = true;
-					string msg = "WED could not load its airline database - ";
-					msg += WedDataFileErrorText(directory.LoadError());
-					msg += ":\n\n  ";
-					msg += dir_path;
-					msg += "\n\nThe Liveries tab still works, but airlines will show as "
-						   "codes without names, and the region-based recommendations "
-						   "will be missing.\n\nReinstalling WED restores the file.";
-					DoUserAlert(msg.c_str());
+					s_logged = true;
+					LOG_MSG("I/Livery no operator records - %s: %s\n",
+							WedDataFileErrorText(directory.LoadError()), dir_path.c_str());
 				}
 			}
 		}
@@ -1517,7 +1518,7 @@ bool	WED_LiveryPane::OperatorMatchesRampOp(const string & code_uc, int ramp_op) 
 
 	if (code_uc == "XPGA")                      return ramp_op == ramp_operation_GeneralAviation;
 	if (code_uc == "XPMI")                      return ramp_op == ramp_operation_Military;
-	if (code_uc == "XPZZ")                      return ramp_op == ramp_operation_Airline || ramp_op == ramp_operation_Cargo;
+	if (WED_IsGenericAirlinerCode(code_uc))     return ramp_op == ramp_operation_Airline || ramp_op == ramp_operation_Cargo;
 
 	WED_AirlineDirectoryEntry e;
 	if (!mAirlineDirectory.Lookup(code_uc, e))
@@ -4666,8 +4667,8 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			// mismatched index as the failure that costs a day precisely because
 			// its only symptom is things quietly not appearing. A readout that
 			// printed a confident zero here would be worse than none at all.
-			snprintf(head,   sizeof(head),   "Coverage unavailable - livery index not loaded");
-			snprintf(detail, sizeof(detail), "Looked for livery_index.txt under the selected X-Plane folder.");
+			snprintf(head,   sizeof(head),   "Coverage unavailable - no livery index");
+			snprintf(detail, sizeof(detail), "%s", NoIndexSentence(mAirlineDirectory.LoadError()).c_str());
 		}
 		else if (mCoverage.stands == 1)
 		{
@@ -5473,7 +5474,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 				// the tool rather than as an answer.
 				string why;
 				if (!mAirlineDirectory.IsLoaded())
-					why = "Airline database unavailable - see the warning shown at startup.";
+					why = NoIndexSentence(mAirlineDirectory.LoadError());
 				else if (!mSearchQuery.empty())
 					why = "No operator matches \"" + mSearchQuery + "\".";
 				else if (cur_op_enum == ramp_operation_None)

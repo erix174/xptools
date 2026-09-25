@@ -192,57 +192,51 @@ for r in _load_rows(os.path.join(WEDL, "WED_AirlineDirectory.txt"), 5):
     if len(r) >= 6 and r[5].strip():
         hub_icaos.setdefault(r[0], r[5].split())
 
-# ICAO -> (lat, lon) for every hub named above, read off the install's own Global
-# Airports apt.dat. Resolved HERE, once, so the sim receives numbers: it must not
-# need an airport lookup at spawn time, and the hand-edited directory must not
-# carry coordinates nobody can check at a glance. The datum row is preferred;
-# an airport without one gets the midpoint of its first runway.
+# ICAO -> (lat, lon) for every hub named on an OPERATOR record, read off the
+# install's Global Airports apt.dat. A LINT, not an output: since schema 4 the
+# index carries hub ICAOs only, and WED and the sim place them themselves at
+# load. This tells the maintainer, on every run, which hubs neither reader will
+# be able to place. Same lookup the readers use: an airport whose 1302 icao_code
+# names the hub wins over one whose header ident does - Ezhou (ZHEC) and
+# Chengdu Tianfu (ZUTF) sit under placeholder idents, and the ident ZSQD is the
+# closed Liuting while icao_code ZSQD is the new Jiaodong. Position: the 1302
+# datum, else the midpoint of the first runway.
 def resolve_hubs(xp_root, wanted):
     path = os.path.join(xp_root, "Global Scenery", "Global Airports", "Earth nav data", "apt.dat")
-    out = {}
+    by_ident, by_code = {}, {}
     if not os.path.exists(path):
-        print(f"WARNING: no Global Airports apt.dat at {path} - hubs left unresolved")
-        return out
-    cur = None; lat = lon = None; rwy = None
+        print(f"WARNING: no Global Airports apt.dat at {path} - hubs not checked")
+        return {}
+    ident = code = None; lat = lon = None; rwy = None
     def flush():
-        if cur in wanted and cur not in out:
-            if lat is not None:        out[cur] = (lat, lon)
-            elif rwy is not None:      out[cur] = rwy
+        want_i, want_c = ident in wanted, code in wanted
+        if not (want_i or want_c): return
+        ll = (lat, lon) if lat is not None and lon is not None else rwy
+        if ll is None: return
+        if want_c: by_code.setdefault(code, ll)
+        if want_i: by_ident.setdefault(ident, ll)
     with open(path, encoding="utf-8", errors="replace") as f:
         for line in f:
-            # 1 land airport, 16 seaplane base, 17 heliport. All three start a
-            # new airport block, and missing 16/17 was a real bug: cur stayed on
-            # the previous airport, so a heliport's datum row overwrote ITS
-            # coordinates (EDDK Cologne came out 250 km north), and a hub that is
-            # itself a heliport or seaplane base was never resolved at all.
+            # 1 land airport, 16 seaplane base, 17 heliport: each starts a block.
             head = line.split(None, 1)[0] if line[:1].isdigit() else ""
             if head in ("1", "16", "17"):
                 flush()
-                t = line.split(); cur = t[4] if len(t) > 4 else None
-                lat = lon = None; rwy = None
-            elif cur in wanted:
-                if line.startswith("1302 datum_lat"):   lat = float(line.split()[2])
-                elif line.startswith("1302 datum_lon"): lon = float(line.split()[2])
+                t = line.split(); ident = t[4] if len(t) > 4 else None
+                code = None; lat = lon = None; rwy = None
+            elif ident is not None:
+                if line.startswith("1302 "):
+                    t = line.split()
+                    if len(t) >= 3:
+                        if   t[1] == "icao_code": code = t[2].upper()
+                        elif t[1] == "datum_lat": lat = float(t[2])
+                        elif t[1] == "datum_lon": lon = float(t[2])
                 elif line.startswith("100 ") and rwy is None:
                     t = line.split()
                     try: rwy = ((float(t[9]) + float(t[18])) / 2, (float(t[10]) + float(t[19])) / 2)
                     except (IndexError, ValueError): pass
     flush()
-    return out
-
-_wanted = {i for v in hub_icaos.values() for i in v}
-hub_ll  = resolve_hubs(XP, _wanted)
-_unres  = sorted(_wanted - set(hub_ll))
-if _unres: print(f"WARNING: {len(_unres)} hub ICAO(s) not in Global Airports: {' '.join(_unres)}")
-
-def hubs_cell(airline):
-    """'lat,lon lat,lon ...' for the operator, or '' when nothing resolved."""
-    return " ".join("%.2f,%.2f" % hub_ll[i] for i in hub_icaos.get(airline, []) if i in hub_ll)
-
-# Military and government rows that may only park on home soil - see that
-# file's header. The token goes in the HUBS column, which such rows never use
-# for coordinates, so schema 2 carries it without a new column.
-HOME_ONLY = set()          # kept from the existing index rows - see the merge below
+    by_ident.update(by_code)
+    return by_ident
 
 # Asset filename stem -> ICAO type designator, for the assets whose own name is
 # not one. Everything else resolves from the folder or filename directly.
@@ -280,9 +274,6 @@ def disambiguate(prefix, ioc, airline):
     op_country = airlines[airline][1]
     return (op_country, True) if op_country in allowed else (ioc, False)
 
-# Hand-read registrations used to live in a sidecar; they are index rows now,
-# and the merge below keeps whatever the index says over anything guessed here.
-OVERRIDES = {}
 
 # "Obsolete" is a NOTE value on the row (R25). A guessed row never carries one:
 # marks are made by hand in the index, and the merge keeps them.
@@ -339,8 +330,6 @@ for dp, _dn, fn in os.walk(ROOT):
 
         m = REG.search(f)
         reg = m.group(1) if m else ""
-        if rel in OVERRIDES:
-            reg = OVERRIDES[rel]
         ioc, confident, prefix = ioc_for_reg(reg) if reg else ("", True, "")
         if reg and not confident and airline:
             ioc, confident = disambiguate(prefix, ioc, airline)
@@ -402,10 +391,14 @@ for dp, _dn, fn in os.walk(ROOT):
             else:
                 airline = "XPZZ"
 
+        # One generic airliner per TYPE: XPZZ_B752, XPZZ_DC10. A stand lists the
+        # white airframe it means, and 1301 carries it like any other code.
+        if airline == "XPZZ" and typ:
+            airline = "XPZZ_" + typ
+
+        # SCOPE is empty on a guessed row: HOME is a human's call, made in the index.
         rows.append((typ or "????", cls, airline or "????", reg, ioc, note,
-                     ranges.get(typ, "") if typ else "",
-                     "HOME" if rel.replace("\\", "/") in HOME_ONLY else (hubs_cell(airline) if airline else ""),
-                     rel))
+                     ranges.get(typ, "") if typ else "", "", rel))
 
 # ------------------------------------------------------------------ MERGE
 # The index is the source of truth. Read what it already says and prefer it.
@@ -425,11 +418,27 @@ if os.path.exists(OUT):
 for code, rec in existing_ops.items():
     airlines[code]  = (rec[0], rec[1], rec[3], rec[2])
     hub_icaos[code] = rec[4].split()
-_wanted = {i for v in hub_icaos.values() for i in v}
-hub_ll.update(resolve_hubs(XP, _wanted - set(hub_ll)))
+# Bare XPZZ is retired: the generic airliners are one record per type now.
+existing_ops.pop("XPZZ", None)
+
+# Military and government rows are never range-checked (they park at home, or
+# anywhere), so hubs on those records would be data nothing reads. Say so and
+# drop them rather than keep a column that looks meaningful and is not.
+_mil_hubs = sorted(c for c, rec in existing_ops.items() if rec[2] in ("Military", "Gov") and rec[4])
+for c in _mil_hubs:
+    existing_ops[c][4] = ""
+if _mil_hubs:
+    print(f"military/gov hubs dropped (never read): {' '.join(_mil_hubs)}")
+
+_wanted = {i for c, rec in existing_ops.items() for i in rec[4].split()}
+_placed = resolve_hubs(XP, _wanted)
+_unres  = sorted(_wanted - set(_placed))
+print(f"hubs                  : {len(_placed)} of {len(_wanted)} ICAOs placed by Global Airports"
+      + ("" if not _unres else f"  ** not found: {' '.join(_unres)} **"))
 
 def op_class_for(code):
     if code in PSEUDO_OP: return PSEUDO_OP[code]
+    if code.startswith("XPZZ_"): return "Pax"
     a = airlines.get(code)
     return (a[3] if a and len(a) > 3 and a[3] else "Pax")
 
@@ -457,12 +466,15 @@ for r in rows:
     rel = r[-1].replace("\\", "/")
     if rel in existing_rows:
         q = existing_rows[rel]
-        # keep the hand-maintained cells; refresh only what is derived from an
-        # operator record the human may have edited since (hub coordinates)
-        if q[7] != "HOME":
-            q[7] = hubs_cell(q[2])
-        if not q[8]:
-            q[8] = op_class_for(q[2])
+        # keep the hand-maintained cells. Two are derived and refreshed:
+        #   SCOPE - HOME or empty. Schema 3 kept hub coordinates here.
+        #   OP    - always the operator record's class; the row only repeats it,
+        #           and a copy that is allowed to drift is how four rows ended up
+        #           disagreeing with their own records.
+        if q[2] == "XPZZ":
+            q[2] = "XPZZ_" + q[0]
+        q[7] = "HOME" if q[7] == "HOME" else ""
+        q[8] = op_class_for(q[2])
         merged.append(tuple(q)); kept += 1
     else:
         r = list(r)
@@ -518,7 +530,7 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
     # This machine alone has 12.4.4-pnl5 with 376 static aircraft and 12.4.3-r2
     # with 298.
     o.write("I\n1 WED Aviation Database\n")
-    o.write("# schema 3\n")
+    o.write("# schema 4\n")
     o.write("# data %s-r1\n" % _dt.date.today().strftime("%Y%m%d"))
     o.write("# source X-Plane %s\n" % xplane_build(XP))
     o.write("# assets %d liveries under apt_aircraft/\n#\n" % len(rows))
@@ -546,7 +558,7 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
 # kept exactly as written, only genuinely new assets get a guessed row - so
 # edit this file directly and re-run the script when X-Plane ships liveries.
 #
-# FORMAT: <TYPE> *** <CLASS> *** <AIRLINE> *** <REG> *** <REG COUNTRY> *** <NOTE> *** <RANGE_KM> *** <HUBS> *** <OP> *** <path>
+# FORMAT: <TYPE> *** <CLASS> *** <AIRLINE> *** <REG> *** <REG COUNTRY> *** <NOTE> *** <RANGE_KM> *** <SCOPE> *** <OP> *** <path>
 #   TYPE        ICAO type designator (B738, A21N, ...).
 #   CLASS       ICAO wingspan class A-F - which ramp size this aircraft needs.
 #               Carried HERE rather than in a separate type->class file on
@@ -570,16 +582,13 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
 #               and the variants worth having are the ones nobody enumerated.
 #   RANGE_KM    Typical operating range of TYPE at a realistic payload, km.
 #               Empty = unknown = never filtered.
-#   HUBS        The operator's hub positions as "lat,lon" pairs, space separated,
-#               OR the single token HOME on a military/government row, meaning
-#               "parks only where the operator's country is the airport's". Any
-#               other military row parks anywhere - most equipment is operated
-#               by many countries. Otherwise: resolved by the generator from
-#               the ICAOs on the operator's OPERATOR record against Global
-#               Airports, on every run. Numbers rather than codes so the sim
-#               needs no airport lookup at spawn time. To move a hub, edit the
-#               OPERATOR record, not this cell.
-#               Empty = unknown = never filtered.
+#   SCOPE       HOME, or empty. HOME on a military or government row means
+#               "parks only at an airport in the operator's own country" - the
+#               airport's country, not a distance. Any other military or
+#               government row parks anywhere: most equipment is flown by many
+#               countries. Neither is range-checked. On any other row, empty.
+#               (Schema 3 kept hub coordinates in this column. Hubs are the
+#               ICAOs on the OPERATOR record now; see HUB ICAOs.)
 #   OP          The operator's operation class - Pax, Cargo, GA, Military or
 #               Gov - repeated on the row so a row is self-contained. The ramp's
 #               None/GA/Airline/Cargo/Military filter reads it.
@@ -600,10 +609,11 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
 #               It does NOT apply to a military, government or generic record -
 #               those are 0 by definition and nobody should go looking.
 #   HUB ICAOs   The operator's hubs and main bases as ICAO codes, space
-#               separated - ALL of the big ones, not just the largest. The
-#               generator resolves them against the install's Global Airports
-#               apt.dat and writes the coordinates into the HUBS column of that
-#               operator's livery rows; this is the only place to edit them.
+#               separated - ALL of the big ones, not just the largest. WED and
+#               X-Plane place each one from Global Airports when they load this
+#               file: the airport whose 1302 icao_code is the hub, else the one
+#               whose ident is. The generator warns about any it cannot place.
+#               Left empty on military and government records - never read.
 #               Empty = unknown = that operator is never range-filtered.
 #               A hub belongs in the operator's own country in almost every
 #               case. Where it does not, check you have the right company:
@@ -630,17 +640,19 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
 #           no ICAO designator could be confirmed. Allocated sequentially as
 #           assets arrive, so the digits carry no meaning; the moment a real
 #           code is confirmed, replace the code here and in every livery row.
-#   XPGA    The three RESERVED generic pseudo-operators - not companies, and
-#   XPMI    never to be renumbered: XPGA general aviation, XPMI military,
-#   XPZZ    XPZZ unpainted/house-colours airliner. They exist so every asset in
+#   XPGA    The RESERVED generic pseudo-operators - not companies, and never
+#   XPMI    to be renumbered: XPGA general aviation, XPMI military, and
+#   XPZZ_T  XPZZ_<TYPE> the unpainted/house-colours airliner of that type
+#           (XPZZ_B752, XPZZ_DC10) - one per type, so a stand can list the one
+#           white airframe it means. They exist so every asset in
 #           the file has an operator record and therefore an answer for the
 #           ramp's operation-type filter. They are also the only records with no
 #           country: a generic has no nationality, which is why the reader
-#           exempts these three codes from the country requirement.
+#           exempts them from the country requirement.
 #           An unpainted airframe takes the code for what it IS - a white light
-#           aircraft is XPGA, a white airliner XPZZ, a bare military airframe
+#           aircraft is XPGA, a white airliner XPZZ_<TYPE>, a bare military airframe
 #           XPMI - so the operation-type filter still answers correctly.
-#           XPZZ IS NEVER PLACED AUTOMATICALLY. It sorts last everywhere it
+#           XPZZ_* IS NEVER PLACED AUTOMATICALLY. It sorts last everywhere it
 #           appears, and any auto-fill pass must skip it: it exists so a human
 #           can deliberately park a white airframe, and if a machine could pick
 #           it, every airport in the world would sprout white 757s. The Z's are
@@ -648,16 +660,17 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
 #           There was a fourth, XPBZ for business jets, retired 2026-09-19:
 #           the ramp offers one General Aviation operation type, so a light
 #           aircraft and a business jet were never treated differently.
-# SPAWN RULE, applied by X-Plane to each candidate row at a stand:
-#     if RANGE_KM is empty or HUBS is empty     -> eligible
-#     d = min over HUBS of greatcircle(hub, stand position from the 1300 row)
+# SPAWN RULE (R26), applied by X-Plane to each candidate row at a stand:
+#     Military or Gov row                       -> eligible (HOME: only in its own country)
+#     RANGE_KM empty, or no hub placed          -> eligible
+#     d = min over the operator's hubs of greatcircle(hub, stand position from the 1300 row)
 #     if d > RANGE_KM                           -> skip this row
 #     otherwise                                 -> eligible
 # The rule is a floor, not a route network: it removes what cannot physically
 # reach the stand and says nothing about what an operator chooses to fly there.
 # A domestic operator needs no exemption - its nearest hub is close by definition.
-# WED evaluates the same rule from the same file and the same stand position for
-# its preview cards, so the two sides cannot disagree; nothing is written to
+# WED evaluates the same rule from the same file and the same Global Airports
+# for its preview cards, so the two sides cannot disagree; nothing is written to
 # apt.dat for this.
 #
 # "????" in any column means the bootstrap could not determine it and a human
@@ -690,7 +703,7 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
     TAB = chr(9)
     OP_TAB = 4
     PSEUDO = {"XPGA": ("Generic - general aviation", "GA"),
-              "XPMI": ("Generic - military", "Military"), "XPZZ": ("Generic - unpainted airliner", "Pax")}
+              "XPMI": ("Generic - military", "Military")}
 
     # Build every record first, because the column stops come from the DATA, not
     # from constants: one long name widens its own column instead of shoving
@@ -707,6 +720,8 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
             op_records.append([code] + list(existing_ops[code])); continue
         if code in PSEUDO:
             name, opc = PSEUDO[code]; cty = ""; fleet = "0"; hubs = ""
+        elif code.startswith("XPZZ_"):
+            name, opc = "Generic - unpainted " + code[5:], "Pax"; cty = ""; fleet = "0"; hubs = ""
         elif code in airlines:
             a = airlines[code]; name, cty, fleet = a[0], a[1], a[2]
             opc  = a[3] if len(a) > 3 else "Pax"

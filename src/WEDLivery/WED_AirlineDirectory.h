@@ -79,9 +79,21 @@
 #define WED_AIRLINEDIRECTORY_H
 
 #include "WED_MandatoryHeader.h"
+#include <cctype>
 #include <string>
 #include <vector>
 #include <unordered_map>
+
+// The generic unpainted airliners: XPZZ_<TYPE>, one pseudo-operator per type
+// (XPZZ_B752, XPZZ_DC10), so a stand can list the one white airframe it means.
+// Bare XPZZ is still recognised - an older index has only that. Either case.
+inline bool	WED_IsGenericAirlinerCode(const std::string & code)
+{
+	if (code.size() < 4) return false;
+	for (int i = 0; i < 4; ++i)
+		if (toupper((unsigned char) code[i]) != "XPZZ"[i]) return false;
+	return code.size() == 4 || code[4] == '_';
+}
 
 struct WED_AirlineDirectoryEntry
 {

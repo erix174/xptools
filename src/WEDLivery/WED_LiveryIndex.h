@@ -92,9 +92,11 @@ struct WED_LiveryIndexEntry {
 	std::string		note;			// free text; "Default" means "no annotation"
 	// Schema 2. 0 / empty mean "unknown", and unknown is never filtered.
 	int				range_km;		// typical operating range of `type`
-	std::vector<std::pair<double,double> >	hubs;	// operator's hub positions, (lat, lon)
-	// HUBS == "HOME": a military/government livery that parks only on home soil.
-	// Every other military row parks anywhere; HOME is typed into the index row.
+	// The operator's hub positions, (lat, lon): the hub ICAOs on its OPERATOR
+	// record, placed by the install's Global Airports when the index loads.
+	std::vector<std::pair<double,double> >	hubs;
+	// SCOPE == "HOME": a military/government livery that parks only in its own
+	// country. Every other military row parks anywhere; HOME is typed into the row.
 	bool			home_only;
 	// Schema 3: the operator's operation class carried on the row as well, so a
 	// row is self-contained without the OPERATOR record - Pax, Cargo, GA,
