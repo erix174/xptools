@@ -5255,7 +5255,17 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 				field_r2 = clear_r[0] - 2;
 			}
 			int ib[4] = { (int) r[0], (int) r[1], (int) field_r2, (int) r[3] };
-			mSearchField->SetBounds(ib);
+			// ONLY WHEN IT MOVED. GUI_TextField::SetBounds() calls Refresh() and
+			// broadcasts GUI_SCROLL_CONTENT_SIZE_CHANGED, so setting the same bounds
+			// from Draw() on every frame asked for the next frame, forever: this pane
+			// redrew at full rate while idle (a core at 100%), GUI_Timer never got a
+			// quiet queue to fire in, and a MessageBox - which is only shown once the
+			// queue goes idle - stayed invisible behind a disabled WED, which looked
+			// exactly like a hang.
+			int cur[4];
+			mSearchField->GetBounds(cur);
+			if (cur[0] != ib[0] || cur[1] != ib[1] || cur[2] != ib[2] || cur[3] != ib[3])
+				mSearchField->SetBounds(ib);
 
 			bool show_real = has_query || mSearchField->IsFocused();
 			if (show_real)
