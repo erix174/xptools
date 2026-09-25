@@ -603,6 +603,7 @@ private:
 	int							mCycleShow;			// which livery is on the face
 	float						mCycleAccum;		// seconds since the last step
 	int							mCyclePrevShow;		// the face being faded out
+	bool						mCycleNextReady;	// the next face is loaded - the cycle waits for it
 	float						mCycleFade;			// seconds into the crossfade; >= kCycleFadeSec when done
 
 	// ---- the tray ----

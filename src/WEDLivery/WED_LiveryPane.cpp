@@ -1061,6 +1061,7 @@ WED_LiveryPane::WED_LiveryPane(
 	mHoverY(0),
 	mCycleAccum(0.0f),
 	mCyclePrevShow(0),
+	mCycleNextReady(true),
 	mCycleFade(1.0f),
 	mTrayOpen(0.0f),
 	mTrayClosingOpen(0.0f),
@@ -2592,9 +2593,14 @@ bool	WED_LiveryPane::StepAnimation(void)
 		mCycleAccum += dt;
 		if (mCycleAccum >= 1.0f)
 		{
-			mCycleAccum -= 1.0f;
-			mCyclePrevShow = mCycleShow++;
-			mCycleFade = 0.0f;					// the new face fades in over the old one
+			if (mCycleNextReady)
+			{
+				mCycleAccum -= 1.0f;
+				mCyclePrevShow = mCycleShow++;
+				mCycleFade = 0.0f;				// the new face fades in over the old one
+			}
+			else
+				mCycleAccum = 1.0f;				// hold on this face until the next one has loaded
 		}
 		moving = true;
 	}
@@ -2956,6 +2962,18 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 	bool have_new = thumb && thumb->tex != 0;
 	if (from)	draw_thumb(from, have_new ? 1.0f - fade : 1.0f);
 	if (have_new)	draw_thumb(thumb, from ? fade : 1.0f);
+
+	// Nothing to show yet: say so, centred where the aircraft will be, so a card
+	// that is loading is not mistaken for one that is broken - or for a hang.
+	if (!from && !have_new)
+	{
+		const char * t = mThumbCache.IsFailed(abs_path) ? "No preview" : "Loading...";
+		float tw = GUI_MeasureRange(font_UI_Basic, t, t + strlen(t));
+		float muted[4] = { 0.62f, 0.62f, 0.64f, 1.0f };
+		GUI_FontDraw(state, font_UI_Basic, muted,
+					 (card_x0 + card_x1) * 0.5f - tw * 0.5f,
+					 (image_bot + image_top) * 0.5f - line_h * 0.35f, t);
+	}
 
 	// Flag icon first - the caption is truncated to whatever room is left
 	// beside it, so a narrow pane can never overlap the two.
@@ -5370,6 +5388,14 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			{
 				float keep_hi = top + kOffscreenMargin;
 				float keep_lo = (float) b[1] - kOffscreenMargin;
+
+				// What the workers read, most wanted first: the faces on screen,
+				// then the cycled card's next face, then the cards about to scroll
+				// in, then the rest of the cycled card. Looking somewhere loads
+				// there first, rather than waiting for everything above it.
+				vector<string> want_visible, want_near, want_cycle;
+				mCycleNextReady = true;
+
 				for (size_t vi = 0; vi < mRows.size(); ++vi)
 				{
 					if (mRows[vi].kind != wed_Row_Airline)  continue;
@@ -5377,6 +5403,21 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 					if (slots[vi].top < keep_lo)           break;		// everything below is further away
 					const AirlineCard * ac = CardFor(mRows[vi].icao);
 					if (!ac || ac->abs_paths.empty()) continue;
+
+					const bool on_screen = slots[vi].top >= (float) b[1] && slots[vi].bot <= top;
+					vector<string> & bucket = on_screen ? want_visible : want_near;
+					const int n = (int) ac->abs_paths.size();
+					if (mRows[vi].icao == mCycleAirline)
+					{
+						const string & face = ac->abs_paths[mCycleShow % n];
+						const string & next = ac->abs_paths[(mCycleShow + 1) % n];
+						bucket.push_back(face);
+						bucket.push_back(next);
+						want_cycle.insert(want_cycle.end(), ac->abs_paths.begin(), ac->abs_paths.end());
+						mCycleNextReady = n <= 1 || mThumbCache.IsSettled(next);
+					}
+					else
+						bucket.push_back(ac->abs_paths[0]);
 
 					// EVERY livery of the card being cycled, not just the one on its
 					// face. Keeping only the visible one meant each tick of the hover
@@ -5390,6 +5431,10 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 					else
 						keep_alive_paths.insert(ac->abs_paths[0]);
 				}
+
+				want_visible.insert(want_visible.end(), want_near.begin(), want_near.end());
+				want_visible.insert(want_visible.end(), want_cycle.begin(), want_cycle.end());
+				mThumbCache.Want(want_visible);
 			}
 
 			for (size_t vi = 0; vi < mRows.size(); ++vi)

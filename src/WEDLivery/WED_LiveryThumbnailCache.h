@@ -24,7 +24,11 @@
 #ifndef WED_LIVERYTHUMBNAILCACHE_H
 #define WED_LIVERYTHUMBNAILCACHE_H
 
-#include <future>
+#include <condition_variable>
+#include <deque>
+#include <mutex>
+#include <thread>
+#include <vector>
 #include <map>
 #include <set>
 #include <string>
@@ -71,7 +75,7 @@ class WED_LiveryThumbnailCache {
 public:
 
 	WED_LiveryThumbnailCache() : mFBO(0), mDepthRB(0), mFBOChecked(false), mFBOUsable(false) {}
-	~WED_LiveryThumbnailCache() { DiscardAll(); }
+	~WED_LiveryThumbnailCache();
 
 	// True if obj_path already has a cached texture - i.e. calling GetThumbnail() for
 	// it right now is a cheap map lookup, NOT a fresh off-screen render. Callers use
@@ -97,7 +101,17 @@ public:
 
 	// True while an object or texture is still being read on a worker thread -
 	// the caller keeps drawing until it lands.
-	bool	HasPending(void) const { return !mPending.empty(); }
+	bool	HasPending(void);
+
+	// What to read next, most wanted first - the cards on screen, then the next
+	// face of the one being cycled, then the ones about to scroll in. Called once
+	// per frame; it REPLACES the queue, so a card scrolled past before a worker
+	// reached it is simply dropped and what is on screen now goes first.
+	void	Want(const std::vector<std::string> & paths_in_priority_order);
+
+	// Cached, or known not to load: nothing more will happen for this path.
+	bool	IsSettled(const std::string & obj_path) const { return mCache.count(obj_path) || mFailed.count(obj_path); }
+	bool	IsFailed(const std::string & obj_path) const  { return mFailed.count(obj_path) != 0; }
 
 	// Frees every cached GL texture.
 	void	DiscardAll();
@@ -135,7 +149,17 @@ public:
 		long		ms = 0;
 	};
 private:
-	std::map<std::string, std::future<Prepared> >	mPending;
+	// The worker pool, started on first use. Workers take mQueue's front, read
+	// it with no lock held, and leave the result in mDone for the UI thread.
+	void										StartWorkers(void);
+	void										WorkerLoop(void);
+	std::mutex									mMutex;
+	std::condition_variable						mWake;
+	std::deque<std::string>						mQueue;
+	std::set<std::string>						mInFlight;
+	std::map<std::string, Prepared>				mDone;
+	std::vector<std::thread>					mWorkers;
+	bool										mStop = false;
 	unsigned long								mTick = 0;
 
 	// THE OFFSCREEN TARGET IS BUILT ONCE AND REUSED. It used to be created and

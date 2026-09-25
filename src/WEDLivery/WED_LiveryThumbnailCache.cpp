@@ -211,7 +211,7 @@ static float	ModelYawCorrection(const XObj8 * o, const string & obj_path)
 // livery set.
 static const size_t kMaxCachedThumbnails = 64;
 static const size_t kKeepThumbnails      = 48;	// off-screen ones kept for scrolling back
-static const size_t kMaxPending          = 2;	// worker jobs in flight
+static const size_t kMaxDoneHeld         = 16;	// finished reads held for cards not on screen
 
 // Halves an image with a 2x2 box filter. Repeated, it takes a 4096 livery down to
 // thumbnail size with far less shimmer than one bicubic jump of 8x.
@@ -369,18 +369,24 @@ const WED_LiveryThumbnail * WED_LiveryThumbnailCache::GetThumbnail(WED_ResourceM
 	if (mCache.size() >= kMaxCachedThumbnails)
 		return nullptr;
 
-	// Not started: queue it on a worker and draw the card without a picture for now.
-	auto job = mPending.find(obj_path);
-	if (job == mPending.end())
+	// Read on a worker: take it if it is done, otherwise make sure it is queued
+	// (at the front - the caller is drawing it) and draw the card without it.
+	Prepared prep;
 	{
-		if (mPending.size() < kMaxPending)
-			mPending[obj_path] = std::async(std::launch::async, PrepareThumbnail, obj_path);
-		return nullptr;
+		std::lock_guard<std::mutex> lock(mMutex);
+		auto done = mDone.find(obj_path);
+		if (done == mDone.end())
+		{
+			if (!mInFlight.count(obj_path) &&
+				std::find(mQueue.begin(), mQueue.end(), obj_path) == mQueue.end())
+				mQueue.push_front(obj_path);
+			StartWorkers();
+			mWake.notify_one();
+			return nullptr;
+		}
+		prep = done->second;
+		mDone.erase(done);
 	}
-	if (job->second.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
-		return nullptr;
-	Prepared prep = job->second.get();
-	mPending.erase(job);
 
 	if (!prep.obj)
 	{
@@ -653,15 +659,14 @@ void WED_LiveryThumbnailCache::EvictNotVisible(const set<string> & currently_vis
 		mCache.erase(oldest);
 	}
 
-	// A job for a card that scrolled away is not waited for, but once it is done
-	// its object and image are freed rather than held until it scrolls back.
-	for (auto it = mPending.begin(); it != mPending.end(); )
-		if (!currently_visible.count(it->first) &&
-			it->second.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+	// Finished reads for cards no longer on screen are kept up to a few, so a
+	// quick scroll back does not re-read them, and freed beyond that.
+	std::lock_guard<std::mutex> lock(mMutex);
+	for (auto it = mDone.begin(); it != mDone.end() && mDone.size() > kMaxDoneHeld; )
+		if (!currently_visible.count(it->first))
 		{
-			Prepared p = it->second.get();
-			FreePrepared(p);
-			it = mPending.erase(it);
+			FreePrepared(it->second);
+			it = mDone.erase(it);
 		}
 		else
 			++it;
@@ -669,12 +674,13 @@ void WED_LiveryThumbnailCache::EvictNotVisible(const set<string> & currently_vis
 
 void WED_LiveryThumbnailCache::DiscardAll()
 {
-	for (auto & kv : mPending)
 	{
-		Prepared p = kv.second.get();		// waits for a job still running
-		FreePrepared(p);
+		std::lock_guard<std::mutex> lock(mMutex);
+		mQueue.clear();
+		for (auto & kv : mDone) FreePrepared(kv.second);
+		mDone.clear();
+		// A read still in flight lands in mDone later and is freed with the rest.
 	}
-	mPending.clear();
 
 	for (auto & kv : mCache)
 		glDeleteTextures(1, &kv.second.tex);
@@ -693,4 +699,80 @@ void WED_LiveryThumbnailCache::DiscardAll()
 	if (mFBO)     glDeleteFramebuffers(1, &mFBO);
 	if (mDepthRB) glDeleteRenderbuffers(1, &mDepthRB);
 	mFBO = 0; mDepthRB = 0; mFBOChecked = false; mFBOUsable = false;
+}
+
+// ---------------------------------------------------------------- worker pool
+
+WED_LiveryThumbnailCache::~WED_LiveryThumbnailCache()
+{
+	{
+		std::lock_guard<std::mutex> lock(mMutex);
+		mStop = true;
+		mQueue.clear();
+	}
+	mWake.notify_all();
+	for (auto & t : mWorkers) t.join();
+	DiscardAll();
+}
+
+void	WED_LiveryThumbnailCache::StartWorkers(void)		// mMutex held
+{
+	if (!mWorkers.empty()) return;
+	// One core is the UI's. Past four, the disk is the limit, not the CPU.
+	unsigned n = std::thread::hardware_concurrency();
+	n = n > 1 ? n - 1 : 1;
+	if (n > 4) n = 4;
+	for (unsigned i = 0; i < n; ++i)
+		mWorkers.emplace_back(&WED_LiveryThumbnailCache::WorkerLoop, this);
+}
+
+void	WED_LiveryThumbnailCache::WorkerLoop(void)
+{
+	std::unique_lock<std::mutex> lock(mMutex);
+	for (;;)
+	{
+		mWake.wait(lock, [this] { return mStop || !mQueue.empty(); });
+		if (mStop) return;
+		string path = mQueue.front();
+		mQueue.pop_front();
+		mInFlight.insert(path);
+
+		lock.unlock();
+		Prepared p = PrepareThumbnail(path);		// no GL, no shared state
+		lock.lock();
+
+		mInFlight.erase(path);
+		auto old = mDone.find(path);
+		if (old != mDone.end()) FreePrepared(old->second);
+		mDone[path] = p;
+	}
+}
+
+void	WED_LiveryThumbnailCache::Want(const vector<string> & paths)
+{
+	std::lock_guard<std::mutex> lock(mMutex);
+	std::deque<string> q;
+	std::set<string> seen;
+	for (size_t i = 0; i < paths.size(); ++i)
+	{
+		const string & p = paths[i];
+		if (seen.count(p) || mCache.count(p) || mFailed.count(p) || mInFlight.count(p) || mDone.count(p)) continue;
+		seen.insert(p);
+		q.push_back(p);
+	}
+	mQueue.swap(q);
+	if (!mQueue.empty())
+	{
+		StartWorkers();
+		mWake.notify_all();
+	}
+}
+
+bool	WED_LiveryThumbnailCache::HasPending(void)
+{
+	std::lock_guard<std::mutex> lock(mMutex);
+	// Queued or being read. Finished results waiting in mDone do not count: the
+	// ones on screen are collected by the next Draw anyway, and the held
+	// off-screen ones would otherwise keep the pane redrawing forever.
+	return !mQueue.empty() || !mInFlight.empty();
 }
