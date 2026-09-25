@@ -82,6 +82,9 @@ using std::map;
 // current ramp's already-checked codes.
 static set<string> ParseCodes(const string & airlines);
 
+// The slideshow's crossfade, seconds: the incoming face goes from transparent to solid.
+static const float kCycleFadeSec = 0.2f;
+
 // What the pane says when livery_index.txt did not load. A missing file is the
 // normal state of an X-Plane older than 12.5 and is worded as such, not as an
 // error; a file that is there but unreadable is a fault and says so. Either
@@ -1054,6 +1057,8 @@ WED_LiveryPane::WED_LiveryPane(
 	mHoverX(0),
 	mHoverY(0),
 	mCycleAccum(0.0f),
+	mCyclePrevShow(0),
+	mCycleFade(1.0f),
 	mTrayOpen(0.0f),
 	mTrayClosingOpen(0.0f),
 	mDragWeightBar(-1),
@@ -2519,7 +2524,17 @@ bool	WED_LiveryPane::StepAnimation(void)
 	if (!mCycleAirline.empty() && mTrayHoverIdx < 0)
 	{
 		mCycleAccum += dt;
-		if (mCycleAccum >= 1.0f) { mCycleAccum -= 1.0f; ++mCycleShow; }
+		if (mCycleAccum >= 1.0f)
+		{
+			mCycleAccum -= 1.0f;
+			mCyclePrevShow = mCycleShow++;
+			mCycleFade = 0.0f;					// the new face fades in over the old one
+		}
+		moving = true;
+	}
+	if (mCycleFade < kCycleFadeSec)
+	{
+		mCycleFade = (std::min)(kCycleFadeSec, mCycleFade + dt);
 		moving = true;
 	}
 
@@ -2699,7 +2714,8 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 										bool is_selected, bool is_hover, bool is_pressed,
 										bool is_locked, bool is_dimmed,
 										float tray_open,
-										int & renders_this_frame)
+										int & renders_this_frame,
+										int fade_from, float fade)
 {
 	if (card.abs_paths.empty()) return;
 	if (show < 0 || show >= (int) card.abs_paths.size()) show = 0;
@@ -2846,23 +2862,34 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 		thumb = mThumbCache.GetThumbnail(res_mgr, tex_mgr, state, abs_path);
 		if (!already_cached) ++renders_this_frame;
 	}
-	if (thumb && thumb->tex != 0)
-	{
-		// Blend ON so the thumbnail's transparent background (the cache
-		// clears its FBO to alpha 0 and only the model itself writes
-		// opaque pixels) lets the card body above show through, rather
-		// than stamping a black rectangle over it.
+	// Blend ON so the thumbnail's transparent background (the cache clears its
+	// FBO to alpha 0 and only the model itself writes opaque pixels) lets the
+	// card body above show through, rather than stamping a black rectangle.
+	auto draw_thumb = [&](const WED_LiveryThumbnail * t, float alpha) {
+		if (!t || t->tex == 0 || alpha <= 0.0f) return;
 		state->SetState(0,1,0,0,1,0,0);
-		glColor4f(1,1,1,1);
-		state->BindTex((int) thumb->tex, 0);
+		glColor4f(1,1,1,alpha);
+		state->BindTex((int) t->tex, 0);
 		glBegin(GL_QUADS);
 			glTexCoord2f(0,0); glVertex2f(card_x0, image_bot);
 			glTexCoord2f(1,0); glVertex2f(card_x1, image_bot);
 			glTexCoord2f(1,1); glVertex2f(card_x1, image_top);
 			glTexCoord2f(0,1); glVertex2f(card_x0, image_top);
 		glEnd();
+		glColor4f(1,1,1,1);
 		state->SetState(0,0,0,0,0,0,0);
-	}
+	};
+
+	// Crossfade: the outgoing face under the incoming one. Only an image that is
+	// already cached is used for it - a fade must never start a render - and if
+	// the incoming one is still loading, the outgoing one simply stays.
+	const WED_LiveryThumbnail * from = nullptr;
+	if (fade_from >= 0 && fade_from < (int) card.abs_paths.size() && fade_from != show &&
+		fade < 1.0f && mThumbCache.IsCached(card.abs_paths[fade_from]))
+		from = mThumbCache.GetThumbnail(res_mgr, tex_mgr, state, card.abs_paths[fade_from]);
+	bool have_new = thumb && thumb->tex != 0;
+	if (from)	draw_thumb(from, have_new ? 1.0f - fade : 1.0f);
+	if (have_new)	draw_thumb(thumb, from ? fade : 1.0f);
 
 	// Flag icon first - the caption is truncated to whatever room is left
 	// beside it, so a narrow pane can never overlap the two.
@@ -5329,10 +5356,21 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 									: (mRows[vi].icao == mTrayClosing)    ? mTrayClosingOpen
 									: 0.0f;
 
+					// The slideshow crossfades: the outgoing face stays under the
+					// incoming one while it goes from transparent to solid.
+					int fade_from = -1;
+					float fade = 1.0f;
+					if (row.icao == mCycleAirline && mTrayHoverIdx < 0 && mCycleFade < kCycleFadeSec &&
+						!ac->abs_paths.empty())
+					{
+						fade_from = mCyclePrevShow % (int) ac->abs_paths.size();
+						fade = mCycleFade / kCycleFadeSec;
+					}
+
 					DrawAirlineCard(state, slots[vi], *ac, show,
 									n_with == n_ramps, (int) vi == mHoverRow,
 									(int) vi == mTrackRow, locked, dimmed,
-									tray_frac, renders_this_frame);
+									tray_frac, renders_this_frame, fade_from, fade);
 
 					if (row.icao == mTrayAirline && mTrayOpen > 0.0f)
 						DrawCardTray(state, slots[vi], *ac, mTrayOpen, show);

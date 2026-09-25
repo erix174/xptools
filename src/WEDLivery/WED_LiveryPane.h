@@ -341,7 +341,8 @@ private:
 										bool is_selected, bool is_hover, bool is_pressed,
 										bool is_locked, bool is_dimmed,
 										float tray_open,
-										int & renders_this_frame);
+										int & renders_this_frame,
+										int fade_from = -1, float fade = 1.0f);
 	void				DrawHoverTip(GUI_GraphState * state, int bounds[4]);
 	void				DrawCardTray(GUI_GraphState * state, const RowSlot & slot,
 									 const AirlineCard & card, float open_frac, int lit_row);
@@ -593,6 +594,8 @@ private:
 	void								SetRowsDirty(void) { mRowsDirty = true; }
 	int							mCycleShow;			// which livery is on the face
 	float						mCycleAccum;		// seconds since the last step
+	int							mCyclePrevShow;		// the face being faded out
+	float						mCycleFade;			// seconds into the crossfade; >= kCycleFadeSec when done
 
 	// ---- the tray ----
 	// Opening one tray closes whichever was open, and the two animate TOGETHER -
