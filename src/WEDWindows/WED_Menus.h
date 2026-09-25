@@ -155,6 +155,7 @@ enum {
 	wed_AddATCTimeRule,
 	wed_AddATCWindRule,
 	wed_UpgradeRamps,
+	wed_AutoFillLiveries,
 	wed_UpgradeJetways,
 	wed_UpgradeArt,
 	wed_AgePavement,

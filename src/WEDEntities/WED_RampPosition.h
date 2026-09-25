@@ -76,6 +76,14 @@ public:
 	// weights" through the one call they already make; HasStoredWeights() is the
 	// raw view, for the button that brings them back. Export follows the mode
 	// the author left the stand in - that is the whole point of persisting it.
+	// THE AUTO-FILL WATERMARK. Set by WED_ApplyLiveryAutoFill on every stand it
+	// changed; cleared the moment a person edits anything on the stand other
+	// than its weights - type, equipment, size, operation type, airlines - since
+	// that means someone has looked at it. Kept in earth.wed.xml only (apt.dat
+	// has no comment syntax), silent to the author, read by moderation.
+	bool	IsAutoFilled(void) const;
+	void	SetAutoFilled(bool on);
+
 	bool	WeightsInUse(void) const;
 	void	SetWeightsInUse(bool in_use);
 	bool	HasStoredWeights(int out_w[6]) const;
@@ -117,6 +125,7 @@ private:
 	WED_PropStringText		airlines;
 	WED_PropStringText		class_weights;	// "" = no 1313 row; see GetClassWeights()
 	WED_PropBoolText		weights_mode;	// weights in use (1) or parked while the size range rules (0)
+	WED_PropBoolText		auto_filled;	// the auto-fill watermark - see IsAutoFilled()
 
 	bool					mLegacyWidthOnly;	// true while parsing an XML element that had no width_min attribute
 

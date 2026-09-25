@@ -36,6 +36,7 @@
 #include "WED_Messages.h"
 #include "WED_ToolUtils.h"		// WED_GetSelect, WED_GetParentAirport
 #include "WED_EnumSystem.h"		// ramp_operation_*, width_A..width_F
+#include "WED_LiveryRules.h"
 #include "WED_LiveryIndex.h"		// WED_LiveryIndexDefaultPath(), WED_LiveryInRange()
 #include "GISUtils.h"
 #include "WED_MandatoryHeader.h"	// WedDataFileDir() - where the loose .txt data files live
@@ -1495,41 +1496,12 @@ void	WED_LiveryPane::EnsureRows(void)
 // range refusals go into mRangeHidden, because that is the line's subject.
 WED_LiveryPane::Allow	WED_LiveryPane::LiveryAllowedHere(const WED_LiveryIndexEntry & e, const Point2 & here) const
 {
-	const string & code = e.airline;
-
-	WED_AirlineDirectoryEntry d;
-	bool known = mAirlineDirectory.Lookup(code, d);
-
-	bool is_ga  = code == "XPGA" || (known && d.op_class == WED_AirlineDirectoryEntry::op_GA);
-	bool is_mil = code == "XPMI" || (known && (d.op_class == WED_AirlineDirectoryEntry::op_Military ||
-											   d.op_class == WED_AirlineDirectoryEntry::op_Gov));
-
-	if (is_ga) return allow_Yes;
-
-	if (is_mil)
-	{
-		// The operator's country from the directory; failing that, the paint's -
-		// an olive C172 registered ET- is Ethiopian whoever "XPMI" is. And this
-		// one FAILS CLOSED: the rule is "home soil only", and an aircraft whose
-		// home nobody can name has no home soil to be on. Fail-open here would put
-		// four unmarked military 757s on every apron in the world, which is the
-		// screenshot that prompted this. The airport's country unknown is the
-		// other way round - then nothing about the stand is known and the
-		// readout is already saying so, so do not also empty the list.
-		// ANYWHERE BY DEFAULT; HOME SOIL ONLY WHEN MARKED. Most military equipment
-		// is operated by many countries - an F-15 or a Seahawk at a foreign base is
-		// unremarkable - so the default is global. The exception is equipment that
-		// identifies one operator so specifically it has no business abroad (a
-		// head-of-state 757, an air force's own-marked airliner), and those rows
-		// carry HOME in their HUBS cell. Only then does the
-		// country matter: the directory's, else the registration's.
-		if (!e.home_only) return allow_Yes;
-		string home = (known && !d.country.empty()) ? d.country : e.reg_country;
-		if (home.empty() || mAirportCountry.empty()) return allow_Yes;
-		return home == mAirportCountry ? allow_Yes : allow_ForeignMilitary;
+	// The rule lives in WED_LiveryRules so auto-fill applies exactly the same one.
+	switch (WED_LiveryAllowedAt(e, mAirlineDirectory, mAirportCountry, here.y(), here.x())) {
+	case livery_allow_OutOfRange:		return allow_OutOfRange;
+	case livery_allow_ForeignMilitary:	return allow_ForeignMilitary;
+	default:							return allow_Yes;
 	}
-
-	return WED_LiveryInRange(e, here.y(), here.x()) ? allow_Yes : allow_OutOfRange;
 }
 
 // Which operation classes a ramp's operation type admits. Pseudo-codes are the

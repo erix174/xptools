@@ -50,6 +50,7 @@
 #include "WED_GroupCommands.h"
 #include "WED_GatewayExport.h"
 #include "WED_GatewayImport.h"
+#include "WED_LiveryAutoFill.h"
 #include "WED_SceneryImport.h"
 #include "WED_MetadataUpdate.h"
 #include "WED_SceneryPackExport.h"
@@ -483,6 +484,7 @@ int	WED_DocumentWindow::HandleCommand(int command)
 	case wed_SelectMissingObjects:		WED_DoSelectMissingObjects(mDocument); return 1;
 
 	case wed_UpdateMetadata:     WED_DoUpdateMetadata(mDocument); return 1;
+	case wed_AutoFillLiveries:   WED_DoLiveryAutoFill(mDocument); return 1;
 	case wed_ExportApt:		WED_DoExportApt(mDocument, mMapPane); return 1;
 	case wed_ExportPack:	WED_DoExportPack(mDocument, mMapPane); return 1;
 #if HAS_GATEWAY
@@ -599,6 +601,7 @@ int	WED_DocumentWindow::CanHandleCommand(int command, string& ioName, int& ioChe
 	case wed_CreateApt:	return WED_CanMakeNewAirport(mDocument);
 	case wed_EditApt:	return WED_CanSetCurrentAirport(mDocument, ioName);
 	case wed_UpdateMetadata:     return WED_CanUpdateMetadata(mDocument);
+	case wed_AutoFillLiveries:   return WED_CanLiveryAutoFill(mDocument);
 	case wed_MoveFirst:	return WED_CanReorder(mDocument,-1,1);
 	case wed_MovePrev:	return WED_CanReorder(mDocument,-1,0);
 	case wed_MoveNext:	return WED_CanReorder(mDocument, 1,0);

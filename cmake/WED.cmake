@@ -279,6 +279,8 @@ set (WED_SOURCES
 	src/WEDLivery/WED_IocCountryCodes.h
 	src/WEDLivery/WED_LiveryData.h
 	src/WEDLivery/WED_LiveryIndex.cpp
+	src/WEDLivery/WED_LiveryRules.cpp
+	src/WEDLivery/WED_LiveryAutoFill.cpp
 	src/WEDLivery/WED_LiveryIndex.h
 	src/WEDLivery/WED_MandatoryHeader.cpp
 	src/WEDLivery/WED_MandatoryHeader.h

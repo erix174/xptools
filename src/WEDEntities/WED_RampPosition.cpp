@@ -45,6 +45,7 @@ WED_RampPosition::WED_RampPosition(WED_Archive * a, int i) : WED_GISPoint_Headin
 	airlines	(this,PROP_Name("Airlines",             XML_Name("ramp_start","airlines")),""),
 	class_weights(this,PROP_Name(".Class Weights",      XML_Name("ramp_start","weights")),""),
 	weights_mode (this,PROP_Name(".Weights Mode",       XML_Name("ramp_start","weights_mode")), 0),
+	auto_filled  (this,PROP_Name(".Auto Filled",        XML_Name("ramp_start","auto_filled")), 0),
 	mLegacyWidthOnly(false)
 {
 }
@@ -135,25 +136,35 @@ void	WED_RampPosition::Export(		 AptGate_t& x) const
 	}
 }
 
+// Each setter below is a human edit of something auto-fill decided or relied
+// on, so a real change drops the watermark. The weight setters do not: tuning
+// the distribution is what an author is expected to do after a fill.
 void	WED_RampPosition::SetType(int	rt)
 {
+	if (rt != ramp_type.value) auto_filled = false;
 	ramp_type = rt;
 }
 
 void	WED_RampPosition::SetEquipment(const set<int>&	et)
 {
+	if (et != equip_type.value) auto_filled = false;
 	equip_type = et;
 }
 
 void	WED_RampPosition::SetWidth(int		w)
 {
+	if (w != width.value) auto_filled = false;
 	width = w;
 }
 
 void	WED_RampPosition::SetWidthMin(int		w)
 {
+	if (w != width_min.value) auto_filled = false;
 	width_min = w;
 }
+
+bool	WED_RampPosition::IsAutoFilled(void) const	{ return auto_filled.value != 0; }
+void	WED_RampPosition::SetAutoFilled(bool on)	{ auto_filled = on; }
 
 void	WED_RampPosition::StartElement(WED_XMLReader * reader, const XML_Char * name, const XML_Char ** atts)
 {
@@ -188,6 +199,7 @@ void	WED_RampPosition::EndElement(void)
 
 void	WED_RampPosition::SetRampOperationType(int ait)
 {
+	if (ait != ramp_op_type.value) auto_filled = false;
 	ramp_op_type = ait;
 }
 
@@ -269,16 +281,38 @@ bool	WED_RampPosition::IsValidAirlineCode(const string &code)
 
 // The grid writes the property directly; normalise it the same way SetAirlines
 // does, or a code typed as "DAL" reads as unchecked on the Liveries tab.
+static bool	SamePropVal(const PropertyVal_t & a, const PropertyVal_t & b)
+{
+	// Only the field the kind uses: the others are not initialised.
+	if (a.prop_kind != b.prop_kind) return false;
+	switch (a.prop_kind) {
+	case prop_EnumSet:	return a.set_val == b.set_val;
+	case prop_Double:	return a.double_val == b.double_val;
+	case prop_Int:
+	case prop_Enum:
+	case prop_Bool:		return a.int_val == b.int_val;
+	default:			return a.string_val == b.string_val;
+	}
+}
+
 void	WED_RampPosition::SetNthProperty(int n, const PropertyVal_t& val)
 {
+	PropertyVal_t v(val);
 	if (n == PropertyItemNumber(&airlines) && val.prop_kind == prop_String)
-	{
-		PropertyVal_t v(val);
 		v.string_val = CorrectAirlinesString(val.string_val);
-		WED_GISPoint_Heading::SetNthProperty(n, v);
-		return;
+
+	// A grid edit of a field auto-fill relies on drops the watermark, as the
+	// setters do - but only when the value really changes.
+	bool human_field = n == PropertyItemNumber(&airlines)  || n == PropertyItemNumber(&ramp_op_type) ||
+					   n == PropertyItemNumber(&ramp_type) || n == PropertyItemNumber(&equip_type)   ||
+					   n == PropertyItemNumber(&width)     || n == PropertyItemNumber(&width_min);
+	if (human_field)
+	{
+		PropertyVal_t before;
+		GetNthProperty(n, before);
+		if (!SamePropVal(before, v)) auto_filled = false;
 	}
-	WED_GISPoint_Heading::SetNthProperty(n, val);
+	WED_GISPoint_Heading::SetNthProperty(n, v);
 }
 
 void	WED_RampPosition::SetAirlines(const string &a)
@@ -291,7 +325,9 @@ void	WED_RampPosition::SetAirlines(const string &a)
 	// checkbox unchecked for a ramp that demonstrably had those airlines, and
 	// the first click then wrote the code a second time in lower case
 	// ("aal dal aal"), which round-tripped straight back out to apt.dat.
-	airlines = CorrectAirlinesString(a);
+	string cleaned = CorrectAirlinesString(a);
+	if (cleaned != airlines.value) auto_filled = false;
+	airlines = cleaned;
 }
 
 // ---------------------------------------------------------------------------

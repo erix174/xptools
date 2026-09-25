@@ -1736,6 +1736,33 @@ A livery row keeps ten cells; the eighth changes meaning:
 
 The header stamp is `# schema 4`.
 
+### 6.7e General aviation stands — R28
+
+- **R28** — At a GA stand the sim draws a GA livery of the drawn class
+  registered in the airport's country (the row's `REG CTY`) with probability
+  0.7 when one exists, otherwise any GA livery of that class. There is no range
+  rule for GA (R26 exempts it) and no airline list: GA is drawn from the
+  library by size, so `1301`'s airlines play no part.
+
+### 6.7f Auto-fill (WED only - nothing new in the file)
+
+WED can fill an airport's stands in one step, the way it updates metadata,
+from `WED_AirportDatabase` (which operators serve the airport) and this index.
+It **extends and never overwrites**: an author's airlines, weights and
+operation types stay as they are. Per gate or tie-down:
+
+| operation type | what auto-fill does |
+|---|---|
+| None | nothing - None means no static aircraft |
+| any, no weights | converts the one size letter to weights: A: A100; B: A30 B70; C: B30 C70; D: B10 C40 D50; E: C10 D30 E60; F: D10 E50 F40. A draw that lands on a class with no livery leaves the stand empty for that load (R18); weights are never renormalised |
+| Passenger / Cargo | adds the airport's recommended operators of that class that have a livery for a weighted class, the stand's equipment type, and within range (R26); never `XPZZ_*` |
+| Military / Gov | adds the airport country's own military and government operators with such a livery; none - nothing added, the sim draws generic military by size |
+| GA | weights only (R28) |
+
+A stand it changes carries a watermark in `earth.wed.xml` (`auto_filled="1"`
+on `<ramp_start>`), never in apt.dat. Any human edit of the stand other than
+its weights clears it: someone has looked. Moderation reads it.
+
 ### 6.8 Authoring note — the weights mode is a property of the stand
 
 WED keeps two things per stand in its own document (`earth.wed.xml`), not one:

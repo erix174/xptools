@@ -223,6 +223,9 @@ public:
 	// them, so the caller knows its coverage and cards are stale.
 	bool				PollHubs(void);
 	bool				HubsPending(void) const { return mHubJob.valid(); }
+	// Blocks until the hubs are placed - for a one-off command (auto-fill) that
+	// needs R26 answered now rather than on a later frame.
+	void				WaitForHubs(void) { if (mHubJob.valid()) { mHubJob.wait(); PollHubs(); } }
 
 private:
 
