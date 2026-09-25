@@ -282,6 +282,10 @@ private:
 	std::string							mAirportCountry;	// IOC, from the airport strip's lookup; empty when unknown
 	// Lines the coverage readout currently needs; see CoverageHeight().
 	int									mCoverageLineCount;
+	bool								mCoverageHasDetail;		// there is something to expand to
+	bool								mHoverCoverageToggle;
+	// The headline row of the readout toggles its detail; see Draw.
+	bool				CoverageToggleHit(int bounds[4], int x, int y) const;
 	void								RebuildAirlineCards(void);
 	const AirlineCard *					CardFor(const std::string & icao_lower) const;
 	void								CardKeys(std::set<std::string> & out) const;

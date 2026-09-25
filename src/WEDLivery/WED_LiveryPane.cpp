@@ -1055,6 +1055,8 @@ WED_LiveryPane::WED_LiveryPane(
 	mRowsDirty(true),
 	mCardsByType(false),
 	mCoverageLineCount(3),
+	mCoverageHasDetail(false),
+	mHoverCoverageToggle(false),
 	mLastAnimClock(0),
 	mTrayHoverIdx(-1),
 	mHoverX(0),
@@ -2332,6 +2334,20 @@ void	WED_LiveryPane::WeightsYRange(int bounds[4], float & top, float & bot) cons
 	bot = top - h;
 }
 
+// The readout's detail is collapsed by default - the headline is the statistic
+// an author needs, and five lines of it under every click was too much - and
+// the choice holds across stands for the session.
+static bool sCoverageExpanded = false;
+
+bool	WED_LiveryPane::CoverageToggleHit(int bounds[4], int x, int y) const
+{
+	if (!mCoverageHasDetail || mSelectedRamps.empty()) return false;
+	float top, bot;
+	CoverageYRange(bounds, top, bot);
+	float row_bot = top - GUI_GetLineHeight(font_UI_Basic) * 1.3f;
+	return y <= top && y >= row_bot && x >= bounds[0] && x <= bounds[2];
+}
+
 void	WED_LiveryPane::CoverageYRange(int bounds[4], float & top, float & bot) const
 {
 	float wtop, wbot;
@@ -3507,6 +3523,9 @@ int		WED_LiveryPane::MouseMove(int x, int y)
 	}
 	if (over_wbtn != mHoverWeightButton)	{ mHoverWeightButton = over_wbtn;	changed = true; }
 
+	bool over_cov = CoverageToggleHit(b, x, y);
+	if (over_cov != mHoverCoverageToggle)	{ mHoverCoverageToggle = over_cov;	changed = true; }
+
 	bool over_pop = false;
 	if (mSelectedRamps.size() == 1)
 	{
@@ -3598,6 +3617,13 @@ int		WED_LiveryPane::MouseDown(int x, int y, int button)
 	if (chip >= 0)
 	{
 		mTrackFilterChip = chip;
+		return 1;
+	}
+
+	if (CoverageToggleHit(b, x, y))
+	{
+		sCoverageExpanded = !sCoverageExpanded;
+		Refresh();
 		return 1;
 	}
 
@@ -5009,6 +5035,8 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			vector<string> more = WrapText(font_UI_Basic, range_line, avail_w);
 			body.insert(body.end(), more.begin(), more.end());
 		}
+		mCoverageHasDetail = !body.empty();
+		if (!sCoverageExpanded) body.clear();
 		mCoverageLineCount = 1 + (int) body.size();
 		CoverageYRange(b, cov_top, cov_bot);
 
@@ -5029,7 +5057,36 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			glVertex2f((float) b[0] + 1, cov_top);
 		glEnd();
 
-		GUI_FontDraw(state, font_UI_Basic, head_col,  b[0] + pad, cov_top - line_h * 0.9f, head);
+		// The toggle: a small triangle at the right of the headline - pointing
+		// right while collapsed, down while open. Wound clockwise, since this
+		// pane's Y-up counter-clockwise shapes are back faces to WED's culling.
+		if (mCoverageHasDetail)
+		{
+			float tri = line_h * 0.55f;
+			float cx = (float) b[2] - pad - tri * 0.5f;
+			float cy = cov_top - line_h * 0.6f;
+			float k = mHoverCoverageToggle ? 1.0f : 0.7f;
+			state->SetState(0,0,0,0,1,0,0);
+			glColor4f(0.8f * k, 0.8f * k, 0.82f * k, 1.0f);
+			glBegin(GL_TRIANGLES);
+			if (sCoverageExpanded)
+			{
+				glVertex2f(cx - tri * 0.5f, cy + tri * 0.3f);
+				glVertex2f(cx + tri * 0.5f, cy + tri * 0.3f);
+				glVertex2f(cx,              cy - tri * 0.4f);
+			}
+			else
+			{
+				glVertex2f(cx - tri * 0.3f, cy + tri * 0.5f);
+				glVertex2f(cx + tri * 0.4f, cy);
+				glVertex2f(cx - tri * 0.3f, cy - tri * 0.5f);
+			}
+			glEnd();
+			state->SetState(0,0,0,0,0,0,0);
+		}
+
+		string head_text = ElideToWidth(font_UI_Basic, head, (float) b[2] - pad * 2 - line_h - (b[0] + pad));
+		GUI_FontDraw(state, font_UI_Basic, head_col,  b[0] + pad, cov_top - line_h * 0.9f, head_text.c_str());
 		for (size_t li = 0; li < body.size(); ++li)
 			GUI_FontDraw(state, font_UI_Basic, col_muted, b[0] + pad,
 						 cov_top - line_h * (1.9f + (float) li), body[li].c_str());
@@ -5347,6 +5404,8 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 				int chip = FilterChipForXY(b, mHoverX, mHoverY);
 				if (chip >= 0 && chip < 5) mHoverTipText = kFilterTips[chip];
 			}
+			if (mHoverCoverageToggle)
+				mHoverTipText = sCoverageExpanded ? "Hide the details" : "Show the details: what fills this stand, and what was left out and why";
 			if (mHoverPopulate)
 				mHoverTipText = (PaneClockNow() < mPopulateFlashUntil && !mPopulateDetail.empty())
 					? mPopulateDetail
