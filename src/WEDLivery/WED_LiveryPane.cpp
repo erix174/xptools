@@ -1057,7 +1057,7 @@ WED_LiveryPane::WED_LiveryPane(
 	mCoverageLineCount(3),
 	mCoverageHasDetail(false),
 	mHoverCoverageToggle(false),
-	mLastAnimClock(0),
+	mLastAnimClock(0.0),
 	mTrayHoverIdx(-1),
 	mHoverX(0),
 	mHoverY(0),
@@ -1198,7 +1198,7 @@ void	WED_LiveryPane::Hide(void)
 	// pane nobody is looking at.
 	mCycleAirline.clear();  mCycleShow = 0;  mCycleAccum = 0.0f;
 	mTrayClosing.clear();   mTrayClosingOpen = 0.0f;
-	mLastAnimClock = 0;
+	mLastAnimClock = 0.0;
 
 	// Everything else the mouse was in the middle of, too. Only the two drags
 	// above own an archive command, so only they can strand it - but the rest of
@@ -1355,7 +1355,22 @@ void	WED_LiveryPane::ReceiveMessage(
 							intptr_t				inMsg,
 							intptr_t				inParam)
 {
-	if (inMsg == msg_ArchiveChanged || inMsg == msg_ArchiveChangedEphemerally)
+	if (inMsg == msg_ArchiveChangedEphemerally)
+	{
+		// Sent on every mouse move of a map drag. Rebuilding every card and the
+		// coverage on each one is what made dragging stutter; the drag's end sends
+		// msg_ArchiveChanged, and that recomputes everything once. Only a change in
+		// WHICH ramps are selected is worth acting on mid-drag.
+		vector<WED_RampPosition *> now;
+		ISelection * sel = WED_GetSelect(mResolver);
+		if (sel) sel->IterateSelectionOr(CollectRamps, &now);
+		if (now != mSelectedRamps)
+		{
+			RebuildSelection();
+			Refresh();
+		}
+	}
+	else if (inMsg == msg_ArchiveChanged)
 	{
 		RebuildSelection();
 		Refresh();
@@ -2574,10 +2589,12 @@ static float	TrayFullHeight(size_t n_liveries)
 // Returns true when something is still in motion, so Draw() knows to come back.
 bool	WED_LiveryPane::StepAnimation(void)
 {
-	clock_t now = clock();
-	if (mLastAnimClock == 0) { mLastAnimClock = now; return false; }
+	// Wall-clock time. clock() is CPU time everywhere but Windows, so on a Mac or
+	// Linux an idle WED barely advanced it and every animation crawled.
+	double now = PaneClockNow();
+	if (mLastAnimClock == 0.0) { mLastAnimClock = now; return false; }
 
-	float dt = (float)(now - mLastAnimClock) / (float) CLOCKS_PER_SEC;
+	float dt = (float) (now - mLastAnimClock);
 	mLastAnimClock = now;
 
 	// A frame that took a long time - the window was hidden, or a thumbnail parse

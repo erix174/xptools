@@ -141,6 +141,7 @@ HINSTANCE gInstance = NULL;
 #endif
 
 FILE * gLogFile;
+static bool sMainReturned = false;		// see the DEV atexit hook in main()
 
 #if IBM
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
@@ -175,7 +176,12 @@ int main(int argc, char * argv[])
 	// handler fires on an uncaught exception. Between them, the next
 	// disappearance names its own path, and a log with neither line means the
 	// process was killed outright.
+	// atexit also fires after a NORMAL return from main(), by which point the log
+	// is closed: writing to it then was a use of a freed FILE, and it logged a
+	// false "did not run to completion" on every clean shutdown. main() sets
+	// sMainReturned before it closes the log.
 	atexit([]() {
+		if (sMainReturned || !gLogFile) return;
 		LOG_MSG("E/APP exit() was called - main() did not run to completion\n");
 		LOG_FLUSH();
 	});
@@ -298,7 +304,9 @@ int main(int argc, char * argv[])
 	GUI_Prefs_Write("WED");
 
 	LOG_MSG("----- WED has shut down -----\n");
+	sMainReturned = true;
 	if(gLogFile) fclose(gLogFile);
+	gLogFile = NULL;		// the atexit hook and any static destructor may still log
 	
 	return 0;
 }

@@ -568,7 +568,7 @@ private:
 	// and reports whether anything still is, so Draw() can ask for another frame.
 	// NOT a GUI_Timer: see the .cpp on why that never fired here.
 	bool						StepAnimation(void);
-	clock_t						mLastAnimClock;
+	double						mLastAnimClock;		// PaneClockNow() seconds; 0 = not running
 
 	// ---- hover cycling ----
 	// A hovered card steps through its operator's other aircraft once a second, so
