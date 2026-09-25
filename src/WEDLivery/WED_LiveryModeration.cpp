@@ -96,7 +96,12 @@ void	WED_ModerationNotes(WED_RampPosition * ramp, WED_Airport * apt, vector<WED_
 	string icao, apt_name;
 	AirportIds(apt, icao, apt_name);
 	vector<string> served;
-	d->airports.GetAirlines(icao, served);
+	if (!d->airports.GetAirlines(icao, served))
+	{
+		string ident;							// the metadata code is not in the database: try the ID
+		apt->GetICAO(ident);
+		d->airports.GetAirlines(Upper(ident), served);
+	}
 	std::set<string> served_set;
 	for (size_t i = 0; i < served.size(); ++i) served_set.insert(Upper(served[i]));
 	const bool db_knows_airport = !served.empty();

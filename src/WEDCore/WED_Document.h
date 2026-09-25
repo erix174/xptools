@@ -125,7 +125,8 @@ public:
 	static	bool	TryCloseAll(void);
 
 	// apt.dat rows an import skipped (AptInfo_t::discarded_rows). They are not in
-	// the document; Save() says so once before writing, then forgets them.
+	// the document; the validator lists them (warn_apt_dat_rows_not_imported) for
+	// the rest of the session. Importing an airport again replaces its entries.
 	void			NoteDiscardedImportRows(const vector<string>& rows);
 	static string	DescribeDiscardedRows(const vector<string>& rows);
 	// One line for the validator: this airport's skipped rows, or "" for none.

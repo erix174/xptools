@@ -1153,6 +1153,10 @@ static void ValidateATCFlows(const vector<WED_ATCFlow*>& flows, const vector<WED
 static void ValidateRampLiveries(WED_RampPosition * ramp, const AptGate_t & g, validation_error_vector & msgs, WED_Airport * apt)
 {
 	if (g.airlines.empty()) return;
+	// Only where the airline list chooses the static aircraft. None parks nothing
+	// by definition; GA and military are drawn from the library by size.
+	int op = ramp->GetRampOperationType();
+	if (op != ramp_operation_Airline && op != ramp_operation_Cargo) return;
 
 	static WED_LiveryIndex sIndex;			// one per session, reloaded if the X-Plane folder changes
 	const string path = WED_LiveryIndexDefaultPath();

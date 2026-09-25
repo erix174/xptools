@@ -161,9 +161,13 @@ WED_AutoFillPlan	WED_PlanLiveryAutoFill(WED_Airport * apt, const vector<WED_Ramp
 		// legacy spread, or is filled against the size range it has now.
 		int w[6];
 		bool classes[6];
+		int parked[6];
 		if (ramp->GetClassWeights(w))
 			for (int k = 0; k < 6; ++k) classes[k] = w[k] > 0;
-		else if (convert_legacy)
+		else if (convert_legacy && !ramp->HasStoredWeights(parked))
+			// Only a stand that has never had weights. One whose author parked
+			// them ("Simple Mode") keeps them parked and is filled against its
+			// size range below - converting it would overwrite their distribution.
 		{
 			WED_LegacyClassWeights(ENUM_Export(ramp->GetWidth()), w);
 			out.set_weights = true;

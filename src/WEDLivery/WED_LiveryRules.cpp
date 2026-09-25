@@ -26,6 +26,7 @@
 #include "WED_AirlineDirectory.h"
 #include "WED_EnumSystem.h"
 #include "WED_MandatoryHeader.h"		// WedDataFileDir
+#include <memory>
 
 WED_LiveryIndex &	WED_SharedLiveryIndex(void)
 {
@@ -35,14 +36,18 @@ WED_LiveryIndex &	WED_SharedLiveryIndex(void)
 
 WED_LiveryData *	WED_GetLiveryData(bool need_hubs)
 {
-	static WED_LiveryData d;
+	// Rebuilt whole when the X-Plane folder changes: the operator directory loads
+	// once per instance and would otherwise keep the old install's operators.
+	static std::unique_ptr<WED_LiveryData> d;
+	static std::string d_path;
 	const std::string index_path = WED_LiveryIndexDefaultPath();
-	if (index_path.empty() || !d.index.EnsureLoaded(index_path)) return NULL;
-	if (need_hubs) d.index.WaitForHubs();
-	if (!d.directory.IsLoaded() && !d.directory.LoadFailed()) d.directory.EnsureLoaded(index_path);
-	if (!d.airports.IsLoaded() && !d.airports.LoadFailed())
-		d.airports.EnsureLoaded(WedDataFileDir() + "WED_AirportDatabase.txt");
-	return &d;
+	if (!d || d_path != index_path) { d.reset(new WED_LiveryData); d_path = index_path; }
+	if (index_path.empty() || !d->index.EnsureLoaded(index_path)) return NULL;
+	if (need_hubs) d->index.WaitForHubs();
+	if (!d->directory.IsLoaded() && !d->directory.LoadFailed()) d->directory.EnsureLoaded(index_path);
+	if (!d->airports.IsLoaded() && !d->airports.LoadFailed())
+		d->airports.EnsureLoaded(WedDataFileDir() + "WED_AirportDatabase.txt");
+	return d.get();
 }
 
 using std::string;

@@ -692,8 +692,7 @@ struct AptInfo_t {
 	// Rows of THIS airport the reader skipped without failing the file - an
 	// unknown row code, a malformed or duplicate 1313 - as "line N: <row> (why)".
 	// Filled by ReadAptFile; a tool that does not care simply never looks. WED
-	// shows them once on import and once more before the first save, because
-	// they are not in the document and a save makes that final.
+	// lists them after a File > Import and as a validation warning.
 	vector<string>		discarded_rows;
 };
 

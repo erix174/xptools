@@ -202,7 +202,17 @@ WED_NWLinkAdapter *	WED_Document::GetNWLink(void)
 
 void	WED_Document::NoteDiscardedImportRows(const vector<string>& rows)
 {
-	mDiscardedImportRows.insert(mDiscardedImportRows.end(), rows.begin(), rows.end());
+	// A re-import of the same airport - a corrected file - replaces its rows
+	// rather than adding to them. Entries are "ICAO line N: ...".
+	std::set<string> icaos;
+	for (size_t i = 0; i < rows.size(); ++i)
+		icaos.insert(rows[i].substr(0, rows[i].find(' ')));
+	vector<string> kept;
+	for (size_t i = 0; i < mDiscardedImportRows.size(); ++i)
+		if (!icaos.count(mDiscardedImportRows[i].substr(0, mDiscardedImportRows[i].find(' '))))
+			kept.push_back(mDiscardedImportRows[i]);
+	kept.insert(kept.end(), rows.begin(), rows.end());
+	mDiscardedImportRows.swap(kept);
 }
 
 string	WED_Document::DescribeDiscardedRows(const vector<string>& rows)

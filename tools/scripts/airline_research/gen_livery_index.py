@@ -420,6 +420,7 @@ for code, rec in existing_ops.items():
     hub_icaos[code] = rec[4].split()
 # Bare XPZZ is retired: the generic airliners are one record per type now.
 existing_ops.pop("XPZZ", None)
+airlines.pop("XPZZ", None)
 
 # Military and government rows are never range-checked (they park at home, or
 # anywhere), so hubs on those records would be data nothing reads. Say so and
@@ -471,7 +472,7 @@ for r in rows:
         #   OP    - always the operator record's class; the row only repeats it,
         #           and a copy that is allowed to drift is how four rows ended up
         #           disagreeing with their own records.
-        if q[2] == "XPZZ":
+        if q[2] == "XPZZ" and q[0] != "????":
             q[2] = "XPZZ_" + q[0]
         q[7] = "HOME" if q[7] == "HOME" else ""
         q[8] = op_class_for(q[2])
