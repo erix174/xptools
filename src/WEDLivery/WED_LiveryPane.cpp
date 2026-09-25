@@ -2744,10 +2744,17 @@ void	WED_LiveryPane::DrawHoverTip(GUI_GraphState * state, int b[4])
 	const string & text = mHoverTipText;
 
 	float line_h = GUI_GetLineHeight(font_UI_Basic);
-	float tw     = GUI_MeasureRange(font_UI_Basic, text.c_str(), text.c_str() + text.size());
 	float pad    = 6.0f;
+	// Wrapped to the pane: a tip wider than the pane - the list Populate added,
+	// say - was cut off at the border, and the end of it is usually the point.
+	float max_tw = (float) (b[2] - b[0]) - 4.0f - pad * 2.0f;
+	vector<string> lines = WrapText(font_UI_Basic, text, max_tw);
+	if (lines.empty()) lines.push_back(text);
+	float tw = 0.0f;
+	for (size_t i = 0; i < lines.size(); ++i)
+		tw = (std::max)(tw, GUI_MeasureRange(font_UI_Basic, lines[i].c_str(), lines[i].c_str() + lines[i].size()));
 	float w      = tw + pad * 2.0f;
-	float h      = line_h + pad * 2.0f - 2.0f;
+	float h      = line_h * (float) lines.size() + pad * 2.0f - 2.0f;
 
 	// Flip to the other side of the cursor rather than being clipped - a tip that
 	// runs off the pane is worse than no tip, because the part that falls off is
@@ -2778,7 +2785,9 @@ void	WED_LiveryPane::DrawHoverTip(GUI_GraphState * state, int b[4])
 	glEnd();
 
 	float tc[4] = { 0.90f, 0.90f, 0.93f, 1.0f };
-	GUI_FontDraw(state, font_UI_Basic, tc, x0 + pad, y0 + pad - 1.0f, text.c_str());
+	for (size_t i = 0; i < lines.size(); ++i)
+		GUI_FontDraw(state, font_UI_Basic, tc, x0 + pad,
+					 y1 - pad - line_h * (float) (i + 1) + 1.0f, lines[i].c_str());
 }
 
 
@@ -4877,6 +4886,12 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		{
 			snprintf(head,   sizeof(head),   "Coverage");
 			snprintf(detail, sizeof(detail), "Select a ramp start to see what can park on it.");
+		}
+		else if (mCoverage.index_ready && mLiveryIndex.HubsPending())
+		{
+			// The range rule cannot be answered yet, and the cards below have not
+			// had it applied - say that rather than print a number it will change.
+			snprintf(head,   sizeof(head),   "Checking which operators can reach this airport...");
 		}
 		else if (!mCoverage.index_ready)
 		{

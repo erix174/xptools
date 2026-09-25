@@ -272,10 +272,12 @@ string	WED_DescribeAutoFill(const WED_AutoFillPlan & plan)
 	return o.str();
 }
 
+// A selected ramp start, or every ramp start inside a selected airport or group:
+// picking twenty stands out of a hierarchy by hand is not a workflow.
 static int CollectSelectedRamps(ISelectable * who, void * ref)
 {
-	if (WED_RampPosition * r = dynamic_cast<WED_RampPosition *>(who))
-		((vector<WED_RampPosition *> *) ref)->push_back(r);
+	if (WED_Thing * t = dynamic_cast<WED_Thing *>(who))
+		CollectRamps(t, *(vector<WED_RampPosition *> *) ref);
 	return 0;
 }
 
@@ -286,9 +288,11 @@ static void SelectedRampsByAirport(IResolver * resolver, std::map<WED_Airport *,
 	if (!sel) return;
 	vector<WED_RampPosition *> ramps;
 	sel->IterateSelectionOr(CollectSelectedRamps, &ramps);
+	std::set<WED_RampPosition *> seen;			// a ramp and its airport both selected
 	for (size_t i = 0; i < ramps.size(); ++i)
-		if (WED_Airport * a = WED_GetParentAirport(ramps[i]))
-			out[a].push_back(ramps[i]);
+		if (seen.insert(ramps[i]).second)
+			if (WED_Airport * a = WED_GetParentAirport(ramps[i]))
+				out[a].push_back(ramps[i]);
 }
 
 int		WED_CanLiveryAutoFill(IResolver * resolver)

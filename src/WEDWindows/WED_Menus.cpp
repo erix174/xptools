@@ -245,8 +245,10 @@ static const GUI_MenuItem_t kAirportMenu[] = {
 {	"No Airport Selected",		'E',	gui_ControlFlag+gui_ShiftFlag,			0, wed_EditApt	},
 {	"-",						0,		0,									0,	0			},
 {	"Upgrade Ramps",			0,		0,									0,	wed_UpgradeRamps},
-{	"Next Ramp Start",			'.',	gui_ControlFlag,					0,	wed_NextRampStart},
-{	"Previous Ramp Start",		',',	gui_ControlFlag,					0,	wed_PrevRampStart},
+// Ctrl+Shift, not Ctrl: Microsoft Pinyin takes Ctrl+. for its punctuation toggle
+// before WED ever sees it.
+{	"Next Ramp Start",			'.',	gui_ControlFlag+gui_ShiftFlag,		0,	wed_NextRampStart},
+{	"Previous Ramp Start",		',',	gui_ControlFlag+gui_ShiftFlag,		0,	wed_PrevRampStart},
 {	"Auto-Populate Static Aircraft (Selected Ramps Only)...",	0,	0,	0,	wed_AutoFillLiveries},
 {	"Upgrade Jetways",			0,		0,									0,	wed_UpgradeJetways},
 {	"Upgrade Art",				0,		0,									0,	wed_UpgradeArt},
