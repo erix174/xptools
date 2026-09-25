@@ -38,6 +38,7 @@
 #include "WED_ExclusionZone.h"
 #include "WED_Group.h"
 #include "WED_Thing.h"
+#include "WED_Archive.h"
 
 #include <sstream>
 #include <iostream>
@@ -50,6 +51,11 @@ bool WED_SceneryImport(string scn_path, WED_Thing* wrl, bool limited)
 
     if (apts.size() == 0 || (limited && apts.size() > 10))   // prevent folks from opening the global airports ...
         return 0;
+
+    // Same as File > Import apt.dat does (WED_AptImportDialog): with no current
+    // airport, every airport tool - the ramp start tool first - refuses to place
+    // anything, and nothing on screen says the fix is Airport > Edit Airport.
+    WED_SetAnyAirport(wrl->GetArchive()->GetResolver());
 
     set<string> dsf = FILE_find_dsfs(scn_path);
     if (limited && dsf.size() > 10)                    // prevent really likey too big sceneries from getting auto-opened ...

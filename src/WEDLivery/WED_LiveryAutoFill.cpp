@@ -34,6 +34,8 @@
 #include "GISUtils.h"
 #include "WED_ToolUtils.h"		// WED_GetCurrentAirport
 #include "PlatformUtils.h"		// ConfirmMessage, DoUserAlert
+#include "ISelection.h"
+#include <map>
 
 #include <set>
 #include <sstream>
@@ -96,7 +98,7 @@ static bool OperatorIs(AutoFillData & d, const string & code, int ramp_op)
 	return false;
 }
 
-WED_AutoFillPlan	WED_PlanLiveryAutoFill(WED_Airport * apt)
+WED_AutoFillPlan	WED_PlanLiveryAutoFill(WED_Airport * apt, const vector<WED_RampPosition *> * only, bool convert_legacy)
 {
 	WED_AutoFillPlan plan;
 	plan.airport = apt;
@@ -135,7 +137,8 @@ WED_AutoFillPlan	WED_PlanLiveryAutoFill(WED_Airport * apt)
 	}
 
 	vector<WED_RampPosition *> ramps;
-	CollectRamps(apt, ramps);
+	if (only)	ramps = *only;
+	else		CollectRamps(apt, ramps);
 
 	for (size_t r = 0; r < ramps.size(); ++r)
 	{
@@ -154,16 +157,24 @@ WED_AutoFillPlan	WED_PlanLiveryAutoFill(WED_Airport * apt)
 
 		if (!out.skipped.empty()) { plan.ramps.push_back(out); continue; }
 
-		// Weights: keep the author's; convert a legacy single letter.
+		// Weights: keep the author's. A stand without them either gets the
+		// legacy spread, or is filled against the size range it has now.
 		int w[6];
-		if (!ramp->GetClassWeights(w))
+		bool classes[6];
+		if (ramp->GetClassWeights(w))
+			for (int k = 0; k < 6; ++k) classes[k] = w[k] > 0;
+		else if (convert_legacy)
 		{
 			WED_LegacyClassWeights(ENUM_Export(ramp->GetWidth()), w);
 			out.set_weights = true;
-			for (int k = 0; k < 6; ++k) out.weights[k] = w[k];
+			for (int k = 0; k < 6; ++k) { out.weights[k] = w[k]; classes[k] = w[k] > 0; }
 		}
-		bool classes[6];
-		for (int k = 0; k < 6; ++k) classes[k] = w[k] > 0;
+		else
+		{
+			int lo = ENUM_Export(ramp->GetWidthMin()), hi = ENUM_Export(ramp->GetWidth());
+			if (lo > hi) std::swap(lo, hi);
+			for (int k = 0; k < 6; ++k) classes[k] = (k >= lo && k <= hi);
+		}
 
 		set<int> equipment;
 		ramp->GetEquipment(equipment);
@@ -210,11 +221,11 @@ WED_AutoFillPlan	WED_PlanLiveryAutoFill(WED_Airport * apt)
 	return plan;
 }
 
-int		WED_ApplyLiveryAutoFill(const WED_AutoFillPlan & plan)
+int		WED_ApplyLiveryAutoFill(const WED_AutoFillPlan & plan, bool own_command)
 {
 	if (!plan.airport || plan.changed == 0) return 0;
 	WED_Archive * archive = plan.airport->GetArchive();
-	archive->StartCommand("Auto-fill Static Aircraft");
+	if (own_command) archive->StartCommand("Auto-Populate Static Aircraft");
 	int n = 0;
 	for (size_t i = 0; i < plan.ramps.size(); ++i)
 	{
@@ -225,7 +236,7 @@ int		WED_ApplyLiveryAutoFill(const WED_AutoFillPlan & plan)
 		r.ramp->SetAutoFilled(true);			// last: the setters above clear it
 		++n;
 	}
-	archive->CommitCommand();
+	if (own_command) archive->CommitCommand();
 	return n;
 }
 
@@ -257,24 +268,54 @@ string	WED_DescribeAutoFill(const WED_AutoFillPlan & plan)
 	return o.str();
 }
 
+static int CollectSelectedRamps(ISelectable * who, void * ref)
+{
+	if (WED_RampPosition * r = dynamic_cast<WED_RampPosition *>(who))
+		((vector<WED_RampPosition *> *) ref)->push_back(r);
+	return 0;
+}
+
+static void SelectedRampsByAirport(IResolver * resolver, std::map<WED_Airport *, vector<WED_RampPosition *> > & out)
+{
+	out.clear();
+	ISelection * sel = WED_GetSelect(resolver);
+	if (!sel) return;
+	vector<WED_RampPosition *> ramps;
+	sel->IterateSelectionOr(CollectSelectedRamps, &ramps);
+	for (size_t i = 0; i < ramps.size(); ++i)
+		if (WED_Airport * a = WED_GetParentAirport(ramps[i]))
+			out[a].push_back(ramps[i]);
+}
+
 int		WED_CanLiveryAutoFill(IResolver * resolver)
 {
-	return WED_GetCurrentAirport(resolver) != nullptr;
+	std::map<WED_Airport *, vector<WED_RampPosition *> > by_apt;
+	SelectedRampsByAirport(resolver, by_apt);
+	return !by_apt.empty();
 }
 
 void	WED_DoLiveryAutoFill(IResolver * resolver)
 {
-	WED_Airport * apt = WED_GetCurrentAirport(resolver);
-	if (!apt) return;
+	std::map<WED_Airport *, vector<WED_RampPosition *> > by_apt;
+	SelectedRampsByAirport(resolver, by_apt);
+	if (by_apt.empty()) return;
 
-	WED_AutoFillPlan plan = WED_PlanLiveryAutoFill(apt);
-	string text = WED_DescribeAutoFill(plan);
+	vector<WED_AutoFillPlan> plans;
+	string text;
+	int changed = 0;
+	for (auto & kv : by_apt)
+	{
+		plans.push_back(WED_PlanLiveryAutoFill(kv.first, &kv.second, true));
+		const WED_AutoFillPlan & p = plans.back();
+		if (!p.error.empty()) { DoUserAlert(p.error.c_str()); return; }
+		text += WED_DescribeAutoFill(p);
+		changed += p.changed;
+	}
 	LOG_MSG("I/AutoFill %s", text.c_str());
 
-	if (!plan.error.empty())		{ DoUserAlert(plan.error.c_str()); return; }
-	if (plan.changed == 0)
+	if (changed == 0)
 	{
-		DoUserAlert(("Nothing to add for " + plan.icao + ". Details are in WED_Log.txt.").c_str());
+		DoUserAlert("Nothing to add to the selected ramp starts. Details are in WED_Log.txt.");
 		return;
 	}
 
@@ -285,6 +326,12 @@ void	WED_DoLiveryAutoFill(IResolver * resolver)
 		pos = text.find('\n', pos + 1);
 	if (pos != string::npos) text = text.substr(0, pos) + "\n  ... (the full list is in WED_Log.txt)";
 
-	if (ConfirmMessage((text + "\n\nApply? One undo step reverts all of it.").c_str(), "Apply", "Cancel"))
-		WED_ApplyLiveryAutoFill(plan);
+	if (!ConfirmMessage((text + "\n\nApply? One undo step reverts all of it.").c_str(), "Apply", "Cancel"))
+		return;
+
+	WED_Archive * archive = plans.front().airport->GetArchive();
+	archive->StartCommand("Auto-Populate Static Aircraft");
+	for (size_t i = 0; i < plans.size(); ++i)
+		WED_ApplyLiveryAutoFill(plans[i], false);
+	archive->CommitCommand();
 }

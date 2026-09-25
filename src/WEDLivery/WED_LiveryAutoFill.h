@@ -87,18 +87,26 @@ struct WED_AutoFillPlan {
 // Reads the airport and the data files; never touches the document. Blocks
 // until the livery index's hub positions are placed (R26 needs them) - a
 // second or so the first time, nothing after.
-WED_AutoFillPlan	WED_PlanLiveryAutoFill(WED_Airport * apt);
+//   only            - plan just these ramp starts (NULL: every one at `apt`)
+//   convert_legacy  - a stand with no weights gets the legacy spread. false:
+//                     leave its weights alone and fill against the size range
+//                     it has now - what "Populate This Ramp" wants, since the
+//                     author set that scope on purpose.
+WED_AutoFillPlan	WED_PlanLiveryAutoFill(WED_Airport * apt,
+									   const std::vector<WED_RampPosition *> * only = nullptr,
+									   bool convert_legacy = true);
 
-// Applies every changing ramp of `plan` as ONE undoable command and
-// watermarks each of them. Returns the number of ramp starts changed.
-int					WED_ApplyLiveryAutoFill(const WED_AutoFillPlan & plan);
+// Applies every changing ramp of `plan` and watermarks each of them - as one
+// undoable command of its own, or inside the caller's (own_command false).
+// Returns the number of ramp starts changed.
+int					WED_ApplyLiveryAutoFill(const WED_AutoFillPlan & plan, bool own_command = true);
 
 // One line per changed ramp and a summary - for the log and a confirmation.
 std::string			WED_DescribeAutoFill(const WED_AutoFillPlan & plan);
 
-// The command: plan the current airport, show what would change, apply on
-// confirmation. Whatever button or menu item ends up owning auto-fill calls
-// these two and nothing else.
+// Airport > Auto-Populate Static Aircraft (Selected Ramps Only): the selected
+// ramp starts, grouped by airport, shown and applied on confirmation as one
+// undo step. Enabled only while ramp starts are selected.
 class IResolver;
 int					WED_CanLiveryAutoFill(IResolver * resolver);
 void				WED_DoLiveryAutoFill(IResolver * resolver);

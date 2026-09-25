@@ -37,6 +37,9 @@
 #include "WED_ToolUtils.h"		// WED_GetSelect, WED_GetParentAirport
 #include "WED_EnumSystem.h"		// ramp_operation_*, width_A..width_F
 #include "WED_LiveryRules.h"
+#include "WED_LiveryAutoFill.h"
+#include "WED_ToolUtils.h"
+#include <chrono>
 #include "WED_LiveryIndex.h"		// WED_LiveryIndexDefaultPath(), WED_LiveryInRange()
 #include "GISUtils.h"
 #include "WED_MandatoryHeader.h"	// WedDataFileDir() - where the loose .txt data files live
@@ -1065,6 +1068,9 @@ WED_LiveryPane::WED_LiveryPane(
 	mHoverWeightBar(-1),
 	mHoverWeightButton(false),
 	mTrackWeightButton(false),
+	mHoverPopulate(false),
+	mTrackPopulate(false),
+	mPopulateFlashUntil(0.0),
 	mCoverageDirty(true)
 {
 	// Zeroed rather than left indeterminate: Draw() reads mCoverage before the
@@ -1205,6 +1211,7 @@ void	WED_LiveryPane::Hide(void)
 	mTrackRecommendButton = false;
 	mTrackClearButton     = false;
 	mTrackWeightButton    = false;
+	mTrackPopulate        = false;
 
 	// Hover highlights too, or the pane repaints with a lit-up control under a
 	// cursor that is somewhere else entirely.
@@ -1213,6 +1220,7 @@ void	WED_LiveryPane::Hide(void)
 	mHoverSliderHandle    = -1;
 	mHoverWeightBar       = -1;
 	mHoverWeightButton    = false;
+	mHoverPopulate        = false;
 	mHoverSortButton      = false;
 	mHoverRecommendButton = false;
 	mHoverClearButton     = false;
@@ -1904,6 +1912,64 @@ void	WED_LiveryPane::SwitchToSimpleMode(void)
 	mArchive->CommitCommand();
 
 	mCoverageDirty = true;
+	Refresh();
+}
+
+static const char * kPopulateCaption = "Populate This Ramp";
+
+static double PaneClockNow(void)
+{
+	return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
+void	WED_LiveryPane::PopulateButtonRect(int bounds[4], float b_out[4]) const
+{
+	float top, bot;
+	HeaderYRange(bounds, top, bot);
+	const float pad = 4;
+	float w = GUI_MeasureRange(font_UI_Basic, kPopulateCaption, kPopulateCaption + strlen(kPopulateCaption)) + 16;
+	b_out[2] = (float) bounds[2] - pad;
+	b_out[0] = b_out[2] - w;
+	float mid = (top + bot) * 0.5f, h = GUI_GetLineHeight(font_UI_Basic) + 6;
+	b_out[1] = mid - h * 0.5f;
+	b_out[3] = mid + h * 0.5f;
+}
+
+// Fill this one stand from the database against the sizes it allows NOW - its
+// weights, or its size range if it has none - without touching either. Same
+// engine and the same extend-only rule as Airport > Auto-Populate.
+void	WED_LiveryPane::PopulateThisRamp(void)
+{
+	if (mSelectedRamps.size() != 1) return;
+	WED_RampPosition * ramp = mSelectedRamps[0];
+	WED_Airport * apt = WED_GetParentAirport(ramp);
+	vector<WED_RampPosition *> one(1, ramp);
+	WED_AutoFillPlan plan = WED_PlanLiveryAutoFill(apt, &one, false);
+	LOG_MSG("I/AutoFill %s", WED_DescribeAutoFill(plan).c_str());
+
+	if (!plan.error.empty())
+	{
+		mPopulateFlash = "No livery index";
+		mPopulateDetail = plan.error;
+	}
+	else if (plan.changed == 0)
+	{
+		mPopulateFlash = "Nothing to add";
+		mPopulateDetail = plan.ramps.empty() ? string() : "Nothing added: " + plan.ramps[0].skipped + ".";
+	}
+	else
+	{
+		WED_ApplyLiveryAutoFill(plan);
+		const vector<string> & added = plan.ramps[0].added;
+		char buf[32];
+		snprintf(buf, sizeof(buf), "Added %d", (int) added.size());
+		mPopulateFlash = buf;
+		mPopulateDetail = "Added:";
+		for (size_t i = 0; i < added.size(); ++i) mPopulateDetail += " " + added[i];
+		mPopulateDetail += ". Ctrl+Z reverts it.";
+		mCoverageDirty = true;
+	}
+	mPopulateFlashUntil = PaneClockNow() + 3.0;
 	Refresh();
 }
 
@@ -3423,6 +3489,15 @@ int		WED_LiveryPane::MouseMove(int x, int y)
 	}
 	if (over_wbtn != mHoverWeightButton)	{ mHoverWeightButton = over_wbtn;	changed = true; }
 
+	bool over_pop = false;
+	if (mSelectedRamps.size() == 1)
+	{
+		float pb[4];
+		PopulateButtonRect(b, pb);
+		over_pop = (x >= pb[0] && x <= pb[2] && y >= pb[1] && y <= pb[3]);
+	}
+	if (over_pop != mHoverPopulate)		{ mHoverPopulate = over_pop;		changed = true; }
+
 	int row = -1;
 	if (!mSelectedRamps.empty() && !over_sort && !over_recommend && !over_clear)
 	{
@@ -3506,6 +3581,18 @@ int		WED_LiveryPane::MouseDown(int x, int y, int button)
 	{
 		mTrackFilterChip = chip;
 		return 1;
+	}
+
+	if (mSelectedRamps.size() == 1)
+	{
+		float pb[4];
+		PopulateButtonRect(b, pb);
+		if (x >= pb[0] && x <= pb[2] && y >= pb[1] && y <= pb[3])
+		{
+			mTrackPopulate = true;
+			Refresh();
+			return 1;
+		}
 	}
 
 	// The add/clear button, and the bars, both before the slider - the button
@@ -3706,6 +3793,17 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 {
 	int b[4];
 	GetBounds(b);
+
+	if (mTrackPopulate)
+	{
+		mTrackPopulate = false;
+		float pb[4];
+		PopulateButtonRect(b, pb);
+		if (x >= pb[0] && x <= pb[2] && y >= pb[1] && y <= pb[3])
+			PopulateThisRamp();
+		Refresh();
+		return;
+	}
 
 	if (mTrackWeightButton)
 	{
@@ -4274,8 +4372,29 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 	{
 		string name;
 		mSelectedRamps[0]->GetName(name);
-		string header = string("Ramp Start: ") + name;
+		float pb[4];
+		PopulateButtonRect(b, pb);
+		string header = ElideToWidth(font_UI_Basic, string("Ramp Start: ") + name, pb[0] - 8 - tx);
 		GUI_FontDraw(state, font_UI_Basic, header_col, tx, ty, header.c_str());
+
+		const bool flashing = PaneClockNow() < mPopulateFlashUntil;
+		if (flashing) Refresh();					// until the caption goes back
+		state->SetState(0,0,0,0,0,0,0);
+		float k = mTrackPopulate ? 0.82f : (mHoverPopulate ? 1.15f : 1.0f);
+		glColor4f(0.26f * k, 0.30f * k, 0.36f * k, 1.0f);
+		glBegin(GL_QUADS);
+			glVertex2f(pb[0], pb[1]); glVertex2f(pb[0], pb[3]);
+			glVertex2f(pb[2], pb[3]); glVertex2f(pb[2], pb[1]);
+		glEnd();
+		glColor4f(0.55f, 0.55f, 0.58f, 1.0f);
+		glBegin(GL_LINE_LOOP);
+			glVertex2f(pb[0], pb[1]); glVertex2f(pb[0], pb[3]);
+			glVertex2f(pb[2], pb[3]); glVertex2f(pb[2], pb[1]);
+		glEnd();
+		const string cap = flashing ? mPopulateFlash : string(kPopulateCaption);
+		float cw = GUI_MeasureRange(font_UI_Basic, cap.c_str(), cap.c_str() + cap.size());
+		GUI_FontDraw(state, font_UI_Basic, WED_Color_RGBA(wed_Table_Text),
+					 (pb[0] + pb[2]) * 0.5f - cw * 0.5f, pb[1] + 4, cap.c_str());
 	}
 	else
 	{
@@ -5210,6 +5329,11 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 				int chip = FilterChipForXY(b, mHoverX, mHoverY);
 				if (chip >= 0 && chip < 5) mHoverTipText = kFilterTips[chip];
 			}
+			if (mHoverPopulate)
+				mHoverTipText = (PaneClockNow() < mPopulateFlashUntil && !mPopulateDetail.empty())
+					? mPopulateDetail
+					: "Adds this airport's operators that have a livery for the sizes this stand allows now. "
+					  "Keeps everything already listed and leaves the weights alone.";
 
 			// Clip to the content viewport. GUI_Pane::InternalDraw() only scissors to
 			// the WHOLE PANE's bounds, not this section's, so without this a card

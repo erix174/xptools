@@ -182,6 +182,9 @@ private:
 	void				SeedWeightsFromSizeRange(void);
 	void				SwitchToSimpleMode(void);
 	void				WeightButtonRect(int bounds[4], float b_out[4]) const;
+	// "Populate This Ramp", right-aligned on the ramp name's row, single selection only.
+	void				PopulateButtonRect(int bounds[4], float b_out[4]) const;
+	void				PopulateThisRamp(void);
 	std::map<int, std::string>	mWeightCache;
 	void				ListToolbarYRange(int bounds[4], float & top, float & bot) const;
 	float				ContentTop(int bounds[4]) const;		// top Y of the airline checklist
@@ -478,6 +481,11 @@ private:
 	int							mDragWeights0[6];
 	int							mHoverWeightBar;	// -1 when the cursor is off the bars
 	bool						mHoverWeightButton, mTrackWeightButton;
+	bool						mHoverPopulate, mTrackPopulate;
+	// What the last Populate did, shown on the button for a few seconds instead of
+	// a dialog (a modal inside a mouse handler is what once left the click count stuck).
+	std::string					mPopulateFlash, mPopulateDetail;
+	double						mPopulateFlashUntil;
 
 	// Single reference table for everything the picker needs to know about
 	// an airport before looking at any one ramp: country (flag banner +
