@@ -29,9 +29,21 @@
 // and an auto-filled stand can never disagree about what may park where.
 
 #include <string>
+#include "WED_LiveryIndex.h"
+#include "WED_AirlineDirectory.h"
+#include "WED_AirportDatabase.h"
 
-struct WED_LiveryIndexEntry;
-class  WED_AirlineDirectory;
+// The data a whole-airport command (auto-fill, moderation) checks against,
+// loaded on first use and kept for the session - the Liveries tab keeps its
+// own copies. The index reloads if the X-Plane folder changes. Returns NULL
+// when there is no livery index (an X-Plane before 12.5). need_hubs blocks
+// until R26's hub positions are placed.
+struct WED_LiveryData {
+	WED_LiveryIndex			index;
+	WED_AirlineDirectory	directory;
+	WED_AirportDatabase		airports;
+};
+WED_LiveryData *	WED_GetLiveryData(bool need_hubs);
 
 // MAY THIS LIVERY APPEAR AT THIS STAND. By operation class:
 //   GA              - anywhere, no range rule.

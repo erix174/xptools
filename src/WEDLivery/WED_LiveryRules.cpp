@@ -25,6 +25,19 @@
 #include "WED_LiveryIndex.h"
 #include "WED_AirlineDirectory.h"
 #include "WED_EnumSystem.h"
+#include "WED_MandatoryHeader.h"		// WedDataFileDir
+
+WED_LiveryData *	WED_GetLiveryData(bool need_hubs)
+{
+	static WED_LiveryData d;
+	const std::string index_path = WED_LiveryIndexDefaultPath();
+	if (index_path.empty() || !d.index.EnsureLoaded(index_path)) return NULL;
+	if (need_hubs) d.index.WaitForHubs();
+	if (!d.directory.IsLoaded() && !d.directory.LoadFailed()) d.directory.EnsureLoaded(index_path);
+	if (!d.airports.IsLoaded() && !d.airports.LoadFailed())
+		d.airports.EnsureLoaded(WedDataFileDir() + "WED_AirportDatabase.txt");
+	return &d;
+}
 
 using std::string;
 

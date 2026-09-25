@@ -62,20 +62,7 @@ static void CollectRamps(WED_Thing * t, vector<WED_RampPosition *> & out)
 		CollectRamps(t->GetNthChild(i), out);
 }
 
-// The data every stand is checked against. Loaded once per session and kept,
-// like the Liveries tab's own copies; the index reloads if the X-Plane folder
-// changes, which is when its path does.
-struct AutoFillData {
-	WED_LiveryIndex			index;
-	WED_AirlineDirectory	directory;
-	WED_AirportDatabase		airports;
-};
-
-static AutoFillData & Data(void)
-{
-	static AutoFillData d;
-	return d;
-}
+typedef WED_LiveryData AutoFillData;
 
 // Does `code` have a usable livery for this stand - a weighted class, the
 // stand's equipment, allowed here (range, home soil)?
@@ -115,17 +102,13 @@ WED_AutoFillPlan	WED_PlanLiveryAutoFill(WED_Airport * apt)
 	plan.airport = apt;
 	if (!apt) { plan.error = "No airport."; return plan; }
 
-	AutoFillData & d = Data();
-	const string index_path = WED_LiveryIndexDefaultPath();
-	if (index_path.empty() || !d.index.EnsureLoaded(index_path))
+	WED_LiveryData * pd = WED_GetLiveryData(true);
+	if (!pd)
 	{
 		plan.error = "There is no livery index in this X-Plane folder. Static aircraft need X-Plane 12.5 or later.";
 		return plan;
 	}
-	d.index.WaitForHubs();
-	if (!d.directory.IsLoaded()) d.directory.EnsureLoaded(index_path);
-	if (!d.airports.IsLoaded() && !d.airports.LoadFailed())
-		d.airports.EnsureLoaded(WedDataFileDir() + "WED_AirportDatabase.txt");
+	AutoFillData & d = *pd;
 
 	// The ICAO metadata before the airport ID: a placeholder ID with a real code
 	// in its metadata is common, and the database is keyed by the real code.

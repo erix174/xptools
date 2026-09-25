@@ -245,6 +245,8 @@ static const GUI_MenuItem_t kAirportMenu[] = {
 {	"No Airport Selected",		'E',	gui_ControlFlag+gui_ShiftFlag,			0, wed_EditApt	},
 {	"-",						0,		0,									0,	0			},
 {	"Upgrade Ramps",			0,		0,									0,	wed_UpgradeRamps},
+{	"Next Ramp Start",			'.',	gui_ControlFlag,					0,	wed_NextRampStart},
+{	"Previous Ramp Start",		',',	gui_ControlFlag,					0,	wed_PrevRampStart},
 #if DEV
 // Temporary home for auto-fill until its button exists on the Liveries tab.
 {	"Auto-fill Static Aircraft (dev)...",	0,	0,						0,	wed_AutoFillLiveries},

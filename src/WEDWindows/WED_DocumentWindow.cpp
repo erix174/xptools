@@ -50,6 +50,8 @@
 #include "WED_GroupCommands.h"
 #include "WED_GatewayExport.h"
 #include "WED_GatewayImport.h"
+#include "WED_LiveryModeration.h"
+#include "WED_RampPosition.h"
 #include "WED_LiveryAutoFill.h"
 #include "WED_SceneryImport.h"
 #include "WED_MetadataUpdate.h"
@@ -237,6 +239,8 @@ WED_DocumentWindow::WED_DocumentWindow(
 
 	WED_LiveryPane * livery_pane = new WED_LiveryPane(inDocument, inDocument->GetArchive(), prop_tabs);
 	prop_tabs->AddPane(livery_pane, "Static+Liveries");
+	mPropTabs   = prop_tabs;
+	mLiveryPane = livery_pane;
 	// The constructor already tried to sync eligibility, but at that point the pane
 	// wasn't findable in the tab strip yet (AddPane hadn't run), so it silently no-op'd.
 	// Re-sync now that it's actually registered - matters when reopening a document
@@ -485,6 +489,25 @@ int	WED_DocumentWindow::HandleCommand(int command)
 
 	case wed_UpdateMetadata:     WED_DoUpdateMetadata(mDocument); return 1;
 	case wed_AutoFillLiveries:   WED_DoLiveryAutoFill(mDocument); return 1;
+	case wed_NextRampStart:
+	case wed_PrevRampStart:
+		// Moderation's walk through the stands: select the next one, bring it to
+		// the middle of the map at the current zoom, show its Liveries tab, and -
+		// for a moderator - ask about any operator that needs checking.
+		if (WED_RampPosition * r = WED_ModerationStep(mDocument, command == wed_NextRampStart ? 1 : -1))
+		{
+			Point2 ll;
+			r->GetLocation(gis_Geo, ll);
+			mMapPane->CenterOnPoint(ll);
+			if (mPropTabs && mLiveryPane)
+			{
+				int tab = mPropTabs->GetTabForPane(mLiveryPane);
+				if (tab >= 0) mPropTabs->SetTab(tab);
+			}
+			if (WED_ModerationEnabled())
+				WED_ModerationPrompt(r, WED_GetCurrentAirport(mDocument));
+		}
+		return 1;
 	case wed_ExportApt:		WED_DoExportApt(mDocument, mMapPane); return 1;
 	case wed_ExportPack:	WED_DoExportPack(mDocument, mMapPane); return 1;
 #if HAS_GATEWAY
@@ -602,6 +625,8 @@ int	WED_DocumentWindow::CanHandleCommand(int command, string& ioName, int& ioChe
 	case wed_EditApt:	return WED_CanSetCurrentAirport(mDocument, ioName);
 	case wed_UpdateMetadata:     return WED_CanUpdateMetadata(mDocument);
 	case wed_AutoFillLiveries:   return WED_CanLiveryAutoFill(mDocument);
+	case wed_NextRampStart:
+	case wed_PrevRampStart:      return WED_GetCurrentAirport(mDocument) != NULL;
 	case wed_MoveFirst:	return WED_CanReorder(mDocument,-1,1);
 	case wed_MovePrev:	return WED_CanReorder(mDocument,-1,0);
 	case wed_MoveNext:	return WED_CanReorder(mDocument, 1,0);

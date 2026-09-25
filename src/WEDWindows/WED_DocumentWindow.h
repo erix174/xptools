@@ -35,6 +35,7 @@ class	WED_Document;
 class	WED_PropertyPane;
 class	WED_PropertyTable;
 class	GUI_Splitter;
+class	GUI_TabPane;
 
 class	WED_DocumentWindow : public GUI_Window, public GUI_Listener {
 public:
@@ -64,6 +65,8 @@ private:
 	WED_MapPreviewWindow *		mMapPreviewWindow;
 	WED_PropertyPane *			mPropPane;
 	WED_TCEPane *				mTCEPane;
+	GUI_TabPane *				mPropTabs;		// the tab strip the Liveries tab lives in
+	GUI_Pane *					mLiveryPane;
 
 	GUI_Splitter *				mMainSplitter;
 	GUI_Splitter *				mMainSplitter2;
