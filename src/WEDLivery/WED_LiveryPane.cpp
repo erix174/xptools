@@ -1022,6 +1022,7 @@ WED_LiveryPane::WED_LiveryPane(
 						IResolver *		resolver,
 						WED_Archive *	archive,
 						GUI_TabPane *	host_tabs) :
+	mLiveryIndex(WED_SharedLiveryIndex()),
 	// The host tab pane is itself a commander (GUI_TabPane.h:35), so it is the
 	// natural parent: focus flows window -> tab pane -> this pane -> mSearchField.
 	GUI_Commander(host_tabs),
@@ -1967,7 +1968,7 @@ void	WED_LiveryPane::PopulateThisRamp(void)
 
 	if (!plan.error.empty())
 	{
-		mPopulateFlash = "No livery index";
+		mPopulateFlash = "Can't populate";
 		mPopulateDetail = plan.error;
 	}
 	else if (plan.changed == 0)
@@ -2960,12 +2961,16 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 	// class - never a live 3D view). Texcoords use the plain GL
 	// render-to-texture convention (t=0 at the bottom) since this texture
 	// came from our own FBO render, not a loaded image file.
+	// Only an upload-and-render costs the frame's budget. A path still being
+	// read, or one that failed, is a cheap call - charging it made one missing
+	// livery take the only slot every frame and starve every card below it.
 	bool already_cached = mThumbCache.IsCached(abs_path);
+	bool will_render    = !already_cached && mThumbCache.IsReady(abs_path);
 	const WED_LiveryThumbnail * thumb = nullptr;
-	if (already_cached || renders_this_frame < kMaxRendersPerFrame)
+	if (!will_render || renders_this_frame < kMaxRendersPerFrame)
 	{
 		thumb = mThumbCache.GetThumbnail(res_mgr, tex_mgr, state, abs_path);
-		if (!already_cached) ++renders_this_frame;
+		if (will_render) ++renders_this_frame;
 	}
 	// Blend ON so the thumbnail's transparent background (the cache clears its
 	// FBO to alpha 0 and only the model itself writes opaque pixels) lets the
@@ -3000,7 +3005,8 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 	// that is loading is not mistaken for one that is broken - or for a hang.
 	if (!from && !have_new)
 	{
-		const char * t = mThumbCache.IsFailed(abs_path) ? "No preview" : "Loading...";
+		const char * t = (mThumbCache.IsFailed(abs_path) || !WED_LiveryThumbnailCache::RenderingAvailable())
+							? "No preview" : "Loading...";
 		float tw = GUI_MeasureRange(font_UI_Basic, t, t + strlen(t));
 		float muted[4] = { 0.62f, 0.62f, 0.64f, 1.0f };
 		GUI_FontDraw(state, font_UI_Basic, muted,
@@ -3582,6 +3588,7 @@ int		WED_LiveryPane::MouseMove(int x, int y)
 			mCycleAirline = want;
 			mCycleShow    = 0;
 			mCycleAccum   = 0.0f;
+			mCycleFade    = kCycleFadeSec;		// a new card starts on its face, no fade from the old one
 			changed       = true;
 			Refresh();
 		}
@@ -5490,7 +5497,9 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 						bucket.push_back(face);
 						bucket.push_back(next);
 						want_cycle.insert(want_cycle.end(), ac->abs_paths.begin(), ac->abs_paths.end());
-						mCycleNextReady = n <= 1 || mThumbCache.IsSettled(next);
+						// Ready = cached, failed, or read and waiting to upload -
+						// showing it next frame does the upload, under the fade.
+						mCycleNextReady = n <= 1 || mThumbCache.IsSettled(next) || mThumbCache.IsReady(next);
 					}
 					else
 						bucket.push_back(ac->abs_paths[0]);

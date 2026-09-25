@@ -38,10 +38,17 @@
 // own copies. The index reloads if the X-Plane folder changes. Returns NULL
 // when there is no livery index (an X-Plane before 12.5). need_hubs blocks
 // until R26's hub positions are placed.
+// ONE livery index for the process: the Liveries tab and the whole-airport
+// commands read the same instance, so its 380 MB hub scan runs once. A second
+// copy made the first "Populate This Ramp" block the UI for a scan the tab had
+// already finished.
+WED_LiveryIndex &	WED_SharedLiveryIndex(void);
+
 struct WED_LiveryData {
-	WED_LiveryIndex			index;
+	WED_LiveryIndex &		index;
 	WED_AirlineDirectory	directory;
 	WED_AirportDatabase		airports;
+	WED_LiveryData() : index(WED_SharedLiveryIndex()) {}
 };
 WED_LiveryData *	WED_GetLiveryData(bool need_hubs);
 

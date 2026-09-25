@@ -330,10 +330,6 @@ int			GUI_TextField::AcceptTakeFocus(void)
 	mCaret = 1;
 	Start(0.25);
 	SetSelection(0,mText.size());
-	// A field that appears under the cursor - a table cell opening for edit on
-	// the first click - gets the second click of a double-click as its first.
-	// Arm on focus so that click still selects a word.
-	ArmDoubleClick(-1, -1);
 	return 1;
 }
 

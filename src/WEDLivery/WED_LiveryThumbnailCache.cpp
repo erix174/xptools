@@ -211,7 +211,8 @@ static float	ModelYawCorrection(const XObj8 * o, const string & obj_path)
 // livery set.
 static const size_t kMaxCachedThumbnails = 64;
 static const size_t kKeepThumbnails      = 48;	// off-screen ones kept for scrolling back
-static const size_t kMaxDoneHeld         = 16;	// finished reads held for cards not on screen
+static const size_t kMaxDoneHeld         = 4;	// finished reads held for cards not on screen -
+													// few: a raw DDS can be 20 MB
 
 // Halves an image with a 2x2 box filter. Repeated, it takes a 4096 livery down to
 // thumbnail size with far less shimmer than one bicubic jump of 8x.
@@ -738,7 +739,15 @@ void	WED_LiveryThumbnailCache::WorkerLoop(void)
 		mInFlight.insert(path);
 
 		lock.unlock();
-		Prepared p = PrepareThumbnail(path);		// no GL, no shared state
+		Prepared p;
+		try {
+			p = PrepareThumbnail(path);			// no GL, no shared state
+		} catch (...) {
+			// A throw on a worker would terminate WED. A read that throws - a
+			// bad_alloc on a huge texture, a parser choking - is a read that failed.
+			FreePrepared(p);
+			p = Prepared();
+		}
 		lock.lock();
 
 		mInFlight.erase(path);
@@ -775,4 +784,15 @@ bool	WED_LiveryThumbnailCache::HasPending(void)
 	// ones on screen are collected by the next Draw anyway, and the held
 	// off-screen ones would otherwise keep the pane redrawing forever.
 	return !mQueue.empty() || !mInFlight.empty();
+}
+
+bool	WED_LiveryThumbnailCache::IsReady(const string & obj_path)
+{
+	std::lock_guard<std::mutex> lock(mMutex);
+	return mDone.count(obj_path) != 0;
+}
+
+bool	WED_LiveryThumbnailCache::RenderingAvailable(void)
+{
+	return FBOAvailable();
 }

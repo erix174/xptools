@@ -707,6 +707,9 @@ int			GUI_TextTable::CellMouseDown(int cell_bounds[4], int cell_x, int cell_y, i
 		{
 			cell_bounds[0] -= mEditInfo.indent_level * mCellIndent;	// clean out bounds...will get changed again later anyway
 			CreateEdit(cell_bounds);
+			// Opened by a click: the field never saw it, so a quick second click
+			// is its first - arm it to select a word. A field reached by Tab is not.
+			if (mTextField) mTextField->ArmDoubleClick(-1, -1);
 			mClickCellX = cell_x;
 			mClickCellY = cell_y;
 			return 1;

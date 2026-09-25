@@ -112,6 +112,11 @@ public:
 	// Cached, or known not to load: nothing more will happen for this path.
 	bool	IsSettled(const std::string & obj_path) const { return mCache.count(obj_path) || mFailed.count(obj_path); }
 	bool	IsFailed(const std::string & obj_path) const  { return mFailed.count(obj_path) != 0; }
+	// Read by a worker and waiting to be uploaded: the next GetThumbnail for it
+	// renders. The one call that costs a frame its render budget.
+	bool	IsReady(const std::string & obj_path);
+	// False when this GL context cannot render off-screen at all.
+	static bool	RenderingAvailable(void);
 
 	// Frees every cached GL texture.
 	void	DiscardAll();

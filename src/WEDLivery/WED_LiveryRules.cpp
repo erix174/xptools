@@ -27,6 +27,12 @@
 #include "WED_EnumSystem.h"
 #include "WED_MandatoryHeader.h"		// WedDataFileDir
 
+WED_LiveryIndex &	WED_SharedLiveryIndex(void)
+{
+	static WED_LiveryIndex idx;
+	return idx;
+}
+
 WED_LiveryData *	WED_GetLiveryData(bool need_hubs)
 {
 	static WED_LiveryData d;

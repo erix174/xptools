@@ -76,6 +76,10 @@ public:
 	virtual	int			HandleCommand(int command);
 	virtual	int			CanHandleCommand(int command, string& ioName, int& ioCheck);
 	virtual	int			AcceptTakeFocus(void);
+	// The next click counts as the second of a double-click. For a field that
+	// appears under a click - a table cell opening for edit - whose first click
+	// the field never saw. x, y < 0: any position.
+			void		ArmDoubleClick(int x, int y);
 	virtual int			AcceptLoseFocus(int inForce);
 	virtual	int			AcceptFocusChain(void);
 
@@ -139,7 +143,6 @@ private:
 
 			void			ConstrainLogicalBounds(void);
 			void			SelectWordAtCaret(void);
-			void			ArmDoubleClick(int x, int y);
 			bool			IsDoubleClick(int x, int y) const;
 
 		int					mFont;

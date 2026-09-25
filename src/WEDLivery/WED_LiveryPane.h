@@ -513,7 +513,7 @@ private:
 	// consumer the class has ever had; see the appendix of WED_LiveryFormatSpec.md.
 	// Loaded lazily and re-loaded whenever the resolved path changes, which is how
 	// it survives the user switching X-Plane folders mid-session.
-	WED_LiveryIndex				mLiveryIndex;
+	WED_LiveryIndex &			mLiveryIndex;		// WED_SharedLiveryIndex() - one per process
 
 	// ---- country flag banner (WED_FlagProjector / WED_FlagAssets) ----
 	// Re-projected only when the displayed country actually changes (this is
