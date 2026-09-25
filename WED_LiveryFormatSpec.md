@@ -661,9 +661,9 @@ an index fix by hand on the NOTE column, not an obsolescence mark — see §6.3.
 per-stand undo: the livery stops existing at every airport at once, and an
 (airline, class) pair left with no asset is a stand that silently parks nothing —
 the §4.5 defect, created by a data edit. Marking `B752` would empty **twenty**
-pairs, and the 757 is in daily service. The generator therefore prints the blast
-radius of every mark on every run, and answers `--what-if <TYPE>` without
-requiring the mark to be made first. Read that number before committing a row.
+pairs, and the 757 is in daily service. The blast radius of every mark is
+therefore printed on every generator run, and `--what-if` answers it without the
+mark being made first (§6.6). Read that number before committing a row.
 
 ### 4.5 What class-first costs, and who absorbs it
 
@@ -1072,15 +1072,26 @@ because it is simply still there.
 **A mark's blast radius must be read before it is made.** Withdrawing a livery is
 global and has no per-stand undo, and an (airline, class) pair left with no asset
 is a stand that silently parks nothing — the §4.5 defect, manufactured by a data
-edit. The generator prints, for every mark, how many pairs it would empty, and
-answers the question hypothetically without requiring the mark:
+edit. `tools/scripts/airline_research/livery_obsolete_radius.py` prints how many
+pairs the marks already made have emptied, and answers the question
+hypothetically without requiring the mark. It is read-only and needs no X-Plane
+install, so it runs against whichever copy of the index is being edited; the
+generator prints the same report after its merge, on the rows it is about to
+write.
 
 ```
+livery_obsolete_radius.py [index] --what-if B752 MD82 UAL:B744
+
 obsolete marks        : 12 rows
   would empty         : 0 (airline,class) pair(s)
-what-if B752          : 36 rows, would empty 20 pair(s)  AHY/D ATN/D AZV/D ...
-what-if MD82          :  6 rows, would empty  2 pair(s)  AZA/C SAS/C
+what-if B752          :  36 rows, would empty  20 pair(s)  AHY/D ATN/D AZV/D ...
+what-if MD82          :   6 rows (3 already marked), would empty   2 pair(s)  AZA/C SAS/C
+what-if UAL:B744      :   1 rows, would empty   1 pair(s)  UAL/E
 ```
+
+A selector is a type, `AIRLINE:TYPE` (the retired-airframe case: one operator's
+rows, not the type everywhere) or a path. Each is answered on top of the marks
+already in the file. `--rank` lists every type by the pairs it would empty.
 
 The 757 is in daily service; twenty emptied pairs is what one careless line
 costs. Emptying pairs is not always wrong — a genuinely retired type *should*

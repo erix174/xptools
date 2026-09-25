@@ -284,9 +284,8 @@ def disambiguate(prefix, ioc, airline):
 # and the merge below keeps whatever the index says over anything guessed here.
 OVERRIDES = {}
 
-# "Obsolete" is a NOTE value on the row (R25); marks are kept by the merge.
-OBSOLETE_NOTE = "Obsolete"
-OBSOLETE = {}
+# "Obsolete" is a NOTE value on the row (R25). A guessed row never carries one:
+# marks are made by hand in the index, and the merge keeps them.
 
 rows, flagged = [], []
 for dp, _dn, fn in os.walk(ROOT):
@@ -373,12 +372,6 @@ for dp, _dn, fn in os.walk(ROOT):
             _raw = "_".join(_toks[_start:]) if len(_toks) > _start else None
         note = note_for(folder, f, _raw)
 
-        # A mark wins over anything derived from the filename. It is the one note
-        # value with meaning to a reader rather than to a caption: spec R25 says
-        # an Obsolete row never enters the spawn pool, at any stage.
-        if rel in OBSOLETE:
-            note = OBSOLETE_NOTE
-
         if typ is None or airline is None or (reg and not confident) or ioc == "???":
             flagged.append((full, typ, airline, reg, ioc))
         cls = sizes.get(typ, "?") if typ else "?"
@@ -413,64 +406,6 @@ for dp, _dn, fn in os.walk(ROOT):
                      ranges.get(typ, "") if typ else "",
                      "HOME" if rel.replace("\\", "/") in HOME_ONLY else (hubs_cell(airline) if airline else ""),
                      rel))
-
-# --------------------------------------------------- obsolescence blast radius
-#
-# A mark in livery_obsolete.txt is GLOBAL and has no per-stand undo: the livery
-# stops existing at every airport at once. The number that matters is not how
-# many rows were marked, it is how many (airline, class) pairs are left with NO
-# asset - because a pair with no asset is a stand that silently parks nothing,
-# which is the one defect in this whole feature that produces no symptom at all
-# (spec section 4.5 measures the population at 17.2% of stands).
-#
-# So: print it, every run, whether or not anything was marked. Marking B752
-# would empty twenty pairs and the 757 is still in daily service; that has to be
-# visible before the commit, not discovered afterwards.
-def _pairs_emptied_by(dropped_rel):
-    """(airline, class) pairs that would have no asset left if these paths went."""
-    live, doomed = collections.defaultdict(int), collections.defaultdict(int)
-    for r in rows:
-        key = (r[2], r[1])
-        doomed[key] += 1 if r[6] in dropped_rel else 0
-        live[key]   += 1
-    return sorted(k for k in live if live[k] == doomed[k])
-
-_marked = [r for r in rows if r[5] == OBSOLETE_NOTE]
-print(f"obsolete marks        : {len(_marked)} rows"
-      + ("" if len(_marked) == len(OBSOLETE)
-         else f"  ** {len(OBSOLETE) - len(_marked)} sidecar path(s) matched NOTHING - check for typos **"))
-_emptied = _pairs_emptied_by({r[6] for r in _marked})
-print(f"  would empty         : {len(_emptied)} (airline,class) pair(s)"
-      + ("" if not _emptied else "  <-- each one is a stand that parks nothing"))
-for a, c in _emptied[:20]:
-    print(f"      {a} class {c}")
-if len(_emptied) > 20: print(f"      ... +{len(_emptied)-20} more")
-
-# Ask "what if?" without editing the sidecar:  gen_livery_index.py --what-if B752 B744
-if "--what-if" in sys.argv:
-    for t in sys.argv[sys.argv.index("--what-if") + 1:]:
-        t = t.upper()
-        hit = {r[6] for r in rows if r[0] == t}
-        if not hit:
-            print(f"what-if {t:<14}: not in the index")
-            continue
-        em = _pairs_emptied_by(hit)
-        print(f"what-if {t:<14}: {len(hit)} rows, would empty {len(em)} pair(s)"
-              + ("" if not em else "  " + " ".join(f"{a}/{c}" for a, c in em[:12])
-                 + (" ..." if len(em) > 12 else "")))
-
-
-# --------------------------------------------------------------- emit
-rows.sort(key=lambda r: (r[0], r[2], r[6]))
-
-# Writing OUT is a BLIND OVERWRITE of the repo's own index, and the file's header
-# says regeneration is a diff-review. A run against the wrong X-Plane install
-# will cheerfully replace a release index with a beta one and say nothing.
-# --dry-run computes everything, prints the blast radius above, and writes
-# nothing - which is what you want when you came here to read that number.
-if "--dry-run" in sys.argv:
-    print(f"\n--dry-run: nothing written. {OUT} left alone.")
-    sys.exit(0)
 
 # ------------------------------------------------------------------ MERGE
 # The index is the source of truth. Read what it already says and prefer it.
@@ -544,6 +479,26 @@ rows = merged
 # hand them over, which is not reproducible and made the file diff noisily.
 rows.sort(key=lambda r: (class_rank(r[8]), r[0], r[2], r[6], r[-1]))
 print(f"merge: kept {kept}, new {added}, dropped {dropped} (assets no longer on disk)")
+
+# ---------------------------------------------- obsolescence blast radius
+# Computed on the MERGED rows - the ones about to be written - because the marks
+# exist only in the hand-maintained index; the rows guessed off the assets above
+# never carry one. See livery_obsolete_radius.py, which answers the same question
+# for any copy of the index without an install:
+#     gen_livery_index.py <XP root> --dry-run --what-if B752 UAL:B744
+import livery_obsolete_radius as _radius
+_radius.report([list(r[:-1]) + [r[-1].replace("\\", "/")] for r in rows],
+               [a for a in sys.argv[sys.argv.index("--what-if") + 1:] if not a.startswith("--")]
+               if "--what-if" in sys.argv else ())
+
+# Writing OUT replaces the repo's own index, and the file's header says
+# regeneration is a diff-review. A run against the wrong X-Plane install will
+# cheerfully replace a release index with a beta one and say nothing.
+# --dry-run computes everything, prints the merge and the blast radius above,
+# and writes nothing - which is what you want when you came here to read them.
+if "--dry-run" in sys.argv:
+    print(f"\n--dry-run: nothing written. {OUT} left alone.")
+    sys.exit(0)
 
 with open(OUT, "w", encoding="utf-8", newline="\n") as o:
     # TWO versions, deliberately separate.
