@@ -128,6 +128,8 @@ public:
 	// the document; Save() says so once before writing, then forgets them.
 	void			NoteDiscardedImportRows(const vector<string>& rows);
 	static string	DescribeDiscardedRows(const vector<string>& rows);
+	// One line for the validator: this airport's skipped rows, or "" for none.
+	string			DescribeDiscardedRowsFor(const string& icao) const;
 
 private:
 	bool				ReadPrefInternal(const char * in_key, unsigned type, string &out_value) const;

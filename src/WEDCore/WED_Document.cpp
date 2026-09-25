@@ -253,19 +253,55 @@ string	WED_Document::DescribeDiscardedRows(const vector<string>& rows)
 	return msg;
 }
 
+string	WED_Document::DescribeDiscardedRowsFor(const string& icao) const
+{
+	// Each entry is "ICAO line N: <row>  (why)".
+	std::map<string, int> unknown_codes;
+	int n_unknown = 0, n_weights = 0, n_other = 0;
+	const string prefix = icao + " line ";
+	for (size_t i = 0; i < mDiscardedImportRows.size(); ++i)
+	{
+		const string & r = mDiscardedImportRows[i];
+		if (r.compare(0, prefix.size(), prefix) != 0) continue;
+		size_t colon = r.find(": ");
+		string row = colon == string::npos ? string() : r.substr(colon + 2);
+		string code = row.substr(0, row.find(' '));
+		if (r.find("(unknown row code)") != string::npos)	{ ++n_unknown; ++unknown_codes[code]; }
+		else if (code == "1313")							++n_weights;
+		else												++n_other;
+	}
+	int n = n_unknown + n_weights + n_other;
+	if (n == 0) return string();
+
+	char buf[160];
+	snprintf(buf, sizeof(buf), "%d row%s of the imported apt.dat %s not imported:", n, n == 1 ? "" : "s", n == 1 ? "was" : "were");
+	string msg(buf);
+	string sep = " ";
+	if (n_unknown)
+	{
+		string codes;
+		for (std::map<string, int>::const_iterator c = unknown_codes.begin(); c != unknown_codes.end(); ++c)
+		{
+			snprintf(buf, sizeof(buf), "%s%s x%d", codes.empty() ? "" : ", ", c->first.c_str(), c->second);
+			codes += buf;
+		}
+		msg += sep + "unknown row codes " + codes; sep = "; ";
+	}
+	if (n_weights)
+	{
+		snprintf(buf, sizeof(buf), "%d unreadable 1313 spawn-weight row%s", n_weights, n_weights == 1 ? "" : "s");
+		msg += sep + buf; sep = "; ";
+	}
+	if (n_other)
+	{
+		snprintf(buf, sizeof(buf), "%d other", n_other);
+		msg += sep + buf;
+	}
+	return msg + ". They are not in this scenery; line numbers are in WED_Log.txt.";
+}
+
 void	WED_Document::Save(void)
 {
-	// The last chance to notice rows an import dropped. Cancel leaves the
-	// document dirty, which TryClose reads as "do not close".
-	if (!mDiscardedImportRows.empty())
-	{
-		string msg = DescribeDiscardedRows(mDiscardedImportRows) +
-			"\n\nThey are not part of this scenery, so the saved file and any export will not contain them.";
-		if (!ConfirmMessage(msg.c_str(), "Save", "Cancel"))
-			return;
-		mDiscardedImportRows.clear();
-	}
-
 	BroadcastMessage(msg_DocWillSave, reinterpret_cast<uintptr_t>(static_cast<IDocPrefs *>(this)));
 
 	enum {none,nobackup,both};

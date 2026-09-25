@@ -3,9 +3,9 @@ I
 
 1    116 0 0 ZBAA Livery Range Test (shadows Beijing Capital - see README)
 1302 city Beijing
-1302 country CN
-1302 datum_lat  40.078000000
-1302 datum_lon  116.576000000
+1302 country CHN China
+1302 datum_lat 40.078000000
+1302 datum_lon 116.576000000
 1302 gui_label 2D
 1302 icao_code ZBAA
 1302 region_code ZB

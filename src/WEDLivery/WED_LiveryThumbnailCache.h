@@ -24,11 +24,15 @@
 #ifndef WED_LIVERYTHUMBNAILCACHE_H
 #define WED_LIVERYTHUMBNAILCACHE_H
 
+#include <future>
 #include <map>
 #include <set>
 #include <string>
+#include <vector>
+#include "BitmapUtils.h"		// ImageInfo
 
 class WED_ResourceMgr;
+struct XObj8;
 class ITexMgr;
 class GUI_GraphState;
 
@@ -37,6 +41,7 @@ class GUI_GraphState;
 struct WED_LiveryThumbnail {
 	unsigned int	tex = 0;
 	int				w = 0, h = 0;
+	unsigned long	last_used = 0;		// for least-recently-seen eviction
 };
 
 // Renders and caches small off-screen 3D snapshots of library .obj resources, for use
@@ -90,6 +95,10 @@ public:
 	// the on-screen scroll range right now.
 	void	EvictNotVisible(const std::set<std::string> & currently_visible);
 
+	// True while an object or texture is still being read on a worker thread -
+	// the caller keeps drawing until it lands.
+	bool	HasPending(void) const { return !mPending.empty(); }
+
 	// Frees every cached GL texture.
 	void	DiscardAll();
 
@@ -109,6 +118,25 @@ private:
 	// genuinely missing file a fresh chance rather than blacklisting it for the
 	// session.
 	std::set<std::string>						mFailed;
+
+	// THE SLOW HALF RUNS ON A WORKER. A 737-800 is a 7 MB .obj and a 4096-pixel
+	// PNG per livery; parsing and decoding them on the UI thread is what made the
+	// list stall as each new aircraft scrolled in. A worker reads the object and
+	// its texture and shrinks the texture to thumbnail size; the UI thread only
+	// uploads that and draws once. Neither touches WED_ResourceMgr or the texture
+	// manager, which are not thread-safe - and which kept every one of those
+	// objects and full-size textures loaded for the rest of the session.
+public:
+	struct Prepared {
+		XObj8 *		obj = nullptr;
+		ImageInfo	img = { nullptr, 0, 0, 0, 0 };
+		bool		has_img = false;
+		std::vector<char>	dds;	// a DDS is handed to the GPU as the file is, like WED_TexMgr does
+		long		ms = 0;
+	};
+private:
+	std::map<std::string, std::future<Prepared> >	mPending;
+	unsigned long								mTick = 0;
 
 	// THE OFFSCREEN TARGET IS BUILT ONCE AND REUSED. It used to be created and
 	// destroyed around every single thumbnail, which is the whole reason this pane

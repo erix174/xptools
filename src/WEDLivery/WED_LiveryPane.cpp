@@ -5484,6 +5484,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			DrawHoverTip(state, b);
 
 			mThumbCache.EvictNotVisible(keep_alive_paths);
+			if (mThumbCache.HasPending()) Refresh();		// a picture is still being read
 
 			// Rendering is capped per frame, so a screenful that is entirely cold
 			// fills in over the next few frames instead of blocking one of them for

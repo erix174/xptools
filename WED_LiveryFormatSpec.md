@@ -175,8 +175,12 @@ correctly.
   the generic airliners, the type (`xpzz_b752`). WED's validator checks each
   code against this shape; a code outside it is an error, not silently dropped.
 - **R11** — Weights are non-negative integers in `0..1000`.
-- **R14** — A writer MUST NOT emit weights pointing exclusively at classes that no
-  listed airline can fill. WED treats this as a hard export error (§4.5).
+- **R14** — A writer SHOULD NOT emit weights (or a size range) pointing
+  exclusively at classes that no listed airline can fill. WED reports it as a
+  validation **warning** (`warn_ramp_livery_parks_nothing`), visible from
+  Validate without exporting and never blocking an export: the airline list
+  still drives ATC and AI parking, so a stand with no static livery is not
+  wrong, only empty of static aircraft (§4.5).
 
   **Two situations look identical here and must not be treated alike**, which the
   “Emirates A380 gate” case makes concrete: the library ships **no class-F livery

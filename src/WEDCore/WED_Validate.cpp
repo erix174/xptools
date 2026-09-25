@@ -22,6 +22,8 @@
  */
 
 #include "WED_Validate.h"
+#include "WED_Document.h"
+#include "WED_LiveryIndex.h"
 #include <sstream>
 #include "WED_ValidateList.h"
 #include "WED_ValidateATCRunwayChecks.h"
@@ -1143,6 +1145,51 @@ static void ValidateATCFlows(const vector<WED_ATCFlow*>& flows, const vector<WED
 // AIRPORT VALIDATIONS
 //------------------------------------------------------------------------------------------------------------------------------------
 #pragma mark -
+
+// R14, as a warning: can anything park here at all? Only the static aircraft are
+// at stake - the airline list still drives ATC and AI parking whatever the index
+// says - so this never blocks an export. Needs livery_index.txt; without one
+// (an X-Plane before 12.5) there is nothing to check against and it stays quiet.
+static void ValidateRampLiveries(WED_RampPosition * ramp, const AptGate_t & g, validation_error_vector & msgs, WED_Airport * apt)
+{
+	if (g.airlines.empty()) return;
+
+	static WED_LiveryIndex sIndex;			// one per session, reloaded if the X-Plane folder changes
+	const string path = WED_LiveryIndexDefaultPath();
+	if (path.empty() || !sIndex.EnsureLoaded(path, false)) return;
+
+	bool allowed[6] = { false, false, false, false, false, false };
+	if (g.class_weights.size() == 6)
+	{
+		for (int k = 0; k < 6; ++k) allowed[k] = g.class_weights[k] > 0;
+	}
+	else
+	{
+		int lo = ENUM_Export(ramp->GetWidthMin()), hi = ENUM_Export(ramp->GetWidth());
+		if (lo > hi) std::swap(lo, hi);
+		for (int k = 0; k < 6; ++k) allowed[k] = (k >= lo && k <= hi);
+	}
+
+	std::istringstream codes(g.airlines);
+	string code;
+	vector<const WED_LiveryIndexEntry *> hits;
+	while (codes >> code)
+		for (int k = 0; k < 6; ++k)
+			if (allowed[k])
+			{
+				sIndex.GetForAirlineAndClass(code, (char) ('A' + k), hits);
+				if (!hits.empty()) return;			// something can park
+			}
+
+	string classes, name;
+	ramp->GetName(name);
+	for (int k = 0; k < 6; ++k)
+		if (allowed[k]) classes += (char) ('A' + k);
+	msgs.push_back(validation_error_t(string("Ramp start '") + name + "': none of its operators (" + g.airlines +
+		") has a static livery at size " + (classes.empty() ? string("-") : classes) +
+		", so X-Plane will park no static aircraft here. ATC and AI parking are unaffected.",
+		warn_ramp_livery_parks_nothing, ramp, apt));
+}
 
 static int ValidateOneRampPosition(WED_RampPosition* ramp, validation_error_vector& msgs, WED_Airport * apt, const vector<WED_Runway *>& runways)
 {
@@ -2780,6 +2827,24 @@ static void ValidateOneAirport(WED_Airport* apt, validation_error_vector& msgs, 
 	int ai_useable_ramps = 0;
 	for(auto r : ramps)
 		ai_useable_ramps += ValidateOneRampPosition(r, msgs, apt, runways);
+
+	for(auto r : ramps)
+	{
+		AptGate_t g;
+		r->Export(g);
+		ValidateRampLiveries(r, g, msgs, apt);
+	}
+
+	// Rows the import could not read. A warning, not an error: the file loaded
+	// the way X-Plane loads it. It stays listed for the rest of the session.
+	if (WED_Document * doc = dynamic_cast<WED_Document *>(apt->GetArchive()->GetResolver()))
+	{
+		string icao;
+		apt->GetICAO(icao);
+		string summary = doc->DescribeDiscardedRowsFor(icao);
+		if (!summary.empty())
+			msgs.push_back(validation_error_t(summary, warn_apt_dat_rows_not_imported, apt, apt));
+	}
 
 	set<set<WED_FacadePlacement*> > double_door2_jws;
 	for (auto& j1 : jetways)

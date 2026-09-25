@@ -38,6 +38,11 @@
 #include "XObjDefs.h"				// XObj8
 #include "GUI_GraphState.h"
 #include "MathUtils.h"				// fltmax3
+#include "TexUtils.h"				// LoadTextureFromImage
+#include "FileUtils.h"
+#include <chrono>
+#include <cstdio>
+#include <cstring>
 #include <algorithm>				// std::max - parenthesised at every call site, see below
 #include <cmath>
 #include <cstring>				// strstr, for the APL extension check
@@ -205,6 +210,83 @@ static float	ModelYawCorrection(const XObj8 * o, const string & obj_path)
 // blank; 64 comfortably covers a tall pane's window plus a hovered card's whole
 // livery set.
 static const size_t kMaxCachedThumbnails = 64;
+static const size_t kKeepThumbnails      = 48;	// off-screen ones kept for scrolling back
+static const size_t kMaxPending          = 2;	// worker jobs in flight
+
+// Halves an image with a 2x2 box filter. Repeated, it takes a 4096 livery down to
+// thumbnail size with far less shimmer than one bicubic jump of 8x.
+static bool	HalveBitmap(ImageInfo & io)
+{
+	long nw = io.width / 2, nh = io.height / 2;
+	if (nw < 1 || nh < 1) return false;
+	ImageInfo dst;
+	if (CreateNewBitmap(nw, nh, io.channels, &dst) != 0) return false;
+	const long ss = io.width * io.channels + io.pad, ds = dst.width * dst.channels + dst.pad;
+	for (long y = 0; y < nh; ++y)
+		for (long x = 0; x < nw; ++x)
+			for (int c = 0; c < io.channels; ++c)
+			{
+				const unsigned char * a = io.data + (2 * y) * ss + (2 * x) * io.channels + c;
+				int sum = a[0] + a[io.channels] + a[ss] + a[ss + io.channels];
+				dst.data[y * ds + x * dst.channels + c] = (unsigned char) ((sum + 2) / 4);
+			}
+	DestroyBitmap(&io);
+	io = dst;
+	return true;
+}
+
+// Worker thread: no GL, no shared state.
+static WED_LiveryThumbnailCache::Prepared	PrepareThumbnail(string path)
+{
+	WED_LiveryThumbnailCache::Prepared p;
+	auto t0 = std::chrono::steady_clock::now();
+	p.obj = WED_ResourceMgr::LoadObjFile(path);
+	if (p.obj && !p.obj->texture.empty())
+	{
+		// Same test WED_TexMgr makes: a DDS by its magic, not its suffix, uploaded
+		// as-is so it lands the right way up; anything else decoded and shrunk.
+		const string & t = p.obj->texture;
+		if (FILE * f = fopen(t.c_str(), "rb"))
+		{
+			char magic[4] = { 0, 0, 0, 0 };
+			bool is_dds = fread(magic, 1, 4, f) == 4 && strncmp(magic, "DDS ", 4) == 0;
+			if (is_dds)
+			{
+				fseek(f, 0, SEEK_END);
+				long n = ftell(f);
+				fseek(f, 0, SEEK_SET);
+				if (n > 0)
+				{
+					p.dds.resize(n);
+					if (fread(p.dds.data(), 1, n, f) != (size_t) n) p.dds.clear();
+				}
+			}
+			fclose(f);
+			if (!is_dds && LoadBitmapFromAnyFile(t.c_str(), &p.img) == 0)
+			{
+				p.has_img = true;
+				while (p.img.width > 512 || p.img.height > 512)
+					if (!HalveBitmap(p.img)) break;
+			}
+		}
+	}
+	p.ms = (long) std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
+	return p;
+}
+
+static void	FreePrepared(WED_LiveryThumbnailCache::Prepared & p)
+{
+	if (p.has_img) DestroyBitmap(&p.img);
+	p.has_img = false;
+	std::vector<char>().swap(p.dds);
+	if (p.obj)
+	{
+		GLuint vbo[2] = { p.obj->geo_VBO, p.obj->idx_VBO };
+		if (vbo[0] || vbo[1]) glDeleteBuffers(2, vbo);
+		delete p.obj;
+		p.obj = nullptr;
+	}
+}
 
 bool WED_LiveryThumbnailCache::IsCached(const string & obj_path) const
 {
@@ -276,7 +358,10 @@ const WED_LiveryThumbnail * WED_LiveryThumbnailCache::GetThumbnail(WED_ResourceM
 
 	auto it = mCache.find(obj_path);
 	if (it != mCache.end())
+	{
+		it->second.last_used = ++mTick;
 		return &it->second;
+	}
 
 	if (mFailed.count(obj_path))
 		return nullptr;		// already tried this one - see mFailed's comment
@@ -284,20 +369,44 @@ const WED_LiveryThumbnail * WED_LiveryThumbnailCache::GetThumbnail(WED_ResourceM
 	if (mCache.size() >= kMaxCachedThumbnails)
 		return nullptr;
 
-	// Split timing: the point of the breakdown is to say whether a slow thumbnail is
-	// the OBJ parse or the GL work, because the two have completely different fixes
-	// and guessing wrong means optimising the cheap half.
-	clock_t t_begin = clock();
-
-	const XObj8 * o = nullptr;
-	if (!res_mgr || !res_mgr->GetObjAbsolute(obj_path, o) || !o)
+	// Not started: queue it on a worker and draw the card without a picture for now.
+	auto job = mPending.find(obj_path);
+	if (job == mPending.end())
 	{
-		// Logged ONCE per path - mFailed short-circuits every later attempt, so
-		// this stops being a per-frame log write and a per-frame file open.
-		LOG_MSG("E/LiveryThumb GetObj FAILED for %s (res_mgr=%p)\n", obj_path.c_str(), (void *) res_mgr);
-		LOG_FLUSH();
-		mFailed.insert(obj_path);
+		if (mPending.size() < kMaxPending)
+			mPending[obj_path] = std::async(std::launch::async, PrepareThumbnail, obj_path);
 		return nullptr;
+	}
+	if (job->second.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+		return nullptr;
+	Prepared prep = job->second.get();
+	mPending.erase(job);
+
+	if (!prep.obj)
+	{
+		LOG_MSG("E/LiveryThumb cannot load %s\n", obj_path.c_str());
+		mFailed.insert(obj_path);
+		FreePrepared(prep);
+		return nullptr;
+	}
+	const XObj8 * o = prep.obj;
+	auto t_main = std::chrono::steady_clock::now();
+
+	// The livery, shrunk on the worker. Uploaded here and gone once drawn.
+	GLuint src_tex = 0;
+	if (prep.has_img || !prep.dds.empty())
+	{
+		glGenTextures(1, &src_tex);
+		int sx, sy; float fs, ft;
+		bool ok = !prep.dds.empty()
+			? LoadTextureFromDDS(prep.dds.data(), prep.dds.data() + prep.dds.size(), src_tex,
+								 tex_Wrap | tex_Compress_Ok | tex_Always_Pad, &sx, &sy)
+			: LoadTextureFromImage(prep.img, src_tex, tex_Wrap | tex_Linear | tex_Mipmap, &sx, &sy, &fs, &ft);
+		if (!ok)
+		{
+			glDeleteTextures(1, &src_tex);
+			src_tex = 0;
+		}
 	}
 
 	double real_radius = fltmax3(
@@ -314,7 +423,6 @@ const WED_LiveryThumbnail * WED_LiveryThumbnailCache::GetThumbnail(WED_ResourceM
 	// Both the silhouette fit and the modelview below must use the SAME azimuth,
 	// or the projection is fitted to a view that is never drawn and the model is
 	// clipped. See ModelYawCorrection.
-	clock_t t_obj = clock();			// everything before here was loading the OBJ
 
 	float cam_psi = kCamPsi + ModelYawCorrection(o, obj_path);
 
@@ -391,10 +499,7 @@ const WED_LiveryThumbnail * WED_LiveryThumbnailCache::GetThumbnail(WED_ResourceM
 	// No LOG_FLUSH below. This runs once per thumbnail and LOG_MSG already flushes
 	// per message in a DEV build - a second synchronous fsync inside the path we are
 	// trying to make fast would be measuring the thermometer.
-	LOG_MSG("I/LiveryThumb %s: complete=%d radius=%.3f psi=%.1f tris=%d dx=%.1f dz=%.1f obj=%.0fms\n",
-		obj_path.c_str(), (int) complete, real_radius, cam_psi, o->geo_tri.count(),
-		o->xyz_max[0] - o->xyz_min[0], o->xyz_max[2] - o->xyz_min[2],
-		1000.0 * (double)(t_obj - t_begin) / (double) CLOCKS_PER_SEC);
+
 	if (complete)
 	{
 		glViewport(0, 0, kThumbW, kThumbH);
@@ -484,7 +589,7 @@ const WED_LiveryThumbnail * WED_LiveryThumbnailCache::GetThumbnail(WED_ResourceM
 		glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, false);
 		glEnable(GL_LIGHTING);
 
-		draw_obj_at_xyz(tex_mgr, o, xyz_off[0], xyz_off[1], xyz_off[2], 0, g);
+		draw_obj_with_tex(o, (int) src_tex, xyz_off[0], xyz_off[1], xyz_off[2], g);
 		CHECK_GL_ERR
 		glDisable(GL_LIGHTING);
 
@@ -509,6 +614,12 @@ const WED_LiveryThumbnail * WED_LiveryThumbnailCache::GetThumbnail(WED_ResourceM
 	// The framebuffer and depth buffer are deliberately NOT deleted here - see the
 	// members' comment in the header. Deleting them per thumbnail is what stalled.
 
+	if (src_tex) glDeleteTextures(1, &src_tex);
+	FreePrepared(prep);
+	LOG_MSG("I/LiveryThumb %s: complete=%d psi=%.1f worker=%ldms ui=%ldms\n",
+		obj_path.c_str(), (int) complete, cam_psi, prep.ms,
+		(long) std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t_main).count());
+
 	if (!complete)
 	{
 		glDeleteTextures(1, &tex);
@@ -523,22 +634,48 @@ const WED_LiveryThumbnail * WED_LiveryThumbnailCache::GetThumbnail(WED_ResourceM
 	return &ins.first->second;
 }
 
+// Least recently SEEN goes first, and only past kKeepThumbnails. Evicting
+// everything off-screen made scrolling back re-render every card it passed.
 void WED_LiveryThumbnailCache::EvictNotVisible(const set<string> & currently_visible)
 {
-	for (auto it = mCache.begin(); it != mCache.end(); )
+	for (auto & kv : mCache)
+		if (currently_visible.count(kv.first)) kv.second.last_used = ++mTick;
+
+	while (mCache.size() > kKeepThumbnails)
 	{
-		if (currently_visible.count(it->first) == 0)
+		auto oldest = mCache.end();
+		for (auto it = mCache.begin(); it != mCache.end(); ++it)
+			if (!currently_visible.count(it->first) &&
+				(oldest == mCache.end() || it->second.last_used < oldest->second.last_used))
+				oldest = it;
+		if (oldest == mCache.end()) break;		// everything left is on screen
+		glDeleteTextures(1, &oldest->second.tex);
+		mCache.erase(oldest);
+	}
+
+	// A job for a card that scrolled away is not waited for, but once it is done
+	// its object and image are freed rather than held until it scrolls back.
+	for (auto it = mPending.begin(); it != mPending.end(); )
+		if (!currently_visible.count(it->first) &&
+			it->second.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
 		{
-			glDeleteTextures(1, &it->second.tex);
-			it = mCache.erase(it);
+			Prepared p = it->second.get();
+			FreePrepared(p);
+			it = mPending.erase(it);
 		}
 		else
 			++it;
-	}
 }
 
 void WED_LiveryThumbnailCache::DiscardAll()
 {
+	for (auto & kv : mPending)
+	{
+		Prepared p = kv.second.get();		// waits for a job still running
+		FreePrepared(p);
+	}
+	mPending.clear();
+
 	for (auto & kv : mCache)
 		glDeleteTextures(1, &kv.second.tex);
 	mCache.clear();

@@ -176,6 +176,11 @@ bool	WED_ResourceMgr::GetDem(const string& path, dem_info_t const*& info)
 
 XObj8 * WED_ResourceMgr::LoadObj(const string& abspath)
 {
+	return LoadObjFile(abspath);
+}
+
+XObj8 * WED_ResourceMgr::LoadObjFile(const string& abspath)
+{
 	XObj8 * new_obj = new XObj8;
 	if(!XObj8Read(abspath.c_str(),*new_obj))
 	{

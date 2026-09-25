@@ -362,6 +362,21 @@ void draw_obj_at_xyz(ITexMgr * tman, const XObj8 * o, double x, double y, double
 	glPopMatrix();
 }
 
+// draw_obj_at_xyz with a texture the caller already uploaded, for an object
+// that is not in the resource manager (the livery thumbnails load their own).
+void draw_obj_with_tex(const XObj8 * o, int tex_id, double x, double y, double z, GUI_GraphState * g)
+{
+	if (!o) return;
+	g->SetTexUnits(1);
+	if (tex_id) g->BindTex(tex_id, 0);
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glTranslatef(x,y,z);
+	Obj_DrawStruct ds = { g, tex_id, tex_id };
+	ObjDraw8(*o, 0, &kFuncs, &ds);
+	glPopMatrix();
+}
+
 void draw_agp_at_xyz(ITexMgr * tman, const agp_t * agp, double x, double y, double z, float height, float heading, GUI_GraphState * g, int tile_idx)
 {
 	if (!agp) return;

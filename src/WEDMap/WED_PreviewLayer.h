@@ -108,6 +108,7 @@ private:
 };
 
 void draw_obj_at_xyz(ITexMgr * tman, const XObj8 * o, double x, double y, double z, float heading, GUI_GraphState * g);
+void draw_obj_with_tex(const XObj8 * o, int tex_id, double x, double y, double z, GUI_GraphState * g);
 void draw_agp_at_xyz(ITexMgr * tman, const agp_t * agp, double x, double y, double z, float height, float heading, GUI_GraphState * g, int tile_idx = 0);
 int layer_group_for_string(const char * s, int o, int def);
 

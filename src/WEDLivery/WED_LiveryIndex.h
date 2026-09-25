@@ -130,7 +130,9 @@ public:
 	// folder (WED_StartWindow's wed_ChangeSystem, which can happen at any time) -
 	// the path is derived from the root, so a new root is a new path, and a plain
 	// one-shot flag would have left the index dead until WED restarted.
-	bool				EnsureLoaded(const std::string & index_path);
+	// place_hubs: start the background Global Airports scan for R26. A reader
+	// that never asks about range (the validator) passes false.
+	bool				EnsureLoaded(const std::string & index_path, bool place_hubs = true);
 
 	bool				IsLoaded(void) const { return mLoaded; }
 	bool				LoadFailed(void) const { return mLoadAttempted && !mLoaded; }

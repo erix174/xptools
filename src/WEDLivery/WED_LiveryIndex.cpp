@@ -215,7 +215,7 @@ WED_LiveryIndex::WED_LiveryIndex() :
 	for (int k = 0; k < 6; ++k) mAtClass[k] = 0;
 }
 
-bool	WED_LiveryIndex::EnsureLoaded(const string & index_path)
+bool	WED_LiveryIndex::EnsureLoaded(const string & index_path, bool place_hubs)
 {
 	if (index_path != mLoadedPath)
 	{
@@ -325,6 +325,7 @@ bool	WED_LiveryIndex::EnsureLoaded(const string & index_path)
 	mHubWanted.clear();
 	for (std::map<string, vector<string> >::const_iterator i = mOpHubs.begin(); i != mOpHubs.end(); ++i)
 		mHubWanted.insert(i->second.begin(), i->second.end());
+	if (place_hubs)
 	{
 		const string apt_dat = GlobalAirportsAptDat();
 		const set<string> wanted = mHubWanted;

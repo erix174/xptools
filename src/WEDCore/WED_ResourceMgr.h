@@ -301,6 +301,12 @@ public:
 private:
 
 			XObj8 * LoadObj(const string& abspath);
+public:
+	// The same load LoadObj does - parse, balance animations, resolve textures -
+	// with no cache and no GL, so it is safe off the UI thread. The caller owns
+	// the result, including any VBOs a later ObjDraw8 creates on it.
+	static	XObj8 * LoadObjFile(const string& abspath);
+private:
 			void    setup_tile(agp_t::tile_t * agp, int rotation, const string& path);
 
 	unordered_map<string,vector<fac_info_t> > mFac;

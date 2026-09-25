@@ -192,6 +192,8 @@ enum validate_error_t
 	warn_rwy_edge_light_not_matching_center_lights,
 	warn_rwy_misaligned_with_name,
 	warn_viewpoint_mislocated,
+	warn_apt_dat_rows_not_imported,		// rows the reader skipped (AptInfo_t::discarded_rows)
+	warn_ramp_livery_parks_nothing,		// R14: no listed operator has a livery the stand's sizes/weights allow
 };
 
 // The validation error record stores a single validation problem for reporting.
