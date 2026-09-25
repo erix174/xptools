@@ -138,6 +138,9 @@ protected:
 private:
 
 			void			ConstrainLogicalBounds(void);
+			void			SelectWordAtCaret(void);
+			void			ArmDoubleClick(int x, int y);
+			bool			IsDoubleClick(int x, int y) const;
 
 		int					mFont;
 		int					mCaret;
@@ -156,6 +159,12 @@ private:
 		float				mColorBox[4];
 		
 		intptr_t			mMsg, mParam;
+
+		// Double-click selects a word. Wall-clock seconds from steady_clock, not
+		// GetTimeNow(): that is clock(), which is CPU time off Windows, and an idle
+		// WED would read two clicks a minute apart as a double-click.
+		double				mArmedAt;			// < 0: not armed
+		int					mArmX, mArmY;		// < 0: any position (armed by focus)
 
 };
 

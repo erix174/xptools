@@ -1251,6 +1251,20 @@ void		GUI_TextTable::CreateEdit(int cell_bounds[4], const GUI_EnumDictionary * d
 		mTextField->SetMargins(CELL_MARGIN,pad_bottom,CELL_MARGIN,pad_top);
 
 		cell_bounds[0] += mEditInfo.indent_level * mCellIndent;
+
+		// A long value - an airline list, a path - ran off the right of its cell
+		// while being edited, with the cell's neighbours still drawn over nothing
+		// useful. Grow the field to fit the text, never past what is visible.
+		{
+			float want = GUI_MeasureRange(mFont, mEditInfo.text_val.c_str(),
+									mEditInfo.text_val.c_str() + mEditInfo.text_val.size())
+						 + 4 * CELL_MARGIN + 20;
+			int vis[4];
+			mParent->GetVisibleBounds(vis);
+			int right = cell_bounds[0] + (int) want;
+			if (right > vis[2]) right = vis[2];
+			if (right > cell_bounds[2]) cell_bounds[2] = right;
+		}
 		mTextField->SetBounds(cell_bounds);
 		mTextField->SetWidth(max(cell_bounds[2] - cell_bounds[0],2048));
 		mTextField->Show();

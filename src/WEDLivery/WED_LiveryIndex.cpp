@@ -34,6 +34,7 @@
 #include <sstream>
 #include <algorithm>
 #include <chrono>
+#include <future>
 #include <map>
 #include <cstring>			// strncmp / strlen / memchr
 
@@ -226,6 +227,8 @@ bool	WED_LiveryIndex::EnsureLoaded(const string & index_path)
 		mEntries.clear();
 		mByAirline.clear();
 		mByKey.clear();
+		mOpHubs.clear();
+		mHubJob = std::future<HubJob>();	// waits out a placement still running for the old install
 		ForgetHeader();
 	}
 
@@ -315,36 +318,24 @@ bool	WED_LiveryIndex::EnsureLoaded(const string & index_path)
 		parsed.push_back(e);
 	}
 
-	// Hubs, for R26: the operator's ICAOs, placed by Global Airports. A code that
-	// does not resolve is dropped, not guessed, and an operator left with none is
-	// never range-filtered - unknown fails open, as it always has.
+	// Hubs, for R26: the operator's ICAOs, placed by Global Airports on a worker
+	// thread (see PollHubs). The worker reads only its own copies of the path and
+	// the wanted set, and returns a fresh map, so nothing here is shared with it.
+	mOpHubs.swap(op_hubs);
+	mHubWanted.clear();
+	for (std::map<string, vector<string> >::const_iterator i = mOpHubs.begin(); i != mOpHubs.end(); ++i)
+		mHubWanted.insert(i->second.begin(), i->second.end());
 	{
-		set<string> wanted;
-		for (std::map<string, vector<string> >::const_iterator i = op_hubs.begin(); i != op_hubs.end(); ++i)
-			wanted.insert(i->second.begin(), i->second.end());
-		std::map<string, std::pair<double,double> > pos;
 		const string apt_dat = GlobalAirportsAptDat();
-		auto t0 = std::chrono::steady_clock::now();
-		ResolveHubIcaos(apt_dat, wanted, pos);
-		long ms = (long) std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
-
-		string missing;
-		for (set<string>::const_iterator i = wanted.begin(); i != wanted.end(); ++i)
-			if (!pos.count(*i)) missing += " " + *i;
-		LOG_MSG("I/LiveryIndex hubs: %d of %d ICAOs placed from %s in %ld ms%s%s\n",
-				(int) pos.size(), (int) wanted.size(), apt_dat.c_str(), ms,
-				missing.empty() ? "" : "; not found:", missing.c_str());
-
-		for (size_t i = 0; i < parsed.size(); ++i)
-		{
-			std::map<string, vector<string> >::const_iterator h = op_hubs.find(parsed[i].airline);
-			if (h == op_hubs.end()) continue;
-			for (size_t k = 0; k < h->second.size(); ++k)
-			{
-				std::map<string, std::pair<double,double> >::const_iterator p = pos.find(h->second[k]);
-				if (p != pos.end()) parsed[i].hubs.push_back(p->second);
-			}
-		}
+		const set<string> wanted = mHubWanted;
+		mHubJob = std::async(std::launch::async, [apt_dat, wanted]() {
+			HubJob j;
+			j.apt_dat = apt_dat;
+			auto t0 = std::chrono::steady_clock::now();
+			ResolveHubIcaos(apt_dat, wanted, j.pos);
+			j.ms = (long) std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
+			return j;
+		});
 	}
 
 	// Build the indices only after the vector has stopped growing - it holds the
@@ -379,6 +370,35 @@ bool	WED_LiveryIndex::EnsureLoaded(const string & index_path)
 	}
 
 	mLoaded = true;
+	return true;
+}
+
+bool	WED_LiveryIndex::PollHubs(void)
+{
+	if (!mHubJob.valid()) return false;
+	if (mHubJob.wait_for(std::chrono::seconds(0)) != std::future_status::ready) return false;
+	HubJob j = mHubJob.get();		// leaves mHubJob invalid - HubsPending() goes false
+
+	string missing;
+	for (set<string>::const_iterator i = mHubWanted.begin(); i != mHubWanted.end(); ++i)
+		if (!j.pos.count(*i)) missing += " " + *i;
+	LOG_MSG("I/LiveryIndex hubs: %d of %d ICAOs placed from %s in %ld ms (background)%s%s\n",
+			(int) j.pos.size(), (int) mHubWanted.size(), j.apt_dat.c_str(), j.ms,
+			missing.empty() ? "" : "; not found:", missing.c_str());
+
+	// mEntries does not grow here, so the pointers in mByAirline / mByKey stay good.
+	for (size_t i = 0; i < mEntries.size(); ++i)
+	{
+		WED_LiveryIndexEntry & e = mEntries[i];
+		e.hubs.clear();
+		std::map<string, vector<string> >::const_iterator h = mOpHubs.find(e.airline);
+		if (h == mOpHubs.end()) continue;
+		for (size_t k = 0; k < h->second.size(); ++k)
+		{
+			std::map<string, std::pair<double,double> >::const_iterator p = j.pos.find(h->second[k]);
+			if (p != j.pos.end()) e.hubs.push_back(p->second);
+		}
+	}
 	return true;
 }
 

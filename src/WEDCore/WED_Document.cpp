@@ -198,6 +198,7 @@ WED_NWLinkAdapter *	WED_Document::GetNWLink(void)
 #endif
 
 #include <chrono>
+#include <map>
 
 void	WED_Document::NoteDiscardedImportRows(const vector<string>& rows)
 {
@@ -206,19 +207,49 @@ void	WED_Document::NoteDiscardedImportRows(const vector<string>& rows)
 
 string	WED_Document::DescribeDiscardedRows(const vector<string>& rows)
 {
-	const size_t kShown = 10;
-	char head[96];
-	snprintf(head, sizeof(head), "%d row%s of the apt.dat could not be read and %s skipped:\n",
-			 (int) rows.size(), rows.size() == 1 ? "" : "s", rows.size() == 1 ? "was" : "were");
-	string msg(head);
-	for (size_t i = 0; i < rows.size() && i < kShown; ++i)
-		msg += "\n" + rows[i];
-	if (rows.size() > kShown)
+	// Grouped by cause, not listed row by row: ten lines of raw apt.dat in a
+	// dialog read as an error report, when the usual cause is a file written by a
+	// newer tool. Every row, with its line number, is in WED_Log.txt.
+	// Each entry is "ICAO line N: <row>  (why)".
+	std::map<string, int> unknown_codes;		// row code -> count
+	int n_unknown = 0, n_weights = 0, n_other = 0;
+	for (size_t i = 0; i < rows.size(); ++i)
 	{
-		char more[64];
-		snprintf(more, sizeof(more), "\n... and %d more (all listed in WED_Log.txt)", (int) (rows.size() - kShown));
-		msg += more;
+		const string & r = rows[i];
+		size_t colon = r.find(": ");
+		string row = colon == string::npos ? string() : r.substr(colon + 2);
+		string code = row.substr(0, row.find(' '));
+		if (r.find("(unknown row code)") != string::npos)	{ ++n_unknown; ++unknown_codes[code]; }
+		else if (code == "1313")							++n_weights;
+		else												++n_other;
 	}
+
+	char buf[160];
+	snprintf(buf, sizeof(buf), "%d row%s of this apt.dat %s not imported:\n",
+			 (int) rows.size(), rows.size() == 1 ? "" : "s", rows.size() == 1 ? "was" : "were");
+	string msg(buf);
+	if (n_unknown)
+	{
+		string codes;
+		for (std::map<string, int>::const_iterator c = unknown_codes.begin(); c != unknown_codes.end(); ++c)
+		{
+			snprintf(buf, sizeof(buf), "%s%s x%d", codes.empty() ? "" : ", ", c->first.c_str(), c->second);
+			codes += buf;
+		}
+		snprintf(buf, sizeof(buf), "\n  - %d with a row code this version of WED does not know (%s)", n_unknown, codes.c_str());
+		msg += buf;
+	}
+	if (n_weights)
+	{
+		snprintf(buf, sizeof(buf), "\n  - %d spawn-weight row%s (1313) that could not be read", n_weights, n_weights == 1 ? "" : "s");
+		msg += buf;
+	}
+	if (n_other)
+	{
+		snprintf(buf, sizeof(buf), "\n  - %d other", n_other);
+		msg += buf;
+	}
+	msg += "\n\nEach one is listed with its line number in WED_Log.txt.";
 	return msg;
 }
 
@@ -229,7 +260,7 @@ void	WED_Document::Save(void)
 	if (!mDiscardedImportRows.empty())
 	{
 		string msg = DescribeDiscardedRows(mDiscardedImportRows) +
-			"\n\nThey are not part of this scenery. Saving makes that permanent: they will not be in the saved file or in any export.";
+			"\n\nThey are not part of this scenery, so the saved file and any export will not contain them.";
 		if (!ConfirmMessage(msg.c_str(), "Save", "Cancel"))
 			return;
 		mDiscardedImportRows.clear();

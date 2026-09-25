@@ -1114,8 +1114,7 @@ void	WED_AptImport(
 		if (!quiet)
 		{
 			string msg = WED_Document::DescribeDiscardedRows(discarded) +
-				"\n\nEverything else was imported. These rows are not part of the scenery now; "
-				"saving will leave them out for good.";
+				"\n\nThe rest of the airport was imported normally.";
 			DoUserAlert(msg.c_str());
 		}
 	}
@@ -1194,10 +1193,16 @@ void	WED_ImportOneAptFile(
 		return;
 	}
 	
+	// Quiet: both callers - opening a package that has no earth.wed.xml, and the
+	// Gateway download - run inside another dialog's click. A second modal there
+	// swallowed the mouse-up and left GUI_Commander's defer count stuck, so the
+	// next click anywhere asserted. The rows still reach the document, and the
+	// save warning names them.
 	WED_AptImport(
 			in_parent->GetArchive(),
 			in_parent,
 			in_path.c_str(),
 			apts,
-			out_apts);
+			out_apts,
+			true);
 }

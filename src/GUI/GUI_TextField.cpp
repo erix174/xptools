@@ -21,6 +21,9 @@
  *
  */
 
+#include <chrono>
+#include <cstdlib>
+#include <cctype>
 #include "GUI_TextField.h"
 #include "GUI_Messages.h"
 #include "GUI_Fonts.h"
@@ -43,7 +46,8 @@ GUI_TextField::GUI_TextField(int scrollH, GUI_Commander * parent) :
 	mCaret(0),
 	mFont(font_UI_Basic),
 	mMsg(0), mParam(0),
-	mPasswordChar(0)
+	mPasswordChar(0),
+	mArmedAt(-1.0), mArmX(-1), mArmY(-1)
 {
 	mColorText[0] = 0.0;	mColorText[1] = 0.0;	mColorText[2] = 0.0;	mColorText[3] = 1.0;
 	mColorHilite[0] = 1.0;	mColorHilite[1] = 1.0;	mColorHilite[2] = 0.0;	mColorHilite[3] = 1.0;
@@ -148,11 +152,52 @@ void		GUI_TextField::Draw(GUI_GraphState * state)
 	mState = NULL;
 }
 
+static double	TextFieldClockNow(void)
+{
+	return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
+void		GUI_TextField::ArmDoubleClick(int x, int y)
+{
+	mArmedAt = TextFieldClockNow();
+	mArmX = x;
+	mArmY = y;
+}
+
+bool		GUI_TextField::IsDoubleClick(int x, int y) const
+{
+	if (mArmedAt < 0.0 || TextFieldClockNow() - mArmedAt > 0.4) return false;
+	return mArmX < 0 || (abs(x - mArmX) < 4 && abs(y - mArmY) < 4);
+}
+
+// The run of non-space characters around the caret - one airline code in
+// "dal ual ryr_1", one word in a name. A caret in a gap selects nothing.
+void		GUI_TextField::SelectWordAtCaret(void)
+{
+	int s1, s2;
+	GetSelection(&s1, &s2);
+	int n = (int) mText.size();
+	int a = s2, b = s2;
+	while (a > 0 && !isspace((unsigned char) mText[a - 1])) --a;
+	while (b < n && !isspace((unsigned char) mText[b]))     ++b;
+	if (a < b) SetSelection(a, b);
+}
+
 int			GUI_TextField::MouseDown(int x, int y, int button)
 {
+	// Decided before TakeFocus, which arms the next click (see AcceptTakeFocus).
+	bool extend = (GetModifiersNow() & gui_ShiftFlag) != 0;
+	bool dbl = !extend && IsDoubleClick(x, y);
 	if (!IsFocused())
 		TakeFocus();
-	Click(x,y,GetModifiersNow() & gui_ShiftFlag);
+	Click(x,y,extend);
+	if (dbl)
+	{
+		SelectWordAtCaret();
+		mArmedAt = -1.0;			// a third click starts over
+	}
+	else
+		ArmDoubleClick(x, y);
 	Refresh();
 	return 1;
 }
@@ -285,6 +330,10 @@ int			GUI_TextField::AcceptTakeFocus(void)
 	mCaret = 1;
 	Start(0.25);
 	SetSelection(0,mText.size());
+	// A field that appears under the cursor - a table cell opening for edit on
+	// the first click - gets the second click of a double-click as its first.
+	// Arm on focus so that click still selects a word.
+	ArmDoubleClick(-1, -1);
 	return 1;
 }
 

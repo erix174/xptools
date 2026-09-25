@@ -78,6 +78,9 @@
 #ifndef WED_LIVERYINDEX_H
 #define WED_LIVERYINDEX_H
 
+#include <future>
+#include <map>
+#include <set>
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -211,7 +214,21 @@ public:
 										char size_class,
 										bool known_airline) const;
 
+	// Hub positions are placed off Global Airports on a worker thread - a 380 MB
+	// scan that froze the UI for well over a second when it ran in EnsureLoaded.
+	// Until it lands every row has no hubs, which R26 reads as "never filtered".
+	// Call from the UI thread (Draw); returns true on the one call that attaches
+	// them, so the caller knows its coverage and cards are stale.
+	bool				PollHubs(void);
+	bool				HubsPending(void) const { return mHubJob.valid(); }
+
 private:
+
+	struct HubJob {
+		std::map<std::string, std::pair<double,double> >	pos;
+		std::string											apt_dat;
+		long												ms;
+	};
 
 	void				NoteHeaderLine(const char * line);	// one '#' line, on the way past
 	void				ForgetHeader(void);
@@ -223,6 +240,10 @@ private:
 	std::vector<WED_LiveryIndexEntry>										mEntries;
 	std::unordered_map<std::string, std::vector<const WED_LiveryIndexEntry *> >	mByAirline;
 	std::unordered_map<std::string, const WED_LiveryIndexEntry *>			mByKey;
+
+	std::map<std::string, std::vector<std::string> >	mOpHubs;	// operator code -> hub ICAOs
+	std::set<std::string>								mHubWanted;
+	std::future<HubJob>									mHubJob;
 
 	std::string			mLoadedPath;	// what mLoaded/mLoadAttempted refer to
 	bool				mLoadAttempted;

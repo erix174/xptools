@@ -588,9 +588,24 @@ namespace
 	// Both copies are the same operator and both read their state from the same
 	// icao key, so ticking, locking or opening the tray on one shows on the other.
 	// That is honest rather than confusing: there is one operator, shown twice.
-	void PinSelected(vector<WED_LiveryDisplayRow> & rows, const set<string> & selected)
+	//
+	// A listed code with NO card here - out of range, no livery at this size, or
+	// not in the index at all (a code typed in the grid, ryr_1) - is named on a
+	// note line in the same section. Dropping it silently made a stand that lists
+	// three operators look like it lists none.
+	void PinSelected(vector<WED_LiveryDisplayRow> & rows, const set<string> & selected,
+					 const set<string> & have_cards)
 	{
 		if (selected.empty()) return;
+
+		string cardless;
+		for (set<string>::const_iterator c = selected.begin(); c != selected.end(); ++c)
+			if (!have_cards.count(*c))
+			{
+				string uc = *c;
+				for (size_t k = 0; k < uc.size(); ++k) uc[k] = (char) toupper((unsigned char) uc[k]);
+				cardless += (cardless.empty() ? "" : " ") + uc;
+			}
 
 		vector<WED_LiveryDisplayRow> picked;
 		for (size_t i = 0; i < rows.size(); ++i)
@@ -601,7 +616,7 @@ namespace
 				if (picked[j].icao == rows[i].icao) { dup = true; break; }
 			if (!dup) picked.push_back(rows[i]);
 		}
-		if (picked.empty()) return;
+		if (picked.empty() && cardless.empty()) return;
 
 		vector<WED_LiveryDisplayRow> rest = rows;
 
@@ -609,8 +624,17 @@ namespace
 		WED_LiveryDisplayRow h; h.kind = wed_Row_Header; h.header_text = "Selected";
 		out.push_back(h);
 		WED_LiveryDisplayRow g; g.kind = wed_Row_Gap;
-		out.push_back(g);
-		out.insert(out.end(), picked.begin(), picked.end());
+		if (!picked.empty())
+		{
+			out.push_back(g);
+			out.insert(out.end(), picked.begin(), picked.end());
+		}
+		if (!cardless.empty())
+		{
+			WED_LiveryDisplayRow n; n.kind = wed_Row_Note;
+			n.header_text = "Also listed, nothing to show at this stand: " + cardless;
+			out.push_back(n);
+		}
 		out.push_back(g);
 		WED_LiveryDisplayRow d; d.kind = wed_Row_Divider;
 		out.push_back(d);
@@ -1441,9 +1465,11 @@ void	WED_LiveryPane::EnsureRows(void)
 	mRows = BuildCurrentDisplayRows(mSelectedRamps[0], mSortDescending,
 				gShowLiveryRecommendation != 0, mAirportDb, mCurrentAirportIcao,
 				mSearchQuery, mAirlineDirectory, mPopularAirlinesShuffleCache, AllOperators());
-	{ set<string> have; CardKeys(have); DropCardless(mRows, have); }
+	set<string> have_cards;
+	CardKeys(have_cards);
+	DropCardless(mRows, have_cards);
 	PruneEmptySections(mRows);
-	PinSelected(mRows, ParseCodes(mSelectedRamps[0]->GetAirlines()));
+	PinSelected(mRows, ParseCodes(mSelectedRamps[0]->GetAirlines()), have_cards);
 	ApplyCollapse(mRows, mCollapsedSections);
 
 	CardFlags(mRows, mRowIsCard);
@@ -4645,6 +4671,11 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		// One flag drives both. The cards and the readout are answers to the
 		// same query, so recomputing one without the other is exactly how they
 		// would drift back into contradicting each other.
+		// Hub positions arrive from a worker thread (WED_LiveryIndex::PollHubs);
+		// until they do, keep drawing so the frame that attaches them comes soon.
+		if (mLiveryIndex.PollHubs())			mCoverageDirty = true;
+		else if (mLiveryIndex.HubsPending())	Refresh();
+
 		if (mCoverageDirty) { RecomputeCoverage(); RebuildAirlineCards(); SetRowsDirty(); }
 
 		float col_warn[4]  = { 1.00f, 0.45f, 0.35f, 1.0f };	// a stand that parks nothing
