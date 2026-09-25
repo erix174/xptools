@@ -39,7 +39,10 @@ void	WED_AptImport(
 				WED_Thing *				container,
 				const string&			file_path,		// For logging errors
 				AptVector&				apts,			// Not const because "convert forward" called - destructive.
-				vector<WED_Airport *> *	out_airports);
+				vector<WED_Airport *> *	out_airports,
+				bool					quiet = false);	// no alert for skipped rows - a caller importing
+														// thousands of airports would raise one each; the
+														// document still collects them for the save warning
 				
 // Main apt export AIP - we can write to a file path or to a stream via a print func.
 

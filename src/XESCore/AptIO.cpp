@@ -270,6 +270,19 @@ static void CenterToCorners(Point2 location, double heading, double len, double 
 }
 
 
+// Records a row the reader is skipping, against the airport it sits in. A row
+// before the first airport header has nowhere to go and stays silent.
+static void	NoteDiscardedRow(AptVector& apts, MFTextScanner * s, int ln, const char * why)
+{
+	if (apts.empty()) return;
+	string row(TextScanner_GetBegin(s), TextScanner_GetEnd(s));
+	while (!row.empty() && (row.back() == '\n' || row.back() == '\r')) row.pop_back();
+	if (row.size() > 80) row = row.substr(0, 77) + "...";
+	char pfx[32];
+	snprintf(pfx, sizeof(pfx), "line %d: ", ln + 1);
+	apts.back().discarded_rows.push_back(string(pfx) + row + "  (" + why + ")");
+}
+
 string	ReadAptFile(const char * inFileName, AptVector& outApts)
 {
 	outApts.clear();
@@ -802,7 +815,10 @@ string	ReadAptFileMem(const char * inBegin, const char * inEnd, AptVector& outAp
 			// and one bad weight vector must never make an apt.dat unopenable.
 			{
 				if(outApts.empty() || outApts.back().gates.empty())
+				{
+					NoteDiscardedRow(outApts, s, ln, "1313 with no ramp start before it");
 					break;						// R20: nothing to attach to - discard
+				}
 
 				AptGate_t & tmp_gate = outApts.back().gates.back();
 
@@ -813,7 +829,10 @@ string	ReadAptFileMem(const char * inBegin, const char * inEnd, AptVector& outAp
 				// Note 1301 rejects a repeat outright; R4 forbids that here, so
 				// first-wins is the only rule satisfying both.
 				if(!tmp_gate.class_weights.empty())
+				{
+					NoteDiscardedRow(outApts, s, ln, "second 1313 on one ramp start - the first is kept");
 					break;
+				}
 
 				// Read the tokens as STRINGS, not with 'i'. FormatScan's integer
 				// conversion is atoi, which happily reads "1.5" as 1 and "-5" as
@@ -832,7 +851,10 @@ string	ReadAptFileMem(const char * inBegin, const char * inEnd, AptVector& outAp
 				// as zeros: that would silently empty the stand instead of
 				// falling back to today's behaviour.
 				if(got != 7)
+				{
+					NoteDiscardedRow(outApts, s, ln, "1313 needs exactly six weights");
 					break;
+				}
 
 				vector<int> w;
 				w.reserve(6);
@@ -857,6 +879,8 @@ string	ReadAptFileMem(const char * inBegin, const char * inEnd, AptVector& outAp
 
 				if(w.size() == 6)
 					tmp_gate.class_weights.swap(w);
+				else
+					NoteDiscardedRow(outApts, s, ln, "1313 weights must be whole numbers 0 to 1000");
 			}
 			break;
 		case apt_meta_data:
@@ -1292,11 +1316,11 @@ string	ReadAptFileMem(const char * inBegin, const char * inEnd, AptVector& outAp
 				// section 7.2 - and matching it means no row code added after
 				// this release can ever make this version refuse a file again.
 				//
-				// The cost, accepted deliberately: a mistyped row code in a
-				// hand-edited file is now skipped in silence rather than
-				// reported. AptIO has no non-fatal diagnostic channel to report
-				// it through, and adding one means changing a parser shared with
-				// MeshTool, DSF2Text and RenderFarm.
+				// Skipped, but not in silence: the row is recorded on its airport
+				// (AptInfo_t::discarded_rows), so WED can tell the author which
+				// line went missing. Nothing changes for MeshTool, DSF2Text or
+				// RenderFarm - they never read that list.
+				NoteDiscardedRow(outApts, s, ln, "unknown row code");
 			}
 			break;
 		}

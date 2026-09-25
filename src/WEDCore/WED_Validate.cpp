@@ -22,6 +22,7 @@
  */
 
 #include "WED_Validate.h"
+#include <sstream>
 #include "WED_ValidateList.h"
 #include "WED_ValidateATCRunwayChecks.h"
 
@@ -1214,54 +1215,27 @@ static int ValidateOneRampPosition(WED_RampPosition* ramp, validation_error_vect
 			return is_ai_capable;
 		}
 
-		//Add another space on the end, so everything should be exactly "ABC " or "ABC DEF GHI ..."
-		airlines_str.insert(0,1,' ');
-
-		if(airlines_str.size() >= 4)
+		// Codes are checked one token at a time. The old check walked the string in
+		// steps of four characters, which only works while every code is exactly
+		// three letters - and they are not: a subsidiary or cargo division carries
+		// a suffix (ryr_1, afr_f) and the generic airliners carry the type they
+		// are (xpzz_b752). See WED_RampPosition::IsValidAirlineCode for the shape.
+		if (gExportTarget == wet_gateway && airlines_str.size() >= 100)
 		{
-			if(airlines_str.size() % 4 != 0)
-			{
-				msgs.push_back(validation_error_t(string("Ramp start airlines string '") + orig_airlines_str + "' is not in groups of three letters.", err_ramp_airlines_is_not_in_groups_of_three, ramp, apt));
-				return is_ai_capable;
-			}
-			if (gExportTarget == wet_gateway && airlines_str.size() > 100)
-			{
-				msgs.push_back(validation_error_t(string("Ramp start airlines string '") + orig_airlines_str + "' is too long.", err_ramp_airlines_too_long, ramp, apt));
-				return is_ai_capable;
-			}
-
-			for(int i = airlines_str.length() - 1; i > 0; i -= 4)
-			{
-				if(airlines_str[i - 3] != ' ')
-				{
-					msgs.push_back(validation_error_t(string("Ramp start airlines string '") + orig_airlines_str + "' must have a space between every three letter airline code.", err_ramp_airlines_is_not_spaced_correctly, ramp, apt));
-					break;
-				}
-
-				string s = airlines_str.substr(i - 2, 3);
-
-				for(string::iterator itr = s.begin(); itr != s.end(); ++itr)
-				{
-					if(*itr < 'a' || *itr > 'z')
-					{
-						if(*itr == ' ')
-						{
-							msgs.push_back(validation_error_t(string("Ramp start airlines string '") + orig_airlines_str + "' is not in groups of three letters.", err_ramp_airlines_is_not_in_groups_of_three, ramp, apt));
-							return is_ai_capable;
-						}
-						else
-						{
-							msgs.push_back(validation_error_t(string("Ramp start airlines string '") + orig_airlines_str + "' may contains only lowercase ASCII letters.", err_ramp_airlines_contains_non_lowercase_letters, ramp, apt));
-							break;
-						}
-					}
-				}
-			}
+			msgs.push_back(validation_error_t(string("Ramp start airlines string '") + orig_airlines_str + "' is too long.", err_ramp_airlines_too_long, ramp, apt));
+			return is_ai_capable;
 		}
-		else
-		{
-			msgs.push_back(validation_error_t(string("Ramp start airlines string '") + orig_airlines_str + "' does not contain at least one valid airline code.", err_ramp_airlines_no_valid_airline_codes, ramp, apt));
-		}
+
+		std::istringstream codes(airlines_str);
+		string code;
+		while (codes >> code)
+			if (!WED_RampPosition::IsValidAirlineCode(code))
+			{
+				msgs.push_back(validation_error_t(string("Ramp start airlines string '") + orig_airlines_str + "' contains '" + code +
+					"', which is not an airline code. A code is 3 or 4 letters or digits, optionally followed by _ and up to 6 more (dal, ryr_1, xpzz_b752).",
+					err_ramp_airlines_malformed_code, ramp, apt));
+				break;
+			}
 	}
 	return is_ai_capable;
 }

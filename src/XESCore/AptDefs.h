@@ -688,6 +688,13 @@ struct AptInfo_t {
 	AptNetwork_t		taxi_route;
 
 	Bbox2				bounds;
+
+	// Rows of THIS airport the reader skipped without failing the file - an
+	// unknown row code, a malformed or duplicate 1313 - as "line N: <row> (why)".
+	// Filled by ReadAptFile; a tool that does not care simply never looks. WED
+	// shows them once on import and once more before the first save, because
+	// they are not in the document and a save makes that final.
+	vector<string>		discarded_rows;
 };
 
 typedef vector<AptInfo_t>	AptVector;

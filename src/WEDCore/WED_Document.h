@@ -124,6 +124,11 @@ public:
 
 	static	bool	TryCloseAll(void);
 
+	// apt.dat rows an import skipped (AptInfo_t::discarded_rows). They are not in
+	// the document; Save() says so once before writing, then forgets them.
+	void			NoteDiscardedImportRows(const vector<string>& rows);
+	static string	DescribeDiscardedRows(const vector<string>& rows);
+
 private:
 	bool				ReadPrefInternal(const char * in_key, unsigned type, string &out_value) const;
 
@@ -137,6 +142,7 @@ private:
 	string				mPackage;
 	bool				mOnDisk;
 	bool				mPrefsChanged;
+	vector<string>		mDiscardedImportRows;
 
 	WED_Archive			mArchive;
 	WED_UndoMgr			mUndo;

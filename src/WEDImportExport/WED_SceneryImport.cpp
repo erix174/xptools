@@ -234,7 +234,7 @@ void	WED_DoImportExtracts(IResolver * resolver)
                   (hemisphere == 2 && lonlat.x() > -31.8) )
 				{
                     vector<WED_Airport*> this_apt;
-                    WED_AptImport(wrl->GetArchive(), grp, nam_apt.c_str(), apts, &this_apt);
+                    WED_AptImport(wrl->GetArchive(), grp, nam_apt.c_str(), apts, &this_apt, true);
 
                     if (scn_ids.count(icao))
                     {

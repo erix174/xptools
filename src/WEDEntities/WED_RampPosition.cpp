@@ -248,6 +248,21 @@ string	WED_RampPosition::CorrectAirlinesString(const string &a)
 	return cleaned_airlines_str;
 }
 
+bool	WED_RampPosition::IsValidAirlineCode(const string &code)
+{
+	size_t us = code.find('_');
+	size_t base = (us == string::npos) ? code.size() : us;
+	if (base < 3 || base > 4) return false;
+	if (us != string::npos && (code.size() - us - 1 < 1 || code.size() - us - 1 > 6)) return false;
+	for (size_t i = 0; i < code.size(); ++i)
+	{
+		if (i == us) continue;
+		char c = code[i];
+		if (!((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9'))) return false;
+	}
+	return true;
+}
+
 void	WED_RampPosition::SetAirlines(const string &a)
 {
 	// Normalize HERE, not only on export. apt.dat is case-insensitive about

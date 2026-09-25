@@ -199,8 +199,42 @@ WED_NWLinkAdapter *	WED_Document::GetNWLink(void)
 
 #include <chrono>
 
+void	WED_Document::NoteDiscardedImportRows(const vector<string>& rows)
+{
+	mDiscardedImportRows.insert(mDiscardedImportRows.end(), rows.begin(), rows.end());
+}
+
+string	WED_Document::DescribeDiscardedRows(const vector<string>& rows)
+{
+	const size_t kShown = 10;
+	char head[96];
+	snprintf(head, sizeof(head), "%d row%s of the apt.dat could not be read and %s skipped:\n",
+			 (int) rows.size(), rows.size() == 1 ? "" : "s", rows.size() == 1 ? "was" : "were");
+	string msg(head);
+	for (size_t i = 0; i < rows.size() && i < kShown; ++i)
+		msg += "\n" + rows[i];
+	if (rows.size() > kShown)
+	{
+		char more[64];
+		snprintf(more, sizeof(more), "\n... and %d more (all listed in WED_Log.txt)", (int) (rows.size() - kShown));
+		msg += more;
+	}
+	return msg;
+}
+
 void	WED_Document::Save(void)
 {
+	// The last chance to notice rows an import dropped. Cancel leaves the
+	// document dirty, which TryClose reads as "do not close".
+	if (!mDiscardedImportRows.empty())
+	{
+		string msg = DescribeDiscardedRows(mDiscardedImportRows) +
+			"\n\nThey are not part of this scenery. Saving makes that permanent: they will not be in the saved file or in any export.";
+		if (!ConfirmMessage(msg.c_str(), "Save", "Cancel"))
+			return;
+		mDiscardedImportRows.clear();
+	}
+
 	BroadcastMessage(msg_DocWillSave, reinterpret_cast<uintptr_t>(static_cast<IDocPrefs *>(this)));
 
 	enum {none,nobackup,both};
@@ -356,6 +390,7 @@ void	WED_Document::Revert(void)
 			return;
 	}
 	mDocPrefs.clear();
+	mDiscardedImportRows.clear();		// the saved file never had them
 	auto t0 = std::chrono::high_resolution_clock::now();
 
 	try {
@@ -474,7 +509,7 @@ bool	WED_Document::TryClose(void)
 		string msg = string("Save changes to scenery package ") + mPackage + string(" before closing?");
 
 		switch(DoSaveDiscardDialog("Save changes before closing...",msg.c_str())) {
-		case close_Save:	Save();	break;
+		case close_Save:	Save();	if (IsDirty()) return false;	break;	// save cancelled or failed
 		case close_Discard:			break;
 		case close_Cancel:	return false;
 		}

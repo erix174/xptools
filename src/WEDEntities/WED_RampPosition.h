@@ -81,6 +81,12 @@ public:
 	bool	HasStoredWeights(int out_w[6]) const;
 
 	static string CorrectAirlinesString(const string &a);
+	// One 1301 airline code, as CorrectAirlinesString leaves it (lower case):
+	// 3 or 4 letters or digits, optionally "_" and 1 to 6 more. The base is the
+	// ICAO designator or an index code (dal, xpa0); the suffix names a division
+	// flying on it (afr_f, ryr_1) or, on the generic airliners, the type
+	// (xpzz_b752, xpzz_b744f). Same shape as the CODE column of livery_index.txt.
+	static bool	IsValidAirlineCode(const string &code);
 	// Normalises to six integers separated by single spaces, or returns "" if the
 	// input is not exactly six values in 0..1000 (R11). Never throws, never
 	// partially accepts.
