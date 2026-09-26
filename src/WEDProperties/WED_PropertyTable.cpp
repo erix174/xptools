@@ -680,6 +680,23 @@ bool	WED_PropertyTable::ModeratorFocusFolder(WED_Thing * folder)
 	return true;
 }
 
+// The airport is often selected already - an import leaves it so - and a click
+// on a selected name would open it for renaming. In moderator mode it does the
+// single-click setup instead; the Selection tab still renames.
+int		WED_PropertyTable::ClickSelectedCell(
+						int							cell_x,
+						int							cell_y)
+{
+	if (!gModeratorMode || mVertical || mSelOnly) return 0;
+	if (cell_x < 0 || cell_x >= (int) mColNames.size() || mColNames[cell_x] != "Name") return 0;
+	WED_Airport * apt = SAFE_CAST(WED_Airport, FetchNth(cell_y));
+	if (!apt) return 0;
+	DispatchHandleCommand(wed_ZoomSelection);
+	DispatchHandleCommand(wed_MapSelection);
+	ModeratorShowAirport(apt);
+	return 1;
+}
+
 void	WED_PropertyTable::SelectionEnd(void)
 {
 	ISelection * s = WED_GetSelect(mResolver);

@@ -674,6 +674,13 @@ int			GUI_TextTable::CellMouseDown(int cell_bounds[4], int cell_x, int cell_y, i
 
 
 
+	if ((mModifiers & (gui_ShiftFlag | gui_ControlFlag | gui_OptionAltFlag)) == 0 &&
+		mEditInfo.is_selected && mContent->ClickSelectedCell(cell_x, cell_y))
+	{
+		mEditInfo.content_type = gui_Cell_None;
+		return 1;
+	}
+
 	if (!mEditInfo.can_edit)	return 1;
 
 	int	all_edit = mParent->GetModifiersNow() & (gui_OptionAltFlag | gui_ControlFlag);
