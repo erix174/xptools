@@ -42,7 +42,7 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
   - **Pin and compare:** + / - / ~. Chips show the counts; shift-click a chip to pin it.
   - **"?" opens a live web search** in a small Edge or Chrome `--app` window beside the cursor, in the moderator's own profile. A fresh profile hit Google's "unusual traffic" check. With no such browser it falls back to the default browser.
   - The query is "Does <operator> fly to <ICAO> <city>". The author's airport name was noise.
-  - Everything is gated on `WED_ModerationEnabled()`: today always on, Moderation Mode only before release.
+  - Everything is gated on `WED_ModerationEnabled()`, which reads the Moderator Mode preference (done 2026-09-26). The preference is now saved. It applies live, with no restart: every caller asks at draw, click or command time, and the Gateway import dialog reads it when it opens. Investigated 2026-09-26: nothing in WED needs a restart for it. Clearing it while the view is turned puts the map back north up.
   - Same-signature stands share one callout (`03-MIX-CDE x4`). Every leader curves into one hub, and a neck runs from the hub to the callout. The neck's length grows 2.5x to 20x and its weight 3 to 16 px with the number of stands. Leaders head for the hub and never double back (2026-09-26).
   - The chip column takes whichever side covers fewer stands, ordered to minimise crossings.
 - **Moderation toolbar, 2026-09-26.** Bottom of the map's tool column, aligned to the bottom and growing up. Art is `moderation_tools.png`.
@@ -86,7 +86,7 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
 
 - **Map view, open:**
   - Mac and Linux search windows are untested: they use `open -na` and `--app`.
-  - Big-airport run 2026-09-26: LFPG from Global Airports, 520 ramps, plus test stands T1-T7 (package `ZZY_moderation_bigtest_LFPG` in the Steam install - delete when done). Checked: similarity colours, chips and grouping, the overview (260 to check, grouped review), rotate + marquee, and the validator (discarded 1313 / unknown row; GA, military and airline "parks nothing"). Legend tier tested 2026-09-26 on LFPG from the Gateway (513 stands, 53 setups): 24 rows + "and 29 more", hover rings, click selects the setup. Found and fixed: a card past the map's right edge went under the property pane. The legend's fill is 70% black (Eric, 2026-09-26; cards stay 40%). Open: a hovered legend row's rings are in the setup's own colour, which can be the stands' green.
+  - Big-airport run 2026-09-26: LFPG from Global Airports, 520 ramps, plus test stands T1-T7 (package `ZZY_moderation_bigtest_LFPG` in the Steam install - delete when done). Checked: similarity colours, chips and grouping, the overview (260 to check, grouped review), rotate + marquee, and the validator (discarded 1313 / unknown row; GA, military and airline "parks nothing"). Legend tier tested 2026-09-26 on LFPG from the Gateway (513 stands, 53 setups): 24 rows + "and 29 more", hover rings, click selects the setup. Found and fixed: a card past the map's right edge went under the property pane. The legend's fill is 70% black (Eric, 2026-09-26; cards stay 40%). Hover rings are white over a dark edge (Eric, 2026-09-26).
 
 ## Open, no decision needed
 
@@ -99,7 +99,8 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
 
 ## Upstream PRs (ready, not sent)
 
-- Local branches off `origin/wed_270_release` (nine now), each one built on its own, in worktree `WED/xptools-upstream`, backed up to `local`.
+- **Hold until 2.7 ships (Eric, 2026-09-26).** Julian's bug fixes (`feat_julian_deserves_better`, PDF pp. 7-9) already went to 2.7.2 as https://github.com/X-Plane/xptools/pull/59. Everything below waits for the 2.7 train to leave; the livery picker is for 2.8.
+- Local branches off `origin/wed_270_release` (ten now), each one built on its own, in worktree `WED/xptools-upstream`, backed up to `local`.
 - When the feature itself goes up, rebase it onto these.
 
 | Branch | What |
@@ -112,6 +113,7 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
 | `upstream/parking-icons-d-e` | ClassD and ClassE icons fill their frame like the other four |
 | `upstream/lost-mouse-up` | `GUI_Window::ClickDown` finishes a click whose mouse-up was lost instead of asserting (split from `774cde5`) |
 | `upstream/center-keeps-zoom` | `CenterOnPoint` (3D preview's centre on camera) keeps the zoom instead of zooming out a little each time (split from `1cef270`) |
+| `upstream/set-agl-allowed` | Gateway validation no longer calls set_AGL "discouraged" (Julian's PDF p. 10). set_MSL is still refused, and the +/-100 m limit stays. Cherry-picked here as `39005a1` |
 | `feat_moderator_folders` | Moderator mode hierarchy shortcuts from Julian's "WED Moderator Requested Changes" pp. 2-6, and a null-airport crash on a failed Gateway import. Also: a click on an already-selected airport or focus folder no longer opens it for renaming, and the map tab commands switch the tab too. Tested end to end 2026-09-26 (Gateway import of VOVI + RKSI, KLAF). Four commits, cherry-picked onto this branch (`94249f6`, `56b9b98`, `caa2f61`, `fd097e6`) |
 
 `archive/stash-2026-09-13-wip` preserves the pre-commit WIP stash of 2026-09-13. Everything in it was superseded by the branch; it was removed from the stash list.
