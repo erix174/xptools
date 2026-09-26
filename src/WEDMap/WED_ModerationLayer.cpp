@@ -137,7 +137,8 @@ static const float kPad = 6.0f;
 // neck - runs from the hub to the card or chip. Its length and weight say how
 // many stands share the entry: 2.5x the base for one stand, 1.5x more for each
 // further stand, capped at 20x, so a popular entry stands out before a word is
-// read. The receiving bar on the card or chip takes the same weight.
+// read. Its weight runs 3 -> 16 px, and the receiving bar on the card or chip
+// takes the same weight, growing outward (left) so it never covers the content.
 static float	NeckLen(size_t stands, float base)
 {
 	float f = 2.5f + 1.5f * (float) (stands - 1);
@@ -146,8 +147,8 @@ static float	NeckLen(size_t stands, float base)
 
 static float	NeckWidth(size_t stands)
 {
-	float w = 1.5f + 0.35f * (float) (stands - 1);
-	return w > 8.0f ? 8.0f : w;
+	float w = 3.0f + 0.7f * (float) (stands - 1);
+	return w > 16.0f ? 16.0f : w;
 }
 
 // Leaders from every stand to the hub, an arrowhead at each stand, and the neck.
@@ -571,7 +572,7 @@ void	WED_ModerationLayer::DrawCard(GUI_GraphState * g, Callout & c, bool pinned,
 	{
 		// the left edge receives the neck: as heavy as it is
 		const float bw = Max(pinned ? 3.0f : 2.0f, NeckWidth(1 + c.others.size()));
-		Fill(x0 - bw * 0.5f, bottom, x0 + bw * 0.5f, edge + (pinned ? 1.5f : 1.0f), stroke);
+		Fill(x0 - bw + 1.0f, bottom, x0 + 1.0f, edge + (pinned ? 1.5f : 1.0f), stroke);
 	}
 
 	// header: flag, ICAO, ramp name - left-aligned and tight
@@ -823,7 +824,7 @@ void	WED_ModerationLayer::DrawChips(GUI_GraphState * g, vector<Callout> & cs)
 		{
 			// the bar receives the neck: as heavy as it is
 			const float bw = Max(pinned ? 3.0f : 2.0f, NeckWidth(1 + c.others.size()));
-			Fill(cx0 - bw * 0.5f, bot, cx0 + bw * 0.5f, top, stroke);
+			Fill(cx0 - bw + 1.0f, bot, cx0 + 1.0f, top, stroke);
 		}
 
 		float x = cx0 + kPad;
