@@ -67,7 +67,7 @@ I
 1301 C airline cca csn ces csz
 1313 0 0 10 0 0 0
 1300  40.07800000  116.58897200 000.0 gate jets 21-NEVER-HERE
-1301 C airline swa ezy
+1301 C airline swa eju
 1313 0 0 10 0 0 0
 1300  40.07800000  116.59008800 000.0 gate jets 22-FOREIGN-NARROW
 1301 C airline ual dal aal baw
@@ -82,7 +82,7 @@ I
 1301 E airline cca ual
 1313 0 0 5 0 5 0
 1300  40.07800000  116.59455200 000.0 gate heavy|jets 26-CARGO-SPLIT
-1301 D airline fdx
+1301 D cargo fdx
 1313 0 0 0 10 0 0
 1300  40.07800000  116.59566800 000.0 gate jets 27-DOMESTIC-FAR
 1301 C airline cca

@@ -872,14 +872,31 @@ Class-first is strictly more expressive, but it gives up the one virtue the
 step-down had: it always found *something*. Four consequences.
 
 **1. A stand can now be silently empty, and this is common.** Measured against the
-real global apt.dat and the real shipped livery set: if every stand's weights were
-set to the class it already declares, **7,604 of 44,242 stands (17.2%) would spawn
-nothing at all**, touching **1,675 of 3,958 airports (42%)**. The cause is almost
-never "this airline has no models" — only 1.8% of stands are that. It is "this
-airline has no model **in this stand's class**". A gate marked E whose airlines fly
-C-class aircraft is the common case, and today the step-down hides it by quietly
-substituting something smaller. (Measured before the range rule and the
-retired-airframe marks; both can only raise it.)
+real global apt.dat and the real shipped livery set: if every airline and cargo
+stand's weights were set to the class it already declares, **12,946 of 43,412
+stands (29.8%) would spawn nothing at all**, touching **2,613 of 3,924 airports
+(67%)**. The cause is almost never "this airline has no models" — 1.9% of stands
+are that — nor range (0.8%). It is "this airline has no model **in this stand's
+class**" (27.1%). A gate marked E whose airlines fly C-class aircraft is the common
+case, and today the step-down hides it by quietly substituting something smaller.
+
+| rules applied | empty stands | airports |
+|---|---|---|
+| class and op class only | 7,138 (16.4%) | 1,643 (42%) |
+| + range (R26) | 8,742 (20.1%) | 1,980 (50%) |
+| + range and `Obsolete` (R25) — **today** | **12,946 (29.8%)** | **2,613 (67%)** |
+
+Draft 7 measured 7,604 of 44,242 (17.2%) over every stand carrying airlines, GA
+and military included; the same method on today's data gives 7,688 of 44,242.
+**The rise is the `Obsolete` marks, and two of them carry most of it**: Delta's
+CRJ-200 (`DAL` class B) is the only aircraft that can fill 1,915 stands at 487
+airports, and Air France's CRJ-100 (`AFR` B) 1,300 stands at 360 - together 3,215
+of the 4,204 stands the marks empty. Those stands list an operator that really
+did fly a class-B jet there, and no longer does; the library has nothing current
+to put in its place. Retired airframes account for 95% of the marks' effect,
+defunct operators for 1%. Reproduce with
+`tools/scripts/airline_research/measure_empty_stands.py` (`--by-mark` for the
+per-pair split); it reads Global Airports in about four seconds.
 
 > **WED absorbs this.** Weights pointing at a class none of the listed airlines
 > can fill raise a validation warning (R14), visible in Validate at any time and
@@ -891,12 +908,12 @@ retired-airframe marks; both can only raise it.)
 > re-introducing a step-down takes back the expressiveness this change exists to
 > provide.
 
-#### Where the 17.2% actually comes from, and what answers it
+#### Where the 29.8% actually comes from, and what answers it
 
 The figure is **not** a property of the format, and it is not a hazard of hand
 authoring. R17 makes that precise: a stand with no `1313` keeps today's
 behaviour, so **importing an existing apt.dat creates no weights and therefore no
-empty stands.** The 17.2% is conditional — "*if* every stand's weights were set to
+empty stands.** The 29.8% is conditional — "*if* every stand's weights were set to
 the class it already declares" — and the only thing that would do that at scale is
 **WED's own auto-fill** (§6.7f), a bulk operation the author accepts wholesale,
 across up to 326 stands at a single airport.
@@ -910,7 +927,7 @@ stands. That splits the answer in two, and both halves are required:
 | bulk fill across an airport | **airport-level rollup**, presented at the moment the fill completes |
 
 A rollup reads: *"47 stands filled. 12 will be empty more than half the time, 8
-always."* Without it, 42% of commercially served airports acquire the defect
+always."* Without it, two in three commercially served airports acquire the defect
 silently and in one click.
 
 #### What to display, and what not to
@@ -1582,10 +1599,11 @@ The eighth cell of a livery row is `SCOPE`: `HOME` or empty.
 
 `HOME` is for equipment that names one operator so specifically it has no
 business abroad: a head-of-state 757, an air force's own-marked airliner, a
-justice-department transport. Most military equipment is flown by many
-countries, and an F-15 or a Seahawk at a foreign base is unremarkable, so the
-default is anywhere. In the shipped index `HOME` appears on 11 rows, all of them
-Military or Gov.
+justice-department transport - and, by the same test, an air force's own
+transports and trainers (the USAF's Challenger, C-146 and PC-12, the Navy's
+T-44). Combat types are flown by many countries, and an F-15, an F/A-18 or a
+Seahawk at a foreign base is unremarkable, so the default is anywhere. In the
+shipped index `HOME` appears on 15 rows, all of them Military or Gov.
 
 Military and government OPERATOR records carry no hubs: R26 never reads them.
 
@@ -1972,15 +1990,17 @@ Drafts 1–6 carried a second row, `1312`, letting an author write `-ual:B744` o
 `+uae:A388`: this airline, but only (or never) that aircraft. Draft 7 deletes it
 outright, along with R21, R22 and eight conformance vectors.
 
-**It was not paying for itself.** Measured against the shipped 298-row index,
-counting real operators and ignoring the `XP*` pseudo-codes:
+**It was not paying for itself.** Measured against the shipped index - the 254
+rows of 298 that are not `Obsolete`, schema 4, data `20260925` - counting real
+operators and ignoring the `XP*` pseudo-codes (draft 7's count, over all 298 rows
+before the marks, was 168 / 15 / 148 / 134):
 
 | | |
 |---|---|
-| (operator, class) pairs in the index | 168 |
-| …carrying **more than one** aircraft type | **15 — 8.9%** |
-| real operators in the index | 148 |
-| …whose assets sit at **exactly one** class | **134 — 90.5%** |
+| (operator, class) pairs in the index | 144 |
+| …carrying **more than one** aircraft type | **12 — 8.3%** |
+| real operators in the index | 132 |
+| …whose assets sit at **exactly one** class | **122 — 92.4%** |
 
 An aircraft type only ever appears in its own wingspan class, so naming a type
 already names a class — which means the size slider that every stand has anyway
@@ -1998,7 +2018,7 @@ right place, and it cannot go stale the way a per-stand list does.
 
 **What is genuinely lost**, and it is not nothing: an author cannot say "Delta,
 but the A320 rather than the 737" — both are class C and both are current. That
-is 15 pairs across the entire library, and in every one of them the operator
+is 12 pairs across the entire library, and in every one of them the operator
 really does fly both types. Relative frequency between two current aircraft is
 what `EXPORT_RATIO` is for (§4.3), and it belongs to the library, which sees all
 airports, rather than to one stand.
@@ -2116,7 +2136,7 @@ this table.
 | Auto-fill (§6.7f) | **done** |
 | Moderation: stepping through stands, notes, web search (§6.7f) | **done**; the moderator preference switch is not yet wired |
 | Validator: R10 code shape, Gateway 100-character cap, R14 `warn_ramp_livery_parks_nothing` | **done** |
-| Sample package `docs/livery_sample/` — ZBAA, 24 stands incl. the range cases | **done**; its README still describes the older ZZLI package |
+| Sample package `docs/livery_sample/` — ZBAA, 24 stands incl. the range cases | **done**; README regenerated from `livery_sample_expect.py` (2026-09-25) |
 | **X-Plane: R17/R18 three-stage selection, R25–R29, reading the index** | **open** — the sim side of this spec |
 | **Index shipped with X-Plane 12.5 under `apt_aircraft/`** | **open** — Laminar release |
 | **Mac and Linux build and run** | **open** — never done |

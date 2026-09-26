@@ -92,8 +92,8 @@ named so you can read them off the ground: controls and malformed rows
 United, Delta, American and BA at class C and parks **nothing** — none of their
 737s or A320s reaches Beijing; `24-SPLIT-IN-CLASS` keeps United's 767 and drops
 its 757). A `1200` file carrying `1313`; the sim loads packages like it silently
-(evidence: `docs/livery_evidence/`). The sample's README still describes an
-older ZZLI package.
+(evidence: `docs/livery_evidence/`). Its README lists what every stand should
+spawn, computed by `tools/scripts/airline_research/livery_sample_expect.py`.
 
 ---
 

@@ -709,13 +709,13 @@ bool	WED_LiveryPane::SelectionWeights(int out_w[6]) const
 // the stand's own size range. In the sim that stand parks nothing, every time,
 // and produces no log line and no error - an empty gate is indistinguishable
 // from a gate that did not happen to get an aircraft this time. Spec §4.5
-// measures 7,604 of 44,242 stands (17.2%) in that state across the real global
-// apt.dat, at 42% of airports, and notes the cause is almost never "this
+// measures 12,946 of 43,412 stands (29.8%) in that state across the real global
+// apt.dat, at 67% of airports, and notes the cause is almost never "this
 // operator has no models" but "none in THIS class".
 //
 // The index is consulted per (airline, class) rather than per airline: an
 // operator having SOME model is not the same as having one that fits here, and
-// conflating the two is precisely the mistake that makes the 17.2% invisible.
+// conflating the two is precisely the mistake that makes the §4.5 figure invisible.
 void	WED_LiveryPane::RecomputeCoverage(void)
 {
 	mCoverageDirty = false;

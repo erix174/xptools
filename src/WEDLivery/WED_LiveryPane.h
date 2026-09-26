@@ -195,7 +195,7 @@ private:
 	// defect those weights would expose is already measurable from data WED has
 	// today: a stand whose listed operators have no model in ANY class of its own
 	// size range parks nothing, every time, with no symptom in the sim. That is
-	// the 17.2% case, and this is what makes it visible before it is written.
+	// the §4.5 case (29.8% of stands), and this is what makes it visible before it is written.
 	//
 	// When phase 4 lands, the same per-class terms get weighted by `1313` instead
 	// of treated as a flat range, and this becomes a probability. The shape of the
