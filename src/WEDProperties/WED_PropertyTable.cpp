@@ -577,6 +577,109 @@ void	WED_PropertyTable::SelectRange(
 	}
 }
 
+// ---- Moderator mode: one click sets up the hierarchy and map for a check ----
+// (requested by Julian for Gateway moderation, "WED Moderator Requested Changes")
+
+// Set a thing's Hidden flag inside the command 'started' opens, only if it changes.
+static void	ModSetHidden(WED_Thing * t, int hidden, WED_Thing *& started, const char * cmd_name)
+{
+	WED_Entity * e = dynamic_cast<WED_Entity *>(t);
+	if (!e || e->GetHidden() == hidden) return;
+	int idx = t->FindProperty("Hidden");
+	if (idx == -1) return;
+	PropertyVal_t val;
+	val.prop_kind = prop_Bool;
+	val.int_val = hidden;
+	if (!started) { started = t; started->StartCommand(cmd_name); }
+	t->SetNthProperty(idx, val);
+}
+
+// Every folder below t, t itself not included.
+static void	ModCollectGroups(WED_Thing * t, vector<WED_Thing *>& out)
+{
+	int nc = t->CountChildren();
+	for (int n = 0; n < nc; ++n)
+	{
+		WED_Thing * c = t->GetNthChild(n);
+		if (SAFE_CAST(WED_Group, c))
+		{
+			out.push_back(c);
+			ModCollectGroups(c, out);
+		}
+	}
+}
+
+// Single click on an airport: open all its folders, show them all, ESRI imagery.
+// (The Selection tab and the zoom come from SelectionEnd, as for any selection.)
+void	WED_PropertyTable::ModeratorShowAirport(WED_Airport * apt)
+{
+	vector<WED_Thing *> groups;
+	ModCollectGroups(apt, groups);
+
+	SetOpen(apt->GetID(), 1);
+	for (auto g : groups)
+		SetOpen(g->GetID(), 1);
+
+	WED_Thing * started = NULL;
+	ModSetHidden(apt, 0, started, "Show All Folders");
+	for (auto g : groups)
+		ModSetHidden(g, 0, started, "Show All Folders");
+	if (started) started->CommitCommand();
+
+	mCacheValid = false;
+	BroadcastMessage(GUI_TABLE_CONTENT_RESIZED, 0);
+	DispatchHandleCommand(wed_SlippyMapESRI);
+}
+
+// Double click on one of these folders: hide its sibling folders, show only it
+// (and its partners), turn the imagery off, and pick the tab to work in.
+// Returns false for any other folder, which keeps the usual double click.
+bool	WED_PropertyTable::ModeratorFocusFolder(WED_Thing * folder)
+{
+	string name;
+	folder->GetName(name);
+
+	set<string> keep;
+	int tab_cmd = 0;
+	if      (name == "Taxiways")		{ keep.insert(name); }
+	else if (name == "Draped Polygons")	{ keep.insert(name); }
+	else if (name == "Ground Vehicles")	{ keep.insert(name); keep.insert("Ground Routes"); tab_cmd = wed_MapATC; }
+	else return false;
+
+	WED_Thing * parent = folder->GetParent();
+	if (!parent) return false;
+
+	const string cmd_name = "Show Only " + name;
+	WED_Thing * started = NULL;
+
+	// the folder has to be visible to be seen: its parents too
+	for (WED_Thing * p = parent; p; p = p->GetParent())
+		ModSetHidden(p, 0, started, cmd_name.c_str());
+
+	int nc = parent->CountChildren();
+	for (int n = 0; n < nc; ++n)
+	{
+		WED_Thing * c = parent->GetNthChild(n);
+		if (!SAFE_CAST(WED_Group, c)) continue;
+		string cn;
+		c->GetName(cn);
+		const bool shown = keep.count(cn) > 0;
+		ModSetHidden(c, shown ? 0 : 1, started, cmd_name.c_str());
+		if (shown)
+		{
+			vector<WED_Thing *> sub;
+			ModCollectGroups(c, sub);
+			for (auto s : sub)
+				ModSetHidden(s, 0, started, cmd_name.c_str());
+		}
+	}
+	if (started) started->CommitCommand();
+
+	DispatchHandleCommand(wed_SlippyMapNone);
+	if (tab_cmd) DispatchHandleCommand(tab_cmd);
+	return true;
+}
+
 void	WED_PropertyTable::SelectionEnd(void)
 {
 	ISelection * s = WED_GetSelect(mResolver);
@@ -613,6 +716,10 @@ void	WED_PropertyTable::SelectionEnd(void)
 		{
 			DispatchHandleCommand(wed_MapSelection);
 		}
+
+		if (!mSelOnly && !mVertical && s->GetSelectionCount() == 1)
+			if (WED_Airport * apt = SAFE_CAST(WED_Airport, sel0))
+				ModeratorShowAirport(apt);
 	}
 }
 
@@ -715,6 +822,10 @@ int		WED_PropertyTable::DoubleClickCell(
 						int							cell_x,
 						int							cell_y)
 {
+	if (gModeratorMode && !mVertical && !mSelOnly && cell_x >= 0 && cell_x < (int) mColNames.size() && mColNames[cell_x] == "Name")
+		if (WED_Thing * t = FetchNth(cell_y))
+			if (SAFE_CAST(WED_Group, t))
+				return ModeratorFocusFolder(t) ? 1 : 0;
 	return 0;
 }
 
