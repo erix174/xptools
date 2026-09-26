@@ -151,40 +151,52 @@ static float	NeckWidth(size_t stands)
 	return w > 16.0f ? 16.0f : w;
 }
 
-// Leaders from every stand to the hub, an arrowhead at each stand, and the neck.
-// Each leader is an S-curve that leaves its stand level and arrives at the hub
-// level, so it runs straight on into the neck: a straight line to the hub made a
-// hard corner there wherever the stands sat above or below the card.
+// Leaders from every stand to the hub, an arrowhead at each stand, and the neck
+// from the hub to end_x (either side: the neck runs toward end_x).
+//
+// Each leader is a cubic that LEAVES ITS STAND HEADING FOR THE HUB and bends
+// only at the far end, to arrive level and run on into the neck. Two earlier
+// shapes were worse: a straight line met the level neck at a hard corner, and
+// an S-curve that left every stand level ran the leaders along the row of
+// stands on top of one another before they split, and doubled back on itself
+// for any stand past the hub. The level run-in is only as long as the stand is
+// far from the hub on the neck's side - never behind it - so no leader turns
+// back; a stand at or past the hub gets a straight line.
 static void	DrawLeaders(const vector<std::pair<float, float> > & stands, float hub_x, float hub_y, float end_x,
 							const float col[4], float line_w, float arrow)
 {
+	const float dir = end_x >= hub_x ? 1.0f : -1.0f;		// the way the neck runs
 	glColor4fv(col);
 	glLineWidth(line_w);
 	for (size_t k = 0; k < stands.size(); ++k)
 	{
-		const float sx = stands[k].first + arrow * 0.6f, sy = stands[k].second;
-		float d = fabsf(hub_x - sx) * 0.5f;
-		if (d < 20.0f) d = 20.0f;
-		const float c1x = sx + d, c2x = hub_x - d;
+		const float sx = stands[k].first, sy = stands[k].second;
+		const float c1x = sx + (hub_x - sx) * 0.35f, c1y = sy + (hub_y - sy) * 0.35f;
+		float run = dir * (hub_x - sx) * 0.5f;				// > 0: the stand is on the far side, as it should be
+		if (run < 0.0f) run = 0.0f;
+		if (run > 220.0f) run = 220.0f;
+		const float c2x = hub_x - dir * run, c2y = hub_y;
+
+		// the arrowhead points along the leader's first stretch
+		float vx = c1x - sx, vy = c1y - sy, vl = sqrtf(vx * vx + vy * vy);
+		if (vl < 1.0f) { vx = dir; vy = 0; vl = 1.0f; }
+		vx /= vl; vy /= vl;
+		glBegin(GL_TRIANGLES);
+			glVertex2f(sx, sy);
+			glVertex2f(sx + vx * arrow - vy * arrow * 0.5f, sy + vy * arrow + vx * arrow * 0.5f);
+			glVertex2f(sx + vx * arrow + vy * arrow * 0.5f, sy + vy * arrow - vx * arrow * 0.5f);
+		glEnd();
+
 		glBegin(GL_LINE_STRIP);
-		for (int i = 0; i <= 24; ++i)
+		for (int i = 0; i <= 32; ++i)
 		{
-			const float t = (float) i / 24.0f, u = 1.0f - t;
+			const float t = (float) i / 32.0f, u = 1.0f - t;
 			const float x = u * u * u * sx + 3 * u * u * t * c1x + 3 * u * t * t * c2x + t * t * t * hub_x;
-			const float y = u * u * u * sy + 3 * u * u * t * sy  + 3 * u * t * t * hub_y + t * t * t * hub_y;
+			const float y = u * u * u * sy + 3 * u * u * t * c1y + 3 * u * t * t * c2y + t * t * t * hub_y;
 			glVertex2f(x, y);
 		}
 		glEnd();
 	}
-	glBegin(GL_TRIANGLES);
-	for (size_t k = 0; k < stands.size(); ++k)
-	{
-		const float ax = stands[k].first, ay = stands[k].second;
-		glVertex2f(ax, ay);
-		glVertex2f(ax + arrow, ay - arrow * 0.5f);
-		glVertex2f(ax + arrow, ay + arrow * 0.5f);
-	}
-	glEnd();
 	// the neck as a quad, so its weight is exact at any line-width limit
 	const float hw = NeckWidth(stands.size()) * 0.5f;
 	glBegin(GL_QUADS);
@@ -192,6 +204,21 @@ static void	DrawLeaders(const vector<std::pair<float, float> > & stands, float h
 		glVertex2f(end_x, hub_y + hw); glVertex2f(hub_x, hub_y + hw);
 	glEnd();
 	glLineWidth(1.0f);
+}
+
+// Where the hub goes: the neck's full length from the receiver, but never
+// behind a member stand - the neck shortens rather than send a leader back.
+static float	HubX(const vector<std::pair<float, float> > & stands, float receiver_x, float dir, float neck)
+{
+	float hub = receiver_x - dir * neck;
+	for (size_t k = 0; k < stands.size(); ++k)
+	{
+		const float lim = stands[k].first + dir * 40.0f;			// 40 px clear of the stand, toward the receiver
+		if (dir > 0 ? hub < lim : hub > lim) hub = lim;
+	}
+	// ...but a stand AT or past the receiver cannot be helped: keep a stub of neck
+	if (dir > 0 ? hub > receiver_x - 20 : hub < receiver_x + 20) hub = receiver_x - dir * 20.0f;
+	return hub;
 }
 
 // Verdict marks, drawn rather than typed: the UI font has no check or cross.
@@ -559,7 +586,7 @@ void	WED_ModerationLayer::DrawCard(GUI_GraphState * g, Callout & c, bool pinned,
 		// every stand -> one hub -> the neck -> the card's top-left corner
 		vector<std::pair<float, float> > stands(1, std::make_pair(c.ax, c.ay));
 		stands.insert(stands.end(), c.others.begin(), c.others.end());
-		DrawLeaders(stands, x0 - NeckLen(stands.size(), 16.0f), edge, x0, stroke, 2.0f, 10.0f);
+		DrawLeaders(stands, HubX(stands, x0, 1.0f, NeckLen(stands.size(), 16.0f)), edge, x0, stroke, 2.0f, 10.0f);
 	}
 
 	Fill(x0, bottom, x1, edge, kFill);
@@ -714,7 +741,9 @@ void	WED_ModerationLayer::DrawCards(GUI_GraphState * g, vector<Callout> & cs)
 	for (size_t i = 0; i < cs.size(); ++i)
 		if (cs[i].on_screen)
 		{
-			cs[i].x0 = cs[i].ax + 32 + NeckLen(1 + cs[i].others.size(), 16.0f);
+			float rightmost = cs[i].ax;									// the rightmost member
+			for (size_t k = 0; k < cs[i].others.size(); ++k) rightmost = Max(rightmost, cs[i].others[k].first);
+			cs[i].x0 = rightmost + 32 + NeckLen(1 + cs[i].others.size(), 16.0f);
 			cs[i].y1 = cs[i].ay + HeadH();
 			SizeCard(cs[i]);
 			order.push_back(i);
@@ -778,10 +807,42 @@ void	WED_ModerationLayer::DrawChips(GUI_GraphState * g, vector<Callout> & cs)
 			chip_w = Max(chip_w, TextW(cs[i].e.icao) + TextW(cs[i].label) + lh * 1.6f + 110);
 		}
 	chip_w = Min(chip_w, 340.0f);
-	const float cx1 = (float) b[2] - 12, cx0 = cx1 - chip_w;
 
-	// the column, in the stands' own top-to-bottom order
-	std::sort(order.begin(), order.end(), [&cs](size_t a, size_t b) { return cs[a].ay > cs[b].ay; });
+
+	// The column hides whatever it sits on, so it goes on the side where it
+	// covers fewer stands; its bar and neck face the map.
+	int cover_r = 0, cover_l = 0;
+	for (size_t i = 0; i < order.size(); ++i)
+	{
+		const Callout & c = cs[order[i]];
+		vector<std::pair<float, float> > st(1, std::make_pair(c.ax, c.ay));
+		st.insert(st.end(), c.others.begin(), c.others.end());
+		for (size_t k = 0; k < st.size(); ++k)
+		{
+			if (st[k].first > (float) b[2] - 12 - chip_w - 30) ++cover_r;
+			if (st[k].first < (float) b[0] + 12 + chip_w + 30) ++cover_l;
+		}
+	}
+	const bool left = cover_l < cover_r;
+	const float cx0 = left ? (float) b[0] + 12 : (float) b[2] - 12 - chip_w, cx1 = cx0 + chip_w;
+	const float recv = left ? cx1 : cx0, dir = left ? -1.0f : 1.0f;
+
+	// The column's order decides how many leaders cross. Top to bottom by the
+	// stands' height, and among stands at one height - a row of gates - nearest
+	// the column first: that stand's leader is the short, level one at the top,
+	// and each further one drops below the last instead of cutting across it.
+	vector<float> key(cs.size(), 0.0f);
+	for (size_t i = 0; i < order.size(); ++i)
+	{
+		const Callout & c = cs[order[i]];
+		// a group sorts by its member nearest the column: that is where its
+		// leaders leave the pack, and a centroid put spread groups mid-column
+		float best = c.ay - 0.25f * fabsf(c.ax - recv);
+		for (size_t k = 0; k < c.others.size(); ++k)
+			best = Max(best, c.others[k].second - 0.25f * fabsf(c.others[k].first - recv));
+		key[order[i]] = best;
+	}
+	std::sort(order.begin(), order.end(), [&key](size_t a, size_t b) { return key[a] > key[b]; });
 	float next_top = (float) b[3] - kTopClear;
 	vector<float> tops(order.size());
 	for (size_t oi = 0; oi < order.size(); ++oi)
@@ -818,13 +879,14 @@ void	WED_ModerationLayer::DrawChips(GUI_GraphState * g, vector<Callout> & cs)
 		float lead[4] = { stroke[0], stroke[1], stroke[2], 0.85f };
 		vector<std::pair<float, float> > stands(1, std::make_pair(c.ax, c.ay));
 		stands.insert(stands.end(), c.others.begin(), c.others.end());
-		DrawLeaders(stands, cx0 - NeckLen(stands.size(), 14.0f), mid, cx0, lead, 1.5f, 8.0f);
+		DrawLeaders(stands, HubX(stands, recv, dir, NeckLen(stands.size(), 14.0f)), mid, recv, lead, 1.5f, 8.0f);
 
 		Fill(cx0, bot, cx1, top, kFill);
 		{
 			// the bar receives the neck: as heavy as it is
 			const float bw = Max(pinned ? 3.0f : 2.0f, NeckWidth(1 + c.others.size()));
-			Fill(cx0 - bw + 1.0f, bot, cx0 + 1.0f, top, stroke);
+			if (left)	Fill(cx1 - 1.0f, bot, cx1 + bw - 1.0f, top, stroke);
+			else		Fill(cx0 - bw + 1.0f, bot, cx0 + 1.0f, top, stroke);
 		}
 
 		float x = cx0 + kPad;
@@ -873,8 +935,8 @@ void	WED_ModerationLayer::DrawChips(GUI_GraphState * g, vector<Callout> & cs)
 		open->x0 = 0;
 		SizeCard(*open);						// width, and y0 from the chip-level y1
 		const float w = open->x1 - open->x0;
-		open->x1 = cx0 - 10;
-		open->x0 = open->x1 - w;
+		if (left)	{ open->x0 = cx1 + 20; open->x1 = open->x0 + w; }	// past the bar
+		else		{ open->x1 = cx0 - 10; open->x0 = open->x1 - w; }
 		vector<string> lines;
 		float th = open->id == mTrayID ? TrayLines(*open, lines) : 0;
 		DrawCard(g, *open, open->id == mPinnedID, false, th);
