@@ -38,14 +38,17 @@
 
 	CALLOUTS for the selected stands (an airport or group counts as its ramp
 	starts), at a density that fits how many there are:
-	  up to 5    a full card per stand, beside it:
+	Stands with the same signature on screen share ONE callout, with a leader
+	from each: they are the same entry, and saying it once is the point. The
+	tier below counts those shared callouts, not stands.
+	  up to 5    a full card per entry, beside it:
 	                 [flag] ZBAA  02-PIN-C                      (pin)
 	                 ------------------------------------------------ top edge
 	                 | Airlines   DAL UAL
 	                 | Updated (M)   C100
 	                 | Passenger | Jets | Gate
 	                 | v 1 to check     <- hover: the operator tray
-	  6 to 40    a one-line chip per stand in a column at the map's right edge,
+	  6 to 40    a one-line chip per entry in a column at the map's right edge,
 	             with a leader back to its stand; hovering a chip opens its card
 	  more       a legend instead: one row per distinct signature, with a count
 	             and the issues; hovering a row rings its stands, clicking it
@@ -106,10 +109,15 @@ private:
 		std::vector<std::string>	diff;		// against the pinned stand
 		std::vector<int>			diff_kind;	// 1 added, -1 removed, 0 changed, 2 same
 		int						n_add, n_rem, n_chg;
+		// One callout speaks for every on-screen stand with the same signature:
+		// their anchors hang off it, and the label says how many.
+		std::string				label;			// the name shown: "03-MIX-CDE x4", "01-CONTROL +3"
+		std::vector<std::pair<float, float> >	others;	// the other stands' anchors
 	};
 
 	void				Collect(std::vector<Callout> & out);
 	void				Diff(const WED_ModerationEntry & base, Callout & c) const;
+	void				Group(std::vector<Callout> & cs, std::vector<Callout> & out) const;
 	const Flag *		FlagFor(const std::string & ioc);
 	void				SizeCard(Callout & c) const;
 	float				TrayLines(const Callout & c, std::vector<std::string> & lines) const;

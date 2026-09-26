@@ -328,6 +328,7 @@ void	WED_ModerationLayer::Collect(vector<Callout> & out)
 		WED_ModerationDescribe(ramps[i], WED_GetParentAirport(ramps[i]), c.e);
 		c.x0 = c.y0 = c.x1 = c.y1 = 0;
 		c.n_add = c.n_rem = c.n_chg = 0;
+		c.label = c.e.ramp_name;
 		out.push_back(c);
 	}
 }
@@ -351,11 +352,71 @@ void	WED_ModerationLayer::Diff(const WED_ModerationEntry & base, Callout & c) co
 	if (c.diff.empty())						{ c.diff.push_back("= same entry as the pinned stand"); c.diff_kind.push_back(2); }
 }
 
+// On-screen stands with the same signature become one callout. It stands at the
+// topmost of them (or at the pinned one, which must keep its own card), and the
+// rest hang their leaders off it. Off-screen stands are dropped - nothing here
+// could point at them.
+void	WED_ModerationLayer::Group(vector<Callout> & cs, vector<Callout> & out) const
+{
+	out.clear();
+	std::map<string, vector<size_t> > by_sig;
+	vector<string> order;
+	for (size_t i = 0; i < cs.size(); ++i)
+	{
+		if (!cs[i].on_screen) continue;
+		vector<size_t> & v = by_sig[cs[i].e.signature];
+		if (v.empty()) order.push_back(cs[i].e.signature);
+		v.push_back(i);
+	}
+	for (size_t o = 0; o < order.size(); ++o)
+	{
+		vector<size_t> & m = by_sig[order[o]];
+		// topmost first; stands in a row tie on y, so then by name - the card is
+		// headed by 01-CONTROL, not by whichever copy the selection set gave first
+		std::sort(m.begin(), m.end(), [&cs](size_t a, size_t b) {
+			if (cs[a].ay != cs[b].ay) return cs[a].ay > cs[b].ay;
+			return cs[a].e.ramp_name < cs[b].e.ramp_name; });
+		size_t rep = m[0];
+		for (size_t k = 0; k < m.size(); ++k) if (cs[m[k]].id == mPinnedID) rep = m[k];
+
+		Callout c = cs[rep];
+		bool same_name = true;
+		vector<string> names;
+		for (size_t k = 0; k < m.size(); ++k)
+		{
+			names.push_back(cs[m[k]].e.ramp_name);
+			if (cs[m[k]].e.ramp_name != c.e.ramp_name) same_name = false;
+			if (m[k] != rep) c.others.push_back(std::make_pair(cs[m[k]].ax, cs[m[k]].ay));
+		}
+		if (m.size() > 1)
+		{
+			char buf[32];
+			snprintf(buf, sizeof(buf), same_name ? " x%d" : " +%d", same_name ? (int) m.size() : (int) m.size() - 1);
+			c.label = c.e.ramp_name + buf;
+
+			// Say it in words too, and name them when the names differ.
+			string line;
+			snprintf(buf, sizeof(buf), "= the same entry at %d stands", (int) m.size());
+			line = buf;
+			if (!same_name)
+			{
+				std::sort(names.begin(), names.end());
+				names.erase(std::unique(names.begin(), names.end()), names.end());
+				line += ":";
+				for (size_t k = 0; k < names.size(); ++k) line += (k ? ", " : " ") + names[k];
+			}
+			c.diff.insert(c.diff.begin(), line);
+			c.diff_kind.insert(c.diff_kind.begin(), 3);
+		}
+		out.push_back(c);
+	}
+}
+
 // Width and height of a card; x0/y1 are left for the caller to place.
 void	WED_ModerationLayer::SizeCard(Callout & c) const
 {
 	const WED_ModerationEntry & e = c.e;
-	float w = TextW(e.icao) + TextW(e.ramp_name) + LineH() * 1.6f + 40 + (c.id == mPinnedID ? TextW("BASE") + 6 : 0);
+	float w = TextW(e.icao) + TextW(c.label) + LineH() * 1.6f + 40 + (c.id == mPinnedID ? TextW("BASE") + 6 : 0);
 	w = Max(w, TextW("Airlines") + 10 + TextW(AirlinesText(e)));
 	w = Max(w, TextW(StateText(e)) + 20 + TextW(SizeText(e)));
 	w = Max(w, TextW(KindText(e)));
@@ -435,6 +496,8 @@ void	WED_ModerationLayer::DrawCard(GUI_GraphState * g, Callout & c, bool pinned,
 	if (leader)
 	{
 		// stand -> elbow -> the card's top-left corner, arrowhead at the stand
+		// The shared stands join the card's own leader at its elbow, so a group
+		// reads as one line fanning out to its stands.
 		glColor4fv(stroke);
 		glLineWidth(2.0f);
 		glBegin(GL_LINE_STRIP);
@@ -443,11 +506,24 @@ void	WED_ModerationLayer::DrawCard(GUI_GraphState * g, Callout & c, bool pinned,
 			glVertex2f(x0 - 16, edge);
 			glVertex2f(x0, edge);
 		glEnd();
-		glBegin(GL_TRIANGLES);
-			glVertex2f(c.ax, c.ay);
-			glVertex2f(c.ax + 10, c.ay - 5);
-			glVertex2f(c.ax + 10, c.ay + 5);
+		glLineWidth(1.5f);
+		glBegin(GL_LINES);
+		for (size_t k = 0; k < c.others.size(); ++k)
+		{
+			glVertex2f(c.others[k].first + 6, c.others[k].second);
+			glVertex2f(x0 - 16, edge);
+		}
 		glEnd();
+		glBegin(GL_TRIANGLES);
+		for (size_t k = 0; k <= c.others.size(); ++k)
+		{
+			const float ax = k == 0 ? c.ax : c.others[k - 1].first, ay = k == 0 ? c.ay : c.others[k - 1].second;
+			glVertex2f(ax, ay);
+			glVertex2f(ax + 10, ay - 5);
+			glVertex2f(ax + 10, ay + 5);
+		}
+		glEnd();
+		glLineWidth(1.0f);
 	}
 
 	Fill(x0, bottom, x1, edge, kFill);
@@ -479,7 +555,7 @@ void	WED_ModerationLayer::DrawCard(GUI_GraphState * g, Callout & c, bool pinned,
 		name_end -= bw + 6;
 		Txt(g, stroke, pin_x - 10 - bw, base_y, "BASE");
 	}
-	Txt(g, kWhite, hx, base_y, Elide(e.ramp_name, name_end - hx).c_str());
+	Txt(g, kWhite, hx, base_y, Elide(c.label, name_end - hx).c_str());
 
 	// pin: filled when this is the base
 	g->SetState(0, 0, 0, 0, 1, 0, 0);
@@ -509,7 +585,7 @@ void	WED_ModerationLayer::DrawCard(GUI_GraphState * g, Callout & c, bool pinned,
 	for (size_t i = 0; i < c.diff.size(); ++i)
 	{
 		const int k = c.diff_kind[i];
-		const float * col = k == -1 ? kRed : k == 0 ? kAmber : kGreen;		// +, same: green
+		const float * col = k == -1 ? kRed : k == 0 ? kAmber : k == 3 ? kMuted : kGreen;	// +, same: green; group note: muted
 		Txt(g, col, x0 + kPad, y - asc, Elide(c.diff[i], x1 - x0 - kPad * 2).c_str());
 		y -= lh;
 	}
@@ -660,7 +736,7 @@ void	WED_ModerationLayer::DrawChips(GUI_GraphState * g, vector<Callout> & cs)
 		if (cs[i].on_screen)
 		{
 			order.push_back(i);
-			chip_w = Max(chip_w, TextW(cs[i].e.icao) + TextW(cs[i].e.ramp_name) + lh * 1.6f + 110);
+			chip_w = Max(chip_w, TextW(cs[i].e.icao) + TextW(cs[i].label) + lh * 1.6f + 110);
 		}
 	chip_w = Min(chip_w, 340.0f);
 	const float cx1 = (float) b[2] - 12, cx0 = cx1 - chip_w;
@@ -703,16 +779,20 @@ void	WED_ModerationLayer::DrawChips(GUI_GraphState * g, vector<Callout> & cs)
 		float lead[4] = { stroke[0], stroke[1], stroke[2], 0.8f };
 		glColor4fv(lead);
 		glLineWidth(1.5f);
-		glBegin(GL_LINE_STRIP);
-			glVertex2f(c.ax + 6, c.ay);
-			glVertex2f(cx0 - 14, mid);
-			glVertex2f(cx0, mid);
-		glEnd();
-		glBegin(GL_TRIANGLES);
-			glVertex2f(c.ax, c.ay);
-			glVertex2f(c.ax + 8, c.ay - 4);
-			glVertex2f(c.ax + 8, c.ay + 4);
-		glEnd();
+		for (size_t k = 0; k <= c.others.size(); ++k)
+		{
+			const float ax = k == 0 ? c.ax : c.others[k - 1].first, ay = k == 0 ? c.ay : c.others[k - 1].second;
+			glBegin(GL_LINE_STRIP);
+				glVertex2f(ax + 6, ay);
+				glVertex2f(cx0 - 14, mid);
+				glVertex2f(cx0, mid);
+			glEnd();
+			glBegin(GL_TRIANGLES);
+				glVertex2f(ax, ay);
+				glVertex2f(ax + 8, ay - 4);
+				glVertex2f(ax + 8, ay + 4);
+			glEnd();
+		}
 
 		Fill(cx0, bot, cx1, top, kFill);
 		glColor4fv(stroke);
@@ -755,7 +835,7 @@ void	WED_ModerationLayer::DrawChips(GUI_GraphState * g, vector<Callout> & cs)
 			Txt(g, kAmber, rx, by, buf);
 			rx -= 8;
 		}
-		Txt(g, kWhite, x, by, Elide(e.ramp_name, rx - x).c_str());
+		Txt(g, kWhite, x, by, Elide(c.label, rx - x).c_str());
 
 		Hit hc = { Hit::hit_Chip, cx0, bot, cx1, top, c.id, "" };
 		mHits.push_back(hc);
@@ -922,9 +1002,13 @@ void	WED_ModerationLayer::DrawSelected(bool inCurrent, GUI_GraphState * g)
 		for (size_t i = 0; i < cs.size(); ++i)
 			if (cs[i].id != mPinnedID) Diff(*base, cs[i]);
 
-	if (cs.size() <= kMaxCards)			DrawCards(g, cs);
-	else if (cs.size() <= kMaxChips)	DrawChips(g, cs);
-	else								DrawLegend(g, cs);
+	// The tier counts entries on screen, not stands: ten copies of one stand
+	// are one card with ten leaders.
+	vector<Callout> shared;
+	Group(cs, shared);
+	if (shared.size() <= kMaxCards)			DrawCards(g, shared);
+	else if (shared.size() <= kMaxChips)	DrawChips(g, shared);
+	else									DrawLegend(g, cs);
 
 	glEnable(GL_CULL_FACE);
 	g->SetState(0, 0, 0, 0, 0, 0, 0);
