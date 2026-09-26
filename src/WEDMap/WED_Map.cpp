@@ -30,6 +30,7 @@
 #include "WED_Airport.h"
 #include "GUI_GraphState.h"
 #include "WED_Colors.h"
+#include "GUI_DrawUtils.h"
 #include "GUI_Fonts.h"
 #include "WED_Menus.h"
 #include "XESConstants.h"
@@ -62,7 +63,8 @@
 
 WED_Map::WED_Map(IResolver * in_resolver, GUI_Commander * cmdr) : GUI_Commander(cmdr), mResolver(in_resolver), mTool(NULL), mClickLayer(NULL),
 					mIsDownCount(0), mIsDownExtraCount(0),
-					mSelectTool(NULL), mRotateMode(false), mRotating(false), mRotStartAngle(0), mRotStartView(0)
+					mSelectTool(NULL), mRotateMode(false), mRotating(false), mRotStartAngle(0), mRotStartView(0),
+					mClickHeld(false), mArrowOn(false), mArrowX0(0), mArrowY0(0), mArrowX1(0), mArrowY1(0)
 {
 		int k_reg[4] = { 0, 0, 4, 2 };
 		int k_act[4] = { 0, 0, 4, 2 };
@@ -141,8 +143,8 @@ void		WED_Map::SetRotateMode(bool on)
 	if (on && mSelectTool && mTool != mSelectTool) on = false;		// the select tool only
 	mRotateMode = on;
 	mRotating = false;
-	// PROTOTYPE: a fixed 30 degrees until the measuring arrow exists
-	SetViewRotation(on ? 30.0 : 0.0);
+	mClickHeld = mArrowOn = false;
+	if (!on) SetViewRotation(0.0);			// north up; turning on starts from where it is
 	Refresh();
 }
 
@@ -263,12 +265,38 @@ void		WED_Map::Draw(GUI_GraphState * state)
 	{
 		glMatrixMode(GL_MODELVIEW);
 		glPopMatrix();
+	}
+	if (mArrowOn)
+	{
+		// the measuring arrow, drawn as a placed object's heading handle
+		state->SetState(0,0,0,0,1,0,0);
+		glColor4fv(WED_Color_RGBA(wed_ControlHandle));
+		glLineWidth(2.0);
+		glBegin(GL_LINES);
+			glVertex2i(mArrowX0, mArrowY0); glVertex2i(mArrowX1, mArrowY1);
+		glEnd();
+		glLineWidth(1.0);
+		const double dx = mArrowX1 - mArrowX0, dy = mArrowY1 - mArrowY0;
+		GUI_PlotIcon(state, "handle_square.png", mArrowX0, mArrowY0, 0, 1.0);
+		GUI_PlotIcon(state, "handle_arrowhead.png", mArrowX1, mArrowY1, atan2(dx, dy) * RAD_TO_DEG, 1.0);
+		const double a = atan2(dy, dx) * RAD_TO_DEG, snap = floor(a / 90.0 + 0.5) * 90.0;
+		char abuf[64];
+		snprintf(abuf, sizeof(abuf), "%+.0f deg to level", snap - a);
+		const float amber[4] = { 1.0f, 0.75f, 0.3f, 1.0f };
+		GUI_FontDraw(state, font_UI_Basic, amber, mArrowX1 + 12, mArrowY1 + 8, abuf);
+	}
+	if (mRotateMode)
+	{
 		// what is going on, and how to get out, in the screen's own frame
-		char rbuf[128];
-		snprintf(rbuf, sizeof(rbuf), "View rotated %.0f deg - Shift+right-drag to turn, other tools turn it back north up", view_rot);
+		char rbuf[160];
+		snprintf(rbuf, sizeof(rbuf), "Rotate view %.0f deg - drag along a row to level it, Shift+right-drag to turn; other tools turn it back north up", view_rot);
 		const float amber[4] = { 1.0f, 0.75f, 0.3f, 1.0f };
 		GUI_FontDraw(state, font_UI_Basic, amber, b[0] + 5, b[3] - 4.0 * GUI_GetLineHeight(font_UI_Basic), rbuf);
+	}
+	if (view_rot != 0)
+	{
 		// a north arrow, turned with the map
+		const float amber[4] = { 1.0f, 0.75f, 0.3f, 1.0f };
 		const double nx = b[2] - 40, ny = b[1] + 60, a = (90.0 + view_rot) * DEG_TO_RAD;
 		state->SetState(0,0,0,0,1,0,0);
 		glColor4fv(amber);
@@ -520,6 +548,9 @@ int			WED_Map::MouseDown(int x, int y, int button)
 		{
 			bool draw_ent_v, draw_ent_s, wants_sel, wants_clicks;
 			(*l)->GetCaps(draw_ent_v, draw_ent_s, wants_sel, wants_clicks);
+			// the tools are layers too; in rotate mode the select tool's click is
+			// held back below, so it must not take it here first
+			if (mRotateMode && *l == mTool) continue;
 			if(wants_clicks)
 			{
 				if((*l)->HandleClickDown(x,y,button, GetModifiersNow())) {
@@ -528,6 +559,16 @@ int			WED_Map::MouseDown(int x, int y, int button)
 				}
 			}
 		}
+	}
+	if (button == 0 && mClickLayer == NULL && mRotateMode && mTool == mSelectTool)
+	{
+		// held until it is known to be a click or a measuring drag
+		mClickHeld = true;
+		mArrowOn = false;
+		GUI_Pane::GetMouseLocNow(&mArrowX0, &mArrowY0);		// screen coords
+		mArrowX1 = mArrowX0; mArrowY1 = mArrowY0;
+		Refresh();
+		return 1;
 	}
 	if(button == 0 && mClickLayer == NULL && mTool && mTool->HandleClickDown(x,y,button, GetModifiersNow())) { mClickLayer=mTool; }
 
@@ -552,6 +593,13 @@ void		WED_Map::MouseDrag(int x, int y, int button)
 		Refresh();
 		return;
 	}
+	if (mClickHeld && button == 0)
+	{
+		GUI_Pane::GetMouseLocNow(&mArrowX1, &mArrowY1);
+		if (!mArrowOn && (abs(mArrowX1 - mArrowX0) > 8 || abs(mArrowY1 - mArrowY0) > 8)) mArrowOn = true;
+		Refresh();
+		return;
+	}
 	ToMap(x, y);
 	// Turned, the select tool selects but does not drag: nothing is moved or
 	// drawn in a rotated frame. Layers (the callouts) still get their drags.
@@ -571,6 +619,29 @@ void		WED_Map::MouseUp  (int x, int y, int button)
 	{
 		--mIsDownCount;
 		mRotating = false;
+		Refresh();
+		return;
+	}
+	if (mClickHeld && button == 0)
+	{
+		mClickHeld = false;
+		--mIsDownCount;
+		if (mArrowOn)
+		{
+			// Level the arrow: turn by the least that puts it on 0/90/180/270.
+			mArrowOn = false;
+			const double a = atan2((double) (mArrowY1 - mArrowY0), (double) (mArrowX1 - mArrowX0)) * RAD_TO_DEG;
+			const double snap = floor(a / 90.0 + 0.5) * 90.0;
+			SetViewRotation(GetViewRotation() + (snap - a));
+		}
+		else if (mTool)
+		{
+			// only a click: give it to the tool now, where it went down
+			int cx = mArrowX0, cy = mArrowY0;
+			ToMap(cx, cy);
+			if (mTool->HandleClickDown(cx, cy, 0, GetModifiersNow()))
+				mTool->HandleClickUp(cx, cy, 0, GetModifiersNow());
+		}
 		Refresh();
 		return;
 	}

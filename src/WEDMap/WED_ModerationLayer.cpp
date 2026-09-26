@@ -1050,7 +1050,7 @@ void	WED_ModerationLayer::DrawLegend(GUI_GraphState * g, vector<Callout> & cs)
 	Txt(g, kWhite, x0 + 1, edge + (HeadH() - asc) * 0.5f, buf);
 	if (issues)
 	{
-		snprintf(buf, sizeof(buf), "%d operators to verify", issues);
+		snprintf(buf, sizeof(buf), "%d to verify", issues);
 		Txt(g, kAmber, x1 - TextW(buf), edge + (HeadH() - asc) * 0.5f, buf);
 	}
 	g->SetState(0, 0, 0, 0, 1, 0, 0);
@@ -1267,9 +1267,9 @@ void	WED_ModerationLayer::DrawOverview(GUI_GraphState * g)
 		Fill(x0 + kPad, rb + 3, x0 + kPad + 10, rt - 3, sw);
 		const float ty = rb + (rh - asc) * 0.5f;
 		Txt(g, row.reviewed ? kMuted : kWhite, x0 + kPad + 16, ty, row.name.c_str());
-		// in words: "1 operator to verify", or why there is nothing to verify against
+		// in words: "2 to verify", or why there is nothing to verify against
 		string right;
-		if (row.n) { snprintf(buf, sizeof(buf), "%d operator%s to verify", row.n, row.n == 1 ? "" : "s"); right = buf; }
+		if (row.n) { snprintf(buf, sizeof(buf), "%d to verify", row.n); right = buf; }
 		else right = "no airport data";
 		Txt(g, kAmber, x1 - kPad - TextW(right), ty, right.c_str());
 		if (row.reviewed)

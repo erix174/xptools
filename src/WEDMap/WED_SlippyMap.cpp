@@ -313,6 +313,19 @@ void	WED_SlippyMap::DrawVisualization(bool inCurrent, GUI_GraphState * g)
 	int bnds[4];
 	GetHost()->GetBounds(bnds);
 	GLfloat white[4] = { 1, 1, 1, 1 };
+
+	// The status line and the attribution belong to the screen, not the map:
+	// while the view is turned (WED_Map), undo the turn for them.
+	const double rot = GetZoomer()->GetViewRotation();
+	if (rot != 0)
+	{
+		const double cx = (bnds[0] + bnds[2]) * 0.5, cy = (bnds[1] + bnds[3]) * 0.5;
+		glMatrixMode(GL_MODELVIEW);
+		glPushMatrix();
+		glTranslated(cx, cy, 0);
+		glRotated(-rot, 0, 0, 1);
+		glTranslated(-cx, -cy, 0);
+	}
 	GUI_FontDraw(g, font_UI_Basic, white, bnds[0] + 10, bnds[1] + 40, str);
 
 	if(mMapMode <= PREDEFINED_MAPS)
@@ -328,6 +341,11 @@ void	WED_SlippyMap::DrawVisualization(bool inCurrent, GUI_GraphState * g)
 			glVertex2f(bnds[2] - 10 - txtWidth, bnds[1]      );
 		glEnd();
 		GUI_FontDraw(g, font_UI_Small, white, bnds[2] - 5, bnds[1] + 2, attributions[mMapMode-1], align_Right);
+	}
+	if (rot != 0)
+	{
+		glMatrixMode(GL_MODELVIEW);
+		glPopMatrix();
 	}
 }
 

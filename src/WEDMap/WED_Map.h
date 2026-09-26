@@ -111,6 +111,14 @@ private:
 	bool				mRotating;			// a Shift+right-drag is turning the view
 	double				mRotStartAngle;		// screen angle of that drag's start, about the centre
 	double				mRotStartView;		// the view rotation when it began
+	// The measuring arrow: in rotate mode a left-drag draws an arrow, like a
+	// placed object's heading, and on release the view turns to put it on the
+	// nearest of 0/90/180/270. A left-click without a drag still selects - the
+	// click is held back from the tool until it is known not to be a drag, so
+	// measuring never clears the selection.
+	bool				mClickHeld;			// a left-down given to no layer, not yet to the tool
+	bool				mArrowOn;			// ...and it became a drag: the arrow is out
+	int					mArrowX0, mArrowY0, mArrowX1, mArrowY1;	// screen coords
 
 			void		ToMap(int& x, int& y) const;
 			double		ScreenAngle(int x, int y) const;

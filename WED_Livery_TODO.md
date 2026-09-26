@@ -59,9 +59,11 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
   - To persist it we need to know whether a Gateway upload carries earth.wed.xml. If it does not, the file has no carrier for it, and the Gateway would need its own field.
 - **Rotate view, prototype 2026-09-26 (approach B: turn the picture, not the map).**
   - **What it does:**
-    - The Rotate button turns the view to a fixed 30 degrees (the prototype, until the measuring arrow).
-    - Shift+right-drag turns it freely, with a detent every 45 degrees.
-    - Clicking the button again puts it north up.
+    - The Rotate button enters rotate mode, still north up.
+    - A left-drag draws a measuring arrow, in the same style as a placed object's heading handle. On release the view turns by the least that puts the arrow on 0, 90, 180 or 270 degrees.
+    - A left-click without a drag still selects: the click is held back from the tool until it is known to be a click.
+    - Shift+right-drag turns the view freely, with a detent every 45 degrees.
+    - Clicking the button again puts the view north up.
     - A status line and a north arrow show while it is turned.
   - **Guard rails:**
     - It works with the select (Vertex) tool only; pressing Rotate makes Vertex the tool.
@@ -70,7 +72,6 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
   - The angle lives in the window only, so a document always opens north up.
   - Moderation cards, chips, overview and badges stay level with the screen.
   - **Still to do:**
-    - The measuring arrow: drag out a heading, release, and that line becomes horizontal.
     - Marquee under rotation. It is withheld today with the other drags; the Marquee tool itself turns the view off.
     - WED_MapBkgnd's axis-aligned rectangle.
 
