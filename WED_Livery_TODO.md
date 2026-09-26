@@ -99,7 +99,7 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
 
 ## Upstream PRs (ready, not sent)
 
-- Local branches off `origin/wed_270_release`, each one built on its own, in worktree `WED/xptools-upstream`, backed up to `local`.
+- Local branches off `origin/wed_270_release` (nine now), each one built on its own, in worktree `WED/xptools-upstream`, backed up to `local`.
 - When the feature itself goes up, rebase it onto these.
 
 | Branch | What |
@@ -110,8 +110,9 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
 | `upstream/exit-logging` | DEV log flush and exit-path logging |
 | `upstream/apt-unknown-rows` | Unknown apt.dat rows are skipped and reported instead of failing the file. The 1313-free version, tested end to end on 2.7 |
 | `upstream/parking-icons-d-e` | ClassD and ClassE icons fill their frame like the other four |
-| *(to split)* | `GUI_Window::ClickDown` finishes a lost click instead of asserting (on the feature branch, `774cde5`) |
-| *(to split)* | `WED_MapZoomerNew::CenterOn`: centring on a point no longer zooms out a little each time (on the feature branch, `1cef270`) |
+| `upstream/lost-mouse-up` | `GUI_Window::ClickDown` finishes a click whose mouse-up was lost instead of asserting (split from `774cde5`) |
+| `upstream/center-keeps-zoom` | `CenterOnPoint` (3D preview's centre on camera) keeps the zoom instead of zooming out a little each time (split from `1cef270`) |
+| `feat_moderator_folders` | Moderator mode hierarchy shortcuts from Julian's "WED Moderator Requested Changes" pp. 2-6, and a null-airport crash on a failed Gateway import. Cherry-picked onto this branch as `94249f6` |
 
 `archive/stash-2026-09-13-wip` preserves the pre-commit WIP stash of 2026-09-13. Everything in it was superseded by the branch; it was removed from the stash list.
 
