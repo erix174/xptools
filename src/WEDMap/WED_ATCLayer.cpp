@@ -273,11 +273,12 @@ bool	WED_ATCLayer::DrawEntityStructure		(bool inCurrent, IGISEntity * entity, GU
 		DebugAssert(pos);
 		// Green, or the colour of the stand's moderation callout while it has one.
 		float rgb[3] = { 0, 1, 0 };
-		const bool tinted = WED_ModerationTintFor(pos, rgb);
+		float k = 1.0f;
+		const bool tinted = WED_ModerationTintFor(pos, rgb, &k);
 		if(GetZoomer()->GetPPM() > 5)
-			glColor4f(rgb[0], rgb[1], rgb[2], tinted ? 0.35 : 0.2); // avoid getting more opaque when StructureLayer preview kicks in as well
+			glColor4f(rgb[0], rgb[1], rgb[2], tinted ? 0.35 * k : 0.2); // avoid getting more opaque when StructureLayer preview kicks in as well
 		else
-			glColor4f(rgb[0], rgb[1], rgb[2], tinted ? 0.7 : 0.4);
+			glColor4f(rgb[0], rgb[1], rgb[2], tinted ? 0.7 * k : 0.4);
 		WED_ATCLayer_DrawAircraft(pos, g, GetZoomer());
 
 		Point2 tips[4];

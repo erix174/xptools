@@ -51,9 +51,29 @@ using std::string;
 using std::vector;
 using std::set;
 
-bool	WED_ModerationTintFor(const WED_RampPosition * ramp, float out_rgb[3])
+static bool				sModerationView = false;
+static std::set<int>	sIssueIDs;			// Moderation View, last frame: the stands to check
+
+bool	WED_ModerationViewOn(void)			{ return sModerationView; }
+void	WED_SetModerationView(bool on)		{ sModerationView = on; }
+
+bool	WED_ModerationTintFor(const WED_RampPosition * ramp, float out_rgb[3], float * alpha_scale)
 {
 	if (!ramp || !WED_ModerationEnabled()) return false;
+	if (alpha_scale) *alpha_scale = 1.0f;
+	// op type None parks nothing: a grey outline, whatever its list says
+	if (ramp->GetRampOperationType() == ramp_operation_None)
+	{
+		out_rgb[0] = out_rgb[1] = out_rgb[2] = 0.62f;
+		if (alpha_scale) *alpha_scale = 0.6f;
+		return true;
+	}
+	if (sModerationView && !sIssueIDs.count(ramp->GetID()))
+	{
+		out_rgb[0] = out_rgb[1] = out_rgb[2] = 0.55f;
+		if (alpha_scale) *alpha_scale = 0.45f;
+		return true;
+	}
 	float rgba[4];
 	WED_ModerationColour(WED_ModerationSignature(const_cast<WED_RampPosition *>(ramp)), rgba);
 	out_rgb[0] = rgba[0]; out_rgb[1] = rgba[1]; out_rgb[2] = rgba[2];
@@ -922,6 +942,13 @@ void	WED_ModerationLayer::DrawChips(GUI_GraphState * g, vector<Callout> & cs)
 			Txt(g, kAmber, rx, by, buf);
 			rx -= 8;
 		}
+		if (e.auto_filled || e.op_type == ramp_operation_None)
+		{
+			const char * tag = e.op_type == ramp_operation_None ? "None" : "A";		// the watermark, as on the card
+			rx -= TextW(tag);
+			Txt(g, kMuted, rx, by, tag);
+			rx -= 8;
+		}
 		Txt(g, kWhite, x, by, Elide(c.label, rx - x).c_str());
 
 		Hit hc = { Hit::hit_Chip, cx0, bot, cx1, top, c.id, "" };
@@ -1051,6 +1078,182 @@ void	WED_ModerationLayer::DrawLegend(GUI_GraphState * g, vector<Callout> & cs)
 	}
 }
 
+// Select one stand and bring it to the middle of the map, at this zoom.
+void	WED_ModerationLayer::Focus(int ramp_id)
+{
+	WED_Thing * wrl = WED_GetWorld(GetResolver());
+	ISelection * sel = WED_GetSelect(GetResolver());
+	WED_RampPosition * r = wrl ? dynamic_cast<WED_RampPosition *>(wrl->FetchPeer(ramp_id)) : NULL;
+	if (!r || !sel) return;
+	IOperation * op = dynamic_cast<IOperation *>(sel);
+	if (op) op->StartOperation("Select Ramp Start");
+	sel->Clear();
+	sel->Select(r);
+	if (op) op->CommitOperation();
+	Point2 ll;
+	r->GetLocation(gis_Geo, ll);
+	double w, s, e, n;
+	GetZoomer()->GetMapVisibleBounds(w, s, e, n);
+	GetZoomer()->ZoomShowArea(ll.x() - (e - w) / 2, ll.y() - (n - s) / 2, ll.x() + (e - w) / 2, ll.y() + (n - s) / 2);
+	mReviewed.insert(ramp_id);
+	GetHost()->Refresh();
+}
+
+// The Moderation View's opener: the airport at a glance, top left of the map.
+//     [flag] ZBAA  Moderation View
+//     ---------------------------------------------
+//     | 34 ramp starts        12 / 34 reviewed  [====   ]
+//     | 9 to check  7 distinct entries  5 auto-filled  2 None
+//     | To check:
+//     | [] 01-CONTROL                        ?1   (click: select and centre)
+//     |    ...
+//     | Shift+X / Ctrl+Shift+X step through them
+// Reviewed = shown as the one selected stand while the view is on, this session
+// only: keeping it needs a home in the file, which is an open question (TODO).
+void	WED_ModerationLayer::DrawOverview(GUI_GraphState * g)
+{
+	WED_Airport * apt = WED_GetCurrentAirport(GetResolver());
+	sIssueIDs.clear();
+	if (!apt) return;
+
+	vector<WED_RampPosition *> ramps;
+	WED_ModerationRamps(apt, ramps);
+	struct Row { int id; string name; string sig; int n; bool reviewed; };
+	vector<Row> issues;
+	set<string> sigs;
+	int n_auto = 0, n_none = 0;
+	string icao, country;
+	for (size_t i = 0; i < ramps.size(); ++i)
+	{
+		WED_ModerationEntry e;
+		WED_ModerationDescribe(ramps[i], apt, e);
+		if (icao.empty()) { icao = e.icao; country = e.country; }
+		sigs.insert(e.signature);
+		if (e.auto_filled) ++n_auto;
+		if (e.op_type == ramp_operation_None) ++n_none;
+		if (WED_ModerationHasIssue(e))
+		{
+			sIssueIDs.insert(ramps[i]->GetID());
+			Row r = { ramps[i]->GetID(), e.ramp_name, e.signature, e.n_to_check, mReviewed.count(ramps[i]->GetID()) > 0 };
+			issues.push_back(r);
+		}
+	}
+	int n_rev = 0;
+	for (size_t i = 0; i < ramps.size(); ++i) if (mReviewed.count(ramps[i]->GetID())) ++n_rev;
+
+	double b[4];
+	GetZoomer()->GetPixelBounds(b[0], b[1], b[2], b[3]);
+	const float lh = LineH(), asc = Asc();
+	const float x0 = (float) b[0] + 10, w = 380, x1 = x0 + w;
+	const float top = (float) b[3] - 10 - 3 * lh - 8;			// below the map's own three lines
+	const size_t kRows = 10;
+	const size_t shown = issues.size() < kRows ? issues.size() : kRows;
+	const float rh = lh + 4;
+	const float body_h = kPad + 2 * RowH() + 6 + (issues.empty() ? RowH() : lh + shown * rh + (issues.size() > shown ? lh : 0) + lh) + kPad;
+	const float edge = top - HeadH(), bottom = edge - body_h;
+
+	// a ring on every stand to check, so they stand out from the greyed rest
+	g->SetState(0, 0, 0, 0, 1, 0, 0);
+	glColor4fv(kAmber);
+	glLineWidth(2.0f);
+	for (size_t i = 0; i < ramps.size(); ++i)
+	{
+		if (!sIssueIDs.count(ramps[i]->GetID())) continue;
+		Point2 ll;
+		ramps[i]->GetLocation(gis_Geo, ll);
+		Point2 px = GetZoomer()->LLToPixel(ll);
+		if (px.x() < b[0] || px.x() > b[2] || px.y() < b[1] || px.y() > b[3]) continue;
+		Circle((float) px.x(), (float) px.y(), 15, false);
+	}
+	glLineWidth(1.0f);
+
+	// header above the top edge, as the cards
+	float hx = x0 + 1;
+	const float hb = edge + (HeadH() - lh) * 0.5f;
+	if (const Flag * f = FlagFor(country))
+	{
+		DrawFlag(g, f->tex, f->w, f->h, hx, hb + 1, lh - 2);
+		hx += (lh - 2) * (float) f->w / (float) f->h + 5;
+	}
+	const float by = hb + (lh - asc) * 0.5f + 1;
+	Txt(g, kWhite, hx, by, icao.c_str());
+	hx += TextW(icao) + 7;
+	Txt(g, kAmber, hx, by, "Moderation View");
+
+	g->SetState(0, 0, 0, 0, 1, 0, 0);
+	Fill(x0, bottom, x1, edge, kFill);
+	glColor4fv(kAmber);
+	glLineWidth(2.0f);
+	glBegin(GL_LINE_STRIP);
+		glVertex2f(x0, bottom); glVertex2f(x0, edge); glVertex2f(x1, edge);
+	glEnd();
+	glLineWidth(1.0f);
+	Hit hp = { Hit::hit_Panel, x0, bottom, x1, top, -1, "" };
+	mHits.push_back(hp);
+
+	char buf[128];
+	float y = edge - kPad;
+	snprintf(buf, sizeof(buf), "%d ramp starts", (int) ramps.size());
+	Txt(g, kWhite, x0 + kPad, y - asc, buf);
+	snprintf(buf, sizeof(buf), "%d / %d reviewed", n_rev, (int) ramps.size());
+	const float bar_x1 = x1 - kPad, bar_x0 = bar_x1 - 90;
+	Txt(g, kWhite, bar_x0 - 8 - TextW(buf), y - asc, buf);
+	{
+		const float bt = y - lh * 0.5f + 3, bb = bt - 6;
+		const float track[4] = { 1, 1, 1, 0.18f };
+		g->SetState(0, 0, 0, 0, 1, 0, 0);
+		Fill(bar_x0, bb, bar_x1, bt, track);
+		if (!ramps.empty()) Fill(bar_x0, bb, bar_x0 + (bar_x1 - bar_x0) * n_rev / (float) ramps.size(), bt, kGreen);
+	}
+	y -= RowH();
+	snprintf(buf, sizeof(buf), "%d to check    %d distinct entries    %d auto-filled    %d None",
+		(int) issues.size(), (int) sigs.size(), n_auto, n_none);
+	Txt(g, issues.empty() ? kMuted : kAmber, x0 + kPad, y - asc, Elide(buf, w - kPad * 2).c_str());
+	y -= RowH() + 6;
+
+	if (issues.empty())
+	{
+		Txt(g, kGreen, x0 + kPad, y - asc, "Nothing to check at this airport.");
+		return;
+	}
+	Txt(g, kMuted, x0 + kPad, y - asc, "To check - click one to select it:");
+	y -= lh;
+	int mx, my;
+	GetHost()->GetMouseLocNow(&mx, &my);
+	for (size_t r = 0; r < shown; ++r)
+	{
+		const Row & row = issues[r];
+		const float rt = y, rb = y - rh;
+		if (Inside((float) mx, (float) my, x0, rb, x1, rt))
+		{
+			const float hl[4] = { 1, 1, 1, 0.10f };
+			g->SetState(0, 0, 0, 0, 1, 0, 0);
+			Fill(x0 + 2, rb, x1, rt, hl);
+		}
+		float sw[4];
+		WED_ModerationColour(row.sig, sw);
+		g->SetState(0, 0, 0, 0, 1, 0, 0);
+		Fill(x0 + kPad, rb + 3, x0 + kPad + 10, rt - 3, sw);
+		const float ty = rb + (rh - asc) * 0.5f;
+		Txt(g, row.reviewed ? kMuted : kWhite, x0 + kPad + 16, ty, row.name.c_str());
+		string right;
+		if (row.n) { snprintf(buf, sizeof(buf), "?%d", row.n); right = buf; }
+		else right = "no data";
+		Txt(g, kAmber, x1 - kPad - TextW(right), ty, right.c_str());
+		if (row.reviewed) DrawMark(g, WED_ModerationCode::v_Ok, x1 - kPad - TextW(right) - 20, rb + rh * 0.5f, lh * 0.5f);
+		Hit hf = { Hit::hit_Focus, x0, rb, x1, rt, row.id, "" };
+		mHits.push_back(hf);
+		y = rb;
+	}
+	if (issues.size() > shown)
+	{
+		snprintf(buf, sizeof(buf), "... and %d more", (int) (issues.size() - shown));
+		Txt(g, kMuted, x0 + kPad, y - asc - 1, buf);
+		y -= lh;
+	}
+	Txt(g, kMuted, x0 + kPad, y - asc - 2, "Shift+X / Ctrl+Shift+X: next / previous stand to check");
+}
+
 void	WED_ModerationLayer::DrawSelected(bool inCurrent, GUI_GraphState * g)
 {
 	if (!WED_ModerationEnabled()) { mHits.clear(); return; }
@@ -1076,12 +1279,29 @@ void	WED_ModerationLayer::DrawSelected(bool inCurrent, GUI_GraphState * g)
 
 	vector<Callout> cs;
 	Collect(cs);
-	if (cs.empty()) return;
 
 	// Counter-clockwise quads are back faces to WED's GL state (GUI_GraphState
 	// sets glFrontFace(GL_CW)); none of this is 3-D, so culling only ever hides
 	// fills. Off while drawing, on again after.
 	glDisable(GL_CULL_FACE);
+
+	if (sModerationView)
+	{
+		// one stand shown on its own counts as looked at
+		if (cs.size() == 1) mReviewed.insert(cs[0].id);
+		const std::set<int> before = sIssueIDs;
+		DrawOverview(g);
+		if (before != sIssueIDs) GetHost()->Refresh();		// the silhouettes used last frame's set
+	}
+	else if (!sIssueIDs.empty())
+		sIssueIDs.clear();
+
+	if (cs.empty())
+	{
+		glEnable(GL_CULL_FACE);
+		g->SetState(0, 0, 0, 0, 0, 0, 0);
+		return;
+	}
 
 	const WED_ModerationEntry * base = NULL;
 	for (size_t i = 0; i < cs.size(); ++i) if (cs[i].id == mPinnedID) base = &cs[i].e;
@@ -1135,6 +1355,11 @@ int		WED_ModerationLayer::HandleClickDown(int inX, int inY, int inButton, GUI_Ke
 				GetHost()->Refresh();
 				return 1;
 			}
+			if (pass == 1 && h.kind == Hit::hit_Focus)
+			{
+				Focus(h.ramp_id);
+				return 1;
+			}
 			if (pass == 1 && h.kind == Hit::hit_Chip && (modifiers & gui_ShiftFlag))
 			{
 				// shift-click a chip: make it the base, as the card's pin does
@@ -1162,7 +1387,7 @@ int		WED_ModerationLayer::HandleClickDown(int inX, int inY, int inButton, GUI_Ke
 			}
 			// A click on a card, chip or tray is ours - the map tool under it
 			// must not take it as a click on empty ground and drop the selection.
-			if (pass == 2 && (h.kind == Hit::hit_Card || h.kind == Hit::hit_Tray || h.kind == Hit::hit_Chip))
+			if (pass == 2 && (h.kind == Hit::hit_Card || h.kind == Hit::hit_Tray || h.kind == Hit::hit_Chip || h.kind == Hit::hit_Panel))
 				return 1;
 		}
 	return 0;

@@ -63,7 +63,11 @@ std::string	WED_ModerationSearchURL(const std::string & operator_name, const std
 // Selects the next (dir > 0) or previous ramp start of the current airport,
 // wrapping, in hierarchy order. Starts from the selected ramp start, or the
 // first one. Returns the ramp now selected, or NULL when the airport has none.
-WED_RampPosition *	WED_ModerationStep(IResolver * resolver, int dir);
+// issues_only: skip the stands WED_ModerationHasIssue() passes.
+WED_RampPosition *	WED_ModerationStep(IResolver * resolver, int dir, bool issues_only = false);
+
+// Every ramp start of the airport, in hierarchy order.
+void	WED_ModerationRamps(WED_Airport * apt, std::vector<WED_RampPosition *> & out);
 
 // The pop-out: if the stand lists operators that need checking, say which
 // and offer to open a web search for each. Nothing is shown otherwise.
@@ -117,6 +121,10 @@ struct WED_ModerationEntry {
 };
 
 void	WED_ModerationDescribe(WED_RampPosition * ramp, WED_Airport * apt, WED_ModerationEntry & out);
+
+// Needs a moderator: an operator to check (not listed here, or from another
+// country), or an airline stand with no airport data to check it against.
+bool	WED_ModerationHasIssue(const WED_ModerationEntry & e);
 
 // "C60 D30 E10" - the weights as whole percentages, or "" when all zero.
 std::string	WED_ModerationWeightsText(const int w[6]);

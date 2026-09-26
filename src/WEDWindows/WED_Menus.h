@@ -158,6 +158,8 @@ enum {
 	wed_AutoFillLiveries,
 	wed_NextRampStart,
 	wed_PrevRampStart,
+	wed_NextIssueStand,
+	wed_PrevIssueStand,
 	wed_UpgradeJetways,
 	wed_UpgradeArt,
 	wed_AgePavement,

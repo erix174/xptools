@@ -45,13 +45,27 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
   - Everything is gated on `WED_ModerationEnabled()`: today always on, Moderation Mode only before release.
   - Same-signature stands share one callout (`03-MIX-CDE x4`). Every leader curves into one hub, and a neck runs from the hub to the callout. The neck's length grows 2.5x to 20x and its weight 3 to 16 px with the number of stands. Leaders head for the hub and never double back (2026-09-26).
   - The chip column takes whichever side covers fewer stands, ordered to minimise crossings.
-- **Moderation Mode, proposed next** (Eric to pick). See the 2026-09-26 summary in chat:
-  - a moderation summary panel per airport
-  - review status per stand (reviewed / flagged), kept in earth.wed.xml like the watermark
-  - showing the watermark and op type None on the map
-  - next/prev jumping only to stands with issues
-  - an issues-only filter on the map
-  - a pre-submit checklist in the validator
+- **Moderation toolbar, 2026-09-26.** Bottom of the map's tool column, aligned to the bottom and growing up. Art is `moderation_tools.png`.
+  - **Moderation View** (plane with "!"):
+    - Stands that need nothing are greyed; stands to check keep their colour and get an amber ring.
+    - An airport overview opens top-left: stands, reviewed x / N, to check, distinct entries, auto-filled, None, and the list of stands to check. Click one to select and centre it.
+  - **Rotate canvas**: placeholder button, nothing behind it yet.
+  - **Next / previous stand to check.** Airport menu; Shift+X on the map, Ctrl+Shift+X anywhere.
+    - Shift+X is deliberately not a menu accelerator: Windows accelerators are global and would eat capital X in every text field.
+    - Greyed outside moderation.
+  - **Op type None** stands draw a grey silhouette. Chips show "A" (auto-filled) and "None".
+- **Review status, open (Eric to confirm first):**
+  - "Reviewed" is session-only today.
+  - To persist it we need to know whether a Gateway upload carries earth.wed.xml. If it does not, the file has no carrier for it, and the Gateway would need its own field.
+- **Rotate canvas, research (2026-09-26):**
+  - What works for us: `WED_MapZoomerNew::LLToPixel` / `PixelToLL` are the single projection every layer uses, so a rotation about the view centre there moves most drawing and all hit-testing at once. `GetMapVisibleBounds` already samples 8 edge points, so culling survives a rotated view.
+  - Also needs work:
+    - 6 files use the axis-split helpers (`LonToXPixel` / `YPixelToLat`...).
+    - Heading-drawn icons and silhouettes need the angle added.
+    - Pan and marquee selection happen in pixel space.
+    - The tilt buttons already play with the projection matrix.
+  - Suggested first step: rotation in the zoomer only, then fix what visibly breaks.
+
 - **Map view, open:**
   - Mac and Linux search windows are untested: they use `open -na` and `--app`.
   - The legend tier was only seen with a lowered threshold: the sample has 24 stands.

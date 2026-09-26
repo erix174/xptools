@@ -249,6 +249,11 @@ static const GUI_MenuItem_t kAirportMenu[] = {
 // before WED ever sees it.
 {	"Next Ramp Start",			'.',	gui_ControlFlag+gui_ShiftFlag,		0,	wed_NextRampStart},
 {	"Previous Ramp Start",		',',	gui_ControlFlag+gui_ShiftFlag,		0,	wed_PrevRampStart},
+// Shift+X is NOT a menu accelerator: Windows accelerators are global, and it
+// would swallow every capital X typed in a text field. The map takes it when it
+// has the keyboard (WED_MapPane::Map_KeyPress); the label says so.
+{	"Next Stand to Check  (Shift+X on the map)",	0,	0,					0,	wed_NextIssueStand},
+{	"Previous Stand to Check",	'X',	gui_ControlFlag+gui_ShiftFlag,		0,	wed_PrevIssueStand},
 {	"Auto-Populate Static Aircraft (Selected Ramps Only)...",	0,	0,	0,	wed_AutoFillLiveries},
 {	"Upgrade Jetways",			0,		0,									0,	wed_UpgradeJetways},
 {	"Upgrade Art",				0,		0,									0,	wed_UpgradeArt},

@@ -344,6 +344,8 @@ set (WED_SOURCES
 	src/WEDMap/WED_WorldMapLayer.h
 	src/WEDMap/WED_ModerationLayer.cpp
 	src/WEDMap/WED_ModerationLayer.h
+	src/WEDMap/WED_ModerationToolbar.cpp
+	src/WEDMap/WED_ModerationToolbar.h
 	src/WEDMap/WED_NavaidLayer.cpp
 	src/WEDMap/WED_NavaidLayer.h
 	src/WEDMap/WED_TerrainLayer.cpp
@@ -612,6 +614,7 @@ set(WED_RESOURCE_FILES
 	${CMAKE_SOURCE_DIR}/src/WEDResources/taxi_sign.png
 	${CMAKE_SOURCE_DIR}/src/WEDResources/ui_measurements.txt
 	${CMAKE_SOURCE_DIR}/src/WEDResources/map_tools.png
+	${CMAKE_SOURCE_DIR}/src/WEDResources/moderation_tools.png
 	${CMAKE_SOURCE_DIR}/src/WEDResources/tilt_tool.png
 	${CMAKE_SOURCE_DIR}/src/WEDResources/tce_tools.png
 	${CMAKE_SOURCE_DIR}/src/WEDResources/exclaim.png

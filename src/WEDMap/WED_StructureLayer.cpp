@@ -380,8 +380,9 @@ bool		WED_StructureLayer::DrawEntityStructure		(bool inCurrent, IGISEntity * ent
 					if (sub_class == WED_RampPosition::sClass && GetZoomer()->GetPPM() > 5)
 					{
 						float rgb[3] = { 0, 1, 0 };
-						const bool tinted = WED_ModerationTintFor(ramp, rgb);	// the callout's colour, see WED_ModerationLayer.h
-						glColor4f(rgb[0], rgb[1], rgb[2], tinted ? 0.35 : 0.2);
+						float k = 1.0f;
+						const bool tinted = WED_ModerationTintFor(ramp, rgb, &k);	// the callout's colour, see WED_ModerationLayer.h
+						glColor4f(rgb[0], rgb[1], rgb[2], tinted ? 0.35 * k : 0.2);
 						WED_ATCLayer_DrawAircraft(ramp, g, GetZoomer());
 						glColor4fv(WED_Color_RGBA(struct_color));
 					}

@@ -67,14 +67,24 @@
 #include "WED_MapLayer.h"
 #include "WED_LiveryModeration.h"
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
 class WED_RampPosition;
 
 // The silhouette colour for a ramp start: its signature's colour while
-// moderation is on. False when it is off - draw the default green.
-bool	WED_ModerationTintFor(const WED_RampPosition * ramp, float out_rgb[3]);
+// moderation is on - grey for op type None, and in Moderation View grey for
+// every stand that needs nothing. False when moderation is off: draw the
+// default green. alpha_scale (optional) dims the stands the view steps back.
+bool	WED_ModerationTintFor(const WED_RampPosition * ramp, float out_rgb[3], float * alpha_scale = NULL);
+
+// MODERATION VIEW - the toolbar's first button. Highlights the stands that need
+// checking, greys the rest, and opens the airport overview: how many stands,
+// how many reviewed this session, and the list of stands to check, each one a
+// click away. Off by default.
+bool	WED_ModerationViewOn(void);
+void	WED_SetModerationView(bool on);
 
 class	WED_ModerationLayer : public WED_MapLayer {
 public:
@@ -92,7 +102,7 @@ private:
 	struct Flag { unsigned int tex; int w, h; };
 
 	struct Hit {
-		enum Kind { hit_Card, hit_Pin, hit_Tray, hit_Search, hit_Chip, hit_Legend };
+		enum Kind { hit_Card, hit_Pin, hit_Tray, hit_Search, hit_Chip, hit_Legend, hit_Focus, hit_Panel };
 		int				kind;
 		float			x0, y0, x1, y1;
 		int				ramp_id;		// or the legend row
@@ -126,6 +136,8 @@ private:
 	void				DrawCards(GUI_GraphState * g, std::vector<Callout> & cs);
 	void				DrawChips(GUI_GraphState * g, std::vector<Callout> & cs);
 	void				DrawLegend(GUI_GraphState * g, std::vector<Callout> & cs);
+	void				DrawOverview(GUI_GraphState * g);
+	void				Focus(int ramp_id);
 
 	std::vector<Hit>				mHits;			// from the last frame, for clicks and hover
 	int								mPinnedID;		// WED_Persistent id, -1 = none
@@ -135,6 +147,7 @@ private:
 	std::vector<std::vector<int> >	mLegendIDs;		// legend: each row's ramp ids, for the click
 	std::string						mPendingURL;	// a "?" pressed: opened on the mouse-up
 	std::map<std::string, Flag>		mFlags;
+	std::set<int>					mReviewed;		// Moderation View: stands looked at this session
 };
 
 #endif /* WED_MODERATIONLAYER_H */

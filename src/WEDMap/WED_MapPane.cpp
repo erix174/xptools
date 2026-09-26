@@ -47,6 +47,7 @@
 #include "WED_PreviewLayer.h"
 #include "WED_DebugLayer.h"
 #include "WED_ModerationLayer.h"
+#include "WED_ModerationToolbar.h"
 #include "WED_VertexTool.h"
 #include "WED_TerraserverLayer.h"
 #include "GUI_Fonts.h"
@@ -283,6 +284,20 @@ WED_MapPane::WED_MapPane(GUI_Commander * cmdr, double map_bounds[4], IResolver *
 			mToolbar->DisableTool(n);
 	}
 	mToolbar->SetToolTips(tips);
+
+	// The moderation tools sit in the empty foot of the same column, aligned to
+	// the bottom and growing upward, so the two toolbars never meet.
+	{
+		int pb[4], tb[4], cw, ch;
+		GetBounds(pb);
+		mToolbar->GetBounds(tb);
+		WED_ModerationToolbar::CellSize(cw, ch);
+		WED_ModerationToolbar * mod = new WED_ModerationToolbar(mMap);
+		mod->SetParent(this);
+		mod->SetBounds(tb[0], pb[1], tb[0] + cw * WED_ModerationToolbar::Columns(), pb[1] + ch);
+		mod->SetSticky(1, 1, 0, 0);
+		mod->Show();
+	}
 	//	GUI_ScrollerPane * map_scroller = new GUI_ScrollerPane(1,1);    // both Scrollbars on
 	GUI_ScrollerPane * map_scroller = new GUI_ScrollerPane(1,0);        // no scroll bar will not work under any OS
 	map_scroller->SetParent(this);
@@ -404,6 +419,14 @@ void WED_MapPane::CenterOnPoint(const Point2& centerLL)
 
 int		WED_MapPane::Map_KeyPress(uint32_t inKey, int inVK, GUI_KeyFlags inFlags)
 {
+	// Shift+X: the next stand to check. Here rather than as a menu accelerator,
+	// which would take capital X away from every text field (see WED_Menus.cpp).
+	if ((inKey == 'X' || inKey == 'x') && (inFlags & (gui_ShiftFlag | gui_OptionAltFlag | gui_ControlFlag)) == gui_ShiftFlag &&
+		WED_ModerationEnabled())
+	{
+		mMap->DispatchHandleCommand(wed_NextIssueStand);
+		return 1;
+	}
 	if (mMap->HandleKeyPress(inKey, inVK, inFlags)) return 1;
 	if ((inFlags & (gui_ShiftFlag | gui_OptionAltFlag | gui_ControlFlag)) == 0)
 	for (int n = 0; n < sizeof(kToolKeys) / sizeof(kToolKeys[0]); ++n)

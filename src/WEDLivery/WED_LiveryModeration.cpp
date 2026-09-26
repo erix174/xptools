@@ -159,7 +159,18 @@ static int FindSelected(ISelection * sel, const vector<WED_RampPosition *> & ram
 	return -1;
 }
 
-WED_RampPosition *	WED_ModerationStep(IResolver * resolver, int dir)
+void	WED_ModerationRamps(WED_Airport * apt, vector<WED_RampPosition *> & out)
+{
+	out.clear();
+	if (apt) CollectRamps(apt, out);
+}
+
+bool	WED_ModerationHasIssue(const WED_ModerationEntry & e)
+{
+	return e.n_to_check > 0 || e.verify == WED_ModerationEntry::verify_NoData;
+}
+
+WED_RampPosition *	WED_ModerationStep(IResolver * resolver, int dir, bool issues_only)
 {
 	WED_Airport * apt = WED_GetCurrentAirport(resolver);
 	ISelection * sel = WED_GetSelect(resolver);
@@ -171,7 +182,18 @@ WED_RampPosition *	WED_ModerationStep(IResolver * resolver, int dir)
 
 	int cur = FindSelected(sel, ramps);
 	int n = (int) ramps.size();
-	int next = cur < 0 ? (dir >= 0 ? 0 : n - 1) : ((cur + (dir >= 0 ? 1 : -1)) % n + n) % n;
+	int next = -1;
+	const int step = dir >= 0 ? 1 : -1;
+	int at = cur < 0 ? (dir >= 0 ? -1 : n) : cur;
+	for (int tries = 0; tries < n; ++tries)
+	{
+		at = ((at + step) % n + n) % n;
+		if (!issues_only) { next = at; break; }
+		WED_ModerationEntry e;
+		WED_ModerationDescribe(ramps[at], apt, e);
+		if (WED_ModerationHasIssue(e)) { next = at; break; }
+	}
+	if (next < 0) return NULL;						// nothing needs checking
 
 	IOperation * op = dynamic_cast<IOperation *>(sel);
 	if (op) op->StartOperation("Select Ramp Start");

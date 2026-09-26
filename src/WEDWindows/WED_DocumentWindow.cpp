@@ -508,6 +508,24 @@ int	WED_DocumentWindow::HandleCommand(int command)
 				WED_ModerationPrompt(r, WED_GetCurrentAirport(mDocument));
 		}
 		return 1;
+	case wed_NextIssueStand:
+	case wed_PrevIssueStand:
+		// As the ramp walk, but only the stands a moderator has to look at, and
+		// no prompt - the stand's callout shows the "?" to click.
+		if (WED_RampPosition * r = WED_ModerationStep(mDocument, command == wed_NextIssueStand ? 1 : -1, true))
+		{
+			Point2 ll;
+			r->GetLocation(gis_Geo, ll);
+			mMapPane->CenterOnPoint(ll);
+			if (mPropTabs && mLiveryPane)
+			{
+				int tab = mPropTabs->GetTabForPane(mLiveryPane);
+				if (tab >= 0) mPropTabs->SetTab(tab);
+			}
+		}
+		else
+			DoUserAlert("No ramp start at this airport needs checking.");
+		return 1;
 	case wed_ExportApt:		WED_DoExportApt(mDocument, mMapPane); return 1;
 	case wed_ExportPack:	WED_DoExportPack(mDocument, mMapPane); return 1;
 #if HAS_GATEWAY
@@ -627,6 +645,10 @@ int	WED_DocumentWindow::CanHandleCommand(int command, string& ioName, int& ioChe
 	case wed_AutoFillLiveries:   return WED_CanLiveryAutoFill(mDocument);
 	case wed_NextRampStart:
 	case wed_PrevRampStart:      return WED_GetCurrentAirport(mDocument) != NULL;
+	// Moderation only: greyed outside it (WED's menus are built once, so an
+	// item cannot come and go).
+	case wed_NextIssueStand:
+	case wed_PrevIssueStand:     return WED_ModerationEnabled() && WED_GetCurrentAirport(mDocument) != NULL;
 	case wed_MoveFirst:	return WED_CanReorder(mDocument,-1,1);
 	case wed_MovePrev:	return WED_CanReorder(mDocument,-1,0);
 	case wed_MoveNext:	return WED_CanReorder(mDocument, 1,0);
