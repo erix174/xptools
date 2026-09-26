@@ -85,7 +85,7 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
 - **Data:**
   - 419 country-level hubs ("approx") - barely matter for range.
   - AHY B752 is stored, not confirmed retired.
-  - The CYH Peacock row lost its caption to its `Obsolete` mark.
+  - `CYH` liveries (China Eastern Yunnan, B6147 and Peacock B6143) were wrongly marked defunct; restored 2026-09-26. Open: they fly as CES today, so re-code them to CES (or `ces_1`) so a stand listing `ces` can draw them? Eric to decide.
 - **Sample:** a stand carrying two `1313` rows (R24).
 
 ## Upstream PRs (ready, not sent)
@@ -115,7 +115,7 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
   - The placeholder airline list was removed.
 - **Data:**
   - 7 suspicious operator records checked; 6 corrected.
-  - 44 `Obsolete` marks: 12 superseded assets, 20 retired airframes, 12 rows of 11 defunct operators.
+  - 42 `Obsolete` marks: 12 superseded assets, 20 retired airframes, 10 rows of 10 defunct operators (CYH restored 2026-09-26).
   - US military transports and trainers marked HOME.
   - Everything synced to both installs.
 - **Docs:**
