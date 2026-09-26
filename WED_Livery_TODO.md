@@ -47,9 +47,9 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
   - The chip column takes whichever side covers fewer stands, ordered to minimise crossings.
 - **Moderation toolbar, 2026-09-26.** Bottom of the map's tool column, aligned to the bottom and growing up. Art is `moderation_tools.png`.
   - **Moderation View** (plane with "!"):
-    - Stands that need nothing are greyed; stands to check keep their colour and get an amber ring.
+    - Stands that need nothing are greyed; stands to check keep their colour and get a solid amber "!" badge.
     - An airport overview opens top-left: stands, reviewed x / N, to check, distinct entries, auto-filled, None, and the list of stands to check. Click one to select and centre it.
-  - **Rotate canvas**: placeholder button, nothing behind it yet.
+  - **Rotate view**: see below. Done 2026-09-26; Eric tested it.
   - **Next / previous stand to check.** Airport menu; Shift+X on the map, Ctrl+Shift+X anywhere.
     - Shift+X is deliberately not a menu accelerator: Windows accelerators are global and would eat capital X in every text field.
     - Greyed outside moderation.
@@ -57,7 +57,7 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
 - **Review status, open (Eric to confirm first):**
   - "Reviewed" is session-only today.
   - To persist it we need to know whether a Gateway upload carries earth.wed.xml. If it does not, the file has no carrier for it, and the Gateway would need its own field.
-- **Rotate view, prototype 2026-09-26 (approach B: turn the picture, not the map).**
+- **Rotate view, done 2026-09-26 (approach B: turn the picture, not the map).**
   - **What it does:**
     - The Rotate button enters rotate mode, still north up.
     - A left-drag draws a measuring arrow, in the same style as a placed object's heading handle. On release the view turns by the least that puts the arrow on 0, 90, 180 or 270 degrees.
@@ -102,6 +102,7 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
 | `upstream/apt-unknown-rows` | Unknown apt.dat rows are skipped and reported instead of failing the file. The 1313-free version, tested end to end on 2.7 |
 | `upstream/parking-icons-d-e` | ClassD and ClassE icons fill their frame like the other four |
 | *(to split)* | `GUI_Window::ClickDown` finishes a lost click instead of asserting (on the feature branch, `774cde5`) |
+| *(to split)* | `WED_MapZoomerNew::CenterOn`: centring on a point no longer zooms out a little each time (on the feature branch, `1cef270`) |
 
 `archive/stash-2026-09-13-wip` preserves the pre-commit WIP stash of 2026-09-13. Everything in it was superseded by the branch; it was removed from the stash list.
 
