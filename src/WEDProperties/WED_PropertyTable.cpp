@@ -631,6 +631,18 @@ void	WED_PropertyTable::ModeratorShowAirport(WED_Airport * apt)
 	DispatchHandleCommand(wed_SlippyMapESRI);
 }
 
+// The folders a moderator double-clicks to look at one layer on its own: which
+// sibling folders stay shown, and the tab to work in (0 = leave it).
+static bool	ModeratorFocusKeeps(const string& name, set<string>& keep, int& tab_cmd)
+{
+	tab_cmd = 0;
+	if      (name == "Taxiways")		{ keep.insert(name); }
+	else if (name == "Draped Polygons")	{ keep.insert(name); }
+	else if (name == "Ground Vehicles")	{ keep.insert(name); keep.insert("Ground Routes"); tab_cmd = wed_MapATC; }
+	else return false;
+	return true;
+}
+
 // Double click on one of these folders: hide its sibling folders, show only it
 // (and its partners), turn the imagery off, and pick the tab to work in.
 // Returns false for any other folder, which keeps the usual double click.
@@ -641,10 +653,7 @@ bool	WED_PropertyTable::ModeratorFocusFolder(WED_Thing * folder)
 
 	set<string> keep;
 	int tab_cmd = 0;
-	if      (name == "Taxiways")		{ keep.insert(name); }
-	else if (name == "Draped Polygons")	{ keep.insert(name); }
-	else if (name == "Ground Vehicles")	{ keep.insert(name); keep.insert("Ground Routes"); tab_cmd = wed_MapATC; }
-	else return false;
+	if (!ModeratorFocusKeeps(name, keep, tab_cmd)) return false;
 
 	WED_Thing * parent = folder->GetParent();
 	if (!parent) return false;
@@ -682,14 +691,26 @@ bool	WED_PropertyTable::ModeratorFocusFolder(WED_Thing * folder)
 
 // The airport is often selected already - an import leaves it so - and a click
 // on a selected name would open it for renaming. In moderator mode it does the
-// single-click setup instead; the Selection tab still renames.
+// single-click setup instead; the Selection tab still renames. The same goes for
+// the double-click folders.
 int		WED_PropertyTable::ClickSelectedCell(
 						int							cell_x,
 						int							cell_y)
 {
 	if (!gModeratorMode || mVertical || mSelOnly) return 0;
 	if (cell_x < 0 || cell_x >= (int) mColNames.size() || mColNames[cell_x] != "Name") return 0;
-	WED_Airport * apt = SAFE_CAST(WED_Airport, FetchNth(cell_y));
+	WED_Thing * t = FetchNth(cell_y);
+
+	// One of the double-click folders: its first click must not open the name
+	// for editing, or the second lands in the text field instead of here.
+	if (SAFE_CAST(WED_Group, t))
+	{
+		string name; set<string> keep; int tab_cmd;
+		t->GetName(name);
+		return ModeratorFocusKeeps(name, keep, tab_cmd) ? 1 : 0;
+	}
+
+	WED_Airport * apt = SAFE_CAST(WED_Airport, t);
 	if (!apt) return 0;
 	DispatchHandleCommand(wed_ZoomSelection);
 	DispatchHandleCommand(wed_MapSelection);
