@@ -30,7 +30,6 @@
 // the list of rows). Not for use outside the pane.
 
 #include "WED_LiveryPane.h"
-#include "WED_LiveryData.h"
 #include "WED_AirportDatabase.h"
 #include "WED_FlagAssets.h"
 #include "WED_FlagProjector.h"
@@ -142,9 +141,7 @@ namespace livery_pane {
 	float	TrayFullHeight(size_t n_liveries);
 	int WidthEnumToIndex(int enum_val);
 	int IndexToWidthEnum(int idx);
-	int RampOpToLiveryCategory(int ramp_op_enum);
 	bool ContainsCaseInsensitive(const string & haystack, const string & needle_lower);
-	string FindPlaceholderName(const string & icao_lower);
 	string ResolveAirlineName(const string & icao_lower, const WED_AirlineDirectory & directory);
 	bool CompareRowsByIcao(const WED_LiveryDisplayRow & a, const WED_LiveryDisplayRow & b);
 	bool NotTheUnpaintedAirliner(const WED_LiveryDisplayRow & r);

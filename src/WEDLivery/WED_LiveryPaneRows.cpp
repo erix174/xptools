@@ -72,17 +72,6 @@ namespace livery_pane {
 		return kWidthOrder[idx];
 	}
 
-	// Maps the ramp's own Ramp Operation Type onto this file's placeholder livery
-	// categories. -1 means "no filter, show everything" (matches the "None" chip).
-	int RampOpToLiveryCategory(int ramp_op_enum)
-	{
-		if (ramp_op_enum == ramp_operation_GeneralAviation) return wed_LiveryOp_GeneralAviation;
-		if (ramp_op_enum == ramp_operation_Airline)         return wed_LiveryOp_Airline;
-		if (ramp_op_enum == ramp_operation_Cargo)            return wed_LiveryOp_Cargo;
-		if (ramp_op_enum == ramp_operation_Military)         return wed_LiveryOp_Military;
-		return -1;
-	}
-
 	// Case-insensitive substring test. `needle_lower` must already be
 	// lowercased by the caller (it's checked against many rows per call, no
 	// sense lowercasing it more than once).
@@ -95,28 +84,11 @@ namespace livery_pane {
 		return h.find(needle_lower) != string::npos;
 	}
 
-	// kWED_PlaceholderAirlines only has friendly names for its own ~26 entries -
-	// a per-airport Recommended code from WED_AirportDatabase.txt won't
-	// usually be one of them. Case-insensitive; returns "" (not found) rather
-	// than guessing.
-	string FindPlaceholderName(const string & icao_lower)
-	{
-		for (int i = 0; i < kWED_PlaceholderAirlineCount; ++i)
-			if (icao_lower == kWED_PlaceholderAirlines[i].icao)
-				return kWED_PlaceholderAirlines[i].name;
-		return string();
-	}
-
-	// Same idea as FindPlaceholderName(), but checked first against the OPERATOR
-	// records of livery_index.txt (which is what actually knows most
-	// airlines' names) and only falls back to the small hardcoded placeholder
-	// table above for the handful of well-known majors it lists. "" if neither
-	// source has it - callers fall back to showing the bare code.
+	// The operator's name from the OPERATOR records of livery_index.txt. "" if
+	// the index does not know the code - callers show the bare code.
 	string ResolveAirlineName(const string & icao_lower, const WED_AirlineDirectory & directory)
 	{
-		string name = directory.GetName(icao_lower);
-		if (!name.empty()) return name;
-		return FindPlaceholderName(icao_lower);
+		return directory.GetName(icao_lower);
 	}
 
 	bool CompareRowsByIcao(const WED_LiveryDisplayRow & a, const WED_LiveryDisplayRow & b)
@@ -355,13 +327,12 @@ namespace livery_pane {
 	//   4. Same Country            - every WED_AirlineDirectory entry whose country matches the
 	//                                airport's own IOC-normalized country (empty section if the
 	//                                airport's country couldn't be determined at all)
-	//   5. All Airlines            - the small hardcoded WED_LiveryData.h placeholder list (same
-	//                                set "All Results" used to show unconditionally), minus
-	//                                whatever's already appeared above
-	// Tiers 3 and 4 draw from WED_AirlineDirectory, which has no op_type (Airline/Cargo/GA/
-	// Military) classification - see WED_AirlineDirectory.h - so, like tier 2 always has, they
-	// are NOT filtered by the ramp's operation category. Only tier 5 can be (and is), since
-	// WED_LiveryData.h is the only source that carries an op_type at all.
+	//   5. All Airlines            - every operator the index has a livery for that fits this
+	//                                stand (the caller's all_operators), minus whatever has
+	//                                already appeared above
+	// None of the tiers is filtered by operation class here: the caller drops the cards whose
+	// operator the stand's type does not admit (OperatorMatchesRampOp), so a row with no card
+	// behind it never reaches the list.
 	//
 	// `search_query` is matched case-insensitively against both icao and name; pass "" to disable
 	// filtering entirely. Filtering happens per-section, AFTER that section's own sort - a section
@@ -384,19 +355,9 @@ namespace livery_pane {
 		for (string::iterator c = query_lower.begin(); c != query_lower.end(); ++c)
 			*c = (char) tolower((unsigned char) *c);
 
-		int category = RampOpToLiveryCategory(ramp_op_enum);
-
-		// EVERY OPERATOR THE LIVERY INDEX HAS, not the hand-written placeholder list
-		// in WED_LiveryData.h. That list is about 25 codes chosen years ago; the
-		// shipped index carries 152, and none of the two sets' overlap survives
-		// DropCardless - which is why this section came out empty and could not be
-		// opened. The caller passes what it found, already reduced to operators with
-		// a livery that fits this stand.
-		//
-		// No op_type filter here any more either: the placeholder list carried one
-		// per row and the index does not, and inventing one from the code would be
-		// guessing. The tiers above have never been filtered by it - see this
-		// function's own doc comment - so this now matches them.
+		// Every operator the livery index has, as the caller found them: already
+		// reduced to operators with a livery that fits this stand and whose
+		// operation class the stand's type admits.
 		vector<WED_LiveryDisplayRow> all_rows;
 		for (size_t i = 0; i < all_operators.size(); ++i)
 		{
@@ -452,10 +413,9 @@ namespace livery_pane {
 		any |= sect_HasRows == AppendAirlineSection("Same Country", same_country_codes, directory,
 										sort_descending, query_lower, seen, any, out);
 
-		// Tier 5 draws from all_rows (already category-filtered and search-filtered above, per
-		// this function's own doc comment) rather than going through AppendAirlineSection() -
-		// it needs no further name resolution (kWED_PlaceholderAirlines already has names) and
-		// must NOT be re-filtered by search a second time.
+		// Tier 5 draws from all_rows (already search-filtered above) rather than going through
+		// AppendAirlineSection() - its names came with it from the index, and it must NOT be
+		// re-filtered by search a second time.
 		//
 		// NOT YET COLLAPSIBLE: always rendered fully expanded, same as the old "All Results"
 		// section was. A real expand/collapse toggle needs its own WED_LiveryRowKind plus matching

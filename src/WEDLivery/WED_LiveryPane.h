@@ -42,7 +42,9 @@
 	Selection tracking, tab enable/disable, and the input-blocking mask are
 	unchanged from the prior pass.
 
-	The airline dataset in WED_LiveryData.h is a placeholder - see that file.
+	Every fact about an operator or a livery comes from the install's
+	livery_index.txt (WED_LiveryIndex, WED_AirlineDirectory); which airlines
+	serve an airport, from WED_AirportDatabase.
 */
 
 #ifndef WED_LIVERYPANE_H
@@ -517,9 +519,7 @@ private:
 	// Global airline reference data - the OPERATOR records at the top of the
 	// install's livery_index.txt, the same file mLiveryIndex reads; nothing
 	// ships beside WED.exe for this. Name/country/op class/fleet size for
-	// every airline WED knows about, independent of any one airport. Used
-	// to resolve a friendly name for a recommended code that isn't one of
-	// WED_LiveryData.h's ~26 hardcoded placeholder entries. See
+	// every airline WED knows about, independent of any one airport. See
 	// WED_AirlineDirectory.h.
 	WED_AirlineDirectory		mAirlineDirectory;
 

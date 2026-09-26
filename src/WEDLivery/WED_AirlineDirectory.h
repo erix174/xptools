@@ -58,21 +58,22 @@
 		                       code/callsign with the passenger side - split
 		                       into its own row here (this project's own key,
 		                       not a real distinct ICAO code) purely so the
-		                       Pax/Cargo column below can tell the two apart
+		                       operation class can tell the two apart
 		                       without a collision.
+		"XPZZ_<TYPE>"        - a generic, unpainted airliner of that type
+		                       (XPZZ_B752), usable by any airline or cargo
+		                       stand. The full grammar is R10 of the spec:
+		                       [a-z0-9]{3,4}(_[a-z0-9]{1,6})?
 
 	<IOC country> is the 3-letter IOC-style code (see WED_IocCountryCodes.h -
 	same scheme, so an airport's normalized country compares directly against
 	this field for the "same country" recommendation tier).
 
-	The Pax/Cargo field is a first-pass, name-based classification (does this
-	airline's name contain "Cargo"?) added specifically to stop an all-cargo
-	operator's livery from being recommended at a passenger gate - it is NOT
-	meant to be the long-term authority on Airline vs Cargo vs GA vs Military
-	(that's still WED_LiveryData.h's op_type, sourced from what liveries
-	actually exist in the future local static livery database/its own export
-	metadata, which will eventually supersede this column). Until that
-	exists, this field is what the picker has to go on.
+	The operation class (Pax, Cargo, GA, Military, Gov) is the authority for
+	which stands an operator may appear on - a cargo operator never parks at a
+	passenger gate - for the Liveries tab, auto-fill and the validator alike.
+	It is hand-maintained in the index with everything else about the
+	operator.
 */
 
 #ifndef WED_AIRLINEDIRECTORY_H
@@ -131,7 +132,7 @@ public:
 
 	// Convenience wrapper over Lookup() for callers that only want the display
 	// name. Returns "" if not found - callers should fall back to showing the
-	// bare code, same convention as WED_LiveryPane's existing FindPlaceholderName().
+	// bare code.
 	std::string			GetName(const std::string & code) const;
 
 	// Every entry whose country field exact-matches ioc_country (case-
