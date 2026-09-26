@@ -38,6 +38,8 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
 - Data: 7 suspicious operator records and 419 country-level hubs from the
   09-19 enrichment report; `Obsolete` marks for retired airframes (e.g.
   `UAL:B744` empties UAL/E - `livery_obsolete_radius.py` first).
-- Sync the schema-4 index from the Desktop copy to both X-Plane installs.
-- Upstream WED, not ours: a failed save still reads as saved, so a close after
-  it loses the edits; the start window's list needs a double-click inside 0.1 s.
+- Upstream WED bugs fixed on this branch - send as their own small PR, not with
+  the feature: a failed save left the document reading as saved, so a close after
+  it threw the edits away (now stays dirty); the package list needed a
+  double-click inside 0.1 s of CPU time (now 0.4 s wall clock).
+- Sync the schema-4 index to the installs: DONE 2026-09-25 (both installs).

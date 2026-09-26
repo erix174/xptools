@@ -21,6 +21,7 @@
  *
  */
 
+#include <chrono>
 #include "GUI_TextField.h"
 #include "GUI_TextTable.h"
 #include "GUI_GraphState.h"
@@ -517,15 +518,18 @@ int			GUI_TextTable::CellMouseDown(int cell_bounds[4], int cell_x, int cell_y, i
 	static int last_cell_y = -1;
 	static int last_mouse_x = -1;
 	static int last_mouse_y = -1;
-	static float last_time_now = -1.0;
-	float time_now = mParent->GetTimeNow();
+	// Wall-clock seconds. GetTimeNow() is clock(), which is CPU time off Windows,
+	// and the old 0.1 s window was shorter than most people's double-click - the
+	// start window's package list often opened nothing.
+	static double last_time_now = -1.0;
+	double time_now = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
 	bool did_double = false;
 	if (mContent &&
 		last_cell_x == cell_x &&
 		last_cell_y == cell_y &&
 		fabs((float)(last_mouse_x - mouse_x)) < 3.0 &&
 		fabs((float)(last_mouse_y - mouse_y)) < 3.0 &&
-		time_now - last_time_now < 0.1)
+		time_now - last_time_now < 0.4)
 	{
 		did_double = mContent->DoubleClickCell(cell_x,cell_y);
 	}

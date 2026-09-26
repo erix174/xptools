@@ -437,6 +437,10 @@ void	WED_Document::Save(void)
 		rename(bakXML.c_str(), xml.c_str());
 #endif
 		msg += "'.";
+		// The archive already counts as saved - WED_Archive::SaveToXML resets its
+		// dirty count before we know the write failed - so without this a close
+		// after a failed save went ahead and threw the edits away.
+		SetDirty();
 		DoUserAlert(msg.c_str());
 	}
 	else
