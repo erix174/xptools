@@ -415,6 +415,11 @@ int		WED_LiveryPane::MouseDown(int x, int y, int button)
 	if (mSelectedRamps.empty())
 		return 1;			// masked - swallow the click, do nothing
 
+	// A second button pressed during a drag would open a second command inside
+	// the first (asserts); the drag in progress owns the mouse until it ends.
+	if (mDragWeightBar >= 0 || mDragHandle >= 0)
+		return 1;
+
 	int b[4];
 	GetBounds(b);
 

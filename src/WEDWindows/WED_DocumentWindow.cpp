@@ -578,10 +578,17 @@ int	WED_DocumentWindow::HandleCommand(int command)
 #endif
 	// The map's tab modes: show the matching tab too, not only filter the map.
 	// Its index is the map pane's tab_* enum.
-	case wed_MapSelection:	mPropTabs->SetTab(0); return mMapPane->Map_HandleCommand(command);
-	case wed_MapPavement:	mPropTabs->SetTab(1); return mMapPane->Map_HandleCommand(command);
-	case wed_MapATC:		mPropTabs->SetTab(2); return mMapPane->Map_HandleCommand(command);
-	case wed_Map3D:			mPropTabs->SetTab(4); return mMapPane->Map_HandleCommand(command);
+	case wed_MapSelection:
+	case wed_MapPavement:
+	case wed_MapATC:
+	case wed_Map3D:
+		// Moderator mode sends these on every hierarchy selection. The Static
+		// Liveries tab, once up (by hand or "Prompt Up Static Liveries Tab"),
+		// stays up: it has its own map filter, and pulling the moderator off it
+		// on each click would make it unusable.
+		if (mLiveryPane && mPropTabs->GetTab() == mPropTabs->GetTabForPane(mLiveryPane)) return 1;
+		mPropTabs->SetTab(command == wed_MapSelection ? 0 : command == wed_MapPavement ? 1 : command == wed_MapATC ? 2 : 4);
+		return mMapPane->Map_HandleCommand(command);
 	default: return mMapPane->Map_HandleCommand(command);	break;
 	}
 	return 0;

@@ -409,7 +409,10 @@ void	WED_ModerationDescribe(WED_RampPosition * ramp, WED_Airport * apt, WED_Mode
 	ramp->GetName(out.ramp_name);
 	out.op_type     = ramp->GetRampOperationType();
 	out.op_label    = OpLabel(out.op_type);
-	out.ramp_type   = ENUM_Desc(ramp->GetType());
+	// ENUM_Desc is NULL for -1, which an unknown ramp type name in earth.wed.xml
+	// reads as (hand-edited, or from a newer WED)
+	const char * rtype = ENUM_Desc(ramp->GetType());
+	out.ramp_type   = rtype ? rtype : "";
 	out.auto_filled = ramp->IsAutoFilled();
 	out.updated     = ramp->GetClassWeights(out.weights);
 	const char * letter = ENUM_Desc(ramp->GetWidth());

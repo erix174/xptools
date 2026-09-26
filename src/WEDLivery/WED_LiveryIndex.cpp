@@ -642,19 +642,30 @@ static bool IsXPlaneRoot(const string & root)
 	return true;
 }
 
+// IsXPlaneRoot stats several paths, and the moderation overlays ask for the
+// index path for every stand on every frame: check the disk (and log) only when
+// the chosen folder changes.
+static bool	CachedIsXPlaneRoot(const string& root)
+{
+	static string s_root;
+	static bool s_ok = false, s_valid = false;
+	if (s_valid && root == s_root) return s_ok;
+	s_root = root;
+	s_valid = true;
+	s_ok = IsXPlaneRoot(root);
+	if (!s_ok)
+		LOG_MSG("E/LiveryIndex '%s' is not an X-Plane root - need the application, "
+				"Resources and Custom Scenery side by side.\n", root.c_str());
+	return s_ok;
+}
+
 string	WED_LiveryIndexDefaultPath(void)
 {
 	if (gPackageMgr == NULL) return string();
 
 	string root;
 	if (!gPackageMgr->GetXPlaneFolder(root)) return string();	// nothing selected yet
-
-	if (!IsXPlaneRoot(root))
-	{
-		LOG_MSG("E/LiveryIndex '%s' is not an X-Plane root - need the application, "
-				"Resources and Custom Scenery side by side.\n", root.c_str());
-		return string();
-	}
+	if (!CachedIsXPlaneRoot(root)) return string();
 
 	return WED_LiveryAssetDir() + "livery_index.txt";
 }
@@ -669,7 +680,7 @@ string	WED_LiveryAssetDir(void)
 
 	string root;
 	if (!gPackageMgr->GetXPlaneFolder(root)) return string();
-	if (!IsXPlaneRoot(root)) return string();
+	if (!CachedIsXPlaneRoot(root)) return string();
 
 	return root + DIR_STR "Resources" DIR_STR "default scenery" DIR_STR
 				  "sim objects" DIR_STR "apt_aircraft" DIR_STR;

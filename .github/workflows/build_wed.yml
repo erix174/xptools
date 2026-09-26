@@ -44,7 +44,12 @@ jobs:
         uses: actions/upload-artifact@main
         with:
           name: artifact-win
-          path: vs_build/Release/WED.exe
+          # WED reads its data files and flag art from beside the executable
+          # (WedDataFileDir); CMake copies them there. Ship them with it.
+          path: |
+            vs_build/Release/WED.exe
+            vs_build/Release/WED_AirportDatabase.txt
+            vs_build/Release/flags
 
   build-mac:
     runs-on: macos-15
@@ -129,7 +134,10 @@ jobs:
         uses: actions/upload-artifact@main
         with:
           name: artifact-lin
-          path: build_Release/WED
+          path: |
+            build_Release/WED
+            build_Release/WED_AirportDatabase.txt
+            build_Release/flags
 
   create-zip-files:
     runs-on: ubuntu-latest
@@ -140,8 +148,8 @@ jobs:
       - name: get build results
         uses: actions/download-artifact@main
         with:
+          # one folder per artifact: Windows and Linux both carry the data files
           pattern: artifact-*
-          merge-multiple: true
       - name: zip files
         run: |
           version=$(grep 'WED_VERSION_FILENAME' src/WEDCore/WED_Version.h | awk -F'"' '{print $2}')
@@ -149,14 +157,16 @@ jobs:
           cp src/WEDCore/README.WorldEditor .
 
           # Windows
-          zip -r wed_win_$version.zip README.WorldEditor WED.exe
+          cp README.WorldEditor artifact-win/
+          (cd artifact-win && zip -r ../wed_win_$version.zip README.WorldEditor WED.exe WED_AirportDatabase.txt flags)
 
           # Linux
-          chmod a+x WED
-          zip -r wed_lin_$version.zip README.WorldEditor WED
+          chmod a+x artifact-lin/WED
+          cp README.WorldEditor artifact-lin/
+          (cd artifact-lin && zip -r ../wed_lin_$version.zip README.WorldEditor WED WED_AirportDatabase.txt flags)
 
           # MacOS
-          unzip artifact-mac.zip
+          unzip artifact-mac/artifact-mac.zip
           chmod -R a+x build_Release/WED.app/Contents/MacOS/
           cp README.WorldEditor build_Release/
           cd build_Release

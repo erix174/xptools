@@ -900,7 +900,7 @@ endif()
 #   Windows / Linux : beside the executable
 #   macOS           : inside the bundle, at WED.app/Contents/Resources
 # WED_AirlineDirectory.txt is no longer here. Operator facts ship inside
-# livery_index.txt on the X-Plane side (schema 3 OPERATOR records), the one file
+# livery_index.txt on the X-Plane side (OPERATOR records, schema 4), the one file
 # both WED and the sim read; the directory survives only as a bootstrap input to
 # the generator under tools/scripts/airline_research/bootstrap/.
 set(WED_DATA_FILES
