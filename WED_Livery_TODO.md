@@ -43,6 +43,15 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
   - **"?" opens a live web search** in a small Edge or Chrome `--app` window beside the cursor, in the moderator's own profile. A fresh profile hit Google's "unusual traffic" check. With no such browser it falls back to the default browser.
   - The query is "Does <operator> fly to <ICAO> <city>". The author's airport name was noise.
   - Everything is gated on `WED_ModerationEnabled()`: today always on, Moderation Mode only before release.
+  - Same-signature stands share one callout (`03-MIX-CDE x4`). Every leader curves into one hub, and a neck runs from the hub to the callout. The neck's length grows 2.5x to 20x and its weight 3 to 16 px with the number of stands. Leaders head for the hub and never double back (2026-09-26).
+  - The chip column takes whichever side covers fewer stands, ordered to minimise crossings.
+- **Moderation Mode, proposed next** (Eric to pick). See the 2026-09-26 summary in chat:
+  - a moderation summary panel per airport
+  - review status per stand (reviewed / flagged), kept in earth.wed.xml like the watermark
+  - showing the watermark and op type None on the map
+  - next/prev jumping only to stands with issues
+  - an issues-only filter on the map
+  - a pre-submit checklist in the validator
 - **Map view, open:**
   - Mac and Linux search windows are untested: they use `open -na` and `--app`.
   - The legend tier was only seen with a lowered threshold: the sample has 24 stands.
@@ -50,7 +59,6 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
 ## Open, no decision needed
 
 - **Mac / Linux build and run** - never done. Eric tests on his Intel Mac before hand-over. The new code has nothing platform-specific (checked 2026-09-25).
-- **UI check after `2600006`** (the placeholder airline list removed): the airline list's names and search. The build is fine; the screen check was stopped because Eric was typing.
 - **Data:**
   - 419 country-level hubs ("approx") - barely matter for range.
   - AHY B752 is stored, not confirmed retired.
