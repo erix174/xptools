@@ -89,7 +89,7 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
 - **Data:**
   - 419 country-level hubs ("approx") - barely matter for range.
   - AHY B752 is stored, not confirmed retired.
-  - `CYH` liveries (China Eastern Yunnan, B6147 and Peacock B6143) were wrongly marked defunct; restored 2026-09-26. Open: they fly as CES today, so re-code them to CES (or `ces_1`) so a stand listing `ces` can draw them? Eric to decide.
+  - `CYH` liveries (China Eastern Yunnan, B6147 and Peacock B6143) were wrongly marked defunct; restored 2026-09-26. Re-coded to `CES_1` (China Eastern Yunnan, a brand of CES), Eric 2026-09-26.
 - **Sample:** stand `28-DOUBLE-1313` added for R24 (2026-09-26).
 
 ## Upstream PRs (ready, not sent)

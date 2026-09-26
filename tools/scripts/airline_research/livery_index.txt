@@ -354,6 +354,7 @@ OPERATOR	***	CEB			***	Cebu Pacific									***	PHI	***	Pax			***	96		***	RPLL R
 OPERATOR	***	CEL			***	Ceiba Intercontinental							***	GEQ	***	Pax			***	9		***	FGSL
 OPERATOR	***	CEO			***	Travya											***	INA	***	Pax			***	1		***	WIII
 OPERATOR	***	CES			***	China Eastern Airlines							***	CHN	***	Pax			***	678		***	ZSPD ZSSS ZPPP ZLXY ZBAD
+OPERATOR	***	CES_1		***	China Eastern Yunnan							***	CHN	***	Pax			***	0		***	ZPPP
 OPERATOR	***	CEY			***	Air Century										***	DOM	***	Pax			***	6		***	MDSD
 OPERATOR	***	CFA			***	China Flying Dragon Aviation					***	CHN	***	Pax			***	1		***	ZYHB
 OPERATOR	***	CFE			***	BA Cityflyer									***	GBR	***	Pax			***	20		***	EGLC
@@ -402,7 +403,6 @@ OPERATOR	***	CXA			***	Xiamen Airlines									***	CHN	***	Pax			***	175		***	ZS
 OPERATOR	***	CXE			***	Caicos Express Airways							***	GBR	***	Pax			***	1		***	MBPV
 OPERATOR	***	CXI			***	Corendon Airlines Europe						***	MLT	***	Pax			***	12		***	LMML
 OPERATOR	***	CYF			***	Tus Airways										***	CYP	***	Pax			***	5		***	LCLK
-OPERATOR	***	CYH			***	China Eastern Yunnan							***	CHN	***	Pax			***	0		***	ZPPP
 OPERATOR	***	CYP			***	Cyprus Airways									***	CYP	***	Pax			***	6		***	LCLK
 OPERATOR	***	CYX			***	Cayman Airways Express							***	CAY	***	Pax			***	5		***	MWCR
 OPERATOR	***	DAC			***	Daily Air										***	TPE	***	Pax			***	4		***	RCFN
@@ -1700,6 +1700,8 @@ B738 *** C *** CCA       *** B5390     *** CHN *** Peony      *** 5700  ***     
 B738 *** C *** CCD       *** B5639     *** CHN *** Default    *** 5700  ***      *** Pax      *** jet/B738_CCD/738_DalianAirlines_B5639.obj
 B738 *** C *** CDG       *** B1438     *** CHN *** Default    *** 5700  ***      *** Pax      *** jet/B738_CDG/738_ShandongAirlines_B1438.obj
 B738 *** C *** CES       *** B1722     *** CHN *** Default    *** 5700  ***      *** Pax      *** jet/B738_CES/738_ChinaEastern_B1722.obj
+B738 *** C *** CES_1     *** B6147     *** CHN *** Default    *** 5700  ***      *** Pax      *** jet/B738_CYH/738_ChinaEasternYN_B6147.obj
+B738 *** C *** CES_1     *** B6143     *** CHN *** Peacock    *** 5700  ***      *** Pax      *** jet/B738_CYH_Peacock/738_ChinaEasternYNPeacock_B6143.obj
 B738 *** C *** CHH       *** B1995     *** CHN *** Default    *** 5700  ***      *** Pax      *** jet/B738_HNA/738_HainanAirlines_B1995.obj
 B738 *** C *** CHH       *** B1131     *** CHN *** Mixue      *** 5700  ***      *** Pax      *** jet/B738_HNA_Mixue/738_HainanAirlines_Mixue_B1131.obj
 B738 *** C *** CJX       *** B5566     *** CHN *** Default    *** 5700  ***      *** Pax      *** jet/B738_CJX/738_JiangxiAir_B5566.obj
@@ -1709,8 +1711,6 @@ B738 *** C *** CSZ       *** B5613     *** CHN *** Default    *** 5700  ***     
 B738 *** C *** CUA       *** B1280     *** CHN *** Default    *** 5700  ***      *** Pax      *** jet/B738_CUA/738_ChinaUnitedAirlines_B1280.obj
 B738 *** C *** CUH       *** B2157     *** CHN *** Default    *** 5700  ***      *** Pax      *** jet/B738_CUH/738_UrumqiAir_B2157.obj
 B738 *** C *** CXA       *** B5792     *** CHN *** Default    *** 5700  ***      *** Pax      *** jet/B738_CXA/B738_CXA_static.obj
-B738 *** C *** CYH       *** B6147     *** CHN *** Default    *** 5700  ***      *** Pax      *** jet/B738_CYH/738_ChinaEasternYN_B6147.obj
-B738 *** C *** CYH       *** B6143     *** CHN *** Peacock    *** 5700  ***      *** Pax      *** jet/B738_CYH_Peacock/738_ChinaEasternYNPeacock_B6143.obj
 B738 *** C *** DAH       *** 7TVKB     *** ALG *** Default    *** 5700  ***      *** Pax      *** jet/B738_DAH/738_AirAlgerie_7TVKB.obj
 B738 *** C *** DAH       *** 7TVKQ     *** ALG *** Government *** 5700  ***      *** Pax      *** jet/B738_DAH_Mil/738_AirAlgerie_VIP_7TVKQ.obj
 B738 *** C *** DAL       *** N3753     *** USA *** Default    *** 5700  ***      *** Pax      *** jet/B738_DAL/B738_DAL_static.obj

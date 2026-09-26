@@ -137,7 +137,7 @@ def haversine(a, b):
 
 # Operators that no longer exist at all: every Obsolete row of theirs is a
 # defunct-operator mark. Every other Obsolete row is a retired-airframe mark.
-DEFUNCT = set("AZA EGF AWE BER LPV RUS WLC RVF SWG SWQ CYH".split())
+DEFUNCT = set("AZA EGF AWE BER LPV RUS WLC RVF SWG SWQ".split())
 
 
 def by_mark(pop, rows, op_ok, in_range, op_map, empty_all, empty_no_obs, pct):
