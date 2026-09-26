@@ -797,6 +797,16 @@ void	WED_ModerationLayer::DrawCards(GUI_GraphState * g, vector<Callout> & cs)
 			cs[i].x0 = rightmost + 32 + NeckLen(1 + cs[i].others.size(), 16.0f);
 			cs[i].y1 = cs[i].ay + HeadH();
 			SizeCard(cs[i]);
+			// Keep the card on the map: a stand near the right edge (or a far
+			// zoom, where the neck is long) pushed it under the property pane.
+			// Shifted, it may sit over some of its stands; the leaders still meet.
+			double b[4];
+			GetZoomer()->GetPixelBounds(b[0], b[1], b[2], b[3]);
+			float dx = 0, dy = 0;
+			if (cs[i].x1 > b[2] - 8) dx = (float) b[2] - 8 - cs[i].x1;
+			if (cs[i].x0 + dx < b[0] + 8) dx = (float) b[0] + 8 - cs[i].x0;
+			if (cs[i].y1 > b[3] - 4) dy = (float) b[3] - 4 - cs[i].y1;
+			cs[i].x0 += dx; cs[i].x1 += dx; cs[i].y0 += dy; cs[i].y1 += dy;
 			order.push_back(i);
 		}
 	// top down, pushing a card down past any it would overlap
