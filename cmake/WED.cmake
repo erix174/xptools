@@ -286,6 +286,10 @@ set (WED_SOURCES
 	src/WEDLivery/WED_MandatoryHeader.cpp
 	src/WEDLivery/WED_MandatoryHeader.h
 	src/WEDLivery/WED_LiveryPane.cpp
+	src/WEDLivery/WED_LiveryPaneDraw.cpp
+	src/WEDLivery/WED_LiveryPaneInput.cpp
+	src/WEDLivery/WED_LiveryPaneLayout.cpp
+	src/WEDLivery/WED_LiveryPaneRows.cpp
 	src/WEDLivery/WED_LiveryPane.h
 	src/WEDLivery/WED_LiveryThumbnailCache.cpp
 	src/WEDLivery/WED_LiveryThumbnailCache.h

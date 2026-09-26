@@ -33,7 +33,9 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
   DEV logging hooks, parking PNGs, GUI text field word select / wider edit).
 - Docs: spec draft 8 (move §6.7–6.8 before §7, R26–R28 into §1 with vectors,
   schema 4 grammar); rewrite the Brief as the one overview.
-- `WED_LiveryPane.cpp` (~5,900 lines) - decomposition plan in the 09-25 audit.
+- `WED_LiveryPane.cpp` decomposition: DONE 2026-09-25. Five files (core, Layout,
+  Input, Draw, Rows) plus `WED_LiveryPaneInternal.h`. The code was moved, not
+  changed. Release and Debug build, smoke-tested.
 - Data: 7 suspicious operator records and 419 country-level hubs from the
   09-19 enrichment report; `Obsolete` marks for retired airframes (e.g.
   `UAL:B744` empties UAL/E - `livery_obsolete_radius.py` first).
