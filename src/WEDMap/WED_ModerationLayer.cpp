@@ -241,6 +241,23 @@ static float	HubX(const vector<std::pair<float, float> > & stands, float receive
 	return hub;
 }
 
+// "Worth noting": a solid amber disc with a dark "!" centred on it.
+static void	DrawNote(GUI_GraphState * g, float cx, float cy, float r)
+{
+	g->SetState(0, 0, 0, 0, 1, 0, 0);
+	const float ink[4] = { 0.10f, 0.08f, 0.02f, 1.0f };
+	glColor4f(0, 0, 0, 0.5f);
+	Circle(cx, cy, r + 1.5f, true);
+	glColor4fv(kAmber);
+	Circle(cx, cy, r, true);
+	glColor4fv(ink);
+	glBegin(GL_QUADS);								// the stroke
+		glVertex2f(cx - r * 0.14f, cy - r * 0.05f); glVertex2f(cx + r * 0.14f, cy - r * 0.05f);
+		glVertex2f(cx + r * 0.18f, cy + r * 0.62f); glVertex2f(cx - r * 0.18f, cy + r * 0.62f);
+	glEnd();
+	Circle(cx, cy - r * 0.42f, r * 0.17f, true);	// the dot
+}
+
 // Verdict marks, drawn rather than typed: the UI font has no check or cross.
 static void	DrawMark(GUI_GraphState * g, int verdict, float x, float cy, float s)
 {
@@ -357,8 +374,9 @@ static string	VerifyText(const WED_ModerationEntry & e, const float ** col)
 // ---- the layer ----
 
 WED_ModerationLayer::WED_ModerationLayer(GUI_Pane * host, WED_MapZoomerNew * zoomer, IResolver * resolver) :
-	WED_MapLayer(host, zoomer, resolver), mPinnedID(-1), mTrayID(-1), mOpenID(-1), mLegendRow(-1)
+	WED_MapLayer(host, zoomer, resolver), mPinnedID(-1), mTrayID(-1), mOpenID(-1), mLegendRow(-1), mListScroll(0)
 {
+	mListBox[0] = mListBox[1] = mListBox[2] = mListBox[3] = 0;
 }
 
 WED_ModerationLayer::~WED_ModerationLayer()
@@ -457,7 +475,7 @@ void	WED_ModerationLayer::Diff(const WED_ModerationEntry & base, Callout & c) co
 	if (base.op_label != c.e.op_label)		{ c.diff.push_back("~ " + base.op_label + "  ->  " + c.e.op_label); c.diff_kind.push_back(0); ++c.n_chg; }
 	if (base.equipment != c.e.equipment)	{ c.diff.push_back("~ " + base.equipment + "  ->  " + c.e.equipment); c.diff_kind.push_back(0); ++c.n_chg; }
 	if (base.ramp_type != c.e.ramp_type)	{ c.diff.push_back("~ " + base.ramp_type + "  ->  " + c.e.ramp_type); c.diff_kind.push_back(0); ++c.n_chg; }
-	if (c.diff.empty())						{ c.diff.push_back("= same entry as the pinned stand"); c.diff_kind.push_back(2); }
+	if (c.diff.empty())						{ c.diff.push_back("= same setup as the pinned stand"); c.diff_kind.push_back(2); }
 }
 
 // On-screen stands with the same signature become one callout. It stands at the
@@ -504,7 +522,7 @@ void	WED_ModerationLayer::Group(vector<Callout> & cs, vector<Callout> & out) con
 
 			// Say it in words too, and name them when the names differ.
 			string line;
-			snprintf(buf, sizeof(buf), "= the same entry at %d stands", (int) m.size());
+			snprintf(buf, sizeof(buf), "= the same setup at %d stands", (int) m.size());
 			line = buf;
 			if (!same_name)
 			{
@@ -937,7 +955,7 @@ void	WED_ModerationLayer::DrawChips(GUI_GraphState * g, vector<Callout> & cs)
 		}
 		if (e.n_to_check)
 		{
-			snprintf(buf, sizeof(buf), "?%d", e.n_to_check);
+			snprintf(buf, sizeof(buf), "%d to verify", e.n_to_check);
 			rx -= TextW(buf);
 			Txt(g, kAmber, rx, by, buf);
 			rx -= 8;
@@ -1018,12 +1036,12 @@ void	WED_ModerationLayer::DrawLegend(GUI_GraphState * g, vector<Callout> & cs)
 	char buf[96];
 	int issues = 0;
 	for (size_t i = 0; i < groups.size(); ++i) issues += groups[i].issues;
-	snprintf(buf, sizeof(buf), "%d stands, %d distinct entries", (int) cs.size(), (int) groups.size());
+	snprintf(buf, sizeof(buf), "%d stands, %d unique setups", (int) cs.size(), (int) groups.size());
 	const float edge = top - HeadH();
 	Txt(g, kWhite, x0 + 1, edge + (HeadH() - asc) * 0.5f, buf);
 	if (issues)
 	{
-		snprintf(buf, sizeof(buf), "?%d to check", issues);
+		snprintf(buf, sizeof(buf), "%d operators to verify", issues);
 		Txt(g, kAmber, x1 - TextW(buf), edge + (HeadH() - asc) * 0.5f, buf);
 	}
 	g->SetState(0, 0, 0, 0, 1, 0, 0);
@@ -1058,7 +1076,7 @@ void	WED_ModerationLayer::DrawLegend(GUI_GraphState * g, vector<Callout> & cs)
 		Txt(g, kWhite, x, by, buf);
 		x += TextW("x000") + 6;
 		string rt_s;
-		if (gr.issues) { snprintf(buf, sizeof(buf), "?%d", gr.issues); rt_s = buf; }
+		if (gr.issues) { snprintf(buf, sizeof(buf), "%d to verify", gr.issues); rt_s = buf; }
 		const float rx = x1 - kPad - TextW(rt_s);
 		if (!rt_s.empty()) Txt(g, kAmber, rx, by, rt_s.c_str());
 		string summary = e.op_label + "  " + AirlinesText(e) + "  " + SizeText(e);
@@ -1090,11 +1108,13 @@ void	WED_ModerationLayer::Focus(int ramp_id)
 	sel->Clear();
 	sel->Select(r);
 	if (op) op->CommitOperation();
+	// pan, never refit: see WED_MapPane::CenterOnPoint
 	Point2 ll;
 	r->GetLocation(gis_Geo, ll);
-	double w, s, e, n;
-	GetZoomer()->GetMapVisibleBounds(w, s, e, n);
-	GetZoomer()->ZoomShowArea(ll.x() - (e - w) / 2, ll.y() - (n - s) / 2, ll.x() + (e - w) / 2, ll.y() + (n - s) / 2);
+	double b[4];
+	GetZoomer()->GetPixelBounds(b[0], b[1], b[2], b[3]);
+	Point2 p = GetZoomer()->LLToPixel(ll);
+	GetZoomer()->PanPixels(p.x(), p.y(), (b[0] + b[2]) * 0.5, (b[1] + b[3]) * 0.5);
 	mReviewed.insert(ramp_id);
 	GetHost()->Refresh();
 }
@@ -1146,16 +1166,17 @@ void	WED_ModerationLayer::DrawOverview(GUI_GraphState * g)
 	const float lh = LineH(), asc = Asc();
 	const float x0 = (float) b[0] + 10, w = 380, x1 = x0 + w;
 	const float top = (float) b[3] - 10 - 3 * lh - 8;			// below the map's own three lines
-	const size_t kRows = 10;
-	const size_t shown = issues.size() < kRows ? issues.size() : kRows;
+	const int kRows = 10;
+	const int shown = (int) issues.size() < kRows ? (int) issues.size() : kRows;
+	const int max_scroll = (int) issues.size() - shown;
+	if (mListScroll > max_scroll) mListScroll = max_scroll;
+	if (mListScroll < 0) mListScroll = 0;
 	const float rh = lh + 4;
-	const float body_h = kPad + 2 * RowH() + 6 + (issues.empty() ? RowH() : lh + shown * rh + (issues.size() > shown ? lh : 0) + lh) + kPad;
+	const float body_h = kPad + 2 * RowH() + 6 + (issues.empty() ? RowH() : lh + shown * rh + lh) + kPad;
 	const float edge = top - HeadH(), bottom = edge - body_h;
 
-	// a ring on every stand to check, so they stand out from the greyed rest
-	g->SetState(0, 0, 0, 0, 1, 0, 0);
-	glColor4fv(kAmber);
-	glLineWidth(2.0f);
+	// a solid "!" badge beside every stand to check - "worth noting" - so they
+	// stand out from the greyed rest
 	for (size_t i = 0; i < ramps.size(); ++i)
 	{
 		if (!sIssueIDs.count(ramps[i]->GetID())) continue;
@@ -1163,9 +1184,8 @@ void	WED_ModerationLayer::DrawOverview(GUI_GraphState * g)
 		ramps[i]->GetLocation(gis_Geo, ll);
 		Point2 px = GetZoomer()->LLToPixel(ll);
 		if (px.x() < b[0] || px.x() > b[2] || px.y() < b[1] || px.y() > b[3]) continue;
-		Circle((float) px.x(), (float) px.y(), 15, false);
+		DrawNote(g, (float) px.x() + 14, (float) px.y() + 14, 8);
 	}
-	glLineWidth(1.0f);
 
 	// header above the top edge, as the cards
 	float hx = x0 + 1;
@@ -1206,7 +1226,7 @@ void	WED_ModerationLayer::DrawOverview(GUI_GraphState * g)
 		if (!ramps.empty()) Fill(bar_x0, bb, bar_x0 + (bar_x1 - bar_x0) * n_rev / (float) ramps.size(), bt, kGreen);
 	}
 	y -= RowH();
-	snprintf(buf, sizeof(buf), "%d to check    %d distinct entries    %d auto-filled    %d None",
+	snprintf(buf, sizeof(buf), "%d to check    %d unique setups    %d auto-filled    %d \"None\"",
 		(int) issues.size(), (int) sigs.size(), n_auto, n_none);
 	Txt(g, issues.empty() ? kMuted : kAmber, x0 + kPad, y - asc, Elide(buf, w - kPad * 2).c_str());
 	y -= RowH() + 6;
@@ -1217,12 +1237,18 @@ void	WED_ModerationLayer::DrawOverview(GUI_GraphState * g)
 		return;
 	}
 	Txt(g, kMuted, x0 + kPad, y - asc, "To check - click one to select it:");
+	if (max_scroll > 0)
+	{
+		snprintf(buf, sizeof(buf), "%d-%d of %d, scroll for more", mListScroll + 1, mListScroll + shown, (int) issues.size());
+		Txt(g, kMuted, x1 - kPad - TextW(buf), y - asc, buf);
+	}
 	y -= lh;
+	mListBox[0] = x0; mListBox[2] = x1; mListBox[3] = y; mListBox[1] = y - shown * rh;
 	int mx, my;
 	GetHost()->GetMouseLocNow(&mx, &my);
-	for (size_t r = 0; r < shown; ++r)
+	for (int r = 0; r < shown; ++r)
 	{
-		const Row & row = issues[r];
+		const Row & row = issues[r + mListScroll];
 		const float rt = y, rb = y - rh;
 		if (Inside((float) mx, (float) my, x0, rb, x1, rt))
 		{
@@ -1236,20 +1262,30 @@ void	WED_ModerationLayer::DrawOverview(GUI_GraphState * g)
 		Fill(x0 + kPad, rb + 3, x0 + kPad + 10, rt - 3, sw);
 		const float ty = rb + (rh - asc) * 0.5f;
 		Txt(g, row.reviewed ? kMuted : kWhite, x0 + kPad + 16, ty, row.name.c_str());
+		// in words: "1 operator to verify", or why there is nothing to verify against
 		string right;
-		if (row.n) { snprintf(buf, sizeof(buf), "?%d", row.n); right = buf; }
-		else right = "no data";
+		if (row.n) { snprintf(buf, sizeof(buf), "%d operator%s to verify", row.n, row.n == 1 ? "" : "s"); right = buf; }
+		else right = "no airport data";
 		Txt(g, kAmber, x1 - kPad - TextW(right), ty, right.c_str());
-		if (row.reviewed) DrawMark(g, WED_ModerationCode::v_Ok, x1 - kPad - TextW(right) - 20, rb + rh * 0.5f, lh * 0.5f);
+		if (row.reviewed)
+		{
+			const float rx = x1 - kPad - TextW(right) - 12 - TextW("reviewed");
+			Txt(g, kGreen, rx, ty, "reviewed");
+		}
 		Hit hf = { Hit::hit_Focus, x0, rb, x1, rt, row.id, "" };
 		mHits.push_back(hf);
 		y = rb;
 	}
-	if (issues.size() > shown)
+	if (max_scroll > 0)
 	{
-		snprintf(buf, sizeof(buf), "... and %d more", (int) (issues.size() - shown));
-		Txt(g, kMuted, x0 + kPad, y - asc - 1, buf);
-		y -= lh;
+		// a thin scroll bar at the list's right edge
+		const float track[4] = { 1, 1, 1, 0.15f };
+		const float lt = mListBox[3], lb = mListBox[1];
+		const float th = (lt - lb) * shown / (float) issues.size();
+		const float tt = lt - (lt - lb - th) * mListScroll / (float) max_scroll;
+		g->SetState(0, 0, 0, 0, 1, 0, 0);
+		Fill(x1 - 4, lb, x1 - 1, lt, track);
+		Fill(x1 - 4, tt - th, x1 - 1, tt, kMuted);
 	}
 	Txt(g, kMuted, x0 + kPad, y - asc - 2, "Shift+X / Ctrl+Shift+X: next / previous stand to check");
 }
@@ -1320,6 +1356,15 @@ void	WED_ModerationLayer::DrawSelected(bool inCurrent, GUI_GraphState * g)
 	glEnable(GL_CULL_FACE);
 	g->SetState(0, 0, 0, 0, 0, 0, 0);
 	glLineWidth(1.0f);
+}
+
+int		WED_ModerationLayer::HandleScrollWheel(int inX, int inY, int inDist)
+{
+	if (!sModerationView) return 0;
+	if (!Inside((float) inX, (float) inY, mListBox[0], mListBox[1], mListBox[2], mListBox[3])) return 0;
+	mListScroll -= inDist;				// wheel up: towards the top of the list
+	if (mListScroll < 0) mListScroll = 0;	// the upper clamp is DrawOverview's
+	return 1;
 }
 
 void	WED_ModerationLayer::HandleClickUp(int inX, int inY, int inButton, GUI_KeyFlags modifiers)

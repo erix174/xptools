@@ -94,6 +94,7 @@ public:
 
 	virtual	int			HandleClickDown(int inX, int inY, int inButton, GUI_KeyFlags modifiers);
 	virtual	void		HandleClickUp  (int inX, int inY, int inButton, GUI_KeyFlags modifiers);
+	virtual	int			HandleScrollWheel(int inX, int inY, int inDist);
 	virtual	void		DrawSelected(bool inCurrent, GUI_GraphState * g);
 	virtual	void		GetCaps(bool& draw_ent_v, bool& draw_ent_s, bool& cares_about_sel, bool& wants_clicks);
 
@@ -148,6 +149,8 @@ private:
 	std::string						mPendingURL;	// a "?" pressed: opened on the mouse-up
 	std::map<std::string, Flag>		mFlags;
 	std::set<int>					mReviewed;		// Moderation View: stands looked at this session
+	int								mListScroll;	// overview: first row shown
+	float							mListBox[4];	// overview: the list's rectangle, for the wheel
 };
 
 #endif /* WED_MODERATIONLAYER_H */

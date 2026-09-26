@@ -407,13 +407,13 @@ void WED_MapPane::ZoomShowSel(double scale)   // by default show just a bit more
 
 void WED_MapPane::CenterOnPoint(const Point2& centerLL)
 {
-	double west, south, east, north;
-	mMap->GetMapVisibleBounds(west, south, east, north);
-	double lonExtent = east - west;
-	double latExtent = north - south;
-	mMap->ZoomShowArea(
-		centerLL.x() - lonExtent / 2, centerLL.y() - latExtent / 2,
-		centerLL.x() + lonExtent / 2, centerLL.y() + latExtent / 2);
+	// Pan, at the current zoom. Refitting to GetMapVisibleBounds() zoomed out a
+	// little on every call: those bounds are sampled round the edge of the view
+	// and are a touch larger than it, so each re-centre grew the view.
+	double b[4];
+	mMap->GetPixelBounds(b[0], b[1], b[2], b[3]);
+	Point2 p = mMap->LLToPixel(centerLL);
+	mMap->PanPixels(p.x(), p.y(), (b[0] + b[2]) * 0.5, (b[1] + b[3]) * 0.5);
 	Refresh();
 }
 

@@ -100,6 +100,24 @@ void	WED_ModerationToolbar::Draw(GUI_GraphState * state)
 		glTexCoord2f(s1, t0); glVertex2f(sx + w, sy);
 	}
 	glEnd();
+
+	// The grid the map tools draw between their cells, over the art: a line
+	// above the row and down each side of every cell.
+	state->SetState(0, 0, 0, 0, 0, 0, 0);
+	glColor3f(0.40f, 0.40f, 0.40f);
+	glBegin(GL_LINES);
+	const int rows = (kTools + Columns() - 1) / Columns();
+	for (int r = 0; r <= rows; ++r)
+	{
+		const float y = (float) (b[1] + r * h) - (r == rows ? 0.5f : -0.5f);
+		glVertex2f((float) b[0], y); glVertex2f((float) (b[0] + Columns() * w), y);
+	}
+	for (int c = 0; c <= Columns(); ++c)
+	{
+		const float x = (float) (b[0] + c * w) + (c == Columns() ? -0.5f : 0.5f);
+		glVertex2f(x, (float) b[1]); glVertex2f(x, (float) (b[1] + rows * h));
+	}
+	glEnd();
 }
 
 int		WED_ModerationToolbar::MouseDown(int x, int y, int button)

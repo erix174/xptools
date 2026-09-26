@@ -499,6 +499,13 @@ int			WED_Map::HandleKeyPress(uint32_t inKey, int inVK, GUI_KeyFlags inFlags)
 
 int			WED_Map::ScrollWheel(int x, int y, int dist, int axis)
 {
+	for(vector<WED_MapLayer *>::iterator l = mLayers.begin(); l != mLayers.end(); ++l)
+	if((*l)->IsVisible())
+	{
+		bool draw_ent_v, draw_ent_s, wants_sel, wants_clicks;
+		(*l)->GetCaps(draw_ent_v, draw_ent_s, wants_sel, wants_clicks);
+		if (wants_clicks && (*l)->HandleScrollWheel(x, y, dist)) { Refresh(); return 1; }
+	}
 	double	zoom = 1.0;
 	while (dist > 0)
 	{

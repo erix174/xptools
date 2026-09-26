@@ -60,6 +60,9 @@ public:
 	virtual	int					HandleClickDown(int inX, int inY, int inButton, GUI_KeyFlags modifiers) { return 0; }
 	virtual	void				HandleClickDrag(int inX, int inY, int inButton, GUI_KeyFlags modifiers) {			}
 	virtual	void				HandleClickUp  (int inX, int inY, int inButton, GUI_KeyFlags modifiers)	{			}
+	// A layer that scrolls something of its own under the mouse returns 1 and
+	// the map does not zoom. Asked only of layers that want clicks.
+	virtual	int					HandleScrollWheel(int inX, int inY, int inDist)							{ return 0; }
 	
 
 	// These provide generalized drawing routines.  Use this to draw background images and other such stuff.
