@@ -36,9 +36,13 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
 - `WED_LiveryPane.cpp` decomposition: DONE 2026-09-25. Five files (core, Layout,
   Input, Draw, Rows) plus `WED_LiveryPaneInternal.h`. The code was moved, not
   changed. Release and Debug build, smoke-tested.
-- Data: 7 suspicious operator records and 419 country-level hubs from the
-  09-19 enrichment report; `Obsolete` marks for retired airframes (e.g.
-  `UAL:B744` empties UAL/E - `livery_obsolete_radius.py` first).
+- Data, 2026-09-25 pass: DONE for the 7 suspicious operator records.
+  - AEH, DSB, EPT, LHA, MXM and NSE were corrected. DTH was already right (Tassili was renamed Domestic Airlines).
+  - LHA and MXM are now Cargo.
+  - 20 retired airframes are marked `Obsolete` (spec §6.6 case 2). That makes 32 marks, which empty 14 pairs: AFR/B AUA/B CJT/C CPA/E DAL/B DAL/E DLA/C EXS/D HMF/A SAS/C SIA/C UAE/E UAL/E VIR/E.
+  - Left unmarked: AHY B752 (stored, not confirmed retired) and CNV BE9L (mark it once the T-44 sundown completes in 2026).
+  - **Eric to decide:** should liveries of operators that no longer exist be marked Obsolete too? These are AZA MD82, EGF AT72, AWE A320, BER A320, LPV D328, RUS J328, WLC J328, RVF B752, SWG B738, SWQ B738, and CYH B738 (2 rows). Each is that operator's only pair.
+  - Still open: 419 country-level hubs ("approx"), which barely matter for range.
 - Upstream WED bugs fixed on this branch - send as their own small PR, not with
   the feature: a failed save left the document reading as saved, so a close after
   it threw the edits away (now stays dirty); the package list needed a
