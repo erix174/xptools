@@ -196,6 +196,105 @@ WED_NWLinkAdapter *	WED_Document::GetNWLink(void)
 #endif
 
 #include <chrono>
+#include <map>
+
+void	WED_Document::NoteDiscardedImportRows(const vector<string>& rows)
+{
+	// A re-import of the same airport - a corrected file - replaces its rows
+	// rather than adding to them. Entries are "ICAO line N: ...".
+	std::set<string> icaos;
+	for (size_t i = 0; i < rows.size(); ++i)
+		icaos.insert(rows[i].substr(0, rows[i].find(' ')));
+	vector<string> kept;
+	for (size_t i = 0; i < mDiscardedImportRows.size(); ++i)
+		if (!icaos.count(mDiscardedImportRows[i].substr(0, mDiscardedImportRows[i].find(' '))))
+			kept.push_back(mDiscardedImportRows[i]);
+	kept.insert(kept.end(), rows.begin(), rows.end());
+	mDiscardedImportRows.swap(kept);
+}
+
+// Counts entries ("ICAO line N: <row>  (why)") by cause. Unknown row codes are
+// tallied per code, so "1313 x24" says more than twenty-four raw lines would.
+static int	CountDiscarded(const vector<string>& rows, const string& icao_prefix,
+						   std::map<string, int>& unknown_codes, int& n_other)
+{
+	int n_unknown = 0;
+	n_other = 0;
+	for (size_t i = 0; i < rows.size(); ++i)
+	{
+		const string & r = rows[i];
+		if (!icao_prefix.empty() && r.compare(0, icao_prefix.size(), icao_prefix) != 0) continue;
+		size_t colon = r.find(": ");
+		string row = colon == string::npos ? string() : r.substr(colon + 2);
+		string code = row.substr(0, row.find(' '));
+		if (r.find("(unknown row code)") != string::npos)	{ ++n_unknown; ++unknown_codes[code]; }
+		else												++n_other;
+	}
+	return n_unknown;
+}
+
+static string	CodeList(const std::map<string, int>& unknown_codes)
+{
+	string codes;
+	char buf[64];
+	for (std::map<string, int>::const_iterator c = unknown_codes.begin(); c != unknown_codes.end(); ++c)
+	{
+		snprintf(buf, sizeof(buf), "%s%s x%d", codes.empty() ? "" : ", ", c->first.c_str(), c->second);
+		codes += buf;
+	}
+	return codes;
+}
+
+string	WED_Document::DescribeDiscardedRows(const vector<string>& rows)
+{
+	// Grouped by cause, not listed row by row: ten lines of raw apt.dat in a
+	// dialog read as an error report, when the usual cause is a file written by a
+	// newer tool. Every row, with its line number, is in WED_Log.txt.
+	std::map<string, int> unknown_codes;
+	int n_other;
+	int n_unknown = CountDiscarded(rows, string(), unknown_codes, n_other);
+
+	char buf[160];
+	snprintf(buf, sizeof(buf), "%d row%s of this apt.dat %s not imported:\n",
+			 (int) rows.size(), rows.size() == 1 ? "" : "s", rows.size() == 1 ? "was" : "were");
+	string msg(buf);
+	if (n_unknown)
+	{
+		snprintf(buf, sizeof(buf), "\n  - %d with a row code this version of WED does not know (", n_unknown);
+		msg += buf + CodeList(unknown_codes) + ")";
+	}
+	if (n_other)
+	{
+		snprintf(buf, sizeof(buf), "\n  - %d other", n_other);
+		msg += buf;
+	}
+	msg += "\n\nEach one is listed with its line number in WED_Log.txt.";
+	return msg;
+}
+
+string	WED_Document::DescribeDiscardedRowsFor(const string& icao) const
+{
+	std::map<string, int> unknown_codes;
+	int n_other;
+	int n_unknown = CountDiscarded(mDiscardedImportRows, icao + " line ", unknown_codes, n_other);
+	int n = n_unknown + n_other;
+	if (n == 0) return string();
+
+	char buf[160];
+	snprintf(buf, sizeof(buf), "%d row%s of the imported apt.dat %s not imported:", n, n == 1 ? "" : "s", n == 1 ? "was" : "were");
+	string msg(buf);
+	string sep = " ";
+	if (n_unknown)
+	{
+		msg += sep + "unknown row codes " + CodeList(unknown_codes); sep = "; ";
+	}
+	if (n_other)
+	{
+		snprintf(buf, sizeof(buf), "%d other", n_other);
+		msg += sep + buf;
+	}
+	return msg + ". They are not in this scenery; line numbers are in WED_Log.txt.";
+}
 
 void	WED_Document::Save(void)
 {
@@ -354,6 +453,7 @@ void	WED_Document::Revert(void)
 			return;
 	}
 	mDocPrefs.clear();
+	mDiscardedImportRows.clear();		// the saved file never had them
 	auto t0 = std::chrono::high_resolution_clock::now();
 
 	try {

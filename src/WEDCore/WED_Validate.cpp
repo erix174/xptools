@@ -2790,6 +2790,17 @@ static void ValidateOneAirport(WED_Airport* apt, validation_error_vector& msgs, 
 	for(auto r : ramps)
 		ai_useable_ramps += ValidateOneRampPosition(r, msgs, apt, runways);
 
+	// Rows the import could not read. A warning, not an error: the file loaded
+	// the way X-Plane loads it. It stays listed for the rest of the session.
+	if (WED_Document * doc = dynamic_cast<WED_Document *>(apt->GetArchive()->GetResolver()))
+	{
+		string icao;
+		apt->GetICAO(icao);
+		string summary = doc->DescribeDiscardedRowsFor(icao);
+		if (!summary.empty())
+			msgs.push_back(validation_error_t(summary, warn_apt_dat_rows_not_imported, apt, apt));
+	}
+
 	set<set<WED_FacadePlacement*> > double_door2_jws;
 	for (auto& j1 : jetways)
 	{

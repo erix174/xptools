@@ -195,6 +195,7 @@ enum validate_error_t
 	warn_rwy_edge_light_not_matching_center_lights,
 	warn_rwy_misaligned_with_name,
 	warn_viewpoint_mislocated,
+	warn_apt_dat_rows_not_imported,		// rows the reader skipped (AptInfo_t::discarded_rows)
 };
 
 // The validation error record stores a single validation problem for reporting.

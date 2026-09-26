@@ -678,6 +678,12 @@ struct AptInfo_t {
 	AptNetwork_t		taxi_route;
 
 	Bbox2				bounds;
+
+	// Rows of THIS airport the reader skipped without failing the file - today
+	// an unknown row code - as "line N: <row> (why)". Filled by ReadAptFile; a
+	// tool that does not care simply never looks. WED lists them after an import
+	// and as a validation warning.
+	vector<string>		discarded_rows;
 };
 
 typedef vector<AptInfo_t>	AptVector;

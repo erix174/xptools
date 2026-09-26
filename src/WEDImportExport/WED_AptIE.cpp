@@ -58,6 +58,7 @@
 
 #include "AptIO.h"
 #include "WED_AptIE.h"
+#include "WED_Document.h"
 #include "GUI_Application.h"
 #include "WED_EnumSystem.h"
 #include "WED_HierarchyUtils.h"
@@ -695,9 +696,14 @@ void	WED_AptImport(
 				WED_Thing *				container,
 				const string&			file_path,
 				AptVector&				apts,
-				vector<WED_Airport *> *	out_airports)
+				vector<WED_Airport *> *	out_airports,
+				bool					quiet)
 {
 	bool import_ok = true;
+	vector<string> discarded;			// rows the reader skipped, "ICAO line N: ..."
+	for (AptVector::iterator apt = apts.begin(); apt != apts.end(); ++apt)
+		for (size_t i = 0; i < apt->discarded_rows.size(); ++i)
+			discarded.push_back(apt->icao + " " + apt->discarded_rows[i]);
 	for (AptVector::iterator apt = apts.begin(); apt != apts.end(); ++apt)
 	{
 		bool log = false;
@@ -1092,6 +1098,26 @@ void	WED_AptImport(
 
 	if(!import_ok)
 		DoUserAlert("There were problems during the import. See WED_Log.txt for details");
+
+	// Rows the reader could not use - a row code this WED does not know. The file
+	// loaded anyway (it must: the sim loads it too), but those rows are not in the
+	// document, so the author hears about them now, and the validator keeps
+	// listing them until the next save makes the loss permanent.
+	if (!discarded.empty())
+	{
+		for (size_t i = 0; i < discarded.size(); ++i)
+			LOG_MSG("W/Apt %s skipped %s\n", file_path.c_str(), discarded[i].c_str());
+
+		if (WED_Document * doc = dynamic_cast<WED_Document *>(archive->GetResolver()))
+			doc->NoteDiscardedImportRows(discarded);
+
+		if (!quiet)
+		{
+			string msg = WED_Document::DescribeDiscardedRows(discarded) +
+				"\n\nThe rest of the airport was imported normally.";
+			DoUserAlert(msg.c_str());
+		}
+	}
 }
 
 int		WED_CanImportApt(IResolver * resolver)
@@ -1172,5 +1198,9 @@ void	WED_ImportOneAptFile(
 			in_parent,
 			in_path.c_str(),
 			apts,
-			out_apts);
+			out_apts,
+			true);		// Quiet: both callers - opening a package that has no earth.wed.xml,
+						// and the Gateway download - run inside another dialog's click, and
+						// a second modal there swallowed the mouse-up and left GUI_Commander's
+						// defer count stuck. The rows still reach the validator.
 }

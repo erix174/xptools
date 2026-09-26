@@ -270,6 +270,19 @@ static void CenterToCorners(Point2 location, double heading, double len, double 
 }
 
 
+// Records a row the reader is skipping, against the airport it sits in. A row
+// before the first airport header has nowhere to go and stays silent.
+static void	NoteDiscardedRow(AptVector& apts, MFTextScanner * s, int ln, const char * why)
+{
+	if (apts.empty()) return;
+	string row(TextScanner_GetBegin(s), TextScanner_GetEnd(s));
+	while (!row.empty() && (row.back() == '\n' || row.back() == '\r')) row.pop_back();
+	if (row.size() > 80) row = row.substr(0, 77) + "...";
+	char pfx[32];
+	snprintf(pfx, sizeof(pfx), "line %d: ", ln + 1);
+	apts.back().discarded_rows.push_back(string(pfx) + row + "  (" + why + ")");
+}
+
 string	ReadAptFile(const char * inFileName, AptVector& outApts)
 {
 	outApts.clear();
@@ -1206,7 +1219,22 @@ string	ReadAptFileMem(const char * inBegin, const char * inEnd, AptVector& outAp
 					outApts.back().atc.back().atc_type -= apt_freq_awos_1k-apt_freq_awos;    // adjust new style codes to internally use "old" types - to match the enum definitions
 				}
 			} else
-				ok = "Illegal unknown record";
+			{
+				// An unrecognised row code is IGNORED, not an error.
+				//
+				// This used to be `ok = "Illegal unknown record"`, which aborts
+				// the entire file - so one row code this WED had not been taught
+				// meant importing nothing at all, not a degraded airport. X-Plane
+				// has always skipped rows it does not know, and matching it means
+				// no row code added after this release can make this version
+				// refuse a file the sim loads.
+				//
+				// Skipped, but not in silence: the row is recorded on its airport
+				// (AptInfo_t::discarded_rows), so WED can tell the author which
+				// line went missing. Nothing changes for MeshTool, DSF2Text or
+				// RenderFarm - they never read that list.
+				NoteDiscardedRow(outApts, s, ln, "unknown row code");
+			}
 			break;
 		}
 		TextScanner_Next(s);
