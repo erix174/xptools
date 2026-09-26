@@ -48,7 +48,7 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
   - LHA and MXM are now Cargo.
   - 20 retired airframes are marked `Obsolete` (spec §6.6 case 2). That makes 32 marks, which empty 14 pairs: AFR/B AUA/B CJT/C CPA/E DAL/B DAL/E DLA/C EXS/D HMF/A SAS/C SIA/C UAE/E UAL/E VIR/E.
   - Left unmarked: AHY B752 (stored, not confirmed retired) and CNV BE9L (mark it once the T-44 sundown completes in 2026).
-  - **Eric to decide:** should liveries of operators that no longer exist be marked Obsolete too? These are AZA MD82, EGF AT72, AWE A320, BER A320, LPV D328, RUS J328, WLC J328, RVF B752, SWG B738, SWQ B738, and CYH B738 (2 rows). Each is that operator's only pair.
+  - Defunct operators marked too (Eric, 2026-09-25): AZA EGF AWE BER LPV RUS WLC RVF SWG SWQ CYH, 12 rows. 44 marks now empty 25 pairs. The CYH Peacock row lost its caption, since NOTE holds a single value.
   - Still open: 419 country-level hubs ("approx"), which barely matter for range.
 - Upstream WED bugs fixed on this branch: now on `upstream/save-and-doubleclick`.
   - A failed save left the document reading as saved, so closing it afterwards threw the edits away.
