@@ -32,11 +32,11 @@
 #include "WED_FlagAssets.h"
 #include "GUI_Fonts.h"
 #include "GUI_GraphState.h"
-#include "GUI_Help.h"
 #include "GUI_Pane.h"
+#include "ISelection.h"
+#include "IOperation.h"
 
 #include <algorithm>
-#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <set>
@@ -51,48 +51,33 @@ using std::string;
 using std::vector;
 using std::set;
 
-static std::map<int, std::vector<float> > sTints;		// ramp id -> rgb, last frame
-
 bool	WED_ModerationTintFor(const WED_RampPosition * ramp, float out_rgb[3])
 {
-	if (!ramp || sTints.empty()) return false;
-	std::map<int, std::vector<float> >::const_iterator i = sTints.find(ramp->GetID());
-	if (i == sTints.end()) return false;
-	out_rgb[0] = i->second[0]; out_rgb[1] = i->second[1]; out_rgb[2] = i->second[2];
+	if (!ramp || !WED_ModerationEnabled()) return false;
+	float rgba[4];
+	WED_ModerationColour(WED_ModerationSignature(const_cast<WED_RampPosition *>(ramp)), rgba);
+	out_rgb[0] = rgba[0]; out_rgb[1] = rgba[1]; out_rgb[2] = rgba[2];
 	return true;
 }
 
-// Callouts are for reading a handful of stands; a whole airport's worth would
-// only be noise on top of the map.
-static const size_t kMaxCallouts = 40;
+// Density tiers, by how many stands are selected (see the header).
+static const size_t kMaxCards = 5;
+static const size_t kMaxChips = 40;
+static const size_t kMaxLegendRows = 24;
+// The map's own pan/zoom buttons sit in its top-right corner; the chip column
+// and the legend start below them.
+static const float kTopClear = 64.0f;
 
 static const float kWhite[4]  = { 0.93f, 0.93f, 0.93f, 1.0f };
-static const float kMuted[4]  = { 0.62f, 0.62f, 0.64f, 1.0f };
+static const float kMuted[4]  = { 0.66f, 0.66f, 0.68f, 1.0f };
 static const float kGreen[4]  = { 0.45f, 0.85f, 0.45f, 1.0f };
 static const float kRed[4]    = { 1.00f, 0.45f, 0.40f, 1.0f };
 static const float kAmber[4]  = { 1.00f, 0.75f, 0.30f, 1.0f };
+static const float kFill[4]   = { 0.0f, 0.0f, 0.0f, 0.4f };		// the card body: 40% black
 
 // Not std::max: <windows.h>, force-included through XDefs.h, defines min/max macros.
 static inline float	Max(float a, float b) { return a > b ? a : b; }
 static inline float	Min(float a, float b) { return a < b ? a : b; }
-
-static void	HsvToRgb(float h, float s, float v, float out[4])
-{
-	h = h - floorf(h);
-	float r, g, b;
-	int i = (int) (h * 6.0f);
-	float f = h * 6.0f - (float) i;
-	float p = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s);
-	switch (i % 6) {
-	case 0: r = v; g = t; b = p; break;
-	case 1: r = q; g = v; b = p; break;
-	case 2: r = p; g = v; b = t; break;
-	case 3: r = p; g = q; b = v; break;
-	case 4: r = t; g = p; b = v; break;
-	default: r = v; g = p; b = q; break;
-	}
-	out[0] = r; out[1] = g; out[2] = b; out[3] = 1.0f;
-}
 
 static float	TextW(const string & s)
 {
@@ -107,8 +92,8 @@ static string	Elide(const string & s, float w)
 	return t + "...";
 }
 
-// Text over the map: a 1-pixel black shadow keeps it legible on the 40% card
-// fill and on the bare imagery behind the header row.
+// Text over the map: a 1-pixel black shadow keeps it legible on the 40% fill and
+// on the bare imagery behind a header row.
 static void	Txt(GUI_GraphState * g, const float col[4], float x, float y, const char * s, int align = align_Left)
 {
 	const float shadow[4] = { 0, 0, 0, 0.85f * col[3] };
@@ -116,11 +101,24 @@ static void	Txt(GUI_GraphState * g, const float col[4], float x, float y, const 
 	GUI_FontDraw(g, font_UI_Basic, col, x, y, s, align);
 }
 
-static void	Rect(float x0, float y0, float x1, float y1, const float c[4], bool fill)
+static void	Fill(float x0, float y0, float x1, float y1, const float c[4])
 {
 	glColor4fv(c);
-	glBegin(fill ? GL_QUADS : GL_LINE_LOOP);
+	glBegin(GL_QUADS);
 	glVertex2f(x0, y0); glVertex2f(x1, y0); glVertex2f(x1, y1); glVertex2f(x0, y1);
+	glEnd();
+}
+
+static void	Circle(float cx, float cy, float r, bool filled)
+{
+	glBegin(filled ? GL_TRIANGLE_FAN : GL_LINE_LOOP);
+	if (filled) glVertex2f(cx, cy);
+	const int n = 20;
+	for (int i = 0; i < (filled ? n + 1 : n); ++i)
+	{
+		float a = (float) i / (float) n * 6.2831853f;
+		glVertex2f(cx + cosf(a) * r, cy + sinf(a) * r);
+	}
 	glEnd();
 }
 
@@ -128,6 +126,12 @@ static bool	Inside(float x, float y, float x0, float y0, float x1, float y1)
 {
 	return x >= x0 && x <= x1 && y >= y0 && y <= y1;
 }
+
+static float	LineH(void)		{ return GUI_GetLineHeight(font_UI_Basic); }
+static float	Asc(void)		{ return GUI_GetLineAscent(font_UI_Basic); }
+static float	RowH(void)		{ return LineH() + 3.0f; }
+static float	HeadH(void)		{ return LineH() + 8.0f; }
+static const float kPad = 6.0f;
 
 // Verdict marks, drawn rather than typed: the UI font has no check or cross.
 static void	DrawMark(GUI_GraphState * g, int verdict, float x, float cy, float s)
@@ -153,79 +157,16 @@ static void	DrawMark(GUI_GraphState * g, int verdict, float x, float cy, float s
 	{
 		// A filled badge with a dark "?": a ring round the glyph read as a
 		// no-entry sign at this size.
-		const float r = s * 0.72f;
 		glColor4fv(kAmber);
-		// Wound clockwise: counter-clockwise shapes are back faces to WED's
-		// culling here (the Liveries tab hit the same thing).
-		glBegin(GL_TRIANGLE_FAN);
-		glVertex2f(x + s * 0.5f, cy);
-		for (int i = 0; i <= 20; ++i)
-		{
-			float a = -(float) i / 20.0f * 6.2831853f;
-			glVertex2f(x + s * 0.5f + cosf(a) * r, cy + sinf(a) * r);
-		}
-		glEnd();
+		Circle(x + s * 0.5f, cy, s * 0.72f, true);
 		const float ink[4] = { 0.10f, 0.08f, 0.02f, 1.0f };
-		GUI_FontDraw(g, font_UI_Basic, ink, x + s * 0.5f, cy - GUI_GetLineAscent(font_UI_Basic) * 0.36f, "?", align_Center);
+		GUI_FontDraw(g, font_UI_Basic, ink, x + s * 0.5f, cy - Asc() * 0.36f, "?", align_Center);
 		break;
 	}
 	default:
 		break;
 	}
 	glLineWidth(1.0f);
-}
-
-WED_ModerationLayer::WED_ModerationLayer(GUI_Pane * host, WED_MapZoomerNew * zoomer, IResolver * resolver) :
-	WED_MapLayer(host, zoomer, resolver), mPinnedID(-1), mTrayID(-1)
-{
-	long long t = std::chrono::steady_clock::now().time_since_epoch().count();
-	mHueSeed = (float) ((t / 1000) % 1000) / 1000.0f;
-}
-
-WED_ModerationLayer::~WED_ModerationLayer()
-{
-}
-
-void	WED_ModerationLayer::GetCaps(bool& draw_ent_v, bool& draw_ent_s, bool& cares_about_sel, bool& wants_clicks)
-{
-	draw_ent_v = false;
-	draw_ent_s = false;
-	cares_about_sel = false;
-	wants_clicks = true;
-}
-
-void	WED_ModerationLayer::ColourFor(const string & signature, float rgba[4])
-{
-	std::map<string, int>::iterator i = mSigIndex.find(signature);
-	int slot = i != mSigIndex.end() ? i->second : (mSigIndex[signature] = (int) mSigIndex.size());
-	// Golden-ratio steps round the hue circle: each new signature lands as far
-	// as it can from the ones before it, so neighbouring slots never look alike.
-	HsvToRgb(mHueSeed + (float) slot * 0.6180339f, 0.62f, 0.97f, rgba);
-}
-
-const WED_ModerationLayer::Flag *	WED_ModerationLayer::FlagFor(const string & ioc)
-{
-	if (ioc.empty()) return NULL;
-	std::map<string, Flag>::iterator it = mFlags.find(ioc);
-	if (it != mFlags.end()) return it->second.tex ? &it->second : NULL;
-
-	Flag f = { 0, 0, 0 };
-	vector<uint32_t> argb;
-	int w = 0, h = 0;
-	if (WED_LoadPngTopDownARGB(WED_FlagSourcePathForCountry(ioc), argb, w, h) && !argb.empty() && w > 0 && h > 0)
-	{
-		GLuint tex = 0;
-		glGenTextures(1, &tex);
-		glBindTexture(GL_TEXTURE_2D, tex);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, &argb[0]);
-		f.tex = tex; f.w = w; f.h = h;
-	}
-	Flag & stored = mFlags[ioc] = f;
-	return stored.tex ? &stored : NULL;
 }
 
 static void	DrawFlag(GUI_GraphState * g, unsigned int tex, int w, int h, float x, float y_bot, float hgt)
@@ -243,82 +184,7 @@ static void	DrawFlag(GUI_GraphState * g, unsigned int tex, int w, int h, float x
 	g->SetState(0, 0, 0, 0, 1, 0, 0);
 }
 
-void	WED_ModerationLayer::Collect(vector<Callout> & out)
-{
-	out.clear();
-	set<WED_Thing *> sel;
-	WED_GetSelectionRecursive(GetResolver(), sel);
-
-	vector<WED_RampPosition *> ramps;
-	for (set<WED_Thing *>::const_iterator t = sel.begin(); t != sel.end(); ++t)
-		if (WED_RampPosition * r = dynamic_cast<WED_RampPosition *>(*t))
-			ramps.push_back(r);
-
-	// The pinned stand stays on screen while others are selected - that is
-	// what makes it a base to compare against. A stand that has been deleted
-	// is no longer in the archive, or no longer has a parent: unpin it.
-	WED_RampPosition * pinned = NULL;
-	if (mPinnedID >= 0)
-	{
-		WED_Thing * wrl = WED_GetWorld(GetResolver());
-		pinned = wrl ? dynamic_cast<WED_RampPosition *>(wrl->FetchPeer(mPinnedID)) : NULL;
-		if (!pinned || !pinned->GetParent()) { pinned = NULL; mPinnedID = -1; }
-		else if (std::find(ramps.begin(), ramps.end(), pinned) == ramps.end()) ramps.insert(ramps.begin(), pinned);
-	}
-	if (ramps.size() > kMaxCallouts) ramps.resize(kMaxCallouts);
-
-	double b[4];
-	GetZoomer()->GetPixelBounds(b[0], b[1], b[2], b[3]);
-	for (size_t i = 0; i < ramps.size(); ++i)
-	{
-		Callout c;
-		c.ramp = ramps[i];
-		c.id   = ramps[i]->GetID();
-		Point2 ll;
-		ramps[i]->GetLocation(gis_Geo, ll);
-		Point2 px = GetZoomer()->LLToPixel(ll);
-		c.ax = (float) px.x();
-		c.ay = (float) px.y();
-		if (c.ax < b[0] || c.ax > b[2] || c.ay < b[1] || c.ay > b[3]) continue;		// off screen
-		WED_ModerationDescribe(ramps[i], WED_GetParentAirport(ramps[i]), c.e);
-		c.x0 = c.y0 = c.x1 = c.y1 = c.tray_y = 0;
-		out.push_back(c);
-	}
-}
-
-static string	SizeText(const WED_ModerationEntry & e)
-{
-	if (!e.updated) return string("size ") + e.size_letter;
-	string w = WED_ModerationWeightsText(e.weights);
-	return w.empty() ? string("all weights zero - nothing parks") : w;
-}
-
-void	WED_ModerationLayer::Diff(const WED_ModerationEntry & base, Callout & c) const
-{
-	set<string> a, b;
-	for (size_t i = 0; i < base.codes.size(); ++i) a.insert(base.codes[i].code);
-	for (size_t i = 0; i < c.e.codes.size(); ++i)  b.insert(c.e.codes[i].code);
-	string added, removed;
-	for (set<string>::const_iterator i = b.begin(); i != b.end(); ++i) if (!a.count(*i)) added   += " " + *i;
-	for (set<string>::const_iterator i = a.begin(); i != a.end(); ++i) if (!b.count(*i)) removed += " " + *i;
-	if (!added.empty())   { c.diff.push_back("+" + added);   c.diff_kind.push_back(1); }
-	if (!removed.empty()) { c.diff.push_back("-" + removed); c.diff_kind.push_back(-1); }
-
-	const string sa = SizeText(base), sb = SizeText(c.e);
-	if (sa != sb)								{ c.diff.push_back("~ " + sa + "  ->  " + sb); c.diff_kind.push_back(0); }
-	if (base.op_label != c.e.op_label)			{ c.diff.push_back("~ " + base.op_label + "  ->  " + c.e.op_label); c.diff_kind.push_back(0); }
-	if (base.equipment != c.e.equipment)		{ c.diff.push_back("~ " + base.equipment + "  ->  " + c.e.equipment); c.diff_kind.push_back(0); }
-	if (base.ramp_type != c.e.ramp_type)		{ c.diff.push_back("~ " + base.ramp_type + "  ->  " + c.e.ramp_type); c.diff_kind.push_back(0); }
-	if (c.diff.empty())							{ c.diff.push_back("= same entry as the pinned stand"); c.diff_kind.push_back(2); }
-}
-
-// ---- one card ----
-
-static const float kPad = 6.0f;
-
-static float	LineH(void)		{ return GUI_GetLineHeight(font_UI_Basic); }
-static float	RowH(void)		{ return LineH() + 3.0f; }
-static float	HeadH(void)		{ return LineH() + 8.0f; }
+// ---- text of one entry ----
 
 static string	AirlinesText(const WED_ModerationEntry & e)
 {
@@ -336,6 +202,13 @@ static string	StateText(const WED_ModerationEntry & e)
 	string s = e.updated ? "Updated" : "Legacy";
 	if (e.updated || e.auto_filled) s += e.auto_filled ? " (A)" : " (M)";
 	return s;
+}
+
+static string	SizeText(const WED_ModerationEntry & e)
+{
+	if (!e.updated) return string("size ") + e.size_letter;
+	string w = WED_ModerationWeightsText(e.weights);
+	return w.empty() ? string("all weights zero - nothing parks") : w;
 }
 
 static string	KindText(const WED_ModerationEntry & e)
@@ -373,138 +246,134 @@ static string	VerifyText(const WED_ModerationEntry & e, const float ** col)
 	}
 }
 
-void	WED_ModerationLayer::DrawCard(GUI_GraphState * g, Callout & c, bool pinned)
+// ---- the layer ----
+
+WED_ModerationLayer::WED_ModerationLayer(GUI_Pane * host, WED_MapZoomerNew * zoomer, IResolver * resolver) :
+	WED_MapLayer(host, zoomer, resolver), mPinnedID(-1), mTrayID(-1), mOpenID(-1), mLegendRow(-1)
 {
-	const WED_ModerationEntry & e = c.e;
-	float stroke[4];
-	ColourFor(e.signature, stroke);
-
-	const float lh = LineH(), asc = GUI_GetLineAscent(font_UI_Basic);
-	const float x0 = c.x0, x1 = c.x1, y1 = c.y1, y0 = c.y0;
-	const float label_w = TextW("Airlines") + 10.0f;
-
-	// The header row (flag, ICAO, name, pin) floats above the card's top edge;
-	// the card itself is only its top and left edges over a 40% black fill.
-	const float head_mid = y1 - HeadH() * 0.5f;
-	const float edge = y1 - HeadH();		// the top edge, where the leader lands
-
-	// leader: stand -> elbow -> the card's top-left corner, arrowhead at the stand
-	g->SetState(0, 0, 0, 0, 1, 0, 0);
-	glColor4fv(stroke);
-	glLineWidth(2.0f);
-	glBegin(GL_LINE_STRIP);
-		glVertex2f(c.ax + 6, c.ay);
-		glVertex2f(x0 - 16, c.ay);
-		glVertex2f(x0 - 16, edge);
-		glVertex2f(x0, edge);
-	glEnd();
-	glBegin(GL_TRIANGLES);
-		glVertex2f(c.ax, c.ay);				// clockwise, see DrawMark
-		glVertex2f(c.ax + 10, c.ay - 5);
-		glVertex2f(c.ax + 10, c.ay + 5);
-	glEnd();
-
-	const float fill[4] = { 0, 0, 0, 0.4f };
-	Rect(x0, y0, x1, edge, fill, true);
-	glColor4fv(stroke);
-	glLineWidth(pinned ? 3.0f : 2.0f);
-	glBegin(GL_LINE_STRIP);
-		glVertex2f(x0, y0);
-		glVertex2f(x0, edge);
-		glVertex2f(x1, edge);
-	glEnd();
-	glLineWidth(1.0f);
-
-	// header: flag, ICAO, ramp name - left-aligned and tight
-	float hx = x0 + kPad;
-	const float hb = y1 - HeadH() + (HeadH() - lh) * 0.5f;		// header row bottom
-	if (const Flag * f = FlagFor(e.country))
-	{
-		DrawFlag(g, f->tex, f->w, f->h, hx, hb + 1, lh - 2);
-		hx += (lh - 2) * (float) f->w / (float) f->h + 5;
-	}
-	const float base_y = hb + (lh - asc) * 0.5f + 1;
-	Txt(g, kWhite, hx, base_y, e.icao.c_str());
-	hx += TextW(e.icao) + 7;
-	const float pin_x = x1 - kPad - 7;
-	float name_end = pin_x - 10;
-	if (pinned)
-	{
-		const float bw = TextW("BASE");
-		name_end -= bw + 6;
-		Txt(g, stroke, pin_x - 10 - bw, base_y, "BASE");
-	}
-	Txt(g, kWhite, hx, base_y, Elide(e.ramp_name, name_end - hx).c_str());
-
-	// pin: filled when this is the base
-	g->SetState(0, 0, 0, 0, 1, 0, 0);
-	glColor4fv(pinned ? stroke : kMuted);
-	glBegin(pinned ? GL_TRIANGLE_FAN : GL_LINE_LOOP);
-	if (pinned) glVertex2f(pin_x, head_mid + 2);
-	for (int i = 0; i < (pinned ? 17 : 16); ++i)
-	{
-		float a = -(float) i / 16.0f * 6.2831853f;		// clockwise, see DrawMark
-		glVertex2f(pin_x + cosf(a) * 4.5f, head_mid + 2 + sinf(a) * 4.5f);
-	}
-	glEnd();
-	glBegin(GL_LINES);
-		glVertex2f(pin_x, head_mid - 2.5f); glVertex2f(pin_x, head_mid - 7.5f);
-	glEnd();
-	Hit ph = { Hit::hit_Pin, pin_x - 9, head_mid - 9, pin_x + 9, head_mid + 9, c.id, "" };
-	mHits.push_back(ph);
-
-	// rows
-	float y = y1 - HeadH() - kPad;
-	const float vx = x0 + kPad + label_w;
-	const float room = x1 - kPad - vx;
-	Txt(g, kMuted, x0 + kPad, y - asc, "Airlines");
-	Txt(g, kWhite, vx, y - asc, Elide(AirlinesText(e), room).c_str());
-	y -= RowH();
-
-	string st = StateText(e);
-	Txt(g, e.updated ? kWhite : kAmber, x0 + kPad, y - asc, st.c_str());
-	Txt(g, kWhite, x0 + kPad + Max(label_w, TextW(st) + 10), y - asc, SizeText(e).c_str());
-	y -= RowH();
-
-	Txt(g, kMuted, x0 + kPad, y - asc, Elide(KindText(e), x1 - x0 - kPad * 2).c_str());
-	y -= RowH();
-
-	for (size_t i = 0; i < c.diff.size(); ++i)
-	{
-		const int k = c.diff_kind[i];
-		const float * col = k == -1 ? kRed : k == 0 ? kAmber : kGreen;		// +, same: green
-		Txt(g, col, x0 + kPad, y - asc, Elide(c.diff[i], x1 - x0 - kPad * 2).c_str());
-		y -= lh;
-	}
-
-	// the tray row: a disclosure triangle and the verification summary
-	c.tray_y = y;
-	const float * vcol;
-	string vt = VerifyText(e, &vcol);
-	const bool open = mTrayID == c.id;
-	const float ty = y - lh * 0.5f - 1;
-	g->SetState(0, 0, 0, 0, 1, 0, 0);
-	glColor4fv(vcol);
-	glBegin(GL_TRIANGLES);
-	if (open) { glVertex2f(x0 + kPad, ty + 3); glVertex2f(x0 + kPad + 8, ty + 3); glVertex2f(x0 + kPad + 4, ty - 3); }
-	else      { glVertex2f(x0 + kPad + 1, ty + 4); glVertex2f(x0 + kPad + 7, ty); glVertex2f(x0 + kPad + 1, ty - 4); }
-	glEnd();
-	Txt(g, vcol, x0 + kPad + 14, y - asc, Elide(vt, x1 - x0 - kPad * 2 - 14).c_str());
-	Hit th = { Hit::hit_Tray, x0, y0, x1, y + 1, c.id, "" };
-	mHits.push_back(th);
-
-	Hit ch = { Hit::hit_Card, x0, y0, x1, y1, c.id, "" };
-	mHits.push_back(ch);
 }
 
-void	WED_ModerationLayer::DrawTray(GUI_GraphState * g, Callout & c)
+WED_ModerationLayer::~WED_ModerationLayer()
+{
+}
+
+void	WED_ModerationLayer::GetCaps(bool& draw_ent_v, bool& draw_ent_s, bool& cares_about_sel, bool& wants_clicks)
+{
+	draw_ent_v = false;
+	draw_ent_s = false;
+	cares_about_sel = false;
+	wants_clicks = true;
+}
+
+const WED_ModerationLayer::Flag *	WED_ModerationLayer::FlagFor(const string & ioc)
+{
+	if (ioc.empty()) return NULL;
+	std::map<string, Flag>::iterator it = mFlags.find(ioc);
+	if (it != mFlags.end()) return it->second.tex ? &it->second : NULL;
+
+	Flag f = { 0, 0, 0 };
+	vector<uint32_t> argb;
+	int w = 0, h = 0;
+	if (WED_LoadPngTopDownARGB(WED_FlagSourcePathForCountry(ioc), argb, w, h) && !argb.empty() && w > 0 && h > 0)
+	{
+		GLuint tex = 0;
+		glGenTextures(1, &tex);
+		glBindTexture(GL_TEXTURE_2D, tex);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, &argb[0]);
+		f.tex = tex; f.w = w; f.h = h;
+	}
+	Flag & stored = mFlags[ioc] = f;
+	return stored.tex ? &stored : NULL;
+}
+
+void	WED_ModerationLayer::Collect(vector<Callout> & out)
+{
+	out.clear();
+	set<WED_Thing *> sel;
+	WED_GetSelectionRecursive(GetResolver(), sel);
+
+	vector<WED_RampPosition *> ramps;
+	for (set<WED_Thing *>::const_iterator t = sel.begin(); t != sel.end(); ++t)
+		if (WED_RampPosition * r = dynamic_cast<WED_RampPosition *>(*t))
+			ramps.push_back(r);
+
+	// The pinned stand stays while others are selected - that is what makes it a
+	// base to compare against. Deleted (gone from the archive, or orphaned): unpin.
+	if (mPinnedID >= 0)
+	{
+		WED_Thing * wrl = WED_GetWorld(GetResolver());
+		WED_RampPosition * pinned = wrl ? dynamic_cast<WED_RampPosition *>(wrl->FetchPeer(mPinnedID)) : NULL;
+		if (!pinned || !pinned->GetParent()) mPinnedID = -1;
+		else if (std::find(ramps.begin(), ramps.end(), pinned) == ramps.end()) ramps.insert(ramps.begin(), pinned);
+	}
+
+	double b[4];
+	GetZoomer()->GetPixelBounds(b[0], b[1], b[2], b[3]);
+	out.reserve(ramps.size());
+	for (size_t i = 0; i < ramps.size(); ++i)
+	{
+		Callout c;
+		c.ramp = ramps[i];
+		c.id   = ramps[i]->GetID();
+		Point2 ll;
+		ramps[i]->GetLocation(gis_Geo, ll);
+		Point2 px = GetZoomer()->LLToPixel(ll);
+		c.ax = (float) px.x();
+		c.ay = (float) px.y();
+		c.on_screen = !(c.ax < b[0] || c.ax > b[2] || c.ay < b[1] || c.ay > b[3]);
+		WED_ModerationDescribe(ramps[i], WED_GetParentAirport(ramps[i]), c.e);
+		c.x0 = c.y0 = c.x1 = c.y1 = 0;
+		c.n_add = c.n_rem = c.n_chg = 0;
+		out.push_back(c);
+	}
+}
+
+void	WED_ModerationLayer::Diff(const WED_ModerationEntry & base, Callout & c) const
+{
+	set<string> a, b;
+	for (size_t i = 0; i < base.codes.size(); ++i) a.insert(base.codes[i].code);
+	for (size_t i = 0; i < c.e.codes.size(); ++i)  b.insert(c.e.codes[i].code);
+	string added, removed;
+	for (set<string>::const_iterator i = b.begin(); i != b.end(); ++i) if (!a.count(*i)) { added   += " " + *i; ++c.n_add; }
+	for (set<string>::const_iterator i = a.begin(); i != a.end(); ++i) if (!b.count(*i)) { removed += " " + *i; ++c.n_rem; }
+	if (!added.empty())   { c.diff.push_back("+" + added);   c.diff_kind.push_back(1); }
+	if (!removed.empty()) { c.diff.push_back("-" + removed); c.diff_kind.push_back(-1); }
+
+	const string sa = SizeText(base), sb = SizeText(c.e);
+	if (sa != sb)							{ c.diff.push_back("~ " + sa + "  ->  " + sb); c.diff_kind.push_back(0); ++c.n_chg; }
+	if (base.op_label != c.e.op_label)		{ c.diff.push_back("~ " + base.op_label + "  ->  " + c.e.op_label); c.diff_kind.push_back(0); ++c.n_chg; }
+	if (base.equipment != c.e.equipment)	{ c.diff.push_back("~ " + base.equipment + "  ->  " + c.e.equipment); c.diff_kind.push_back(0); ++c.n_chg; }
+	if (base.ramp_type != c.e.ramp_type)	{ c.diff.push_back("~ " + base.ramp_type + "  ->  " + c.e.ramp_type); c.diff_kind.push_back(0); ++c.n_chg; }
+	if (c.diff.empty())						{ c.diff.push_back("= same entry as the pinned stand"); c.diff_kind.push_back(2); }
+}
+
+// Width and height of a card; x0/y1 are left for the caller to place.
+void	WED_ModerationLayer::SizeCard(Callout & c) const
 {
 	const WED_ModerationEntry & e = c.e;
-	const float lh = LineH(), asc = GUI_GetLineAscent(font_UI_Basic);
-	const float x0 = c.x0, x1 = c.x1;
-	const float item_w = (x1 - x0 - kPad * 2) / 3.0f;
-	const float item_h = lh + 5;
+	float w = TextW(e.icao) + TextW(e.ramp_name) + LineH() * 1.6f + 40 + (c.id == mPinnedID ? TextW("BASE") + 6 : 0);
+	w = Max(w, TextW("Airlines") + 10 + TextW(AirlinesText(e)));
+	w = Max(w, TextW(StateText(e)) + 20 + TextW(SizeText(e)));
+	w = Max(w, TextW(KindText(e)));
+	const float * vc;
+	w = Max(w, TextW(VerifyText(e, &vc)) + 14);
+	for (size_t d = 0; d < c.diff.size(); ++d) w = Max(w, TextW(c.diff[d]));
+	w = Min(Max(w + kPad * 2, 240.0f), 420.0f);
+	const float h = HeadH() + kPad + 3 * RowH() + c.diff.size() * LineH() + RowH() + kPad;
+	c.x1 = c.x0 + w;
+	c.y0 = c.y1 - h;
+}
 
+// The tray's text lines (wrapped) and its height, so the card's fill can run
+// down through it: open, the tray is part of the card.
+float	WED_ModerationLayer::TrayLines(const Callout & c, vector<string> & lines) const
+{
+	const WED_ModerationEntry & e = c.e;
+	lines.clear();
 	vector<string> notes;
 	char buf[128];
 	if (e.verify == WED_ModerationEntry::verify_NoData)
@@ -528,9 +397,7 @@ void	WED_ModerationLayer::DrawTray(GUI_GraphState * g, Callout & c)
 	if (e.op_type == ramp_operation_GeneralAviation)
 		notes.push_back("Private stands are not checked: GA comes from all over the world.");
 
-	// Notes wrap to the tray's width - an elided "Click..." hid the instruction.
-	vector<string> lines;
-	const float text_w = x1 - x0 - kPad * 2;
+	const float text_w = c.x1 - c.x0 - kPad * 2;
 	for (size_t n = 0; n < notes.size(); ++n)
 	{
 		string rest = notes[n];
@@ -545,24 +412,151 @@ void	WED_ModerationLayer::DrawTray(GUI_GraphState * g, Callout & c)
 		}
 	}
 	const int rows = ((int) e.codes.size() + 2) / 3;
-	const float h = kPad * 2 + lines.size() * lh + rows * item_h;
-	const float top = c.y0 + 1, bot = top - h;
+	return kPad * 2 + lines.size() * LineH() + rows * (LineH() + 5);
+}
 
+// One card. The header row (flag, ICAO, name, pin) floats above the card's top
+// edge; the card is its top and left edges over a 40% black fill, which runs on
+// down through the tray when the tray is open (tray_h > 0).
+void	WED_ModerationLayer::DrawCard(GUI_GraphState * g, Callout & c, bool pinned, bool leader, float tray_h)
+{
+	const WED_ModerationEntry & e = c.e;
 	float stroke[4];
-	ColourFor(e.signature, stroke);
-	const float fill[4] = { 0, 0, 0, 0.4f };
+	WED_ModerationColour(e.signature, stroke);
+
+	const float lh = LineH(), asc = Asc();
+	const float x0 = c.x0, x1 = c.x1, y1 = c.y1, y0 = c.y0;
+	const float label_w = TextW("Airlines") + 10.0f;
+	const float head_mid = y1 - HeadH() * 0.5f;
+	const float edge = y1 - HeadH();
+	const float bottom = y0 - tray_h;
+
 	g->SetState(0, 0, 0, 0, 1, 0, 0);
-	Rect(x0, bot, x1, top, fill, true);
+	if (leader)
+	{
+		// stand -> elbow -> the card's top-left corner, arrowhead at the stand
+		glColor4fv(stroke);
+		glLineWidth(2.0f);
+		glBegin(GL_LINE_STRIP);
+			glVertex2f(c.ax + 6, c.ay);
+			glVertex2f(x0 - 16, c.ay);
+			glVertex2f(x0 - 16, edge);
+			glVertex2f(x0, edge);
+		glEnd();
+		glBegin(GL_TRIANGLES);
+			glVertex2f(c.ax, c.ay);
+			glVertex2f(c.ax + 10, c.ay - 5);
+			glVertex2f(c.ax + 10, c.ay + 5);
+		glEnd();
+	}
+
+	Fill(x0, bottom, x1, edge, kFill);
 	glColor4fv(stroke);
-	glLineWidth(2.0f);
-	glBegin(GL_LINES);
-		glVertex2f(x0, bot); glVertex2f(x0, top);
+	glLineWidth(pinned ? 3.0f : 2.0f);
+	glBegin(GL_LINE_STRIP);
+		glVertex2f(x0, bottom);
+		glVertex2f(x0, edge);
+		glVertex2f(x1, edge);
 	glEnd();
 	glLineWidth(1.0f);
-	Hit panel = { Hit::hit_Tray, x0, bot, x1, top, c.id, "" };
-	mHits.push_back(panel);
 
-	float y = top - kPad;
+	// header: flag, ICAO, ramp name - left-aligned and tight
+	float hx = x0 + 1;
+	const float hb = edge + (HeadH() - lh) * 0.5f;
+	if (const Flag * f = FlagFor(e.country))
+	{
+		DrawFlag(g, f->tex, f->w, f->h, hx, hb + 1, lh - 2);
+		hx += (lh - 2) * (float) f->w / (float) f->h + 5;
+	}
+	const float base_y = hb + (lh - asc) * 0.5f + 1;
+	Txt(g, kWhite, hx, base_y, e.icao.c_str());
+	hx += TextW(e.icao) + 7;
+	const float pin_x = x1 - 7;
+	float name_end = pin_x - 10;
+	if (pinned)
+	{
+		const float bw = TextW("BASE");
+		name_end -= bw + 6;
+		Txt(g, stroke, pin_x - 10 - bw, base_y, "BASE");
+	}
+	Txt(g, kWhite, hx, base_y, Elide(e.ramp_name, name_end - hx).c_str());
+
+	// pin: filled when this is the base
+	g->SetState(0, 0, 0, 0, 1, 0, 0);
+	glColor4fv(pinned ? stroke : kMuted);
+	Circle(pin_x, head_mid + 2, 4.5f, pinned);
+	glBegin(GL_LINES);
+		glVertex2f(pin_x, head_mid - 2.5f); glVertex2f(pin_x, head_mid - 7.5f);
+	glEnd();
+	Hit ph = { Hit::hit_Pin, pin_x - 9, head_mid - 9, pin_x + 9, head_mid + 9, c.id, "" };
+	mHits.push_back(ph);
+
+	// rows
+	float y = edge - kPad;
+	const float vx = x0 + kPad + label_w;
+	Txt(g, kMuted, x0 + kPad, y - asc, "Airlines");
+	Txt(g, kWhite, vx, y - asc, Elide(AirlinesText(e), x1 - kPad - vx).c_str());
+	y -= RowH();
+
+	string st = StateText(e);
+	Txt(g, e.updated ? kWhite : kAmber, x0 + kPad, y - asc, st.c_str());
+	Txt(g, kWhite, x0 + kPad + Max(label_w, TextW(st) + 10), y - asc, SizeText(e).c_str());
+	y -= RowH();
+
+	Txt(g, kMuted, x0 + kPad, y - asc, Elide(KindText(e), x1 - x0 - kPad * 2).c_str());
+	y -= RowH();
+
+	for (size_t i = 0; i < c.diff.size(); ++i)
+	{
+		const int k = c.diff_kind[i];
+		const float * col = k == -1 ? kRed : k == 0 ? kAmber : kGreen;		// +, same: green
+		Txt(g, col, x0 + kPad, y - asc, Elide(c.diff[i], x1 - x0 - kPad * 2).c_str());
+		y -= lh;
+	}
+
+	// the tray row: a disclosure triangle and the verification summary
+	const float * vcol;
+	string vt = VerifyText(e, &vcol);
+	const bool open = tray_h > 0;
+	const float ty = y - lh * 0.5f - 1;
+	g->SetState(0, 0, 0, 0, 1, 0, 0);
+	glColor4fv(vcol);
+	glBegin(GL_TRIANGLES);
+	if (open) { glVertex2f(x0 + kPad, ty + 3); glVertex2f(x0 + kPad + 8, ty + 3); glVertex2f(x0 + kPad + 4, ty - 3); }
+	else      { glVertex2f(x0 + kPad + 1, ty + 4); glVertex2f(x0 + kPad + 7, ty); glVertex2f(x0 + kPad + 1, ty - 4); }
+	glEnd();
+	Txt(g, vcol, x0 + kPad + 14, y - asc, Elide(vt, x1 - x0 - kPad * 2 - 14).c_str());
+	Hit th = { Hit::hit_Tray, x0, y0, x1, y + 1, c.id, "" };
+	mHits.push_back(th);
+	if (open)
+	{
+		Hit tp = { Hit::hit_Tray, x0, bottom, x1, y0, c.id, "" };
+		mHits.push_back(tp);
+	}
+	Hit ch = { Hit::hit_Card, x0, bottom, x1, y1, c.id, "" };
+	mHits.push_back(ch);
+}
+
+// The open tray's content, below the card (its fill and edge are the card's).
+void	WED_ModerationLayer::DrawTray(GUI_GraphState * g, Callout & c, const vector<string> & lines)
+{
+	const WED_ModerationEntry & e = c.e;
+	const float lh = LineH(), asc = Asc();
+	const float x0 = c.x0, x1 = c.x1;
+	const float item_w = (x1 - x0 - kPad * 2) / 3.0f;
+	const float item_h = lh + 5;
+
+	// a hairline between the card rows and the tray
+	float stroke[4];
+	WED_ModerationColour(e.signature, stroke);
+	stroke[3] = 0.45f;
+	g->SetState(0, 0, 0, 0, 1, 0, 0);
+	glColor4fv(stroke);
+	glBegin(GL_LINES);
+		glVertex2f(x0 + kPad, c.y0); glVertex2f(x1 - kPad, c.y0);
+	glEnd();
+
+	float y = c.y0 - kPad;
 	for (size_t i = 0; i < lines.size(); ++i)
 	{
 		Txt(g, kMuted, x0 + kPad, y - asc, lines[i].c_str());
@@ -597,52 +591,20 @@ void	WED_ModerationLayer::DrawTray(GUI_GraphState * g, Callout & c)
 	}
 }
 
-void	WED_ModerationLayer::DrawSelected(bool inCurrent, GUI_GraphState * g)
+// ---- tier 1: a full card beside each stand ----
+
+void	WED_ModerationLayer::DrawCards(GUI_GraphState * g, vector<Callout> & cs)
 {
-	sTints.clear();
-	if (!WED_ModerationEnabled()) { mHits.clear(); return; }
-
-	// Which tray is open: the one the mouse was over last frame.
-	int mx, my;
-	GetHost()->GetMouseLocNow(&mx, &my);
-	mTrayID = -1;
-	for (size_t i = 0; i < mHits.size(); ++i)
-		if (mHits[i].kind == Hit::hit_Tray && Inside((float) mx, (float) my, mHits[i].x0, mHits[i].y0, mHits[i].x1, mHits[i].y1))
-			{ mTrayID = mHits[i].ramp_id; break; }
-	mHits.clear();
-
-	vector<Callout> cs;
-	Collect(cs);
-	if (cs.empty()) return;
-
-	const WED_ModerationEntry * base = NULL;
-	for (size_t i = 0; i < cs.size(); ++i) if (cs[i].id == mPinnedID) base = &cs[i].e;
-	if (base)
-		for (size_t i = 0; i < cs.size(); ++i)
-			if (cs[i].id != mPinnedID) Diff(*base, cs[i]);
-
-	// Size every card, then stack them to the right of their stands, top down,
-	// pushing a card down past any it would overlap.
+	vector<size_t> order;
 	for (size_t i = 0; i < cs.size(); ++i)
-	{
-		Callout & c = cs[i];
-		const WED_ModerationEntry & e = c.e;
-		float w = TextW(e.icao) + TextW(e.ramp_name) + LineH() * 1.6f + 40;
-		w = Max(w, TextW("Airlines") + 10 + TextW(AirlinesText(e)));
-		w = Max(w, TextW(StateText(e)) + 20 + TextW(SizeText(e)));
-		w = Max(w, TextW(KindText(e)));
-		const float * vc;
-		w = Max(w, TextW(VerifyText(e, &vc)) + 14);
-		for (size_t d = 0; d < c.diff.size(); ++d) w = Max(w, TextW(c.diff[d]));
-		w = Min(Max(w + kPad * 2, 240.0f), 420.0f);
-		const float h = HeadH() + kPad + 3 * RowH() + c.diff.size() * LineH() + RowH() + kPad;
-		c.x0 = c.ax + 48;
-		c.x1 = c.x0 + w;
-		c.y1 = c.ay + HeadH() * 0.5f;
-		c.y0 = c.y1 - h;
-	}
-	vector<size_t> order(cs.size());
-	for (size_t i = 0; i < order.size(); ++i) order[i] = i;
+		if (cs[i].on_screen)
+		{
+			cs[i].x0 = cs[i].ax + 48;
+			cs[i].y1 = cs[i].ay + HeadH();
+			SizeCard(cs[i]);
+			order.push_back(i);
+		}
+	// top down, pushing a card down past any it would overlap
 	std::sort(order.begin(), order.end(), [&cs](size_t a, size_t b) { return cs[a].ay > cs[b].ay; });
 	vector<size_t> placed;
 	for (size_t oi = 0; oi < order.size(); ++oi)
@@ -668,20 +630,303 @@ void	WED_ModerationLayer::DrawSelected(bool inCurrent, GUI_GraphState * g)
 	}
 
 	Callout * open = NULL;
+	for (size_t oi = 0; oi < order.size(); ++oi)
+	{
+		Callout & c = cs[order[oi]];
+		if (c.id == mTrayID) { open = &c; continue; }		// drawn last, over the others
+		DrawCard(g, c, c.id == mPinnedID, true, 0);
+	}
+	if (open)
+	{
+		vector<string> lines;
+		float th = TrayLines(*open, lines);
+		DrawCard(g, *open, open->id == mPinnedID, true, th);
+		DrawTray(g, *open, lines);
+	}
+}
+
+// ---- tier 2: a chip per stand in a column at the right edge ----
+
+void	WED_ModerationLayer::DrawChips(GUI_GraphState * g, vector<Callout> & cs)
+{
+	double b[4];
+	GetZoomer()->GetPixelBounds(b[0], b[1], b[2], b[3]);
+	const float lh = LineH(), asc = Asc();
+	const float ch = HeadH() + 2;
+
+	vector<size_t> order;
+	float chip_w = 200;
+	for (size_t i = 0; i < cs.size(); ++i)
+		if (cs[i].on_screen)
+		{
+			order.push_back(i);
+			chip_w = Max(chip_w, TextW(cs[i].e.icao) + TextW(cs[i].e.ramp_name) + lh * 1.6f + 110);
+		}
+	chip_w = Min(chip_w, 340.0f);
+	const float cx1 = (float) b[2] - 12, cx0 = cx1 - chip_w;
+
+	// the column, in the stands' own top-to-bottom order
+	std::sort(order.begin(), order.end(), [&cs](size_t a, size_t b) { return cs[a].ay > cs[b].ay; });
+	float next_top = (float) b[3] - kTopClear;
+	vector<float> tops(order.size());
+	for (size_t oi = 0; oi < order.size(); ++oi)
+	{
+		const Callout & c = cs[order[oi]];
+		float top = Min(next_top, c.ay + ch * 0.5f);
+		tops[oi] = top;
+		next_top = top - ch - 3;
+	}
+	// ran off the bottom: pack from the bottom up instead
+	if (!tops.empty() && tops.back() - ch < (float) b[1] + 8)
+	{
+		float bot_top = (float) b[1] + 8 + ch;
+		for (size_t oi = order.size(); oi-- > 0; )
+		{
+			if (tops[oi] >= bot_top) break;
+			tops[oi] = bot_top;
+			bot_top += ch + 3;
+		}
+	}
+
+	Callout * open = NULL;
+	for (size_t oi = 0; oi < order.size(); ++oi)
+	{
+		Callout & c = cs[order[oi]];
+		const WED_ModerationEntry & e = c.e;
+		float stroke[4];
+		WED_ModerationColour(e.signature, stroke);
+		const float top = tops[oi], bot = top - ch, mid = (top + bot) * 0.5f;
+		const bool pinned = c.id == mPinnedID;
+
+		// leader from the stand to the chip
+		g->SetState(0, 0, 0, 0, 1, 0, 0);
+		float lead[4] = { stroke[0], stroke[1], stroke[2], 0.8f };
+		glColor4fv(lead);
+		glLineWidth(1.5f);
+		glBegin(GL_LINE_STRIP);
+			glVertex2f(c.ax + 6, c.ay);
+			glVertex2f(cx0 - 14, mid);
+			glVertex2f(cx0, mid);
+		glEnd();
+		glBegin(GL_TRIANGLES);
+			glVertex2f(c.ax, c.ay);
+			glVertex2f(c.ax + 8, c.ay - 4);
+			glVertex2f(c.ax + 8, c.ay + 4);
+		glEnd();
+
+		Fill(cx0, bot, cx1, top, kFill);
+		glColor4fv(stroke);
+		glLineWidth(pinned ? 3.0f : 2.0f);
+		glBegin(GL_LINES);
+			glVertex2f(cx0, bot); glVertex2f(cx0, top);
+		glEnd();
+		glLineWidth(1.0f);
+
+		float x = cx0 + kPad;
+		if (const Flag * f = FlagFor(e.country))
+		{
+			DrawFlag(g, f->tex, f->w, f->h, x, bot + (ch - lh) * 0.5f + 1, lh - 2);
+			x += (lh - 2) * (float) f->w / (float) f->h + 5;
+		}
+		const float by = bot + (ch - asc) * 0.5f;
+		Txt(g, kWhite, x, by, e.icao.c_str());
+		x += TextW(e.icao) + 6;
+
+		// right side: the issues, and against the base the diff counts
+		string right;
+		char buf[48];
+		if (pinned) right = "BASE";
+		else if (mPinnedID >= 0)
+		{
+			if (c.n_add + c.n_rem + c.n_chg == 0) right = "=";
+			else { snprintf(buf, sizeof(buf), "+%d -%d ~%d", c.n_add, c.n_rem, c.n_chg); right = buf; }
+		}
+		float rx = cx1 - kPad;
+		if (!right.empty())
+		{
+			rx -= TextW(right);
+			Txt(g, pinned ? stroke : kMuted, rx, by, right.c_str());
+			rx -= 8;
+		}
+		if (e.n_to_check)
+		{
+			snprintf(buf, sizeof(buf), "?%d", e.n_to_check);
+			rx -= TextW(buf);
+			Txt(g, kAmber, rx, by, buf);
+			rx -= 8;
+		}
+		Txt(g, kWhite, x, by, Elide(e.ramp_name, rx - x).c_str());
+
+		Hit hc = { Hit::hit_Chip, cx0, bot, cx1, top, c.id, "" };
+		mHits.push_back(hc);
+		if (c.id == mOpenID) { open = &c; c.y1 = top; }
+	}
+
+	// the hovered chip's card, to the chip's left, its header level with the chip
+	if (open)
+	{
+		open->x0 = 0;
+		SizeCard(*open);						// width, and y0 from the chip-level y1
+		const float w = open->x1 - open->x0;
+		open->x1 = cx0 - 10;
+		open->x0 = open->x1 - w;
+		vector<string> lines;
+		float th = open->id == mTrayID ? TrayLines(*open, lines) : 0;
+		DrawCard(g, *open, open->id == mPinnedID, false, th);
+		if (th > 0) DrawTray(g, *open, lines);
+	}
+}
+
+// ---- tier 3: a legend of the distinct entries ----
+
+void	WED_ModerationLayer::DrawLegend(GUI_GraphState * g, vector<Callout> & cs)
+{
+	struct Group { string sig; vector<size_t> members; int issues; };
+	std::map<string, size_t> index;
+	vector<Group> groups;
 	for (size_t i = 0; i < cs.size(); ++i)
 	{
-		float rgba[4];
-		ColourFor(cs[i].e.signature, rgba);
-		sTints[cs[i].id] = std::vector<float>(rgba, rgba + 3);
-		DrawCard(g, cs[i], cs[i].id == mPinnedID);
-		if (cs[i].id == mTrayID) open = &cs[i];
+		const string & s = cs[i].e.signature;
+		std::map<string, size_t>::iterator it = index.find(s);
+		if (it == index.end()) { index[s] = groups.size(); Group gr; gr.sig = s; gr.issues = 0; groups.push_back(gr); it = index.find(s); }
+		groups[it->second].members.push_back(i);
+		groups[it->second].issues += cs[i].e.n_to_check;
 	}
-	if (open) DrawTray(g, *open);		// last, over everything
+	std::stable_sort(groups.begin(), groups.end(), [](const Group & a, const Group & b) { return a.members.size() > b.members.size(); });
 
-	// The silhouettes were drawn this frame with the previous frame's tints;
-	// if those changed, one more frame puts the right colours on them.
-	if (sTints != mLastTints) { mLastTints = sTints; GetHost()->Refresh(); }
+	double b[4];
+	GetZoomer()->GetPixelBounds(b[0], b[1], b[2], b[3]);
+	const float lh = LineH(), asc = Asc();
+	const float rh = lh + 6;
+	const float w = 430;
+	const float x1 = (float) b[2] - 12, x0 = x1 - w;
+	const size_t shown = groups.size() < kMaxLegendRows ? groups.size() : kMaxLegendRows;
+	float top = (float) b[3] - kTopClear;
+	const float h = HeadH() + kPad + shown * rh + (groups.size() > shown ? lh : 0) + kPad;
 
+	// a ring round every on-screen stand of the hovered row
+	if (mLegendRow >= 0 && mLegendRow < (int) groups.size())
+	{
+		float stroke[4];
+		WED_ModerationColour(groups[mLegendRow].sig, stroke);
+		g->SetState(0, 0, 0, 0, 1, 0, 0);
+		glColor4fv(stroke);
+		glLineWidth(3.0f);
+		for (size_t m = 0; m < groups[mLegendRow].members.size(); ++m)
+		{
+			const Callout & c = cs[groups[mLegendRow].members[m]];
+			if (c.on_screen) Circle(c.ax, c.ay, 18, false);
+		}
+		glLineWidth(1.0f);
+	}
+
+	// header above the top edge, like a card's
+	char buf[96];
+	int issues = 0;
+	for (size_t i = 0; i < groups.size(); ++i) issues += groups[i].issues;
+	snprintf(buf, sizeof(buf), "%d stands, %d distinct entries", (int) cs.size(), (int) groups.size());
+	const float edge = top - HeadH();
+	Txt(g, kWhite, x0 + 1, edge + (HeadH() - asc) * 0.5f, buf);
+	if (issues)
+	{
+		snprintf(buf, sizeof(buf), "?%d to check", issues);
+		Txt(g, kAmber, x1 - TextW(buf), edge + (HeadH() - asc) * 0.5f, buf);
+	}
+	g->SetState(0, 0, 0, 0, 1, 0, 0);
+	Fill(x0, top - h, x1, edge, kFill);
+	glColor4fv(kMuted);
+	glLineWidth(2.0f);
+	glBegin(GL_LINE_STRIP);
+		glVertex2f(x0, top - h); glVertex2f(x0, edge); glVertex2f(x1, edge);
+	glEnd();
+	glLineWidth(1.0f);
+
+	mLegendIDs.clear();
+	float y = edge - kPad;
+	for (size_t r = 0; r < shown; ++r)
+	{
+		const Group & gr = groups[r];
+		const WED_ModerationEntry & e = cs[gr.members[0]].e;
+		float stroke[4];
+		WED_ModerationColour(gr.sig, stroke);
+		const float rt = y, rb = y - rh;
+		if ((int) r == mLegendRow)
+		{
+			const float hl[4] = { 1, 1, 1, 0.08f };
+			g->SetState(0, 0, 0, 0, 1, 0, 0);
+			Fill(x0 + 2, rb, x1, rt, hl);
+		}
+		g->SetState(0, 0, 0, 0, 1, 0, 0);
+		Fill(x0 + kPad, rb + 4, x0 + kPad + 12, rt - 4, stroke);		// swatch
+		float x = x0 + kPad + 18;
+		const float by = rb + (rh - asc) * 0.5f;
+		snprintf(buf, sizeof(buf), "x%d", (int) gr.members.size());
+		Txt(g, kWhite, x, by, buf);
+		x += TextW("x000") + 6;
+		string rt_s;
+		if (gr.issues) { snprintf(buf, sizeof(buf), "?%d", gr.issues); rt_s = buf; }
+		const float rx = x1 - kPad - TextW(rt_s);
+		if (!rt_s.empty()) Txt(g, kAmber, rx, by, rt_s.c_str());
+		string summary = e.op_label + "  " + AirlinesText(e) + "  " + SizeText(e);
+		Txt(g, kMuted, x, by, Elide(summary, rx - 8 - x).c_str());
+
+		vector<int> ids;
+		for (size_t m = 0; m < gr.members.size(); ++m) ids.push_back(cs[gr.members[m]].id);
+		mLegendIDs.push_back(ids);
+		Hit hl = { Hit::hit_Legend, x0, rb, x1, rt, (int) r, "" };
+		mHits.push_back(hl);
+		y = rb;
+	}
+	if (groups.size() > shown)
+	{
+		snprintf(buf, sizeof(buf), "... and %d more", (int) (groups.size() - shown));
+		Txt(g, kMuted, x0 + kPad, y - asc - 2, buf);
+	}
+}
+
+void	WED_ModerationLayer::DrawSelected(bool inCurrent, GUI_GraphState * g)
+{
+	if (!WED_ModerationEnabled()) { mHits.clear(); return; }
+
+	// What the mouse was over last frame decides what is open this frame.
+	int mx, my;
+	GetHost()->GetMouseLocNow(&mx, &my);
+	const float fx = (float) mx, fy = (float) my;
+	int tray = -1, chip = -1, card = -1, row = -1;
+	for (size_t i = 0; i < mHits.size(); ++i)
+	{
+		const Hit & h = mHits[i];
+		if (!Inside(fx, fy, h.x0, h.y0, h.x1, h.y1)) continue;
+		if (h.kind == Hit::hit_Tray)   tray = h.ramp_id;
+		if (h.kind == Hit::hit_Chip)   chip = h.ramp_id;
+		if (h.kind == Hit::hit_Card)   card = h.ramp_id;
+		if (h.kind == Hit::hit_Legend) row  = h.ramp_id;
+	}
+	mTrayID = tray;
+	mOpenID = chip >= 0 ? chip : (card >= 0 && card == mOpenID ? card : -1);
+	mLegendRow = row;
+	mHits.clear();
+
+	vector<Callout> cs;
+	Collect(cs);
+	if (cs.empty()) return;
+
+	// Counter-clockwise quads are back faces to WED's GL state (GUI_GraphState
+	// sets glFrontFace(GL_CW)); none of this is 3-D, so culling only ever hides
+	// fills. Off while drawing, on again after.
+	glDisable(GL_CULL_FACE);
+
+	const WED_ModerationEntry * base = NULL;
+	for (size_t i = 0; i < cs.size(); ++i) if (cs[i].id == mPinnedID) base = &cs[i].e;
+	if (base)
+		for (size_t i = 0; i < cs.size(); ++i)
+			if (cs[i].id != mPinnedID) Diff(*base, cs[i]);
+
+	if (cs.size() <= kMaxCards)			DrawCards(g, cs);
+	else if (cs.size() <= kMaxChips)	DrawChips(g, cs);
+	else								DrawLegend(g, cs);
+
+	glEnable(GL_CULL_FACE);
 	g->SetState(0, 0, 0, 0, 0, 0, 0);
 	glLineWidth(1.0f);
 }
@@ -691,7 +936,7 @@ void	WED_ModerationLayer::HandleClickUp(int inX, int inY, int inButton, GUI_KeyF
 	if (mPendingURL.empty()) return;
 	string url;
 	url.swap(mPendingURL);
-	GUI_LaunchURL(url.c_str());
+	WED_ModerationOpenSearch(url);
 }
 
 int		WED_ModerationLayer::HandleClickDown(int inX, int inY, int inButton, GUI_KeyFlags modifiers)
@@ -719,9 +964,34 @@ int		WED_ModerationLayer::HandleClickDown(int inX, int inY, int inButton, GUI_Ke
 				GetHost()->Refresh();
 				return 1;
 			}
-			// A click on a card or its tray is the card's - the map tool under it
+			if (pass == 1 && h.kind == Hit::hit_Chip && (modifiers & gui_ShiftFlag))
+			{
+				// shift-click a chip: make it the base, as the card's pin does
+				mPinnedID = mPinnedID == h.ramp_id ? -1 : h.ramp_id;
+				GetHost()->Refresh();
+				return 1;
+			}
+			if (pass == 1 && h.kind == Hit::hit_Legend && h.ramp_id >= 0 && h.ramp_id < (int) mLegendIDs.size())
+			{
+				// select that entry's stands
+				ISelection * sel = WED_GetSelect(GetResolver());
+				WED_Thing * wrl = WED_GetWorld(GetResolver());
+				if (sel && wrl)
+				{
+					IOperation * op = dynamic_cast<IOperation *>(sel);
+					if (op) op->StartOperation("Select Ramp Starts");
+					sel->Clear();
+					const vector<int> & ids = mLegendIDs[h.ramp_id];
+					for (size_t k = 0; k < ids.size(); ++k)
+						if (WED_RampPosition * r = dynamic_cast<WED_RampPosition *>(wrl->FetchPeer(ids[k])))
+							sel->Insert(r);
+					if (op) op->CommitOperation();
+				}
+				return 1;
+			}
+			// A click on a card, chip or tray is ours - the map tool under it
 			// must not take it as a click on empty ground and drop the selection.
-			if (pass == 2 && (h.kind == Hit::hit_Card || h.kind == Hit::hit_Tray))
+			if (pass == 2 && (h.kind == Hit::hit_Card || h.kind == Hit::hit_Tray || h.kind == Hit::hit_Chip))
 				return 1;
 		}
 	return 0;

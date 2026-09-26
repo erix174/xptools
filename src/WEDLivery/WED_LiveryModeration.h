@@ -57,7 +57,7 @@ struct WED_ModerationNote {
 void	WED_ModerationNotes(WED_RampPosition * ramp, WED_Airport * apt, std::vector<WED_ModerationNote> & out);
 
 // "Does <operator> fly to <airport>" as a Google search URL.
-std::string	WED_ModerationSearchURL(const std::string & operator_name, const std::string & airport_name,
+std::string	WED_ModerationSearchURL(const std::string & operator_name, const std::string & city,
 									const std::string & icao);
 
 // Selects the next (dir > 0) or previous ramp start of the current airport,
@@ -120,5 +120,18 @@ void	WED_ModerationDescribe(WED_RampPosition * ramp, WED_Airport * apt, WED_Mode
 
 // "C60 D30 E10" - the weights as whole percentages, or "" when all zero.
 std::string	WED_ModerationWeightsText(const int w[6]);
+
+// What the stand would park, as a string: operation type, airline set, weights or
+// size letter. Two stands with the same signature are the same entry.
+std::string	WED_ModerationSignature(WED_RampPosition * ramp);
+
+// The colour for a signature, shared by every map layer and stable for the
+// session (see WED_ModerationLayer.h: "colour is similarity").
+void	WED_ModerationColour(const std::string & signature, float out_rgba[4]);
+
+// Opens a search in a small, chromeless browser window beside the cursor (Edge
+// or Chrome in app mode), or the default browser when neither is found. Call it
+// only once a click is over - see WED_ModerationLayer::HandleClickUp.
+void	WED_ModerationOpenSearch(const std::string & url);
 
 #endif /* WED_LIVERYMODERATION_H */

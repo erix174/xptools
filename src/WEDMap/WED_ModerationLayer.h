@@ -27,32 +27,37 @@
 /*
 	WED_ModerationLayer - THEORY OF OPERATION
 
-	A callout per selected ramp start, drawn on the map for a Gateway moderator
-	reading a submission stand by stand. A leader runs from the stand to a card:
+	What a Gateway moderator reads off the map, stand by stand. Three pieces:
 
-		[flag] ZBAA  02-PIN-C                    (pin)
-		Airlines   DAL UAL
-		Updated · Manual   C60 D30 E10           (or: Legacy · size C)
-		Passenger · Heavy Jets, Jets · Gate
-		v 1 to check                             <- hover: the operator tray
+	COLOUR IS SIMILARITY. Every ramp start's aircraft silhouette is drawn in the
+	colour of its signature (operation type, airline set, size or weights - see
+	WED_ModerationSignature) instead of the default green: stands that would park
+	the same thing share a colour, different ones get colours spread round the
+	hue circle. A moderator sees at a glance which stands were copied from which,
+	selected or not.
 
-	The tray lists the operators three to a row with their flags and a verdict -
-	see WED_ModerationDescribe() for what is checked against what. A "?" opens a
-	web search for that operator at that airport.
+	CALLOUTS for the selected stands (an airport or group counts as its ramp
+	starts), at a density that fits how many there are:
+	  up to 5    a full card per stand, beside it:
+	                 [flag] ZBAA  02-PIN-C                      (pin)
+	                 ------------------------------------------------ top edge
+	                 | Airlines   DAL UAL
+	                 | Updated (M)   C100
+	                 | Passenger | Jets | Gate
+	                 | v 1 to check     <- hover: the operator tray
+	  6 to 40    a one-line chip per stand in a column at the map's right edge,
+	             with a leader back to its stand; hovering a chip opens its card
+	  more       a legend instead: one row per distinct signature, with a count
+	             and the issues; hovering a row rings its stands, clicking it
+	             selects them
+	The tray lists operators three to a row with their flags and a verdict (see
+	WED_ModerationDescribe); a "?" opens a web search in a small browser window.
 
-	COLOUR IS SIMILARITY. The leader and the card's stroke take a colour from the
-	stand's signature (operation type, airline set, size or weights): stands that
-	would park the same thing share a colour, different ones get colours spread
-	round the hue circle (golden-ratio steps), so a moderator sees at a glance
-	which stands were copied from which. The first hue is random per session.
+	COMPARE. The pin makes a stand the base. Every other card then shows what it
+	adds (+), lacks (-) and changes (~); chips show the counts. The base stays on
+	screen while other stands are selected.
 
-	COMPARE. The pin on a card makes it the base: every other card then shows,
-	GitHub-style, what it has that the base does not (+, green), what it lacks
-	(-, red) and what is different (~). The pinned stand keeps its card while
-	other stands are selected.
-
-	Selecting an airport or a group counts as selecting its ramp starts, as for
-	auto-fill. Shown while WED_ModerationEnabled() - today always; Moderation
+	Everything here asks WED_ModerationEnabled() - today always true, Moderation
 	Mode only once that exists.
 */
 
@@ -64,11 +69,8 @@
 
 class WED_RampPosition;
 
-// The colour of a ramp start's callout, for the layers that draw its aircraft
-// silhouette: while a stand has a card, its outline wears the card's colour
-// instead of the default green, so a stand and its card read as one even where
-// cards cannot sit next to their stands. False when the stand has no card.
-// (From the last frame drawn - the silhouettes are drawn before the callouts.)
+// The silhouette colour for a ramp start: its signature's colour while
+// moderation is on. False when it is off - draw the default green.
 bool	WED_ModerationTintFor(const WED_RampPosition * ramp, float out_rgb[3]);
 
 class	WED_ModerationLayer : public WED_MapLayer {
@@ -87,10 +89,10 @@ private:
 	struct Flag { unsigned int tex; int w, h; };
 
 	struct Hit {
-		enum Kind { hit_Card, hit_Pin, hit_Tray, hit_Search };
+		enum Kind { hit_Card, hit_Pin, hit_Tray, hit_Search, hit_Chip, hit_Legend };
 		int				kind;
 		float			x0, y0, x1, y1;
-		int				ramp_id;
+		int				ramp_id;		// or the legend row
 		std::string		url;			// hit_Search
 	};
 
@@ -98,27 +100,32 @@ private:
 		WED_RampPosition *		ramp;
 		int						id;
 		WED_ModerationEntry		e;
-		float					ax, ay;		// the stand, in pixels
-		float					x0, y0, x1, y1;	// the card
-		float					tray_y;		// top of the tray row
-		std::vector<std::string>	diff;	// "+ CSN CES", "- UAL", "~ ..." against the pinned stand
+		bool					on_screen;
+		float					ax, ay;			// the stand, in pixels
+		float					x0, y0, x1, y1;	// card: y1 is the header's top
+		std::vector<std::string>	diff;		// against the pinned stand
 		std::vector<int>			diff_kind;	// 1 added, -1 removed, 0 changed, 2 same
+		int						n_add, n_rem, n_chg;
 	};
 
 	void				Collect(std::vector<Callout> & out);
 	void				Diff(const WED_ModerationEntry & base, Callout & c) const;
-	void				ColourFor(const std::string & signature, float rgba[4]);
 	const Flag *		FlagFor(const std::string & ioc);
-	void				DrawCard(GUI_GraphState * g, Callout & c, bool pinned);
-	void				DrawTray(GUI_GraphState * g, Callout & c);
+	void				SizeCard(Callout & c) const;
+	float				TrayLines(const Callout & c, std::vector<std::string> & lines) const;
+	void				DrawCard(GUI_GraphState * g, Callout & c, bool pinned, bool leader, float tray_h);
+	void				DrawTray(GUI_GraphState * g, Callout & c, const std::vector<std::string> & lines);
+	void				DrawCards(GUI_GraphState * g, std::vector<Callout> & cs);
+	void				DrawChips(GUI_GraphState * g, std::vector<Callout> & cs);
+	void				DrawLegend(GUI_GraphState * g, std::vector<Callout> & cs);
 
-	std::vector<Hit>				mHits;			// from the last frame, for clicks
+	std::vector<Hit>				mHits;			// from the last frame, for clicks and hover
 	int								mPinnedID;		// WED_Persistent id, -1 = none
 	int								mTrayID;		// the card whose tray is open, -1 = none
+	int								mOpenID;		// chips: the chip whose card is open
+	int								mLegendRow;		// legend: the row under the mouse
+	std::vector<std::vector<int> >	mLegendIDs;		// legend: each row's ramp ids, for the click
 	std::string						mPendingURL;	// a "?" pressed: opened on the mouse-up
-	std::map<int, std::vector<float> >	mLastTints;	// the tints the silhouettes were drawn with
-	std::map<std::string, int>		mSigIndex;		// signature -> colour slot, stable for the session
-	float							mHueSeed;
 	std::map<std::string, Flag>		mFlags;
 };
 

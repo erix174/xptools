@@ -31,14 +31,22 @@
 #include "WED_EnumSystem.h"
 #include "PlatformUtils.h"		// ConfirmMessage
 #include "GUI_Help.h"			// GUI_LaunchURL
+#if !IBM
+	#include <unistd.h>				// access()
+#endif
 
 #include <algorithm>
+#include <chrono>
+#include <thread>
+#include <cmath>
+#include <map>
 #include <set>
 #include <sstream>
 #include <cctype>
 #include <cstdio>
 
 using std::string;
+using std::wstring;
 using std::set;
 using std::vector;
 
@@ -67,20 +75,25 @@ static string UrlEncode(const string & s)
 	return out;
 }
 
-string	WED_ModerationSearchURL(const string & operator_name, const string & airport_name, const string & icao)
+// The question as a person would type it: the operator's name and the airport's
+// ICAO code, plus its city when the airport carries one. NOT the airport's name -
+// that is whatever the author typed ("Livery Range Test (shadows Beijing Capital -
+// see README)"), and every word of it is noise to a search engine.
+string	WED_ModerationSearchURL(const string & operator_name, const string & city, const string & icao)
 {
-	string q = "Does " + operator_name + " fly to " + airport_name;
-	if (!icao.empty()) q += " " + icao;
+	string q = "Does " + operator_name + " fly to " + icao;
+	if (!city.empty()) q += " " + city;
 	return "https://www.google.com/search?q=" + UrlEncode(q);
 }
 
-static void AirportIds(WED_Airport * apt, string & icao, string & name)
+// The airport's ICAO (icao_code metadata, else its ID) and city (1302 city).
+static void AirportIds(WED_Airport * apt, string & icao, string & city)
 {
 	string ident;
 	apt->GetICAO(ident);
 	string meta = apt->ContainsMetaDataKey("icao_code") ? apt->GetMetaDataValue("icao_code") : string();
 	icao = Upper(!meta.empty() ? meta : ident);
-	apt->GetName(name);
+	city = apt->ContainsMetaDataKey("city") ? apt->GetMetaDataValue("city") : string();
 }
 
 void	WED_ModerationNotes(WED_RampPosition * ramp, WED_Airport * apt, vector<WED_ModerationNote> & out)
@@ -192,7 +205,7 @@ void	WED_ModerationPrompt(WED_RampPosition * ramp, WED_Airport * apt)
 	msg += to_check.size() > kMaxTabs ? "\n\nSearch the web for the first five?" : "\n\nSearch the web for them?";
 	if (ConfirmMessage(msg.c_str(), "Search", "Skip"))
 		for (size_t i = 0; i < to_check.size() && i < kMaxTabs; ++i)
-			GUI_LaunchURL(to_check[i]->search_url.c_str());
+			WED_ModerationOpenSearch(to_check[i]->search_url);
 }
 
 // ---- the callout model ----
@@ -271,7 +284,6 @@ void	WED_ModerationDescribe(WED_RampPosition * ramp, WED_Airport * apt, WED_Mode
 	else if (out.op_type == ramp_operation_Military)
 		out.verify = WED_ModerationEntry::verify_Country;
 
-	vector<string> sorted_codes;
 	std::istringstream ss(ramp->GetAirlines());
 	string code;
 	while (ss >> code)
@@ -279,7 +291,6 @@ void	WED_ModerationDescribe(WED_RampPosition * ramp, WED_Airport * apt, WED_Mode
 		WED_ModerationCode c;
 		c.code    = Upper(code);
 		c.verdict = WED_ModerationCode::v_Plain;
-		sorted_codes.push_back(c.code);
 
 		WED_AirlineDirectoryEntry e;
 		const bool known = d && d->directory.Lookup(c.code, e);
@@ -311,10 +322,214 @@ void	WED_ModerationDescribe(WED_RampPosition * ramp, WED_Airport * apt, WED_Mode
 		out.codes.push_back(c);
 	}
 
-	std::sort(sorted_codes.begin(), sorted_codes.end());
-	sorted_codes.erase(std::unique(sorted_codes.begin(), sorted_codes.end()), sorted_codes.end());
-	out.signature = out.op_label + "|";
-	for (size_t i = 0; i < sorted_codes.size(); ++i) out.signature += sorted_codes[i] + " ";
-	out.signature += "|";
-	out.signature += out.updated ? WED_ModerationWeightsText(out.weights) : string(1, out.size_letter);
+	out.signature = WED_ModerationSignature(ramp);
+}
+
+string	WED_ModerationSignature(WED_RampPosition * ramp)
+{
+	if (!ramp) return string();
+	vector<string> codes;
+	std::istringstream ss(ramp->GetAirlines());
+	string code;
+	while (ss >> code) codes.push_back(Upper(code));
+	std::sort(codes.begin(), codes.end());
+	codes.erase(std::unique(codes.begin(), codes.end()), codes.end());
+
+	string sig = string(OpLabel(ramp->GetRampOperationType())) + "|";
+	for (size_t i = 0; i < codes.size(); ++i) sig += codes[i] + " ";
+	sig += "|";
+	int w[6];
+	if (ramp->GetClassWeights(w)) sig += WED_ModerationWeightsText(w);
+	else { const char * l = ENUM_Desc(ramp->GetWidth()); sig += (l && *l) ? l : "?"; }
+	return sig;
+}
+
+// Colour slots are shared by every map layer that asks, and stable for the
+// session: the first signature seen gets slot 0, the next slot 1, and so on.
+// Golden-ratio steps round the hue circle put each new slot as far as it can be
+// from the ones before it, so neighbouring slots never look alike.
+static void	HsvToRgb(float h, float s, float v, float out[4])
+{
+	h = h - floorf(h);
+	float r, g, b;
+	int i = (int) (h * 6.0f);
+	float f = h * 6.0f - (float) i;
+	float p = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s);
+	switch (i % 6) {
+	case 0: r = v; g = t; b = p; break;
+	case 1: r = q; g = v; b = p; break;
+	case 2: r = p; g = v; b = t; break;
+	case 3: r = p; g = q; b = v; break;
+	case 4: r = t; g = p; b = v; break;
+	default: r = v; g = p; b = q; break;
+	}
+	out[0] = r; out[1] = g; out[2] = b; out[3] = 1.0f;
+}
+
+void	WED_ModerationColour(const string & signature, float out_rgba[4])
+{
+	static std::map<string, int> slots;
+	static float seed = -1.0f;
+	if (seed < 0.0f)
+	{
+		long long t = std::chrono::steady_clock::now().time_since_epoch().count();
+		seed = (float) ((t / 1000) % 1000) / 1000.0f;
+	}
+	std::map<string, int>::iterator i = slots.find(signature);
+	int slot = i != slots.end() ? i->second : (slots[signature] = (int) slots.size());
+	HsvToRgb(seed + (float) slot * 0.6180339f, 0.62f, 0.97f, out_rgba);
+}
+
+// ---- the search window ----
+//
+// A small, chromeless browser window beside the cursor, not a tab in whatever
+// browser happens to be the default: Edge or Chrome in --app mode. Windows ships
+// Edge, so this almost always works there; elsewhere it tries Chrome/Chromium.
+// When none is found, the system default browser, as before.
+//
+// It runs in the moderator's own browser profile, and WED places the window
+// itself once it appears. An --app window handed to a browser that is already
+// running goes to that process, which ignores the size and position flags (the
+// first try opened full-size in the corner). A separate profile would honour
+// them, but a profile with no cookies meets Google's "unusual traffic" check
+// instead of the results - so: the real profile, and SetWindowPos afterwards.
+#if IBM
+// The search's query, decoded, for finding its window by title.
+static wstring	QueryOf(const string & url)
+{
+	size_t q = url.find("q=");
+	if (q == string::npos) return wstring();
+	string enc = url.substr(q + 2, url.find('&', q) == string::npos ? string::npos : url.find('&', q) - q - 2), dec;
+	for (size_t i = 0; i < enc.size(); ++i)
+	{
+		if (enc[i] == '+') dec += ' ';
+		else if (enc[i] == '%' && i + 2 < enc.size()) { dec += (char) strtol(enc.substr(i + 1, 2).c_str(), NULL, 16); i += 2; }
+		else dec += enc[i];
+	}
+	return wstring(dec.begin(), dec.end());
+}
+
+struct PlaceWindow { wstring query; int x, y, w, h; HWND found; std::set<HWND> before; };
+
+static BOOL CALLBACK	FindSearchWindow(HWND h, LPARAM ref)
+{
+	PlaceWindow * pw = (PlaceWindow *) ref;
+	if (!IsWindowVisible(h)) return TRUE;
+	wchar_t title[512];
+	if (GetWindowTextW(h, title, 512) <= 0) return TRUE;
+	wstring t(title);
+	// the page title once loaded, or the address while it loads
+	if (t.find(pw->query) == wstring::npos && t.find(L"google.com/search?q=") == wstring::npos) return TRUE;
+	if (pw->before.count(h)) return TRUE;			// was there before this search: not ours
+	pw->found = h;
+	return FALSE;
+}
+
+// Waits up to eight seconds for the window, off the main thread, then moves it.
+static void	PlaceSearchWindow(PlaceWindow pw)
+{
+	std::thread([pw]() mutable {
+		for (int i = 0; i < 80 && !pw.found; ++i)
+		{
+			Sleep(100);
+			EnumWindows(FindSearchWindow, (LPARAM) &pw);
+		}
+		if (pw.found) SetWindowPos(pw.found, NULL, pw.x, pw.y, pw.w, pw.h, SWP_NOZORDER);
+	}).detach();
+}
+
+static bool	FindBrowserExe(wstring & out)
+{
+	const wchar_t * keys[] = {
+		L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\msedge.exe",
+		L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe" };
+	for (int k = 0; k < 2; ++k)
+		for (int hive = 0; hive < 2; ++hive)
+		{
+			wchar_t buf[MAX_PATH];
+			DWORD len = sizeof(buf);
+			if (RegGetValueW(hive ? HKEY_CURRENT_USER : HKEY_LOCAL_MACHINE, keys[k], NULL, RRF_RT_REG_SZ, NULL, buf, &len) == ERROR_SUCCESS &&
+				GetFileAttributesW(buf) != INVALID_FILE_ATTRIBUTES)
+			{
+				out = buf;
+				return true;
+			}
+		}
+	return false;
+}
+#endif
+
+void	WED_ModerationOpenSearch(const string & url)
+{
+	const int w = 620, h = 760;
+#if IBM
+	wstring exe;
+	if (FindBrowserExe(exe))
+	{
+		POINT p = { 100, 100 };
+		GetCursorPos(&p);
+		HMONITOR mon = MonitorFromPoint(p, MONITOR_DEFAULTTONEAREST);
+		MONITORINFO mi;
+		mi.cbSize = sizeof(mi);
+		int x = p.x + 24, y = p.y - h / 3;
+		if (GetMonitorInfo(mon, &mi))
+		{
+			if (x + w > mi.rcWork.right)  x = p.x - 24 - w;
+			if (x < mi.rcWork.left)       x = mi.rcWork.left;
+			if (y + h > mi.rcWork.bottom) y = mi.rcWork.bottom - h;
+			if (y < mi.rcWork.top)        y = mi.rcWork.top;
+		}
+		wchar_t tail[128];
+		swprintf(tail, 128, L" --window-size=%d,%d --window-position=%d,%d", w, h, x, y);
+		wstring cmd = L"\"" + exe + L"\" --app=\"" + wstring(url.begin(), url.end()) + L"\"" + tail;
+		STARTUPINFOW si;
+		PROCESS_INFORMATION pi;
+		ZeroMemory(&si, sizeof(si));
+		si.cb = sizeof(si);
+		ZeroMemory(&pi, sizeof(pi));
+		vector<wchar_t> line(cmd.begin(), cmd.end());
+		line.push_back(0);
+		// Any window already showing this search belongs to the moderator, not
+		// to this click: note them so only the new one is moved.
+		PlaceWindow pw = { QueryOf(url), x, y, w, h, NULL };
+		for (;;)
+		{
+			pw.found = NULL;
+			EnumWindows(FindSearchWindow, (LPARAM) &pw);
+			if (!pw.found) break;
+			pw.before.insert(pw.found);
+		}
+		if (CreateProcessW(NULL, &line[0], NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
+		{
+			CloseHandle(pi.hThread);
+			CloseHandle(pi.hProcess);
+			PlaceSearchWindow(pw);
+			return;
+		}
+	}
+#elif APL
+	const char * apps[] = { "/Applications/Google Chrome.app", "/Applications/Microsoft Edge.app", "/Applications/Chromium.app" };
+	for (int i = 0; i < 3; ++i)
+		if (access(apps[i], F_OK) == 0)
+		{
+			char size[64];
+			snprintf(size, sizeof(size), "--window-size=%d,%d", w, h);
+			string cmd = string("open -na \"") + apps[i] + "\" --args --app='" + url + "' " + size + " &";
+			if (system(cmd.c_str()) == 0) return;
+		}
+#else
+	const char * bins[] = { "google-chrome", "chromium", "chromium-browser", "microsoft-edge" };
+	for (int i = 0; i < 4; ++i)
+	{
+		string probe = string("command -v ") + bins[i] + " >/dev/null 2>&1";
+		if (system(probe.c_str()) == 0)
+		{
+			char size[64];
+			snprintf(size, sizeof(size), "--window-size=%d,%d", w, h);
+			string cmd = string(bins[i]) + " --app='" + url + "' " + size + " >/dev/null 2>&1 &";
+			if (system(cmd.c_str()) == 0) return;
+		}
+	}
+#endif
+	GUI_LaunchURL(url.c_str());
 }

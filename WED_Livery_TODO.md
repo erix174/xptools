@@ -32,21 +32,20 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
 
 ## Next: Moderation Mode
 
-- **Map callouts: framework built 2026-09-25** (`WEDMap/WED_ModerationLayer`, model `WED_ModerationDescribe`).
-  - Every selected ramp start gets a card: flag / ICAO / name; airlines; Legacy or Updated (A/M) with size or weights; op type, equipment and ramp type.
-  - The hover tray lists the operators three to a row, with a verdict each. "?" opens a web search.
-  - Similarity colour; pin-and-compare (+ / - / ~).
-  - It shows in normal mode for now. Before release, gate it on Moderation Mode through `WED_ModerationEnabled()`.
-- **Callouts, open:**
-  - Card placement on a dense row of stands: cards cover their neighbours.
-  - Whether the whole airport, or only the selection, gets cards.
-  - Clicking "?" was not exercised by automation, since it opens a browser.
-- What already exists:
-  - Ramp stepping with Ctrl+Shift+. and Ctrl+Shift+,.
-  - The "operators to check" prompt with a web search.
-  - `WED_ModerationEnabled()`, which is always true: one version for everyone.
-- Detected but not shown anywhere yet: the auto-fill watermark (`auto_filled`), and op type None.
-- `WED_LiveryModeration.h` still speaks of a preference checkbox. Settle that in the design.
+- **Map view, 2026-09-26.**
+  - **Colour is similarity.** Every ramp start's silhouette is drawn in its signature colour while moderation is on, selected or not.
+  - **Callouts for the selection come in three densities:**
+    - Up to 5 stands: full cards.
+    - 6 to 40: one-line chips in a right-edge column; hovering a chip opens its card.
+    - More than 40: a legend of the distinct entries. Hovering a row rings its stands; clicking selects them.
+  - **Cards:** the header floats above the top edge, the body has top and left edges over a 40% black fill, and the fill runs down through the open tray.
+  - **Pin and compare:** + / - / ~. Chips show the counts; shift-click a chip to pin it.
+  - **"?" opens a live web search** in a small Edge or Chrome `--app` window beside the cursor, in the moderator's own profile. A fresh profile hit Google's "unusual traffic" check. With no such browser it falls back to the default browser.
+  - The query is "Does <operator> fly to <ICAO> <city>". The author's airport name was noise.
+  - Everything is gated on `WED_ModerationEnabled()`: today always on, Moderation Mode only before release.
+- **Map view, open:**
+  - Mac and Linux search windows are untested: they use `open -na` and `--app`.
+  - The legend tier was only seen with a lowered threshold: the sample has 24 stands.
 
 ## Open, no decision needed
 
@@ -71,6 +70,7 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
 | `upstream/exit-logging` | DEV log flush and exit-path logging |
 | `upstream/apt-unknown-rows` | Unknown apt.dat rows are skipped and reported instead of failing the file. The 1313-free version, tested end to end on 2.7 |
 | `upstream/parking-icons-d-e` | ClassD and ClassE icons fill their frame like the other four |
+| *(to split)* | `GUI_Window::ClickDown` finishes a lost click instead of asserting (on the feature branch, `774cde5`) |
 
 `archive/stash-2026-09-13-wip` preserves the pre-commit WIP stash of 2026-09-13. Everything in it was superseded by the branch; it was removed from the stash list.
 
