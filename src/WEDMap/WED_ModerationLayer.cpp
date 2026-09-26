@@ -97,6 +97,7 @@ static const float kGreen[4]  = { 0.45f, 0.85f, 0.45f, 1.0f };
 static const float kRed[4]    = { 1.00f, 0.45f, 0.40f, 1.0f };
 static const float kAmber[4]  = { 1.00f, 0.75f, 0.30f, 1.0f };
 static const float kFill[4]   = { 0.0f, 0.0f, 0.0f, 0.4f };		// the card body: 40% black
+static const float kLegendFill[4] = { 0.0f, 0.0f, 0.0f, 0.7f };	// the legend: 70% - zoomed out it sits on solid stands
 
 // Not std::max: <windows.h>, force-included through XDefs.h, defines min/max macros.
 static inline float	Max(float a, float b) { return a > b ? a : b; }
@@ -1069,7 +1070,7 @@ void	WED_ModerationLayer::DrawLegend(GUI_GraphState * g, vector<Callout> & cs)
 		Txt(g, kAmber, x1 - TextW(buf), edge + (HeadH() - asc) * 0.5f, buf);
 	}
 	g->SetState(0, 0, 0, 0, 1, 0, 0);
-	Fill(x0, top - h, x1, edge, kFill);
+	Fill(x0, top - h, x1, edge, kLegendFill);
 	glColor4fv(kMuted);
 	glLineWidth(2.0f);
 	glBegin(GL_LINE_STRIP);

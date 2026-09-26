@@ -86,7 +86,7 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
 
 - **Map view, open:**
   - Mac and Linux search windows are untested: they use `open -na` and `--app`.
-  - Big-airport run 2026-09-26: LFPG from Global Airports, 520 ramps, plus test stands T1-T7 (package `ZZY_moderation_bigtest_LFPG` in the Steam install - delete when done). Checked: similarity colours, chips and grouping, the overview (260 to check, grouped review), rotate + marquee, and the validator (discarded 1313 / unknown row; GA, military and airline "parks nothing"). Legend tier tested 2026-09-26 on LFPG from the Gateway (513 stands, 53 setups): 24 rows + "and 29 more", hover rings, click selects the setup. Found and fixed: a card past the map's right edge went under the property pane. Still open (Eric to decide): legend text is hard to read over a solid field of green stands at 40% fill, and a hovered setup's rings are in its own colour, which can be the stands' green.
+  - Big-airport run 2026-09-26: LFPG from Global Airports, 520 ramps, plus test stands T1-T7 (package `ZZY_moderation_bigtest_LFPG` in the Steam install - delete when done). Checked: similarity colours, chips and grouping, the overview (260 to check, grouped review), rotate + marquee, and the validator (discarded 1313 / unknown row; GA, military and airline "parks nothing"). Legend tier tested 2026-09-26 on LFPG from the Gateway (513 stands, 53 setups): 24 rows + "and 29 more", hover rings, click selects the setup. Found and fixed: a card past the map's right edge went under the property pane. The legend's fill is 70% black (Eric, 2026-09-26; cards stay 40%). Open: a hovered legend row's rings are in the setup's own colour, which can be the stands' green.
 
 ## Open, no decision needed
 
