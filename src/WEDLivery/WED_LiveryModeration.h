@@ -37,8 +37,9 @@ class IResolver;
 class WED_Airport;
 class WED_RampPosition;
 
-// The switch. Today always on, so the feature can be used and tested in
-// normal mode; hook it to the Moderation Mode preference when that exists.
+// The switch: the Moderator Mode preference (gModeratorMode), read live. Every
+// caller asks it at draw, click or command time, so ticking or clearing the box
+// takes effect at once in open documents - no restart, no reopen.
 bool	WED_ModerationEnabled(void);
 
 // What a moderator should look at on one stand.

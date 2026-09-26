@@ -26,6 +26,7 @@
 #include "WED_LiveryIndex.h"
 #include "WED_Version.h"
 #include "WED_Document.h"
+#include "WED_Globals.h"		// gModeratorMode
 #include "GISUtils.h"
 #include "WED_Airport.h"
 #include "WED_RampPosition.h"
@@ -56,7 +57,7 @@ using std::vector;
 
 bool	WED_ModerationEnabled(void)
 {
-	return true;
+	return gModeratorMode != 0;
 }
 
 static string Upper(string s)

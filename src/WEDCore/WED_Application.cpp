@@ -230,6 +230,7 @@ WED_Settings::WED_Settings(GUI_Commander * cmdr) : GUI_Window("WED Preferences",
 	moderator_btn->SetDescriptor("Moderator Mode");
 	moderator_btn->SetParent(this);
 	moderator_btn->AddListener(this);
+	moderator_btn->SetValue(gModeratorMode);
 	moderator_btn->SetMsg((intptr_t) &gModeratorMode, (intptr_t) moderator_btn);
 
 	GUI_Button * png_btn = new GUI_Button("check_buttons.png",btn_Check,k_no, k_no, k_yes, k_yes);

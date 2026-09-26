@@ -32,6 +32,7 @@
 #include "WED_Colors.h"
 #include "GUI_DrawUtils.h"
 #include "WED_HandleToolBase.h"
+#include "WED_LiveryModeration.h"	// WED_ModerationEnabled
 #include "GUI_Fonts.h"
 #include "WED_Menus.h"
 #include "XESConstants.h"
@@ -174,6 +175,9 @@ void		WED_Map::GetMouseLocNow(int * out_x, int * out_y)
 
 void		WED_Map::Draw(GUI_GraphState * state)
 {
+	// Moderator Mode cleared while the view was turned: back to north up.
+	if ((mRotateMode || GetViewRotation() != 0.0) && !WED_ModerationEnabled())
+		SetRotateMode(false);
 	WED_MapLayer * cur = mTool;
 	bool draw_ent_v, draw_ent_s, wants_sel, wants_clicks;
 

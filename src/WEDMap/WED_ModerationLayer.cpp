@@ -1041,18 +1041,21 @@ void	WED_ModerationLayer::DrawLegend(GUI_GraphState * g, vector<Callout> & cs)
 	float top = (float) b[3] - kTopClear;
 	const float h = HeadH() + kPad + shown * rh + (groups.size() > shown ? lh : 0) + kPad;
 
-	// a ring round every on-screen stand of the hovered row
+	// a ring round every on-screen stand of the hovered row: white over a dark
+	// edge, since the setup's own colour can be the stands' own green
 	if (mLegendRow >= 0 && mLegendRow < (int) groups.size())
 	{
-		float stroke[4];
-		WED_ModerationColour(groups[mLegendRow].sig, stroke);
+		const float dark[4] = { 0.0f, 0.0f, 0.0f, 0.8f };
 		g->SetState(0, 0, 0, 0, 1, 0, 0);
-		glColor4fv(stroke);
-		glLineWidth(3.0f);
-		for (size_t m = 0; m < groups[mLegendRow].members.size(); ++m)
+		for (int pass = 0; pass < 2; ++pass)
 		{
-			const Callout & c = cs[groups[mLegendRow].members[m]];
-			if (c.on_screen) Circle(c.ax, c.ay, 18, false);
+			glColor4fv(pass == 0 ? dark : kWhite);
+			glLineWidth(pass == 0 ? 5.0f : 2.5f);
+			for (size_t m = 0; m < groups[mLegendRow].members.size(); ++m)
+			{
+				const Callout & c = cs[groups[mLegendRow].members[m]];
+				if (c.on_screen) Circle(c.ax, c.ay, 18, false);
+			}
 		}
 		glLineWidth(1.0f);
 	}
@@ -1487,7 +1490,7 @@ void	WED_ModerationLayer::DrawOverlays(GUI_GraphState * g)
 int		WED_ModerationLayer::HandleScrollWheel(int inX, int inY, int inDist)
 {
 	{ Point2 sp = GetZoomer()->MapPixelToScreen(Point2(inX, inY)); inX = (int) floor(sp.x() + 0.5); inY = (int) floor(sp.y() + 0.5); }
-	if (!sModerationView) return 0;
+	if (!sModerationView || !WED_ModerationEnabled()) return 0;
 	if (!Inside((float) inX, (float) inY, mListBox[0], mListBox[1], mListBox[2], mListBox[3])) return 0;
 	mListScroll -= inDist;				// wheel up: towards the top of the list
 	if (mListScroll < 0) mListScroll = 0;	// the upper clamp is DrawOverview's

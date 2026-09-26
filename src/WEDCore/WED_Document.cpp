@@ -784,6 +784,7 @@ void	WED_Document::ReadGlobalPrefs(void)
 	gOrthoExport = atoi(GUI_GetPrefString("preferences","OrthoExport","1"));
 	gPromptLiveriesOnRampSelect = atoi(GUI_GetPrefString("preferences","PromptLiveriesOnRampSelect","0"));
 	gShowLiveryRecommendation = atoi(GUI_GetPrefString("preferences","ShowLiveryRecommendation","1"));
+	gModeratorMode = atoi(GUI_GetPrefString("preferences","ModeratorMode","0"));
 }
 
 void	WED_Document::WriteGlobalPrefs(void)
@@ -796,6 +797,7 @@ void	WED_Document::WriteGlobalPrefs(void)
 	GUI_SetPrefString("preferences","OrthoExport",gOrthoExport ? "1" : "0");
 	GUI_SetPrefString("preferences","PromptLiveriesOnRampSelect",gPromptLiveriesOnRampSelect ? "1" : "0");
 	GUI_SetPrefString("preferences","ShowLiveryRecommendation",gShowLiveryRecommendation ? "1" : "0");
+	GUI_SetPrefString("preferences","ModeratorMode",gModeratorMode ? "1" : "0");
 
 	for (map<string,string>::iterator i = sGlobalPrefs.begin(); i != sGlobalPrefs.end(); ++i)
 		if(i->first != "doc/xml_compatibility")          // why NOT write that ? Cuz WED 2.0 ... 2.2 read that and if an PRE wed-2.0 document
