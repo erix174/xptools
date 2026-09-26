@@ -202,6 +202,7 @@ WED_DocumentWindow::WED_DocumentWindow(
 	prop_tabs->SetSticky(1,1,1,0.5);
 	prop_tabs->SetTextColor(WED_Color_RGBA(wed_Tabs_Text));
 	prop_tabs->AddListener(mMapPane);
+	mPropTabs = prop_tabs;
 
 	// --------------- Selection ---------------
 
@@ -521,6 +522,12 @@ int	WED_DocumentWindow::HandleCommand(int command)
 		}
 		return 1;
 #endif
+	// The map's tab modes: show the matching tab too, not only filter the map.
+	// Its index is the map pane's tab_* enum.
+	case wed_MapSelection:	mPropTabs->SetTab(0); return mMapPane->Map_HandleCommand(command);
+	case wed_MapPavement:	mPropTabs->SetTab(1); return mMapPane->Map_HandleCommand(command);
+	case wed_MapATC:		mPropTabs->SetTab(2); return mMapPane->Map_HandleCommand(command);
+	case wed_Map3D:			mPropTabs->SetTab(4); return mMapPane->Map_HandleCommand(command);
 	default: return mMapPane->Map_HandleCommand(command);	break;
 	}
 	return 0;

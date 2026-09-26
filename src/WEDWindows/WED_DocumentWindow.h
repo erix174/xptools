@@ -31,6 +31,7 @@ class	WED_MapPane;
 class	WED_MapPreviewPane;
 class	WED_MapPreviewWindow;
 class	WED_TCEPane;
+class	GUI_TabPane;
 class	WED_Document;
 class	WED_PropertyPane;
 class	WED_PropertyTable;
@@ -64,6 +65,7 @@ private:
 	WED_MapPreviewWindow *		mMapPreviewWindow;
 	WED_PropertyPane *			mPropPane;
 	WED_TCEPane *				mTCEPane;
+	GUI_TabPane *				mPropTabs;
 
 	GUI_Splitter *				mMainSplitter;
 	GUI_Splitter *				mMainSplitter2;
