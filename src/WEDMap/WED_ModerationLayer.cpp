@@ -135,34 +135,46 @@ static const float kPad = 6.0f;
 
 // THE NECK: every leader of a callout meets at one hub, and a single segment - the
 // neck - runs from the hub to the card or chip. Its length and weight say how
-// many stands share the entry: 2.5x the base for one stand, growing with each
-// more, capped at 10x, so a popular entry stands out before a word is read.
+// many stands share the entry: 2.5x the base for one stand, 1.5x more for each
+// further stand, capped at 20x, so a popular entry stands out before a word is
+// read. The receiving bar on the card or chip takes the same weight.
 static float	NeckLen(size_t stands, float base)
 {
-	float f = 2.5f + 0.75f * (float) (stands - 1);
-	return base * (f > 10.0f ? 10.0f : f);
+	float f = 2.5f + 1.5f * (float) (stands - 1);
+	return base * (f > 20.0f ? 20.0f : f);
 }
 
 static float	NeckWidth(size_t stands)
 {
-	float w = 1.5f + 0.25f * (float) (stands - 1);
-	return w > 4.0f ? 4.0f : w;
+	float w = 1.5f + 0.35f * (float) (stands - 1);
+	return w > 8.0f ? 8.0f : w;
 }
 
-// Leaders from every stand to the hub, an arrowhead at each stand, the neck, and
-// a dot on the hub when more than one line meets there.
+// Leaders from every stand to the hub, an arrowhead at each stand, and the neck.
+// Each leader is an S-curve that leaves its stand level and arrives at the hub
+// level, so it runs straight on into the neck: a straight line to the hub made a
+// hard corner there wherever the stands sat above or below the card.
 static void	DrawLeaders(const vector<std::pair<float, float> > & stands, float hub_x, float hub_y, float end_x,
 							const float col[4], float line_w, float arrow)
 {
 	glColor4fv(col);
 	glLineWidth(line_w);
-	glBegin(GL_LINES);
 	for (size_t k = 0; k < stands.size(); ++k)
 	{
-		glVertex2f(stands[k].first + arrow * 0.6f, stands[k].second);
-		glVertex2f(hub_x, hub_y);
+		const float sx = stands[k].first + arrow * 0.6f, sy = stands[k].second;
+		float d = fabsf(hub_x - sx) * 0.5f;
+		if (d < 20.0f) d = 20.0f;
+		const float c1x = sx + d, c2x = hub_x - d;
+		glBegin(GL_LINE_STRIP);
+		for (int i = 0; i <= 24; ++i)
+		{
+			const float t = (float) i / 24.0f, u = 1.0f - t;
+			const float x = u * u * u * sx + 3 * u * u * t * c1x + 3 * u * t * t * c2x + t * t * t * hub_x;
+			const float y = u * u * u * sy + 3 * u * u * t * sy  + 3 * u * t * t * hub_y + t * t * t * hub_y;
+			glVertex2f(x, y);
+		}
+		glEnd();
 	}
-	glEnd();
 	glBegin(GL_TRIANGLES);
 	for (size_t k = 0; k < stands.size(); ++k)
 	{
@@ -172,22 +184,13 @@ static void	DrawLeaders(const vector<std::pair<float, float> > & stands, float h
 		glVertex2f(ax + arrow, ay + arrow * 0.5f);
 	}
 	glEnd();
-	glLineWidth(NeckWidth(stands.size()));
-	glBegin(GL_LINES);
-		glVertex2f(hub_x, hub_y); glVertex2f(end_x, hub_y);
+	// the neck as a quad, so its weight is exact at any line-width limit
+	const float hw = NeckWidth(stands.size()) * 0.5f;
+	glBegin(GL_QUADS);
+		glVertex2f(hub_x, hub_y - hw); glVertex2f(end_x, hub_y - hw);
+		glVertex2f(end_x, hub_y + hw); glVertex2f(hub_x, hub_y + hw);
 	glEnd();
 	glLineWidth(1.0f);
-	if (stands.size() > 1)
-	{
-		glBegin(GL_TRIANGLE_FAN);
-		glVertex2f(hub_x, hub_y);
-		for (int i = 0; i <= 12; ++i)
-		{
-			float a = (float) i / 12.0f * 6.2831853f;
-			glVertex2f(hub_x + cosf(a) * 3.0f, hub_y + sinf(a) * 3.0f);
-		}
-		glEnd();
-	}
 }
 
 // Verdict marks, drawn rather than typed: the UI font has no check or cross.
@@ -561,12 +564,15 @@ void	WED_ModerationLayer::DrawCard(GUI_GraphState * g, Callout & c, bool pinned,
 	Fill(x0, bottom, x1, edge, kFill);
 	glColor4fv(stroke);
 	glLineWidth(pinned ? 3.0f : 2.0f);
-	glBegin(GL_LINE_STRIP);
-		glVertex2f(x0, bottom);
-		glVertex2f(x0, edge);
-		glVertex2f(x1, edge);
+	glBegin(GL_LINES);
+		glVertex2f(x0, edge); glVertex2f(x1, edge);
 	glEnd();
 	glLineWidth(1.0f);
+	{
+		// the left edge receives the neck: as heavy as it is
+		const float bw = Max(pinned ? 3.0f : 2.0f, NeckWidth(1 + c.others.size()));
+		Fill(x0 - bw * 0.5f, bottom, x0 + bw * 0.5f, edge + (pinned ? 1.5f : 1.0f), stroke);
+	}
 
 	// header: flag, ICAO, ramp name - left-aligned and tight
 	float hx = x0 + 1;
@@ -707,7 +713,7 @@ void	WED_ModerationLayer::DrawCards(GUI_GraphState * g, vector<Callout> & cs)
 	for (size_t i = 0; i < cs.size(); ++i)
 		if (cs[i].on_screen)
 		{
-			cs[i].x0 = cs[i].ax + 48;
+			cs[i].x0 = cs[i].ax + 32 + NeckLen(1 + cs[i].others.size(), 16.0f);
 			cs[i].y1 = cs[i].ay + HeadH();
 			SizeCard(cs[i]);
 			order.push_back(i);
@@ -814,12 +820,11 @@ void	WED_ModerationLayer::DrawChips(GUI_GraphState * g, vector<Callout> & cs)
 		DrawLeaders(stands, cx0 - NeckLen(stands.size(), 14.0f), mid, cx0, lead, 1.5f, 8.0f);
 
 		Fill(cx0, bot, cx1, top, kFill);
-		glColor4fv(stroke);
-		glLineWidth(pinned ? 3.0f : 2.0f);
-		glBegin(GL_LINES);
-			glVertex2f(cx0, bot); glVertex2f(cx0, top);
-		glEnd();
-		glLineWidth(1.0f);
+		{
+			// the bar receives the neck: as heavy as it is
+			const float bw = Max(pinned ? 3.0f : 2.0f, NeckWidth(1 + c.others.size()));
+			Fill(cx0 - bw * 0.5f, bot, cx0 + bw * 0.5f, top, stroke);
+		}
 
 		float x = cx0 + kPad;
 		if (const Flag * f = FlagFor(e.country))
