@@ -122,7 +122,8 @@ struct WED_ModerationEntry {
 	bool			parks_nothing;
 	std::string		parks_nothing_msg;
 	// Equal for two stands that would park the same thing: operation type, the
-	// airline set and the size letter or weights. The callout colours by it.
+	// airline set, the size letter or weights, and equipment. The callout
+	// colours by it, and reviewing one stand reviews every stand that shares it.
 	std::string		signature;
 };
 

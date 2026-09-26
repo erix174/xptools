@@ -114,8 +114,8 @@ void	WED_ModerationNotes(WED_RampPosition * ramp, WED_Airport * apt, vector<WED_
 	WED_LiveryData * d = WED_GetLiveryData(false);
 	if (!d) return;						// no index: nothing to check operators against
 
-	string icao, apt_name;
-	AirportIds(apt, icao, apt_name);
+	string icao, apt_city;
+	AirportIds(apt, icao, apt_city);
 	vector<string> served;
 	if (!d->airports.GetAirlines(icao, served))
 	{
@@ -137,7 +137,7 @@ void	WED_ModerationNotes(WED_RampPosition * ramp, WED_Airport * apt, vector<WED_
 		{
 			out.push_back({ WED_ModerationNote::note_UnknownOperator, uc,
 							uc + " is not an operator in the livery index.",
-							WED_ModerationSearchURL(uc + " airline", apt_name, icao) });
+							WED_ModerationSearchURL(uc + " airline", apt_city, icao) });
 			continue;
 		}
 		// Only for airlines: military, government and GA are not in the
@@ -147,7 +147,7 @@ void	WED_ModerationNotes(WED_RampPosition * ramp, WED_Airport * apt, vector<WED_
 		if (db_knows_airport && !served_set.count(uc))
 			out.push_back({ WED_ModerationNote::note_NotServedHere, uc,
 							uc + " " + e.name + " is not listed as serving " + icao + ".",
-							WED_ModerationSearchURL(e.name, apt_name, icao) });
+							WED_ModerationSearchURL(e.name, apt_city, icao) });
 	}
 }
 
@@ -420,8 +420,8 @@ void	WED_ModerationDescribe(WED_RampPosition * ramp, WED_Airport * apt, WED_Mode
 	for (set<int>::const_iterator e = eq.begin(); e != eq.end(); ++e)
 		out.equipment += string(out.equipment.empty() ? "" : ", ") + ENUM_Desc(*e);
 
-	string apt_name;
-	if (apt) AirportIds(apt, out.icao, apt_name);
+	string apt_city;
+	if (apt) AirportIds(apt, out.icao, apt_city);
 
 	WED_LiveryData * d = WED_GetLiveryData(false);
 	vector<string> served;
@@ -467,7 +467,7 @@ void	WED_ModerationDescribe(WED_RampPosition * ramp, WED_Airport * apt, WED_Mode
 			else
 			{
 				c.verdict    = WED_ModerationCode::v_Check;
-				c.search_url = WED_ModerationSearchURL(name, apt_name, out.icao);
+				c.search_url = WED_ModerationSearchURL(name, apt_city, out.icao);
 			}
 			break;
 		case WED_ModerationEntry::verify_Country:
@@ -784,9 +784,11 @@ string	WED_ModerationReport(WED_Airport * apt, const std::set<string> & reviewed
 			if (su.e.verify == WED_ModerationEntry::verify_NoData) why += (why.empty() ? "" : "; ") + string("no airport data to check the operators against");
 			if (!su.parks.empty())
 			{
-				string at = su.parks.size() == su.stands.size() ? string("all of them") : string();
-				for (size_t k = 0; k < su.parks.size() && at.empty(); ++k) at += string(k ? ", " : "") + su.parks[k];
-				if (at.empty()) for (size_t k = 0; k < su.parks.size(); ++k) at += string(k ? ", " : "") + su.parks[k];
+				string at;
+				if (su.parks.size() == su.stands.size())
+					at = "all of them";
+				else
+					for (size_t k = 0; k < su.parks.size(); ++k) at += string(k ? ", " : "") + su.parks[k];
 				why += (why.empty() ? "" : "; ") + string("parks nothing (validator): ") + at;
 			}
 			r += "    " + why + NL;

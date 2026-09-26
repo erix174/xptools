@@ -30,7 +30,8 @@
 	What a Gateway moderator reads off the map, stand by stand. Three pieces:
 
 	COLOUR IS SIMILARITY. Every ramp start's aircraft silhouette is drawn in the
-	colour of its signature (operation type, airline set, size or weights - see
+	colour of its signature (operation type, airline set, size or weights,
+	equipment - see
 	WED_ModerationSignature) instead of the default green: stands that would park
 	the same thing share a colour, different ones get colours spread round the
 	hue circle. A moderator sees at a glance which stands were copied from which,
@@ -60,8 +61,8 @@
 	adds (+), lacks (-) and changes (~); chips show the counts. The base stays on
 	screen while other stands are selected.
 
-	Everything here asks WED_ModerationEnabled() - today always true, Moderation
-	Mode only once that exists.
+	Everything here asks WED_ModerationEnabled() - the Moderator Mode preference,
+	read live.
 */
 
 #include "WED_MapLayer.h"
@@ -155,7 +156,7 @@ private:
 	// reviews them all - whether each sits in the right place is the
 	// moderator's own look at the map.
 	std::set<std::string>			mReviewed;
-	int								mListFilter;	// overview: 0 all, 1 not listed here, 2 no data, 3 foreign
+	int								mListFilter;	// overview: 0 all, 1 not listed here, 2 no data, 3 foreign, 4 parks nothing
 	int								mListSort;		// overview: 0 by name, 1 most to verify first
 	double							mCopiedUntil;		// the "Copied!" flash, steady-clock seconds
 	float							mOverviewBottom;	// the overview's lower edge this frame, screen y; <0 = not shown

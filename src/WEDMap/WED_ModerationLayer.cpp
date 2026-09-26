@@ -851,7 +851,7 @@ void	WED_ModerationLayer::DrawCards(GUI_GraphState * g, vector<Callout> & cs)
 	}
 }
 
-// ---- tier 2: a chip per stand in a column at the right edge ----
+// ---- tier 2: a chip per setup in a column at the side that covers fewer stands ----
 
 void	WED_ModerationLayer::DrawChips(GUI_GraphState * g, vector<Callout> & cs)
 {

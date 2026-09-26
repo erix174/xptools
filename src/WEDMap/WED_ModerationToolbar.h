@@ -34,7 +34,7 @@
 	toggles, not one-of-many, so this is its own pane rather than a GUI_ToolBar.
 
 	  0  Moderation View   - see WED_ModerationViewOn()
-	  1  Rotate canvas     - placeholder: the map cannot rotate yet
+	  1  Rotate view       - see WED_MapPane::ToggleViewRotate(), WED_Map rotate mode
 
 	Shown only while WED_ModerationEnabled().
 */
