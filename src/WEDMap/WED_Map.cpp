@@ -61,7 +61,8 @@
 #define SHOW_FPS 0
 
 WED_Map::WED_Map(IResolver * in_resolver, GUI_Commander * cmdr) : GUI_Commander(cmdr), mResolver(in_resolver), mTool(NULL), mClickLayer(NULL),
-					mIsDownCount(0), mIsDownExtraCount(0)
+					mIsDownCount(0), mIsDownExtraCount(0),
+					mSelectTool(NULL), mRotateMode(false), mRotating(false), mRotStartAngle(0), mRotStartView(0)
 {
 		int k_reg[4] = { 0, 0, 4, 2 };
 		int k_act[4] = { 0, 0, 4, 2 };
@@ -100,6 +101,8 @@ void		WED_Map::SetTool(WED_MapToolNew * tool)
 {
 	if (mTool) mTool->KillOperation(mClickLayer == mTool);
 	mTool = tool;
+	// The guard rail: any tool but the select tool puts the view north up.
+	if (mRotateMode && tool != mSelectTool) SetRotateMode(false);
 }
 
 void		WED_Map::AddLayer(WED_MapLayer * layer)
@@ -131,6 +134,39 @@ void		WED_Map::SetBounds(int inBounds[4])
 
 }
 
+// ---- view rotation ----
+
+void		WED_Map::SetRotateMode(bool on)
+{
+	if (on && mSelectTool && mTool != mSelectTool) on = false;		// the select tool only
+	mRotateMode = on;
+	mRotating = false;
+	// PROTOTYPE: a fixed 30 degrees until the measuring arrow exists
+	SetViewRotation(on ? 30.0 : 0.0);
+	Refresh();
+}
+
+void		WED_Map::ToMap(int& x, int& y) const
+{
+	if (GetViewRotation() == 0) return;
+	Point2 p = ScreenToMapPixel(Point2(x, y));
+	x = (int) floor(p.x() + 0.5);
+	y = (int) floor(p.y() + 0.5);
+}
+
+double		WED_Map::ScreenAngle(int x, int y) const
+{
+	double b[4];
+	const_cast<WED_Map *>(this)->GetPixelBounds(b[0], b[1], b[2], b[3]);
+	return atan2(y - (b[1] + b[3]) * 0.5, x - (b[0] + b[2]) * 0.5) * RAD_TO_DEG;
+}
+
+void		WED_Map::GetMouseLocNow(int * out_x, int * out_y)
+{
+	GUI_Pane::GetMouseLocNow(out_x, out_y);
+	ToMap(*out_x, *out_y);
+}
+
 void		WED_Map::Draw(GUI_GraphState * state)
 {
 	WED_MapLayer * cur = mTool;
@@ -150,6 +186,18 @@ void		WED_Map::Draw(GUI_GraphState * state)
 	state->EnableDepth(true,true);         // turn on z-buffering - otherwise we can't clear the z-buffer
 	glClear(GL_DEPTH_BUFFER_BIT);
 	state->EnableDepth(false,false);
+
+	// The picture turns; the map beneath it does not (see WED_MapZoomerNew).
+	const double view_rot = GetViewRotation();
+	if (view_rot != 0)
+	{
+		const double cx = (b[0] + b[2]) * 0.5, cy = (b[1] + b[3]) * 0.5;
+		glMatrixMode(GL_MODELVIEW);
+		glPushMatrix();
+		glTranslated(cx, cy, 0);
+		glRotated(view_rot, 0, 0, 1);
+		glTranslated(-cx, -cy, 0);
+	}
 
 	vector<WED_MapLayer *>::iterator l;
 	for (l = mLayers.begin(); l != mLayers.end(); ++l)
@@ -209,6 +257,32 @@ void		WED_Map::Draw(GUI_GraphState * state)
 		glVertex2i(mX_Orig,mY_Orig);
 		glVertex2i(x,y);
 		glEnd();
+	}
+
+	if (view_rot != 0)
+	{
+		glMatrixMode(GL_MODELVIEW);
+		glPopMatrix();
+		// what is going on, and how to get out, in the screen's own frame
+		char rbuf[128];
+		snprintf(rbuf, sizeof(rbuf), "View rotated %.0f deg - Shift+right-drag to turn, other tools turn it back north up", view_rot);
+		const float amber[4] = { 1.0f, 0.75f, 0.3f, 1.0f };
+		GUI_FontDraw(state, font_UI_Basic, amber, b[0] + 5, b[3] - 4.0 * GUI_GetLineHeight(font_UI_Basic), rbuf);
+		// a north arrow, turned with the map
+		const double nx = b[2] - 40, ny = b[1] + 60, a = (90.0 + view_rot) * DEG_TO_RAD;
+		state->SetState(0,0,0,0,1,0,0);
+		glColor4fv(amber);
+		glLineWidth(2.0);
+		glBegin(GL_LINES);
+			glVertex2d(nx - cos(a) * 16, ny - sin(a) * 16); glVertex2d(nx + cos(a) * 16, ny + sin(a) * 16);
+		glEnd();
+		glBegin(GL_TRIANGLES);
+			glVertex2d(nx + cos(a) * 22, ny + sin(a) * 22);
+			glVertex2d(nx + cos(a) * 10 - sin(a) * 6, ny + sin(a) * 10 + cos(a) * 6);
+			glVertex2d(nx + cos(a) * 10 + sin(a) * 6, ny + sin(a) * 10 - cos(a) * 6);
+		glEnd();
+		glLineWidth(1.0);
+		GUI_FontDraw(state, font_UI_Basic, amber, nx + cos(a) * 30 - 4, ny + sin(a) * 30 - 5, "N");
 	}
 
 	float * white = WED_Color_RGBA(wed_pure_white);
@@ -422,6 +496,16 @@ void		WED_Map::DrawStrFor(WED_MapLayer * layer, int current, const Bbox2& bounds
 
 int			WED_Map::MouseDown(int x, int y, int button)
 {
+	// Shift+right-drag turns the view, in screen coordinates
+	if (button == 1 && mRotateMode && (GetModifiersNow() & gui_ShiftFlag))
+	{
+		++mIsDownCount;
+		mRotating = true;
+		mRotStartAngle = ScreenAngle(x, y);
+		mRotStartView = GetViewRotation();
+		return 1;
+	}
+	ToMap(x, y);
 	if (mIsDownCount++==0)
 	{
 		mX_Orig = x;
@@ -459,7 +543,19 @@ int			WED_Map::MouseDown(int x, int y, int button)
 
 void		WED_Map::MouseDrag(int x, int y, int button)
 {
-	if (button==0 && mClickLayer) mClickLayer->HandleClickDrag(x,y,button, GetModifiersNow());
+	if (mRotating && button == 1)
+	{
+		double r = mRotStartView + (ScreenAngle(x, y) - mRotStartAngle);
+		const double detent = floor(r / 45.0 + 0.5) * 45.0;		// a detent every 45 degrees
+		if (fabs(r - detent) < 4.0) r = detent;
+		SetViewRotation(r);
+		Refresh();
+		return;
+	}
+	ToMap(x, y);
+	// Turned, the select tool selects but does not drag: nothing is moved or
+	// drawn in a rotated frame. Layers (the callouts) still get their drags.
+	if (button==0 && mClickLayer && !(GetViewRotation() != 0 && mClickLayer == mTool)) mClickLayer->HandleClickDrag(x,y,button, GetModifiersNow());
 	if (button==1)
 	{
 		this->PanPixels(mX, mY, x, y);
@@ -471,9 +567,21 @@ void		WED_Map::MouseDrag(int x, int y, int button)
 
 void		WED_Map::MouseUp  (int x, int y, int button)
 {
+	if (mRotating && button == 1)
+	{
+		--mIsDownCount;
+		mRotating = false;
+		Refresh();
+		return;
+	}
+	ToMap(x, y);
 	--mIsDownCount;
 	if (button > 1) --mIsDownExtraCount;
 
+	// Turned, the select tool gets its click back where it went down: it also
+	// commits a move on the mouse-up, so the release point would drag the
+	// selection there even with the drags withheld.
+	if (button==0 && mClickLayer && GetViewRotation() != 0 && mClickLayer == mTool) { x = mX_Orig; y = mY_Orig; }
 	if (button==0&&mClickLayer)	mClickLayer->HandleClickUp(x,y,button, GetModifiersNow());
 	if (button==1)				this->PanPixels(mX, mY, x, y);
 	if(button==0)mClickLayer = NULL;
@@ -499,6 +607,7 @@ int			WED_Map::HandleKeyPress(uint32_t inKey, int inVK, GUI_KeyFlags inFlags)
 
 int			WED_Map::ScrollWheel(int x, int y, int dist, int axis)
 {
+	ToMap(x, y);
 	for(vector<WED_MapLayer *>::iterator l = mLayers.begin(); l != mLayers.end(); ++l)
 	if((*l)->IsVisible())
 	{

@@ -46,6 +46,16 @@ public:
 	virtual				~WED_Map();
 
 			void		SetTool(WED_MapToolNew * tool);
+
+	// VIEW ROTATION - moderation only, and only for looking and selecting.
+	// The guard rails: it is on only while the select tool (Vertex) is the
+	// tool - picking any other tool turns the view north up again - and while
+	// turned, tool drags are not passed on, so nothing can be moved or drawn in
+	// a rotated frame. Held by this window alone: a document opens north up.
+			void		SetSelectTool(WED_MapToolNew * t) { mSelectTool = t; }
+			bool		IsRotateMode(void) const { return mRotateMode; }
+			void		SetRotateMode(bool on);
+	virtual	void		GetMouseLocNow(int * out_x, int * out_y);
 			void		AddLayer(WED_MapLayer * layer);
 	
 			void		SetFilter(const string& name, const MapFilter_t& hide_filter, const MapFilter_t& lock_filter);
@@ -95,6 +105,15 @@ private:
 	int				mIsDownExtraCount;
 	
 	GUI_Button *	mTiltButton[4];
+
+	WED_MapToolNew *	mSelectTool;
+	bool				mRotateMode;
+	bool				mRotating;			// a Shift+right-drag is turning the view
+	double				mRotStartAngle;		// screen angle of that drag's start, about the centre
+	double				mRotStartView;		// the view rotation when it began
+
+			void		ToMap(int& x, int& y) const;
+			double		ScreenAngle(int x, int y) const;
 };
 
 

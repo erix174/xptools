@@ -26,6 +26,7 @@
 #include "WED_LiveryModeration.h"
 #include "GUI_GraphState.h"
 #include "GUI_Resources.h"
+#include "WED_MapPane.h"
 
 #if APL
 	#include <OpenGL/gl.h>
@@ -37,10 +38,10 @@ static const char * kArt = "moderation_tools.png";
 static const int kTools = 2;
 static const char * kTips[kTools] = {
 	"Moderation View - highlight the ramp starts to check, and show the airport overview",
-	"Rotate canvas - not built yet"
+	"Rotate view (select tool only) - Shift+right-drag to turn, 45-degree detents; click again for north up"
 };
 
-WED_ModerationToolbar::WED_ModerationToolbar(GUI_Pane * map) : mMap(map), mRotate(false)
+WED_ModerationToolbar::WED_ModerationToolbar(WED_MapPane * map) : mMap(map)
 {
 }
 
@@ -54,7 +55,7 @@ void	WED_ModerationToolbar::CellSize(int & w, int & h)
 
 bool	WED_ModerationToolbar::IsOn(int tool) const
 {
-	return tool == 0 ? WED_ModerationViewOn() : mRotate;
+	return tool == 0 ? WED_ModerationViewOn() : (mMap && mMap->IsViewRotated());
 }
 
 // Tools fill the pane bottom-up, left to right: tool n is column n % 2 of row n / 2.
@@ -126,8 +127,8 @@ int		WED_ModerationToolbar::MouseDown(int x, int y, int button)
 	int cell[4];
 	int n = ToolAt(x, y, cell);
 	if (n < 0) return 0;
-	if (n == 0) WED_SetModerationView(!WED_ModerationViewOn());
-	else        mRotate = !mRotate;			// placeholder until the map can rotate
+	if (n == 0)		WED_SetModerationView(!WED_ModerationViewOn());
+	else if (mMap)	mMap->ToggleViewRotate();
 	Refresh();
 	if (mMap) mMap->Refresh();
 	return 1;

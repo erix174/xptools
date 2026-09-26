@@ -142,6 +142,15 @@ static void	Circle(float cx, float cy, float r, bool filled)
 	glEnd();
 }
 
+// The mouse where the overlays are: in the screen's frame. The host (WED_Map)
+// reports map pixels, which differ once the view is turned.
+static void	MouseOnScreen(WED_MapZoomerNew * z, GUI_Pane * host, int& x, int& y)
+{
+	host->GetMouseLocNow(&x, &y);
+	Point2 p = z->MapPixelToScreen(Point2(x, y));
+	x = (int) floor(p.x() + 0.5); y = (int) floor(p.y() + 0.5);
+}
+
 static bool	Inside(float x, float y, float x0, float y0, float x1, float y1)
 {
 	return x >= x0 && x <= x1 && y >= y0 && y <= y1;
@@ -447,7 +456,7 @@ void	WED_ModerationLayer::Collect(vector<Callout> & out)
 		c.id   = ramps[i]->GetID();
 		Point2 ll;
 		ramps[i]->GetLocation(gis_Geo, ll);
-		Point2 px = GetZoomer()->LLToPixel(ll);
+		Point2 px = GetZoomer()->MapPixelToScreen(GetZoomer()->LLToPixel(ll));
 		c.ax = (float) px.x();
 		c.ay = (float) px.y();
 		c.on_screen = !(c.ax < b[0] || c.ax > b[2] || c.ay < b[1] || c.ay > b[3]);
@@ -1108,13 +1117,9 @@ void	WED_ModerationLayer::Focus(int ramp_id)
 	sel->Clear();
 	sel->Select(r);
 	if (op) op->CommitOperation();
-	// pan, never refit: see WED_MapPane::CenterOnPoint
 	Point2 ll;
 	r->GetLocation(gis_Geo, ll);
-	double b[4];
-	GetZoomer()->GetPixelBounds(b[0], b[1], b[2], b[3]);
-	Point2 p = GetZoomer()->LLToPixel(ll);
-	GetZoomer()->PanPixels(p.x(), p.y(), (b[0] + b[2]) * 0.5, (b[1] + b[3]) * 0.5);
+	GetZoomer()->CenterOn(ll);			// keeps the zoom: see WED_MapZoomerNew::CenterOn
 	mReviewed.insert(ramp_id);
 	GetHost()->Refresh();
 }
@@ -1182,7 +1187,7 @@ void	WED_ModerationLayer::DrawOverview(GUI_GraphState * g)
 		if (!sIssueIDs.count(ramps[i]->GetID())) continue;
 		Point2 ll;
 		ramps[i]->GetLocation(gis_Geo, ll);
-		Point2 px = GetZoomer()->LLToPixel(ll);
+		Point2 px = GetZoomer()->MapPixelToScreen(GetZoomer()->LLToPixel(ll));
 		if (px.x() < b[0] || px.x() > b[2] || px.y() < b[1] || px.y() > b[3]) continue;
 		DrawNote(g, (float) px.x() + 14, (float) px.y() + 14, 8);
 	}
@@ -1245,7 +1250,7 @@ void	WED_ModerationLayer::DrawOverview(GUI_GraphState * g)
 	y -= lh;
 	mListBox[0] = x0; mListBox[2] = x1; mListBox[3] = y; mListBox[1] = y - shown * rh;
 	int mx, my;
-	GetHost()->GetMouseLocNow(&mx, &my);
+	MouseOnScreen(GetZoomer(), GetHost(), mx, my);
 	for (int r = 0; r < shown; ++r)
 	{
 		const Row & row = issues[r + mListScroll];
@@ -1290,13 +1295,38 @@ void	WED_ModerationLayer::DrawOverview(GUI_GraphState * g)
 	Txt(g, kMuted, x0 + kPad, y - asc - 2, "Shift+X / Ctrl+Shift+X: next / previous stand to check");
 }
 
+// Cards, chips, the overview and the badges stay level with the screen when the
+// view is turned: undo the map's rotation for them, and place their anchors
+// with MapPixelToScreen.
 void	WED_ModerationLayer::DrawSelected(bool inCurrent, GUI_GraphState * g)
+{
+	const double rot = GetZoomer()->GetViewRotation();
+	if (rot != 0)
+	{
+		double b[4];
+		GetZoomer()->GetPixelBounds(b[0], b[1], b[2], b[3]);
+		const double cx = (b[0] + b[2]) * 0.5, cy = (b[1] + b[3]) * 0.5;
+		glMatrixMode(GL_MODELVIEW);
+		glPushMatrix();
+		glTranslated(cx, cy, 0);
+		glRotated(-rot, 0, 0, 1);
+		glTranslated(-cx, -cy, 0);
+	}
+	DrawOverlays(g);
+	if (rot != 0)
+	{
+		glMatrixMode(GL_MODELVIEW);
+		glPopMatrix();
+	}
+}
+
+void	WED_ModerationLayer::DrawOverlays(GUI_GraphState * g)
 {
 	if (!WED_ModerationEnabled()) { mHits.clear(); return; }
 
 	// What the mouse was over last frame decides what is open this frame.
 	int mx, my;
-	GetHost()->GetMouseLocNow(&mx, &my);
+	MouseOnScreen(GetZoomer(), GetHost(), mx, my);
 	const float fx = (float) mx, fy = (float) my;
 	int tray = -1, chip = -1, card = -1, row = -1;
 	for (size_t i = 0; i < mHits.size(); ++i)
@@ -1360,6 +1390,7 @@ void	WED_ModerationLayer::DrawSelected(bool inCurrent, GUI_GraphState * g)
 
 int		WED_ModerationLayer::HandleScrollWheel(int inX, int inY, int inDist)
 {
+	{ Point2 sp = GetZoomer()->MapPixelToScreen(Point2(inX, inY)); inX = (int) floor(sp.x() + 0.5); inY = (int) floor(sp.y() + 0.5); }
 	if (!sModerationView) return 0;
 	if (!Inside((float) inX, (float) inY, mListBox[0], mListBox[1], mListBox[2], mListBox[3])) return 0;
 	mListScroll -= inDist;				// wheel up: towards the top of the list
@@ -1377,6 +1408,7 @@ void	WED_ModerationLayer::HandleClickUp(int inX, int inY, int inButton, GUI_KeyF
 
 int		WED_ModerationLayer::HandleClickDown(int inX, int inY, int inButton, GUI_KeyFlags modifiers)
 {
+	{ Point2 sp = GetZoomer()->MapPixelToScreen(Point2(inX, inY)); inX = (int) floor(sp.x() + 0.5); inY = (int) floor(sp.y() + 0.5); }
 	if (!WED_ModerationEnabled() || inButton != 0) return 0;
 	const float x = (float) inX, y = (float) inY;
 

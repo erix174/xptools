@@ -69,6 +69,16 @@ public:
 			double	GetPPM(void) const;
 			double	GetRotation(const Point2& p) const;
 
+	// VIEW ROTATION (moderation). The map is drawn turned by this many degrees,
+	// counter-clockwise, about the centre of the pixel bounds. Everything above
+	// stays in MAP pixels - unrotated - so tools, handles and hit tests are
+	// untouched; WED_Map rotates the picture with GL and turns mouse points
+	// back with ScreenToMapPixel as they arrive. 0 = north up.
+			double	GetViewRotation(void) const { return mViewRotation; }
+			void	SetViewRotation(double deg);
+			Point2	ScreenToMapPixel(const Point2& p) const;
+			Point2	MapPixelToScreen(const Point2& p) const;
+
 			double	GetClickRadius(double pixels) const;
 			long long	CacheKey(void) { return mCacheKey; }
 
@@ -105,6 +115,10 @@ public:
 							double	inSouth,
 							double	inEast,
 							double	inNorth);
+			// Put this lat/lon in the middle of the view, keeping the zoom exactly.
+			// For any distance: PanPixels is only good near the screen, and
+			// refitting to GetMapVisibleBounds() zooms out a little each time.
+			void	CenterOn(const Point2& ll);
 			void	PanPixels(						// Pan so that the logical pixel under p1
 							double	x1,				// is now visible under p2
 							double	y1,
@@ -159,6 +173,7 @@ private:
 
 	double	mPixels[4];
 	double	mLogicalBounds[4];
+	double	mViewRotation;
 
 	// values below are dreived from the above, to provide
 	// pre-computed values for faster pixel transformations

@@ -120,6 +120,12 @@ private:
 	WED_NWInfoLayer *		mNWInfoLayer;
 #endif
 	GUI_ToolBar *			mToolbar;
+public:
+	// The moderation toolbar's Rotate button. Turning on first makes the select
+	// tool the tool, since the view may only be turned with it.
+			bool			IsViewRotated(void) const;
+			void			ToggleViewRotate(void);
+private:
 
 	GUI_Table *						mTable;
 	GUI_TextTable *					mTextTable;

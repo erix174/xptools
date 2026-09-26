@@ -292,7 +292,7 @@ WED_MapPane::WED_MapPane(GUI_Commander * cmdr, double map_bounds[4], IResolver *
 		GetBounds(pb);
 		mToolbar->GetBounds(tb);
 		WED_ModerationToolbar::CellSize(cw, ch);
-		WED_ModerationToolbar * mod = new WED_ModerationToolbar(mMap);
+		WED_ModerationToolbar * mod = new WED_ModerationToolbar(this);
 		mod->SetParent(this);
 		mod->SetBounds(tb[0], pb[1], tb[0] + cw * WED_ModerationToolbar::Columns(), pb[1] + ch);
 		mod->SetSticky(1, 1, 0, 0);
@@ -322,6 +322,8 @@ WED_MapPane::WED_MapPane(GUI_Commander * cmdr, double map_bounds[4], IResolver *
 		mMap->AddLayer(*t);
 
 	mMap->SetTool(mTools[0]);
+	for (size_t n = 0; n < mTools.size(); ++n)
+		if (mTools[n] && dynamic_cast<WED_VertexTool *>(mTools[n])) { mMap->SetSelectTool(mTools[n]); break; }
 	mInfoAdapter->SetTool(mTools[0]);
 	mToolbar->SetValue(mTools.size()-2);
 
@@ -407,14 +409,28 @@ void WED_MapPane::ZoomShowSel(double scale)   // by default show just a bit more
 
 void WED_MapPane::CenterOnPoint(const Point2& centerLL)
 {
-	// Pan, at the current zoom. Refitting to GetMapVisibleBounds() zoomed out a
+	// At the current zoom. Refitting to GetMapVisibleBounds() zoomed out a
 	// little on every call: those bounds are sampled round the edge of the view
 	// and are a touch larger than it, so each re-centre grew the view.
-	double b[4];
-	mMap->GetPixelBounds(b[0], b[1], b[2], b[3]);
-	Point2 p = mMap->LLToPixel(centerLL);
-	mMap->PanPixels(p.x(), p.y(), (b[0] + b[2]) * 0.5, (b[1] + b[3]) * 0.5);
+	mMap->CenterOn(centerLL);
 	Refresh();
+}
+
+bool	WED_MapPane::IsViewRotated(void) const
+{
+	return mMap->IsRotateMode();
+}
+
+void	WED_MapPane::ToggleViewRotate(void)
+{
+	if (mMap->IsRotateMode()) { mMap->SetRotateMode(false); return; }
+	for (size_t n = 0; n < mTools.size(); ++n)
+		if (mTools[n] && dynamic_cast<WED_VertexTool *>(mTools[n]))
+		{
+			mToolbar->SetValue(n);			// the listener makes it the map's tool
+			break;
+		}
+	mMap->SetRotateMode(true);
 }
 
 int		WED_MapPane::Map_KeyPress(uint32_t inKey, int inVK, GUI_KeyFlags inFlags)

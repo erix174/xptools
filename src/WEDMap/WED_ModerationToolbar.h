@@ -43,10 +43,12 @@
 #include <string>
 #include <vector>
 
+class	WED_MapPane;
+
 class	WED_ModerationToolbar : public GUI_Pane {
 public:
 
-					 WED_ModerationToolbar(GUI_Pane * map);
+					 WED_ModerationToolbar(WED_MapPane * map);
 
 	// Width and height of the art, for placing the pane.
 	static	void	CellSize(int & w, int & h);
@@ -61,8 +63,7 @@ private:
 	int				ToolAt(int x, int y, int cell[4]);
 	bool			IsOn(int tool) const;
 
-	GUI_Pane *		mMap;			// refreshed when a toggle changes what it draws
-	bool			mRotate;
+	WED_MapPane *	mMap;			// owns the rotation; refreshed when a toggle changes what it draws
 };
 
 #endif /* WED_MODERATIONTOOLBAR_H */

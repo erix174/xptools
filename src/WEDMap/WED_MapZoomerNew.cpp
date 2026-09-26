@@ -119,9 +119,38 @@ WED_MapZoomerNew::WED_MapZoomerNew(WED_Camera * c)
 	  mPixels{0, 0, 1, 1},
 	  mLogicalBounds{-180, -90, 180, 90},
 	  mLonCenter(0), mLatCenter(0),
-	  mCenterX(0.5), mCenterY(0.5)
+	  mCenterX(0.5), mCenterY(0.5),
+	  mViewRotation(0)
 {
 	RecalcAspectRatio();
+}
+
+void	WED_MapZoomerNew::SetViewRotation(double deg)
+{
+	while (deg >= 180.0)  deg -= 360.0;
+	while (deg < -180.0)  deg += 360.0;
+	if (deg == mViewRotation) return;
+	mViewRotation = deg;
+	++mCacheKey;
+}
+
+static Point2	RotateAbout(const Point2& p, double cx, double cy, double deg)
+{
+	const double a = deg * DEG_TO_RAD, c = cos(a), s = sin(a);
+	const double dx = p.x() - cx, dy = p.y() - cy;
+	return Point2(cx + dx * c - dy * s, cy + dx * s + dy * c);
+}
+
+Point2	WED_MapZoomerNew::ScreenToMapPixel(const Point2& p) const
+{
+	if (mViewRotation == 0) return p;
+	return RotateAbout(p, (mPixels[0] + mPixels[2]) * 0.5, (mPixels[1] + mPixels[3]) * 0.5, -mViewRotation);
+}
+
+Point2	WED_MapZoomerNew::MapPixelToScreen(const Point2& p) const
+{
+	if (mViewRotation == 0) return p;
+	return RotateAbout(p, (mPixels[0] + mPixels[2]) * 0.5, (mPixels[1] + mPixels[3]) * 0.5, mViewRotation);
 }
 
 WED_MapZoomerNew::~WED_MapZoomerNew()
@@ -377,6 +406,24 @@ void	WED_MapZoomerNew::GetMapVisibleBounds(
 	coords[6] = PixelToLL(Point2(mPixels[2], mPixels[1]));
 	coords[7] = PixelToLL(Point2((mPixels[0] + mPixels[2]) * 0.5, mPixels[1]));
 
+	if (mViewRotation != 0)
+	{
+		// Turned, the screen's edge is a rotated rectangle in map pixels: sample
+		// it there, and any sample can be the extreme.
+		const Point2 scr[8] = {
+			Point2(mPixels[0], mPixels[1]), Point2(mPixels[0], (mPixels[1] + mPixels[3]) * 0.5),
+			Point2(mPixels[0], mPixels[3]), Point2((mPixels[0] + mPixels[2]) * 0.5, mPixels[3]),
+			Point2(mPixels[2], mPixels[3]), Point2(mPixels[2], (mPixels[1] + mPixels[3]) * 0.5),
+			Point2(mPixels[2], mPixels[1]), Point2((mPixels[0] + mPixels[2]) * 0.5, mPixels[1]) };
+		for (int i = 0; i < 8; ++i) coords[i] = PixelToLL(ScreenToMapPixel(scr[i]));
+		outWest = outEast = coords[0].x(); outSouth = outNorth = coords[0].y();
+		for (int i = 1; i < 8; ++i)
+		{
+			outWest  = min(outWest,  coords[i].x()); outEast  = max(outEast,  coords[i].x());
+			outSouth = min(outSouth, coords[i].y()); outNorth = max(outNorth, coords[i].y());
+		}
+		return;
+	}
 	outWest = fltmin3(coords[0].x(), coords[1].x(), coords[2].x());
 	outSouth = fltmin3(coords[6].y(), coords[7].y(), coords[0].y());
 	outEast = fltmax3(coords[4].x(), coords[5].x(), coords[6].x());
@@ -422,6 +469,16 @@ void	WED_MapZoomerNew::ZoomShowArea(
 	BroadcastMessage(GUI_SCROLL_CONTENT_SIZE_CHANGED,0);
 }
 
+
+void	WED_MapZoomerNew::CenterOn(const Point2& ll)
+{
+	// ZoomShowArea takes the larger of its two scales. Give it the view's own
+	// height in degrees, measured with the linear helpers (the exact inverse of
+	// the current scale), and a sliver of width, so the height decides and the
+	// scale comes back unchanged.
+	const double h = fabs(YPixelToLat(mPixels[3]) - YPixelToLat(mPixels[1]));
+	ZoomShowArea(ll.x() - 1e-9, ll.y() - h * 0.5, ll.x() + 1e-9, ll.y() + h * 0.5);
+}
 
 void	WED_MapZoomerNew::PanPixels(
 					double	x1,

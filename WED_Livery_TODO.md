@@ -57,20 +57,22 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
 - **Review status, open (Eric to confirm first):**
   - "Reviewed" is session-only today.
   - To persist it we need to know whether a Gateway upload carries earth.wed.xml. If it does not, the file has no carrier for it, and the Gateway would need its own field.
-- **Rotate canvas: research done 2026-09-26, design pending from Eric.**
-  - **Recommended: rotate the picture, not the projection.**
-    - A GL rotation about the map centre is wrapped around the layer passes in `WED_Map::Draw`.
-    - Every mouse coordinate is inverse-rotated where it enters `WED_Map` (MouseDown/Drag/Up/Move, ScrollWheel, and an override of the virtual `GetMouseLocNow`), so tools, handles and hit tests keep working in map pixels, unchanged.
-    - `GetMapVisibleBounds` samples the rotated screen edge, so culling keeps up.
-  - **Why this and not a rotated `LLToPixel`:**
-    - What rotates for free: icons (38 `GUI_PlotIcon` heading calls), silhouettes, slippy tiles, and text (fonts are textured quads).
-    - The projection route would have to add the angle at each of those sites.
-  - **Must stay screen-aligned and needs work:**
-    - the moderation overlays (cards, chips, overview): drawn with the rotation popped, anchors mapped to the screen
-    - the map's own status text and scale bar
-    - the marquee: a screen-dragged box becomes a map-axis box, so it looks rotated - a limitation to fix later
-    - `WED_MapBkgnd`'s axis-aligned background rectangle
-  - **Tool, per Eric:** the Rotate button arms a tool that drags out an arrow, like a heading handle; on release the view turns so the arrow is horizontal. Then 90-degree detents. Details to come.
+- **Rotate view, prototype 2026-09-26 (approach B: turn the picture, not the map).**
+  - **What it does:**
+    - The Rotate button turns the view to a fixed 30 degrees (the prototype, until the measuring arrow).
+    - Shift+right-drag turns it freely, with a detent every 45 degrees.
+    - Clicking the button again puts it north up.
+    - A status line and a north arrow show while it is turned.
+  - **Guard rails:**
+    - It works with the select (Vertex) tool only; pressing Rotate makes Vertex the tool.
+    - Any other tool puts the view north up again.
+    - While turned the select tool only selects: drags are withheld, and its mouse-up is given the mouse-down point, since it commits a move on release.
+  - The angle lives in the window only, so a document always opens north up.
+  - Moderation cards, chips, overview and badges stay level with the screen.
+  - **Still to do:**
+    - The measuring arrow: drag out a heading, release, and that line becomes horizontal.
+    - Marquee under rotation. It is withheld today with the other drags; the Marquee tool itself turns the view off.
+    - WED_MapBkgnd's axis-aligned rectangle.
 
 - **Map view, open:**
   - Mac and Linux search windows are untested: they use `open -na` and `--app`.
