@@ -389,6 +389,8 @@ The Lights and Markings tab allows editing of non-sign details on top of base pa
 
 The 3D Objects tab allows you to edit 3D clutter and buildings, such as facades, forests, and objects. Underlying pavement is visible but locked again in this mode.
 
+The Static Liveries tab chooses which static aircraft park at the selected ramp starts: the operation type, the size range or spawn weights, and the operators, with a picture of each operator's aircraft. Only ramp starts can be selected and edited in this mode; pavement, objects and lines stay visible but locked. It needs X-Plane 12.5 or later. See [Static Aircraft Liveries](#staticaircraftliveries).
+
 The Exclusion and Boundary tab allows fine editing of exclusion zones and airport boundaries, with most airport features visible but locked in this mode.
 
 The Texture tab is for texture mapping a custom draped polygon file named "Draped Orthophoto." To add these to the scenery, select a .pol file in the library pane, then select **Use Texture Map** in the tool defaults pane. Some .pol art assets (such as the DrapedRunwaySigns.pol) come with special pre-defined "subtextures" that can be pre-selected by a mouse click on the relevant part of the texture in the library preview pane.
@@ -410,6 +412,13 @@ Signs in the hierarchy are shown as a rendered preview of what the sign will loo
 <p class="cap"><strong>Figure 7</strong>: The options in the preferences window</p>
 
 WED has globalized preference settings that will apply to every scenery pack. This menu is found under File > Preferences (or WED > Preferences on Mac OS). Here you can change between meters and feet, or how the coordinates are displayed in the map (although you can only enter coordinates as decimals still). The size of all text in WED can be specified as well. Most tables and menus will adjust to this size instantly, but some may require a restart of WED for best appearance. See the section "[Using Orthophotos for Scenery and Guides][]" for information on how to use the Tile Server Custom URL field.
+
+Two checkboxes concern ramp starts and the Gateway:
+
+* **Prompt Up Static Liveries Tab** (under "When Selecting Ramp Start"): when you select ramp starts, and nothing but ramp starts, WED switches the attributes pane to the Static Liveries tab. It does this once for each new selection, so you can still switch to another tab afterwards. Off by default.
+* **Moderator Mode**: turns on the tools for checking Gateway submissions, described in [Moderating Gateway Submissions][]. It takes effect immediately in every open scenery pack. The Import from Airport Scenery Gateway window reads it when it opens, so change it before opening that window. Off by default.
+
+Like the other preferences, both are remembered the next time WED starts.
 
 ## Creating Airports and Overlay Scenery ##
 
@@ -628,9 +637,64 @@ Select your ramp start type: gate, tie down, or hangar. You can only have one of
 
 The equipment type field tells X-Plane what type of aircraft would use this ramp in the real world. This is mostly used for spawning the correct type of AI planes. Pick at least one type of plane from the list.
 
-Specifying the size, operation type, and airline fields will help X-Plane populate airports with the most accurate mix of AI aircraft and static objects. Note that changing the Size field will change the size of the yellow icon. This is to help visualize how much space will be taken up by the largest aircraft of that category. Be sure to provide plenty of clearance--if any part of the icon is covered, there will not be enough space there in X-Plane and taxiing aircraft will become stuck when trying to pass. Keep in mind that viewing the layout in the "Taxi+Flow" editing tab will make these issues easier to spot.
+Specifying the size, operation type, and airline fields will help X-Plane populate airports with the most accurate mix of AI aircraft and static objects. The operation type and airlines can be edited in the Selection tab; the size is set in the Static Liveries tab, described [below](#staticaircraftliveries). Note that changing the size will change the size of the yellow icon. This is to help visualize how much space will be taken up by the largest aircraft of that category. Be sure to provide plenty of clearance--if any part of the icon is covered, there will not be enough space there in X-Plane and taxiing aircraft will become stuck when trying to pass. Keep in mind that viewing the layout in the "Taxi Routes" editing tab will make these issues easier to spot.
 
 If you are importing an airport from an earlier version of WED, use the "Upgrade Ramps" option under the airport menu to automatically convert old style ramps to the new format compatible with X-Plane 10.50.
+
+##### Static Aircraft Liveries #####
+
+Starting with X-Plane 12.5, the static aircraft parked at gates and tie-downs wear the liveries of real operators, and you choose which operators and which sizes of aircraft park at each stand. This is done in the **Static Liveries** tab. Hangars and misc ramp starts never get static aircraft.
+
+The tab needs the livery index that ships with X-Plane 12.5 and later, `livery_index.txt` in `Resources/default scenery/sim objects/apt_aircraft/` of the X-Plane folder WED is set to. It lists every livery X-Plane has, and every operator with its country, its kind of operation and its home airports. If the file is missing, as it is in older versions of X-Plane, the tab shows "Livery previews need X-Plane 12.5 or later. Airlines can still be typed in the Selection tab." There are then no previews and no coverage readout, the auto-populate commands refuse to run, and validation skips its static aircraft check.
+
+Select one or more ramp starts, then click the tab. To have WED switch to the tab whenever you select ramp starts, turn on **Prompt Up Static Liveries Tab** in the [Preferences][]. **Airport > Next Ramp Start** (Ctrl+Shift+. , Command+Shift+. on Macs) and **Previous Ramp Start** (Ctrl+Shift+,) step through the ramp starts of the current airport one at a time. Each one is selected, centered in the map at the current zoom, and shown in this tab.
+
+From top to bottom, the tab shows:
+
+* **The airport**: its name, ICAO code and country, and whether WED has airline data for it ("Livery recommendation is available at this airport").
+* **The ramp start's name** (or how many are selected) and the **Populate This Ramp** button (**Populate N Ramps** for several), described under Auto-Populate below.
+* **The operation type**, a row of buttons:
+
+| Button         | Written to apt.dat as | What parks there |
+| -------------- | --------------------- | ---------------- |
+| None           | none                  | No static aircraft at all. This is the default in the ramp start tool. |
+| Private/BizJet | general_aviation      | Light aircraft and business jets, picked by X-Plane by size. About 70% of the time it picks one registered in the airport's country, if there is one. The airline list is not used. |
+| Passenger      | airline               | Aircraft of the operators listed on the stand. |
+| Cargo          | cargo                 | Aircraft of the cargo operators listed on the stand. |
+| Military/Gov   | military              | Air forces and government flights. With no operator listed, any military aircraft of the stand's size may appear. |
+
+  The Selection tab lists the same types under their older names (General Aviation, Airline, Military).
+
+* **Size (ICAO Wingspan Category)**: a slider with two handles over the classes A to F. Drag them to set the smallest and the largest aircraft that may park here.
+* **Set Spawn Weights**: replaces the plain range with six bars, one per class, starting at an equal share for each class in the range. Drag a bar to make that class more or less common. The bars are relative and the percentages are shown under them; all six at zero means nobody parks here, on purpose. While weights are in use the size range is taken from them ("Size is derived from the weights below"). **Simple Mode** goes back to the plain range but keeps the weights stored with the stand, so **Set Spawn Weights** brings them back exactly as they were. Weights are only exported when the target is X-Plane 12.00 or later, or the Airport Scenery Gateway. Older versions of X-Plane use the largest class that has a weight.
+* **The coverage readout**: one line that says what will actually happen at the stand, for example "This stand will spawn aircraft ...% of the time" (when it has weights), "Only UAL will ever park here", or "This stand parks nothing - no operators listed". Click it for the details: what fills the stand, and what was left out and why.
+* **The operators**: a search field ("Lookup Operators"), the **Show Recommendation** button, an A-Z / Z-A sort button, and one card per operator that has an aircraft that fits this stand.
+
+Operator cards are shown only when a single ramp start is selected. Each card shows the largest aircraft that operator can park here, its operator code and aircraft type, and "(and N more)" when it has more. Click the picture to add the operator to the stand, or to remove it. Click the caption row to open a list of all its aircraft that fit (a preview; you cannot pick single aircraft). The lock icon on a card dims all the other cards so you can look at one operator by itself; it is a viewing aid and is not saved. Operators already listed on the stand are repeated at the top under **Selected**. Listed codes that have nothing to show at this stand are named there too ("Also listed, nothing to show at this stand: ...").
+
+With **Show Recommendation** on, the cards are grouped into **Recommended** (airlines that WED's airport data says serve this airport), **Popular Airlines**, **Same Country** and **All Airlines**. All Airlines starts collapsed; click any section header to open or close it. The button is available only at airports for which WED has airline data. On Private/BizJet and Military/Gov stands the cards are grouped by aircraft type instead, and are only a preview: X-Plane picks those aircraft by size. To list particular military operators, type their codes into the Airlines field in the Selection tab or use Populate.
+
+**Operator codes.** The Airlines field is a list of codes separated by spaces. A code is the operator's 3-letter ICAO designator (`dal`, `ual`), a 4-character code from the livery index (`xpa0`), or either of these followed by `_` and up to six letters or digits for a division of that operator (`afr_f` for Air France Cargo, `ryr_1`). WED writes them in lower case. Some codes stand for no real operator: `xpga` for generic general aviation, `xpmi` for generic military aircraft, and `xpzz_` followed by an aircraft type (`xpzz_b752`) for an unpainted airliner of that type. The `xpzz_` codes are never added for you and sort last in the list; use one only when you really want a white airframe. For the Gateway the whole Airlines field must stay under 100 characters, about 24 three-letter codes.
+
+**What keeps an aircraft away.** Several rules, applied the same way by WED and by X-Plane, decide which of an operator's aircraft can park at a stand. The tab only shows aircraft that pass them, and the coverage readout names what was left out:
+
+* **Range.** An airliner only parks where it could fly from one of its operator's home airports. A United 737 will not park in Beijing, while United's long-haul aircraft can. The readout lists what was removed ("Out of range from their hubs, not offered: ..."). If an operator has no aircraft left at the stand's sizes, it has no card. Private and military aircraft have no range limit.
+* **Home country.** A few military and government aircraft, such as a head-of-state airliner, are marked in the index to park only in their own country. Other military aircraft may park anywhere.
+* **Retired liveries.** Liveries of aircraft or airlines that are no longer flying are marked "Obsolete" in the livery index. They are never picked, and WED does not show them. A stand whose only operator is affected can end up parking nothing, which validation reports.
+
+If WED knows nothing about an operator or its range, the aircraft is allowed. Validation warns (it does not stop an export) about any stand where nothing listed can park, for example "Ramp start '...': none of its operators (...) has a static livery at size ... that can reach this airport and fits its equipment type, so X-Plane will park no static aircraft here. ATC and AI parking are unaffected."
+
+**Auto-Populate.** **Airport > Auto-Populate Static Aircraft (Selected Ramps Only)...** fills in the selected ramp starts (or all the ramp starts in a selected airport or group) from WED's airport data. It shows what it would change and asks before applying it, as one undo step. **Populate This Ramp** in the tab does the same for the selected stands without a confirmation. Both only add. They never remove an operator or change an operation type, and they keep existing weights:
+
+| Operation type | What auto-populate does |
+| -------------- | ----------------------- |
+| None           | Nothing. None means no static aircraft. |
+| Any other, no weights yet | The menu command gives the stand weights based on its size: A: A100; B: A30 B70; C: B30 C70; D: B10 C40 D50; E: C10 D30 E60; F: D10 E50 F40. **Populate This Ramp** keeps the stand's size range instead. A stand in Simple Mode keeps its range either way. |
+| Passenger, Cargo | Adds the airlines WED's airport data lists for this airport that are of that kind, have an aircraft at the stand's sizes and equipment type, and are within range. It never adds `xpzz_` codes and stops before the 100-character limit. At an airport with no data it adds nothing. |
+| Military/Gov   | Adds the military and government operators of the airport's own country that have such an aircraft. If there are none, it adds nothing, and X-Plane picks military aircraft by size. |
+| Private/BizJet | Weights only. |
+
+WED marks each stand it fills as auto-filled. The mark is saved in the WED project, not in apt.dat, and is removed as soon as you change anything on that stand other than its weights.
 
 #### Creating Taxi Signs ####
 
@@ -847,7 +911,7 @@ To track your airport's progress on the Gateway:
 	* **Recommended** (This airport submission has been recommended for inclusion in a future release of X-Plane. Airport submissions that are "Recommended" at the moment of capture into the next release of X-Plane will appear.)
 	* **See Comments** (This airport submission could not be approved by the moderator. The reason for this can be viewed by clicking the moderator comment button that applies to this submission.)
 
-For more information, to register as an artist, or to download existing files, check out the [Airport Scenery Gateway website][68]. 
+For more information, to register as an artist, or to download existing files, check out the [Airport Scenery Gateway website][68]. Gateway moderators, see [Moderating Gateway Submissions][] for the tools WED offers them.
 
 ## Editing Using the Map Tools ##
 
@@ -1103,6 +1167,58 @@ These placements are intended as a starting point for more manual customization 
 
 When exporting to the gateway export target (or when Laminar creates the global airports), any airport including one or more art asset from the lib/airport/ground/terrain_FX or lib/airport/ground/pavement_FX library catories will NOT have these upgrade heuristics applied. So it is possible to prevent the automatic addition of this grass mowing by adding a single (small, hard to see) item of one of these categories somewhere within the airport. The manually triggered menu functions for these upgrades are not conditional on these presence tests, though. 
 
+### Moderating Gateway Submissions ###
+
+WED has a set of tools for Airport Scenery Gateway moderators. They are all turned on by the **Moderator Mode** checkbox in the [Preferences][], and none of them appears or does anything without it. Turning the checkbox off takes effect at once, and a rotated map returns to north up.
+
+#### Importing Submissions ####
+
+With Moderator Mode on, **File > Import from Airport Scenery Gateway** shows the columns "Date Accepted" and "User Name" instead of "Locked until" and "by Artist". For an airport that has an accepted submission newer than its approved ones, the date and user of that submission are shown. Select several airports (Ctrl+click, Command+click on Macs) and the **Next** button becomes **Import Accepted**: each airport is imported as its accepted submission if it has one, otherwise as its recommended one. Imported airports are collapsed in the hierarchy, so that each takes one line.
+
+#### Hierarchy Shortcuts ####
+
+In Moderator Mode the hierarchy pane sets up the map for you:
+
+* Selecting something in the hierarchy zooms the map to it. Ramp starts, taxi routes, runways, and the "Runways", "Ramp Starts", "Taxi Routes", "Ground Vehicles" and "Ground Routes" folders switch to the Taxi Routes tab; anything else switches to the Selection tab.
+* A single click on an airport's name (also when it is already selected) opens all of its folders, makes them all visible and switches the imagery to ESRI. It does not open the name for renaming; rename airports in the Selection tab instead.
+* A double click on the **Taxiways** or **Draped Polygons** folder shows only that folder, hides its sibling folders and turns the imagery off.
+* A double click on the **Ground Vehicles** folder shows it together with **Ground Routes**, hides the other folders and switches to the Taxi Routes tab.
+
+Showing and hiding folders is an ordinary edit that can be undone. Hidden items are not exported, so click the airport name to show everything again before you export.
+
+#### The Moderation Tools ####
+
+Two buttons appear at the bottom of the map's tool column:
+
+* **Moderation View** - "highlight the ramp starts to check, and show the airport overview".
+* **Rotate view** - see [Rotating the Map](#rotatingthemap) below.
+
+In Moderator Mode every ramp start's aircraft icon is drawn in a color that stands for its setup: operation type, airlines, and size or spawn weights. Stands with the same setup share a color, so you can see at a glance which stands were copied from which. Stands with operation type None are grey.
+
+**Callouts.** Select ramp starts (or an airport or folder, which counts as all the ramp starts in it) and WED draws a callout for them on the map. Stands on screen with the same setup share one callout, with a leader line to each. How much is shown depends on how many different callouts there are:
+
+* **Up to 5**: a card beside each stand, with its airlines, whether it is "Legacy" (a size letter only) or "Updated" (spawn weights), marked (A) if auto-filled or (M) if set by hand, the operation type, equipment and ramp type, and a line on its operators, such as "Operators: 1 to check". Hover that line to see the operators with their flags and a verdict each. A "?" next to an operator means it is not listed as serving this airport, or is not in the livery index at all; click it to open a web search ("Does ... fly to ...") in a small browser window.
+* **6 to 40**: a one-line chip for each, in a column at the right edge of the map. Hover a chip to open its card.
+* **More than 40**: a legend with one row per setup, its count and its issues. Hover a row to ring its stands on the map, click it to select them.
+
+Click the pin on a card (or Shift+click a chip) to make that stand the base for a comparison. Every other card then lists what it adds (+), lacks (-) and changes (~) compared with the base, and the chips show the counts.
+
+**What needs checking.** A stand needs a look when it lists an operator that WED's airport data does not list for this airport (listing fewer airlines than the data is fine), when it lists an operator that is not in the livery index, when a military stand lists an operator from another country, when it is a Passenger or Cargo stand at an airport WED has no data for, or when validation says it parks nothing. Stands filled by auto-populate are assumed correct as long as nobody has edited them.
+
+**The overview.** With Moderation View on, stands that need checking get a "!" badge, the rest are greyed, and an overview of the current airport appears in the top left of the map. It shows the number of ramp starts, how many of them you have reviewed, and a line such as "9 to check    7 unique setups    5 auto-filled    2 "None"". Below that is the list of stands to check. Filter it with the buttons "All", "Not listed", "No data", "Foreign" and "Parks nothing", and click "Sort: name" to sort by the number of operators to verify instead. Click a stand in the list to select it and center the map on it. A stand counts as reviewed once it has been the only selected stand while Moderation View is on, and reviewing one stand reviews every stand with the same setup. This is kept for the current session only. **Copy Summary to Clipboard** copies a plain text report: the airport, the counts, the WED and livery index versions it was checked with, rows the import skipped, and each stand that needs a look with the reason.
+
+**Stepping through stands.** **Airport > Next Stand to Check** (Shift+X while the map has the keyboard focus) and **Previous Stand to Check** (Ctrl+Shift+X) select the next or previous stand that needs checking, center the map on it and show the Static Liveries tab. **Next Ramp Start** and **Previous Ramp Start** step through all stands, and in Moderator Mode they also ask about any operator that needs checking and offer to open a web search for each one.
+
+#### Rotating the Map ####
+
+Airports are rarely built north up, and a row of stands is easier to compare when it runs straight across the screen. Click the **Rotate view** button to turn the map. It switches to the vertex tool, and works only with that tool:
+
+1. Drag along a row of stands. When you let go, the view turns by the smallest angle that makes your line level (horizontal or vertical). While dragging, WED shows how many degrees that is.
+2. After that, dragging draws a selection box as usual, level with the screen. Alt+drag draws a new reference line instead.
+3. Shift+right-drag turns the view by hand. Once a reference line has been drawn, it snaps to the line's direction and every 90° from it. Right-drag still moves the map.
+
+While the view is turned you can click and box-select, but nothing can be moved or edited on the map. The callouts and the overview stay level with the screen. Choosing any other tool, clicking the Rotate view button again, or turning off Moderator Mode returns the map to north up.
+
 ### Improving Performance of WorldEditor ###
 
 If you have performance issues with WED, you can turn off the visual preview of objects, terrain or nadvaid layers. To do so, open the View menu and click **Toggle Preview**, **Toggle Terrain** or **Toggle Navaids**.
@@ -1231,6 +1347,9 @@ To file a bug report, please visit the [Airport Scenery Gateway][75] and create 
 | Update Metadata | Downloads new, missing metadata (if available) for the airport. |
 | Edit Airport *[airport]*  | Changes the current airport to the selected one.      |
 | Upgrade Ramps | Auto-update pre X-Plane 10.50 style ramp starts with useful defaults. |
+| Next Ramp Start, Previous Ramp Start | Select the next or previous ramp start of the current airport, center the map on it and show the Static Liveries tab (Ctrl+Shift+. and Ctrl+Shift+,). In Moderator Mode, also offers a web search for any operator that needs checking. See [Static Aircraft Liveries](#staticaircraftliveries). |
+| Next Stand to Check, Previous Stand to Check | Moderator Mode only. The same, but only for the stands that need checking (Shift+X on the map, Ctrl+Shift+X). See [Moderating Gateway Submissions][]. |
+| Auto-Populate Static Aircraft (Selected Ramps Only) | Adds the airport's operators to the selected ramp starts and gives stands without spawn weights a default set, after showing what would change. Never removes anything. Needs X-Plane 12.5 or later. See [Static Aircraft Liveries](#staticaircraftliveries). |
 | Upgrade Jetways | Auto-update pre X-Plane 11 style jetways using discrete objects to X-Plane 11/12 style jetway facades. This is a requirement to create animated, auto-docking jetways in X-Plane 12 |
 | Age Pavement              | Changes all default X-Plane 11 run and taxiways to x-Plane 12 surface types that look either more worn/older or brand new |
 | Mow grass                 | Adds polygons and 2D objects looking like mowed grass to bare-earth surfaces with the airport boundary |
@@ -1315,19 +1434,20 @@ The following is a list of object types with descriptions of the properties asso
 | Closed         | When checked, WED will automatically close the line to make a loop.  |
 | = Airport Line | Virtual property to invoke the Line Style Selector GUI, offering to select a resource that matches the appearance of the choices available for Airport Line Markings |
 |                             **Object Placement**                                ||
-| Elevation Mode  | Select to place the object either at ground level "None", at an height relative to ground level "set_AGL" or at an absolute elevation "set_MSL". Set_MSL is available starting with XP10, set_AGL requires XP11.50 or later. |
+| Elevation Mode  | Select to place the object either at ground level "None", at an height relative to ground level "set_AGL" or at an absolute elevation "set_MSL". Set_MSL is available starting with XP10, set_AGL requires XP11.50 or later. On the Airport Scenery Gateway set_MSL is not allowed, and set_AGL heights must stay within +/-100 m (except for .agp files with scrapers). |
 | Elevation      | Height in MSL or AGL as per Elevation Mode property.            |
 | Resource       | The path to the `.obj` or `.agp` file that defines the look of this object placement.  |
 | Show level     | The minimum rendering settings at which this object is guaranteed to appear.  By picking higher rendering settings in this menu, you allow X-Plane to not display your object when the user's rendering settings are low.  If you pick "default", your facade will always appear.  |
 |                             **Polygon Placement**                               ||
 | Heading        | The heading, in degrees, to which the draped polygon's texture is rotated. |
 | Resource       | The path to the `.pol` file that defines the look of this draped polygon. |
-| = Taxi Surface | Virtual property to select a resource that matches in appearance the run/taxiway surface types |                             |                             **Ramp Position**                                   ||
-| Ramp start type | The [type](https://developer.x-plane.com/article/guide-to-ramp-starts) of parking spot (X-Plane 10+ only) [. |
+| = Taxi Surface | Virtual property to select a resource that matches in appearance the run/taxiway surface types |
+|                             **Ramp Position**                                   ||
+| Ramp start type | The [type](https://developer.x-plane.com/article/guide-to-ramp-starts) of parking spot (X-Plane 10+ only). |
 | Equipment      | Selects all airplane classes that can legally park at this spot (X-Plane 10+ only).  |
-| Size           | Largest ICAO size class of aircraft to use the position (X-Plane 10.45+ only) |
-| Ramp Operation Type | Types of aircraft that park to use the position (X-Plane 10.45+ only) |
-| Airlines       | List of 3-letter airline codes to specify liveries for parked aircraft (X-Plane 10.45+ only) |
+| Ramp Operation Type | Types of aircraft that park to use the position (X-Plane 10.45+ only): None, General Aviation, Airline, Cargo or Military. None means no static aircraft. |
+| Airlines       | Operator codes, separated by spaces, for the liveries of parked aircraft (X-Plane 10.45+ only). A code is 3 or 4 letters or digits, optionally followed by `_` and up to 6 more (`dal`, `ryr_1`, `xpzz_b752`). Must be under 100 characters for the Gateway. See [Static Aircraft Liveries](#staticaircraftliveries). |
+| Size, spawn weights | Not shown in the Selection tab: set them in the Static Liveries tab. The size is a range of ICAO classes; the largest is exported as the ramp's size. Spawn weights are written when exporting for X-Plane 12.00 or later, and used by X-Plane 12.5 and later. |
 |                             **Runway**                                          ||
 | Width          | Change the default width.                                       |
 | Surface        | The material the runway itself is built out of.                 |
