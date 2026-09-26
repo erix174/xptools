@@ -239,12 +239,14 @@ int					ENUM_ExportSet(const set<int>& members)
 // it is the only thing keeping files written by an older WED readable.
 struct legacy_enum_desc_t { int domain; const char * old_desc; int value; };
 static const legacy_enum_desc_t kLegacyEnumDescs[] = {
-	// 2026-09-19: the ramp labels were renamed to name the OPERATION rather than
-	// the aircraft, so a business jet at a private stand stops reading as a
-	// mistake. apt.dat still exports general_aviation / airline and always will.
-	{ RampOperationType, "General Aviation", ramp_operation_GeneralAviation },
-	{ RampOperationType, "Airline",          ramp_operation_Airline         },
-	{ RampOperationType, "Military",         ramp_operation_Military        },
+	// 2026-09-19 to 09-25 this branch wrote the ramp operation types under new
+	// names. The descriptions went back to the originals - earth.wed.xml stores
+	// the description, and WED 2.7 cannot read a name it has never seen - and the
+	// new names live on only as labels on the Liveries tab. These rows keep the
+	// files saved in that week readable.
+	{ RampOperationType, "Private/BizJet",   ramp_operation_GeneralAviation },
+	{ RampOperationType, "Passenger",        ramp_operation_Airline         },
+	{ RampOperationType, "Military/Gov",     ramp_operation_Military        },
 };
 
 int					ENUM_LookupDesc(int domain, const char * value)

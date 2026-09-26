@@ -117,7 +117,7 @@ namespace
 	// apt.dat token it writes. A divergence nobody can see is the kind that gets
 	// rediscovered at 2am by someone diffing a .dat.
 	const char * kFilterTips[5] = {
-		"Stand does not say - everything is offered   |   apt.dat: none",
+		"No static aircraft park here   |   apt.dat: none",
 		"Private and business aviation   |   apt.dat: general_aviation",
 		"Scheduled and charter passenger service   |   apt.dat: airline",
 		"Freight   |   apt.dat: cargo",
@@ -1936,6 +1936,15 @@ void	WED_LiveryPane::SwitchToSimpleMode(void)
 
 static const char * kPopulateCaption = "Populate This Ramp";
 
+// One stand or many: the same button, named for what it will do.
+static string PopulateCaption(size_t n)
+{
+	if (n <= 1) return kPopulateCaption;
+	char buf[48];
+	snprintf(buf, sizeof(buf), "Populate %d Ramps", (int) n);
+	return buf;
+}
+
 static double PaneClockNow(void)
 {
 	return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
@@ -1946,7 +1955,8 @@ void	WED_LiveryPane::PopulateButtonRect(int bounds[4], float b_out[4]) const
 	float top, bot;
 	HeaderYRange(bounds, top, bot);
 	const float pad = 4;
-	float w = GUI_MeasureRange(font_UI_Basic, kPopulateCaption, kPopulateCaption + strlen(kPopulateCaption)) + 16;
+	string cap = PopulateCaption(mSelectedRamps.size());
+	float w = GUI_MeasureRange(font_UI_Basic, cap.c_str(), cap.c_str() + cap.size()) + 16;
 	b_out[2] = (float) bounds[2] - pad;
 	b_out[0] = b_out[2] - w;
 	float mid = (top + bot) * 0.5f, h = GUI_GetLineHeight(font_UI_Basic) + 6;
@@ -1959,12 +1969,24 @@ void	WED_LiveryPane::PopulateButtonRect(int bounds[4], float b_out[4]) const
 // engine and the same extend-only rule as Airport > Auto-Populate.
 void	WED_LiveryPane::PopulateThisRamp(void)
 {
-	if (mSelectedRamps.size() != 1) return;
-	WED_RampPosition * ramp = mSelectedRamps[0];
-	WED_Airport * apt = WED_GetParentAirport(ramp);
-	vector<WED_RampPosition *> one(1, ramp);
-	WED_AutoFillPlan plan = WED_PlanLiveryAutoFill(apt, &one, false);
-	LOG_MSG("I/AutoFill %s", WED_DescribeAutoFill(plan).c_str());
+	if (mSelectedRamps.empty()) return;
+	// Grouped by airport - one plan each - and applied as one undo step.
+	std::map<WED_Airport *, vector<WED_RampPosition *> > by_apt;
+	for (size_t i = 0; i < mSelectedRamps.size(); ++i)
+		if (WED_Airport * a = WED_GetParentAirport(mSelectedRamps[i]))
+			by_apt[a].push_back(mSelectedRamps[i]);
+	if (by_apt.empty()) return;
+
+	vector<WED_AutoFillPlan> plans;
+	WED_AutoFillPlan plan;					// the summary the caption reports
+	for (auto & kv : by_apt)
+	{
+		plans.push_back(WED_PlanLiveryAutoFill(kv.first, &kv.second, false));
+		LOG_MSG("I/AutoFill %s", WED_DescribeAutoFill(plans.back()).c_str());
+		if (!plans.back().error.empty() && plan.error.empty()) plan.error = plans.back().error;
+		plan.changed += plans.back().changed;
+		plan.ramps.insert(plan.ramps.end(), plans.back().ramps.begin(), plans.back().ramps.end());
+	}
 
 	if (!plan.error.empty())
 	{
@@ -1974,17 +1996,27 @@ void	WED_LiveryPane::PopulateThisRamp(void)
 	else if (plan.changed == 0)
 	{
 		mPopulateFlash = "Nothing to add";
-		mPopulateDetail = plan.ramps.empty() ? string() : "Nothing added: " + plan.ramps[0].skipped + ".";
+		mPopulateDetail = plan.ramps.size() == 1 ? "Nothing added: " + plan.ramps[0].skipped + "." : "Nothing to add to any of them.";
 	}
 	else
 	{
-		WED_ApplyLiveryAutoFill(plan);
-		const vector<string> & added = plan.ramps[0].added;
-		char buf[32];
-		snprintf(buf, sizeof(buf), "Added %d", (int) added.size());
+		mArchive->StartCommand(plans.size() == 1 && plan.ramps.size() == 1 ? "Populate This Ramp" : "Populate Ramps");
+		for (size_t i = 0; i < plans.size(); ++i) WED_ApplyLiveryAutoFill(plans[i], false);
+		mArchive->CommitCommand();
+
+		std::set<string> codes;
+		size_t n_added = 0;
+		for (size_t i = 0; i < plan.ramps.size(); ++i)
+		{
+			n_added += plan.ramps[i].added.size();
+			codes.insert(plan.ramps[i].added.begin(), plan.ramps[i].added.end());
+		}
+		char buf[48];
+		if (plan.ramps.size() == 1) snprintf(buf, sizeof(buf), "Added %d", (int) n_added);
+		else                        snprintf(buf, sizeof(buf), "%d of %d changed", plan.changed, (int) plan.ramps.size());
 		mPopulateFlash = buf;
-		mPopulateDetail = "Added:";
-		for (size_t i = 0; i < added.size(); ++i) mPopulateDetail += " " + added[i];
+		mPopulateDetail = plan.ramps.size() == 1 ? "Added:" : "Added across them:";
+		for (auto & c : codes) mPopulateDetail += " " + c;
 		mPopulateDetail += ". Ctrl+Z reverts it.";
 		mCoverageDirty = true;
 	}
@@ -3559,7 +3591,7 @@ int		WED_LiveryPane::MouseMove(int x, int y)
 	if (over_cov != mHoverCoverageToggle)	{ mHoverCoverageToggle = over_cov;	changed = true; }
 
 	bool over_pop = false;
-	if (mSelectedRamps.size() == 1)
+	if (!mSelectedRamps.empty())
 	{
 		float pb[4];
 		PopulateButtonRect(b, pb);
@@ -3660,7 +3692,7 @@ int		WED_LiveryPane::MouseDown(int x, int y, int button)
 		return 1;
 	}
 
-	if (mSelectedRamps.size() == 1)
+	if (!mSelectedRamps.empty())
 	{
 		float pb[4];
 		PopulateButtonRect(b, pb);
@@ -4450,10 +4482,29 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		string name;
 		mSelectedRamps[0]->GetName(name);
 		float pb[4];
-		PopulateButtonRect(b, pb);
+		PopulateButtonRect(b, pb);			// drawn below, for any selection
 		string header = ElideToWidth(font_UI_Basic, string("Ramp Start: ") + name, pb[0] - 8 - tx);
 		GUI_FontDraw(state, font_UI_Basic, header_col, tx, ty, header.c_str());
 
+	}
+	else
+	{
+		char buf[16];
+		snprintf(buf, sizeof(buf), "%d", (int) mSelectedRamps.size());
+		string count_str(buf);
+
+		// GUI_Fonts has no bold weight - approximate it with a 1px double-draw.
+		GUI_FontDraw(state, font_UI_Basic, header_col, tx,     ty, count_str.c_str());
+		GUI_FontDraw(state, font_UI_Basic, header_col, tx + 1, ty, count_str.c_str());
+
+		float count_w = GUI_MeasureRange(font_UI_Basic, count_str.c_str(), count_str.c_str() + count_str.size());
+		GUI_FontDraw(state, font_UI_Basic, header_col, tx + count_w + 4, ty, " Ramp Starts Selected");
+	}
+
+	if (!mSelectedRamps.empty())
+	{
+		float pb[4];
+		PopulateButtonRect(b, pb);
 		const bool flashing = PaneClockNow() < mPopulateFlashUntil;
 		if (flashing) Refresh();					// until the caption goes back
 		state->SetState(0,0,0,0,0,0,0);
@@ -4468,23 +4519,10 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			glVertex2f(pb[0], pb[1]); glVertex2f(pb[0], pb[3]);
 			glVertex2f(pb[2], pb[3]); glVertex2f(pb[2], pb[1]);
 		glEnd();
-		const string cap = flashing ? mPopulateFlash : string(kPopulateCaption);
+		const string cap = flashing ? mPopulateFlash : PopulateCaption(mSelectedRamps.size());
 		float cw = GUI_MeasureRange(font_UI_Basic, cap.c_str(), cap.c_str() + cap.size());
 		GUI_FontDraw(state, font_UI_Basic, WED_Color_RGBA(wed_Table_Text),
 					 (pb[0] + pb[2]) * 0.5f - cw * 0.5f, pb[1] + 4, cap.c_str());
-	}
-	else
-	{
-		char buf[16];
-		snprintf(buf, sizeof(buf), "%d", (int) mSelectedRamps.size());
-		string count_str(buf);
-
-		// GUI_Fonts has no bold weight - approximate it with a 1px double-draw.
-		GUI_FontDraw(state, font_UI_Basic, header_col, tx,     ty, count_str.c_str());
-		GUI_FontDraw(state, font_UI_Basic, header_col, tx + 1, ty, count_str.c_str());
-
-		float count_w = GUI_MeasureRange(font_UI_Basic, count_str.c_str(), count_str.c_str() + count_str.size());
-		GUI_FontDraw(state, font_UI_Basic, header_col, tx + count_w + 4, ty, " Ramp Starts Selected");
 	}
 
 	int cur_op_enum = mSelectedRamps.empty() ? ramp_operation_None : mSelectedRamps[0]->GetRampOperationType();
@@ -4886,6 +4924,12 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		{
 			snprintf(head,   sizeof(head),   "Coverage");
 			snprintf(detail, sizeof(detail), "Select a ramp start to see what can park on it.");
+		}
+		else if (mSelectedRamps.size() == 1 && mSelectedRamps[0]->GetRampOperationType() == ramp_operation_None)
+		{
+			// None is written to apt.dat as "none", which X-Plane reads as no static
+			// aircraft - the same as six zero weights. Nothing to compute.
+			snprintf(head,   sizeof(head),   "No static aircraft - operation type None");
 		}
 		else if (mCoverage.index_ready && mLiveryIndex.HubsPending())
 		{
@@ -5458,7 +5502,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			if (mHoverPopulate)
 				mHoverTipText = (PaneClockNow() < mPopulateFlashUntil && !mPopulateDetail.empty())
 					? mPopulateDetail
-					: "Adds this airport's operators that have a livery for the sizes this stand allows now. "
+					: "Adds the airport's operators that have a livery for the sizes each selected stand allows now. "
 					  "Keeps everything already listed and leaves the weights alone.";
 
 			// Clip to the content viewport. GUI_Pane::InternalDraw() only scissors to
@@ -5799,7 +5843,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 				else if (!mSearchQuery.empty())
 					why = "No operator matches \"" + mSearchQuery + "\".";
 				else if (cur_op_enum == ramp_operation_None)
-					why = "Set a ramp operation type above to see operators.";
+					why = "No static aircraft at this stand (operation type None).";
 				else
 					why = "No operators are tagged for this operation type yet.";
 
