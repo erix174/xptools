@@ -32,6 +32,7 @@ class	ISelectable;
 class	ISelection;
 class	IResolver;
 class	WED_Thing;
+class	WED_Airport;
 class	WED_Archive;
 class	WED_Select;
 class   GUI_Commander;
@@ -193,6 +194,10 @@ private:
 									int&	is_disclose);
 
 			void			RecalculateColumns(void);
+
+			// Moderator mode shortcuts (Gateway moderation)
+			void			ModeratorShowAirport(WED_Airport * apt);
+			bool			ModeratorFocusFolder(WED_Thing * folder);
 
 			void	Resort();
 

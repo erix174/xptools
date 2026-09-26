@@ -1149,12 +1149,18 @@ WED_Airport * WED_GatewayImportDialog::ImportSpecificVersion(const string& json_
 	}
 
 	// the auto-created groups are at this point always the children of the airport. Close them all.
-	// for(auto c_ID ; )
-	set<int> cat_list;
-	int n_child = g->CountChildren();
-	for (int c = 0; c < n_child; c++)
-		cat_list.insert(g->GetNthChild(c)->GetID());
-	mPropPane->SetClosed(cat_list);
+	// A moderator imports many airports at once: close each airport too, so the
+	// hierarchy lists airports, one line each.
+	if (g)
+	{
+		set<int> cat_list;
+		int n_child = g->CountChildren();
+		for (int c = 0; c < n_child; c++)
+			cat_list.insert(g->GetNthChild(c)->GetID());
+		if (gModeratorMode)
+			cat_list.insert(g->GetID());
+		mPropPane->SetClosed(cat_list);
+	}
 
 	if(!out_apt.empty())
 		WED_DoInvisibleUpdateMetadata(out_apt[0]);  // this also sets GUI 2D/3D metadata - so do it only after dsf contents has been added
