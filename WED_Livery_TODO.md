@@ -112,7 +112,7 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
 | `upstream/parking-icons-d-e` | ClassD and ClassE icons fill their frame like the other four |
 | `upstream/lost-mouse-up` | `GUI_Window::ClickDown` finishes a click whose mouse-up was lost instead of asserting (split from `774cde5`) |
 | `upstream/center-keeps-zoom` | `CenterOnPoint` (3D preview's centre on camera) keeps the zoom instead of zooming out a little each time (split from `1cef270`) |
-| `feat_moderator_folders` | Moderator mode hierarchy shortcuts from Julian's "WED Moderator Requested Changes" pp. 2-6, and a null-airport crash on a failed Gateway import. Cherry-picked onto this branch as `94249f6` |
+| `feat_moderator_folders` | Moderator mode hierarchy shortcuts from Julian's "WED Moderator Requested Changes" pp. 2-6, and a null-airport crash on a failed Gateway import. Also: a click on an already-selected airport or focus folder no longer opens it for renaming, and the map tab commands switch the tab too. Tested end to end 2026-09-26 (Gateway import of VOVI + RKSI, KLAF). Four commits, cherry-picked onto this branch (`94249f6`, `56b9b98`, `caa2f61`, `fd097e6`) |
 
 `archive/stash-2026-09-13-wip` preserves the pre-commit WIP stash of 2026-09-13. Everything in it was superseded by the branch; it was removed from the stash list.
 
