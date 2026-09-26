@@ -1,239 +1,127 @@
 # Static aircraft at ramp stands — the short version
 
-For Jim K. 2026-09-17. Targets WED 2.8.0 / a matching X-Plane.
+For Jim K. and reviewers. 2026-09-25. WED 2.8.0, for X-Plane 12.5.
 
-**This is the 5-minute version.** The full specification is
-`WED_LiveryFormatSpec.md` — it is long on purpose, written to be handed to an
-assistant, and you should not need to read it to answer the questions below.
-
----
-
-## The ask, in one paragraph
-
-WED is gaining a UI where a scenery author says which airlines park at a stand,
-and which ICAO size classes may spawn there and in what proportion. That second
-half needs somewhere to live in apt.dat. We propose **one** new row, `1313`,
-written at the stand it describes: six integers, a relative weight per wingspan
-class A–F. **`1301` is not modified and not deprecated.** A reader that ignores
-the new row behaves exactly as today.
-
-There is a second ask, and it is not an apt.dat change: **one reserved value in
-the livery index** (§4 below). Between them they replace everything the earlier
-two-row draft was trying to do.
+The full specification is `WED_LiveryFormatSpec.md` (draft 8). It is long on
+purpose, written to be handed to an assistant with the apt.dat reader; section
+and rule numbers below point into it. You should not need it to answer the asks.
 
 ---
 
-## What we need from you
+## What the feature is
 
-### 1. A row code — 10 minutes
-
-We used `1313`. **Any unused number works.**
-
-We are not waiting on it to build - the reader, writer and editor are done, with
-the code as one constant, so your answer changes a single line. We are waiting on
-it to let a file leave this machine. Nothing goes to the Gateway, or into a
-build anyone else runs, carrying a number you have not agreed to.
-
-It was four rows, then two, now one. The grouping machinery went when we measured
-what it actually shared and found it was six integers (spec §8.2). The
-refinement row went when we measured how often an operator has more than one
-aircraft at a given size class: **15 of 168 pairs in the shipped library**, and
-90% of operators have assets at exactly one class anyway (spec §8.6). Each time
-the measurement said the mechanism was bigger than the thing it managed.
-
-### 2. Do we bump the apt.dat version — your call, no wrong answer
-
-We assumed a bump was forced. **It is not.** We tested it rather than asking
-you, on two builds — 12.4.4 in the beta lane and 12.4.3-r2 in the release lane.
-Both ignore unknown row codes *and* accept a version number that does not exist.
-So the new rows can ship in a `1200` file and every existing sim keeps working.
-
-The sample package (below) is the proof you can repeat in five minutes: it is a
-`1200` file carrying the new rows, it starts a flight, and the sim says
-nothing — in a run where it *did* complain about an unknown metadata key
-elsewhere. Evidence: `docs/livery_evidence/`.
-
-So a bump is now a question about *signalling*, not compatibility. Our
-recommendation: **don't bump.** It buys nothing and costs the Gateway a
-two-version problem.
-
-### 3. One that is not yours alone — needs the release manager
-
-An **old WED cannot open a file containing these rows at all.** Not degraded —
-it refuses the whole file and imports nothing. That is a WED behaviour
-(`AptIO.cpp:1208`), not a sim one, and it is the reverse of the sim's tolerance.
-
-| | opening 2.8-era scenery |
-|---|---|
-| X-Plane 12.2.x | fine — reads `1301`, ignores the rest |
-| WED 2.7.x | refuses the file |
-
-Three ways out: Gateway strips the new rows for old clients; a 2.7.x patch that
-skips unknown rows; or accept that 2.8-era scenery needs 2.8-era WED. We lean
-to the third with the first as a safety net, but it is a Gateway policy call and
-we are not making it for you.
-
----
-
-## Something to play with first
-
-`docs/livery_sample/ZZZ_livery_format_sample/` — copy it into `Custom Scenery/`.
-No DSF, no objects, airport data only.
-
-Sixteen stands in a line at a fictional **ZZLI** (flat western Kansas), each
-demonstrating exactly one thing and **named so you can read it off the ground**:
-`01-CONTROL`, `04-ALL-ZERO`, `05-CLASS-F`, and so on. Stands 01–10 are what WED
-will emit; 11–15 are deliberately broken and must all end up behaving identically
-to `01-CONTROL`.
-
-> **The package predates draft 7 and six of its stands are stale.** `07-EXCLUDE`,
-> `08-WHITELIST`, `09-MIXED-SIGILS`, `10-PLUS-WINS`, `14-BAD-REFINE` and
-> `16-EXCL-NO-WEIGHTS` all exercise the `1312` refinement row that draft 7
-> deleted — ignore them, and note that their `1312` rows are now simply an
-> unknown row code, which is itself a valid test of "ignore what you don't
-> recognise". The other ten stands are current. We will regenerate the package
-> once you give us a row code, since every `1313` in it has to change anyway.
-
-`docs/livery_sample/README.md` has a table of every stand and its expected
-result, so you can check an implementation against it line by line.
-
-Two stands are worth looking at before anything else:
-
-- **`05-CLASS-F`** asks for class F. **No F-class livery exists anywhere in the
-  library**, so it is permanently empty — a data gap, not a format error.
-- **`06-UNFILLABLE`** lists only BAW and asks for class D. BAW has liveries at C
-  and E and **none at D**. This is the 17.2% case, live. WED will refuse to
-  export it.
-
-It already runs: we loaded it in 12.4.3-r2 and started a flight there, with no
-complaint from the sim.
-
----
-
-## What we are asking the sim to do
-
-One behaviour change, and it is the part worth your attention:
+WED 2.8 gains a Liveries tab where a scenery author says, per stand, **which
+airlines park there** (the existing `1301` list) and **which ICAO size classes
+may spawn, in what proportion**. The second half needs somewhere to live, so
+apt.dat gains **one row**, written right after the stand's `1301`:
 
 ```
-1.  pick a CLASS      weighted by the six integers in 1313
-2.  pick an AIRLINE   uniformly among those in 1301 that HAVE a livery in
-                      that class  (not merely "have one somewhere")
-3.  pick a LIVERY     uniformly among that airline's liveries in that class,
-                      skipping any marked Obsolete, honouring EXPORT_RATIO
+1300 40.07800000 116.57223200 000.0 gate heavy|jets 03-MIX-CDE
+1301 E airline dal ual
+1313 0 0 6 3 1 0            <- relative weights for classes A-F: C 60%, D 30%, E 10%
 ```
 
-**Class first, and the order is the whole point.** Do it as one flat weighted
-draw and the *size of the asset library* decides the outcome: 120 B738 liveries
-against 42 A359 means two classes set to equal probability still come out
-overwhelmingly 737s. The author's intent gets silently overridden by how much
-art happens to exist. Same bias one level down, which is why airline is its own
-stage.
+`1301` is not modified and not deprecated. A reader that ignores `1313` behaves
+exactly as today. A bad `1313` is dropped whole and never fails the file (R4, R5).
 
-**Stage 2 must ask about *this* class, not about the operator in general.**
-United's only class-E aircraft in the library is a 747-400 they retired in 2017.
-Ask "does United have a livery?" and they get drawn at class E, find nothing, and
-the stand parks nothing 14% of the time. Ask "at class E?" and they are simply
-absent there while still parking at D. It is one line of difference and it is the
-single easiest thing to get wrong.
+What parks is resolved at load time against a **livery index** shipped next to
+the assets, so new models appear at every airport already authored, and retired
+ones disappear, with no apt.dat edit. That index is the other half of the ask.
 
-**Gate all of this on `1313` being present.** No `1313` row → today's behaviour,
-untouched. Otherwise you change the look of all 20,108 airports that have ramp
-starts, none of whose authors asked for it.
+The sim change is three stages, class first (spec §4.1):
 
-### The second ask: one reserved value in the index
+```
+1. CLASS    weighted by the six integers in 1313
+2. AIRLINE  uniform among those in 1301 with a USABLE livery at that class
+3. LIVERY   uniform (or EXPORT_RATIO) among that airline's usable liveries there
+```
 
-`Obsolete` in the index's NOTE column means **never spawn this livery** — not at
-stage 2, not at stage 3. One string comparison when you load the index.
-
-It exists because the object must stay on disk. Twelve liveries in the shipped
-library are old assets superseded by newer ones for the same real aircraft, and
-both are exported, so those aircraft currently spawn at double the rate of their
-neighbours. Deleting the old export fixes that and breaks every scenery pack
-referencing it by hard path. A note fixes it and breaks nothing.
-
-The same mechanism retires an airframe: an operator who no longer flies a type
-stops parking one everywhere at once, with no apt.dat edit anywhere. That is
-what earlier drafts were spending a whole second row code on, one stand at a
-time.
-
-### The one thing we want you *not* to do
-
-Class-first gives up the step-down's one virtue: it always found *something*.
-A stand can now be legitimately empty. **Please don't add a fallback.** An empty
-stand is the correct reading of what the author wrote, and a step-down takes
-back the expressiveness this whole change exists to provide.
-
-We know the scale of that, because we measured it against the real global
-apt.dat: naively migrating every stand to its own declared class would empty
-**7,604 of 44,242 stands (17.2%)**, at **42% of airports**. Almost never
-because the airline has no models — because it has none *in that class*.
-
-**We absorb that, entirely on the WED side**, and in two places rather than one:
-
-- **While the author edits** — an always-visible sentence saying what the stand
-  will actually do, recomputed on every change:
-
-  > *This ramp will spawn Emirates aircraft, size D-E, 70% of the time.*
-
-  The percentage is occupancy, so "70%" **is** the empty-stand number, stated
-  where an author cannot miss it, and the delta shows at the moment of the click
-  (`empty 3% → 31%` when an operator is deselected). An empty stand is invisible
-  in the sim; this is what makes it visible before the file is ever written.
-- **At export** — weights pointing at a class none of the listed airlines can
-  fill is a hard error, not a dismissible warning, with one-click repair offered
-  at the point of failure.
-
-The readout matters more than the error, because a file's stands are usually
-filled in bulk across a whole airport rather than one at a time, and an error at
-the end of that has nothing useful to say about which of 300 stands the author
-actually meant to leave empty.
+"Usable" is one `eligible()` used by stages 2 and 3 alike (R18): right class,
+right operation class for the stand, not `Obsolete`, within range, `HOME` rules
+met. If stage 2 asks only "has this airline any livery?", an airline with
+nothing usable at the drawn class gets picked and the stand parks nothing. On
+the spec's example stand that happens **half the time**. Gate all of it on `1313`
+being present (R17); without the row, today's behaviour is untouched.
 
 ---
 
-## What you get from us, and when
+## What we are asking of the sim
+
+| # | ask | notes |
+|---|---|---|
+| 1 | **Confirm row code `1313`**, or give the one to use | It is **live**: WED 2.8 writes it on every X-Plane 12 export, Gateway included. Changing it is one constant (`AptDefs.h`). Best settled before 2.8 is released |
+| 2 | **Version policy** | Our recommendation: **no bump.** Tested on 12.4.4 and 12.4.3-r2: the sim ignores unknown rows *and* unknown version numbers (spec §7.2), so the row rides in a `1200` file |
+| 3 | **Implement the reader rules** | Three-stage selection (R17, R18) plus: **R25** NOTE `Obsolete` never spawns; **R26** skip a row when the stand is farther than `RANGE_KM` from the operator's nearest hub (Military/Gov exempt; unknown range or no placed hub is never filtered); **R27** `HOME` rows only in the operator's own country, fail open if unknown; **R28** GA stands draw a home-registered GA livery 70% of the time when one exists, no range, no airline list; **R29** operation type `none` = no static aircraft, read exactly as six zero weights |
+| 4 | **Ship `livery_index.txt` (schema 4) with X-Plane 12.5** | Under `Resources/default scenery/sim objects/apt_aircraft/`, from the same build as the assets (a mismatch fails silently, spec §6.4). WED 2.8 turns its livery features on when it finds it |
+| 5 | **Please don't add a fallback** | An empty stand is the correct reading of what the author wrote. WED makes empties visible instead (below) |
+
+**The index, schema 4** (spec §6.2). Mandatory header `I` / `1 WED Aviation
+Database`, a `# schema 4` stamp, then one record per operator and one row per
+`.obj`, cells split on `***` with spaces and tabs stripped:
+
+```
+OPERATOR *** CODE *** NAME *** IOC CTY *** Pax|Cargo|GA|Military|Gov *** FLEET *** HUB ICAOs
+TYPE *** CLASS *** AIRLINE *** REG *** REG CTY *** NOTE *** RANGE_KM *** SCOPE *** OP *** path
+```
+
+`path` is always last. `SCOPE` is `HOME` or empty. Hubs are ICAO codes on the
+OPERATOR record, placed by each reader from its own Global Airports (`1302
+icao_code` wins over the header ident; datum, else first-runway midpoint), so WED
+and the sim measure from the same points. Military/Gov records carry no hubs.
+Pseudo-operators: `XPGA` general aviation, `XPMI` military, `XPZZ_<TYPE>` a
+generic airliner of that type — never placed automatically. Today: 298 liveries,
+1,499 operator records, 32 `Obsolete` marks (12 superseded assets, which alone
+empty nothing, and 20 retired airframes, which withdraw 14 airline/class pairs
+on purpose).
+
+**One Gateway constraint to know about.** Gateway caps the `1301` airline string
+below 100 characters, about 24 codes. Airline codes are now
+`[a-z0-9]{3,4}(_[a-z0-9]{1,6})?`, lower case (`dal`, `afr_f`, `xpzz_b752`), and
+WED's validator rejects anything else (R10). The Gateway team should say
+whether the cap can be raised, and confirm the server accepts suffixed codes.
+
+---
+
+## Try it
+
+`docs/livery_sample/ZZZ_livery_format_sample/` — copy into `Custom Scenery/`.
+Airport data only. It sits over **ZBAA** (Beijing Capital), 24 stands in a row,
+named so you can read them off the ground: controls and malformed rows
+(`01-CONTROL`, `04-ALL-ZERO`, `11-BAD-5-WEIGHTS` …), then the range bench
+(`20-CN-CONTROL` parks Chinese narrowbodies; `22-FOREIGN-NARROW` lists
+United, Delta, American and BA at class C and parks **nothing** — none of their
+737s or A320s reaches Beijing; `24-SPLIT-IN-CLASS` keeps United's 767 and drops
+its 757). A `1200` file carrying `1313`; the sim loads packages like it silently
+(evidence: `docs/livery_evidence/`). The sample's README still describes an
+older ZZLI package.
+
+---
+
+## Where things stand
 
 | | state |
 |---|---|
-| `livery_index.txt` — 298 liveries with type, class, operator, registration, country, livery note | **exists**, generated + hand-maintained |
-| The format spec | **this document set** |
-| WED reads the index, previews real aircraft | index loader written; first consumer wired this week |
-| WED reads/writes `1313` | blocked on your row code |
-| Validator + one-click fill | designed, sized against real data |
-
-The index is the piece you may not have expected. `library.txt` buckets objects
-by (operation type, size class, airline) and carries **no aircraft type and no
-livery axis** — one `heavy_e` bucket mixes A359, A35K and B772. So "United's 737
-in the retro livery" cannot be named today even though both objects have shipped
-for years. The index is the missing half, it lives next to the assets at
-`Resources/default scenery/sim objects/apt_aircraft/`, and whatever ships it
-must ship it from the same build as the assets — it is install-specific and a
-mismatch fails silently.
-
----
-
-## Three defects we found in the shipped library
-
-By-product of building the index, offered as data rather than complaint:
-
-- **38** cases where an old and a new asset for the same aircraft are *both*
-  `EXPORT_EXTEND`ed (`AT45_FDX_static.obj` and `ATR42-500_FedEx.obj`). Under
-  stage 3 above, each of these gets **double the spawn probability** of its
-  neighbours.
-- **6** objects on disk that `library.txt` never exports.
-- `heavy/B772_AAL/` and `heavy/B772_AAl/` — byte-identical folders, ~13 MB
-  wasted, whose two `library.txt` lines point at **different** paths. Fine on
-  Windows and macOS, broken on a case-sensitive filesystem.
+| WED reads and writes `1313` | **done** — every X-Plane 12 export, Gateway included |
+| WED reader skips unknown rows instead of failing the file, and lists them after import and in Validate (`warn_apt_dat_rows_not_imported`) | **done** — WED 2.7.x still refuses such files (spec §7.3) |
+| Index reader, hub placement, schema 4 index + merge-only generator | **done** |
+| Liveries tab: operator cards with real aircraft previews, weights, flags, recommendations | **done** |
+| Coverage readout — "This ramp will spawn … 70% of the time", empty and single-operator warnings (spec §4.5) | **done** |
+| Auto-fill of an airport's stands, never overwriting the author (spec §6.7f) | **done** |
+| Moderation: stepping through stands, flags for auto-filled / unknown / not-served operators, web search | **done** |
+| Validator: code shape and 100-char cap (errors), R14 "this stand parks nothing" (`warn_ramp_livery_parks_nothing`, a warning, Airline/Cargo stands only, all-zero weights exempt) | **done** |
+| **Sim implementation** of R17, R18, R25–R29 and reading the index | **open** — asks 3 and 4 |
+| **Row code and version policy** | **open** — asks 1 and 2 |
+| **Mac / Linux build and run of WED** | **open** — never done |
 
 ---
 
 ## If you only remember five things
 
-1. `1301` is untouched and authoritative. Everything new is additive and
-   discardable.
-2. The new row must **soft-fail** — a bad one is dropped whole, never fails the
-   file. This is the opposite of the rest of `AptIO.cpp` and it is deliberate.
-3. Selection is **three stages, class first**, gated on `1313` existing — and
-   stage 2 asks about the class drawn, not about the operator in general.
-4. `Obsolete` in the index NOTE column means never spawn. One comparison, and it
-   is what lets us leave `library.txt` alone.
-5. We need **one row code** from you. Everything else can proceed without you.
+1. `1301` is untouched. `1313` is additive, six integers, soft-fail, and live.
+2. Selection is **three stages, class first**, gated on `1313` — and stage 2
+   uses the same `eligible()` as stage 3, range and `Obsolete` included.
+3. The index ships with 12.5 and carries everything that changes: `Obsolete`,
+   range, hubs, `HOME`. No apt.dat is ever re-exported for it.
+4. `none` parks nothing; GA is by size and 70% home-registered.
+5. We need a **row code** confirmation and a **version** decision from you.
+   Everything on the WED side is done except Mac/Linux.

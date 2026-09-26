@@ -28,11 +28,18 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
 - Military country line (point 5 of Eric's nine-point list); the other eight
   points are not recorded anywhere - ask Eric.
 - Mac / Linux build and run - never done.
-- Upstream PR: split out the changes that are not the feature (ctype casts,
-  validator country fix, AptIO unknown-row policy + discarded-row reporting,
-  DEV logging hooks, parking PNGs, GUI text field word select / wider edit).
-- Docs: spec draft 8 (move §6.7–6.8 before §7, R26–R28 into §1 with vectors,
-  schema 4 grammar); rewrite the Brief as the one overview.
+- Upstream PRs: five local branches off `origin/wed_270_release`, all built. Worktree `WED/xptools-upstream`, backed up to `local`.
+  - `upstream/save-and-doubleclick`
+  - `upstream/text-field-word-select`: stacked on the one above.
+  - `upstream/ctype-and-validate-country`
+  - `upstream/exit-logging`
+  - `upstream/apt-unknown-rows`: the 1313-free version, tested end to end on 2.7 with the ZBAA apt.dat.
+  - Not split yet: the parking PNGs.
+  - When the feature itself goes up, rebase it onto these.
+- Docs: spec draft 8 and the Brief rewrite are DONE (2026-09-25). Left over:
+  - §4.1 says a Military stand with an empty airline list draws any Military/Gov livery at its class. That was inferred from the auto-fill code; Eric to confirm.
+  - `docs/livery_sample/README.md` still describes the old ZZLI package.
+  - §4.5's 17.2% and §8.6's 168/148 figures predate range and the 32 marks, and need recomputing.
 - `WED_LiveryPane.cpp` decomposition: DONE 2026-09-25. Five files (core, Layout,
   Input, Draw, Rows) plus `WED_LiveryPaneInternal.h`. The code was moved, not
   changed. Release and Debug build, smoke-tested.
@@ -43,8 +50,7 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
   - Left unmarked: AHY B752 (stored, not confirmed retired) and CNV BE9L (mark it once the T-44 sundown completes in 2026).
   - **Eric to decide:** should liveries of operators that no longer exist be marked Obsolete too? These are AZA MD82, EGF AT72, AWE A320, BER A320, LPV D328, RUS J328, WLC J328, RVF B752, SWG B738, SWQ B738, and CYH B738 (2 rows). Each is that operator's only pair.
   - Still open: 419 country-level hubs ("approx"), which barely matter for range.
-- Upstream WED bugs fixed on this branch - send as their own small PR, not with
-  the feature: a failed save left the document reading as saved, so a close after
-  it threw the edits away (now stays dirty); the package list needed a
-  double-click inside 0.1 s of CPU time (now 0.4 s wall clock).
+- Upstream WED bugs fixed on this branch: now on `upstream/save-and-doubleclick`.
+  - A failed save left the document reading as saved, so closing it afterwards threw the edits away.
+  - The package list needed a double-click inside 0.1 s of CPU time.
 - Sync the schema-4 index to the installs: DONE 2026-09-25 (both installs).
