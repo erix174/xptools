@@ -84,10 +84,10 @@ format itself is still one row.
   order (8.6 no longer sits between 8.3 and 8.4); §2 has 2.1-2.4; the appendix
   is a status table. §7's evidence is kept as recorded, with dated draft-8
   notes; §8's rationale is unchanged.
-- **44 `Obsolete` marks, not 12** (§6.6). The twelve superseded-asset marks are
-  joined by twenty retired airframes, `UAL:B744` among them, and by the twelve
-  liveries of eleven operators that no longer fly at all. The superseded marks
-  alone still empty nothing; together the 44 empty 25 (airline, class) pairs,
+- **42 `Obsolete` marks, not 12** (§6.6). The twelve superseded-asset marks are
+  joined by twenty retired airframes, `UAL:B744` among them, and by the ten
+  liveries of ten operators that no longer fly at all. The superseded marks
+  alone still empty nothing; together the 42 empty 24 (airline, class) pairs,
   each a deliberate withdrawal.
 - **The worked example is recomputed** against the schema 4 index
   (`20260925-r1`) with R25 and R26 applied. Range and the new marks change seven
@@ -851,7 +851,7 @@ The twelve pairs are identified and marked — `AT45_FDX_static.obj` superseded 
 `ATR42-500_FedEx.obj`, and eleven more of the same shape, every one with its
 replacement sitting beside it. **These twelve marks alone empty zero (airline,
 class) pairs**, so the skew disappears and nothing becomes unfillable. (The
-index now carries 44 marks in all; the other thirty-two are retired airframes and
+index now carries 42 marks in all; the other thirty are retired airframes and
 defunct operators, which empty pairs on purpose — §6.6.)
 
 The thirteenth pair is not one: `F15EX_cft` / `F15EX` are genuinely different
@@ -1364,11 +1364,14 @@ does both at once.
    retired airframes are marked today, among them Delta's 777 and CRJ-200,
    Emirates' 777, Cathay's and Virgin's 747s and FedEx's DC-10.
 3. **Defunct operators** — the same fact one level up: the airline flies nothing
-   at all. Alitalia, Air Berlin, US Airways, Sunwing and seven more, twelve rows.
-   A mark here costs one thing the other two do not: NOTE holds one value, so a
-   caption on the row (China Eastern Yunnan's `Peacock`) gives way to the mark.
+   at all. Alitalia, Air Berlin, US Airways, Sunwing and six more, ten rows.
+   Check the aircraft, not the code: `CYH` (the old China Yunnan Airlines) has
+   been unused since the 2003 merger, but its two liveries still fly for China
+   Eastern's Yunnan branch, and marking them was a mistake (undone 2026-09-26).
+   A mark also costs what the other two do not: NOTE holds one value, so a
+   caption on the row would give way to it.
 
-Together the **44 marks empty 25 (airline, class) pairs**: AFR/B, AUA/B, AWE/C, AZA/C, BER/C, CJT/C, CPA/E, CYH/C, DAL/B, DAL/E, DLA/C, EGF/C, EXS/D, HMF/A, LPV/B, RUS/B, RVF/D, SAS/C, SIA/C, SWG/C, SWQ/C, UAE/E, UAL/E, VIR/E, WLC/B.
+Together the **42 marks empty 24 (airline, class) pairs**: AFR/B, AUA/B, AWE/C, AZA/C, BER/C, CJT/C, CPA/E, DAL/B, DAL/E, DLA/C, EGF/C, EXS/D, HMF/A, LPV/B, RUS/B, RVF/D, SAS/C, SIA/C, SWG/C, SWQ/C, UAE/E, UAL/E, VIR/E, WLC/B.
 Every one is a retirement or a closure, and so a deliberate withdrawal: a stand weighted
 only for one of those classes, listing only that operator, now parks nothing,
 and R14 says so.
@@ -1391,8 +1394,8 @@ write.
 ```
 livery_obsolete_radius.py [index] --what-if B752 MD82 UAL:B744
 
-obsolete marks        : 44 rows
-  would empty         : 25 (airline,class) pair(s)  <-- each one is a stand that parks nothing
+obsolete marks        : 42 rows
+  would empty         : 24 (airline,class) pair(s)  <-- each one is a stand that parks nothing
       AFR class B
       ...                                           (25 lines)
       WLC class B

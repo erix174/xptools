@@ -1,7 +1,7 @@
 I
 1 WED Aviation Database
 # schema 4
-# data 20260925-r1
+# data 20260926-r1
 # source X-Plane 12.4.3-r2-15ff1e4d
 # assets 298 liveries under apt_aircraft/
 #
@@ -1709,8 +1709,8 @@ B738 *** C *** CSZ       *** B5613     *** CHN *** Default    *** 5700  ***     
 B738 *** C *** CUA       *** B1280     *** CHN *** Default    *** 5700  ***      *** Pax      *** jet/B738_CUA/738_ChinaUnitedAirlines_B1280.obj
 B738 *** C *** CUH       *** B2157     *** CHN *** Default    *** 5700  ***      *** Pax      *** jet/B738_CUH/738_UrumqiAir_B2157.obj
 B738 *** C *** CXA       *** B5792     *** CHN *** Default    *** 5700  ***      *** Pax      *** jet/B738_CXA/B738_CXA_static.obj
-B738 *** C *** CYH       *** B6147     *** CHN *** Obsolete   *** 5700  ***      *** Pax      *** jet/B738_CYH/738_ChinaEasternYN_B6147.obj
-B738 *** C *** CYH       *** B6143     *** CHN *** Obsolete   *** 5700  ***      *** Pax      *** jet/B738_CYH_Peacock/738_ChinaEasternYNPeacock_B6143.obj
+B738 *** C *** CYH       *** B6147     *** CHN *** Default    *** 5700  ***      *** Pax      *** jet/B738_CYH/738_ChinaEasternYN_B6147.obj
+B738 *** C *** CYH       *** B6143     *** CHN *** Peacock    *** 5700  ***      *** Pax      *** jet/B738_CYH_Peacock/738_ChinaEasternYNPeacock_B6143.obj
 B738 *** C *** DAH       *** 7TVKB     *** ALG *** Default    *** 5700  ***      *** Pax      *** jet/B738_DAH/738_AirAlgerie_7TVKB.obj
 B738 *** C *** DAH       *** 7TVKQ     *** ALG *** Government *** 5700  ***      *** Pax      *** jet/B738_DAH_Mil/738_AirAlgerie_VIP_7TVKQ.obj
 B738 *** C *** DAL       *** N3753     *** USA *** Default    *** 5700  ***      *** Pax      *** jet/B738_DAL/B738_DAL_static.obj
