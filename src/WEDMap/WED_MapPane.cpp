@@ -46,6 +46,7 @@
 #include "WED_TerrainLayer.h"
 #include "WED_PreviewLayer.h"
 #include "WED_DebugLayer.h"
+#include "WED_ModerationLayer.h"
 #include "WED_VertexTool.h"
 #include "WED_TerraserverLayer.h"
 #include "GUI_Fonts.h"
@@ -166,6 +167,9 @@ WED_MapPane::WED_MapPane(GUI_Commander * cmdr, double map_bounds[4], IResolver *
 	mLayers.push_back(mTerrainMap =		new WED_TerrainLayer(mMap, mMap, resolver));
 	mLayers.push_back(mBdyLayer =		new WED_BoundaryLayer(mMap, mMap, resolver));
 	mLayers.push_back(					new WED_DebugLayer(mMap, mMap, resolver));
+	// Last, so its callouts draw over every other layer; it takes a click only
+	// on a callout, so ordering does not steal clicks from anything else.
+	mLayers.push_back(					new WED_ModerationLayer(mMap, mMap, resolver));
 #if WITHNWLINK
 	WED_NWLinkAdapter * nwlink = (dynamic_cast<WED_Document *>(resolver))->GetNWLink();
 	if(nwlink)

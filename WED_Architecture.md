@@ -424,7 +424,8 @@ path except through `WED_RampPosition` (`class_weights`, `auto_filled`) and
 | `WED_AirportDatabase` | Per airport: country and the airlines that serve it (`WED_AirportDatabase.txt` beside WED). Feeds the Recommended tier. |
 | `WED_LiveryRules` | **The one allow rule** (`WED_LiveryAllowedAt`: op class, range R26, HOME R27), equipment by asset folder, the legacy letter→weights table, and the shared index (`WED_GetLiveryData`). The tab, auto-fill and the validator all call it. |
 | `WED_LiveryAutoFill` | Airport > Auto-Populate and the tab's Populate button. Extends, never overwrites; one undo step. |
-| `WED_LiveryModeration` | Ramp-to-ramp stepping (Ctrl+Shift+. / ,) and the "operators to check" prompt with a web search. |
+| `WED_LiveryModeration` | Ramp-to-ramp stepping (Ctrl+Shift+. / ,), the "operators to check" prompt, and `WED_ModerationDescribe` - one stand's entry and verdicts, which the map callouts draw. |
+| `WEDMap/WED_ModerationLayer` | The map callouts for selected ramp starts: leader + card, operator tray, similarity colour, pin-and-compare. |
 | `WED_LiveryThumbnailCache` | Renders a livery `.obj` to a card image on worker threads; LRU. |
 | `WED_LiveryPane*` | The Static Liveries tab, split by concern: `WED_LiveryPane.cpp` state, selection, cards and the coverage readout; `…Layout` rectangles and hit tests; `…Input` mouse and the edits it makes; `…Draw` drawing and animation; `…Rows` the airline list tiers. `WED_LiveryPaneInternal.h` is private to them. |
 | `WED_Flag*`, `WED_IocCountryCodes` | The country flag banner, and apt.dat country → IOC code. |

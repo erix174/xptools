@@ -36,7 +36,15 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
 
 ## Next: Moderation Mode
 
-- Eric is writing the design.
+- **Map callouts: framework built 2026-09-25** (`WEDMap/WED_ModerationLayer`, model `WED_ModerationDescribe`).
+  - Every selected ramp start gets a card: flag / ICAO / name; airlines; Legacy or Updated (A/M) with size or weights; op type, equipment and ramp type.
+  - The hover tray lists the operators three to a row, with a verdict each. "?" opens a web search.
+  - Similarity colour; pin-and-compare (+ / - / ~).
+  - It shows in normal mode for now. Before release, gate it on Moderation Mode through `WED_ModerationEnabled()`.
+- **Callouts, open:**
+  - Card placement on a dense row of stands: cards cover their neighbours.
+  - Whether the whole airport, or only the selection, gets cards.
+  - Clicking "?" was not exercised by automation, since it opens a browser.
 - What already exists:
   - Ramp stepping with Ctrl+Shift+. and Ctrl+Shift+,.
   - The "operators to check" prompt with a web search.

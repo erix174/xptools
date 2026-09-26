@@ -32,11 +32,14 @@
 #include "PlatformUtils.h"		// ConfirmMessage
 #include "GUI_Help.h"			// GUI_LaunchURL
 
+#include <algorithm>
 #include <set>
 #include <sstream>
 #include <cctype>
+#include <cstdio>
 
 using std::string;
+using std::set;
 using std::vector;
 
 bool	WED_ModerationEnabled(void)
@@ -190,4 +193,128 @@ void	WED_ModerationPrompt(WED_RampPosition * ramp, WED_Airport * apt)
 	if (ConfirmMessage(msg.c_str(), "Search", "Skip"))
 		for (size_t i = 0; i < to_check.size() && i < kMaxTabs; ++i)
 			GUI_LaunchURL(to_check[i]->search_url.c_str());
+}
+
+// ---- the callout model ----
+
+string	WED_ModerationWeightsText(const int w[6])
+{
+	int total = 0;
+	for (int k = 0; k < 6; ++k) total += w[k];
+	if (total <= 0) return string();
+	string out;
+	for (int k = 0; k < 6; ++k)
+	{
+		if (w[k] <= 0) continue;
+		char buf[16];
+		snprintf(buf, sizeof(buf), "%s%c%d", out.empty() ? "" : " ", 'A' + k, (int) (100.0 * w[k] / total + 0.5));
+		out += buf;
+	}
+	return out;
+}
+
+// The Liveries tab's names for the operation types, so the callout and the tab
+// read the same. The file keeps the original enum names (see WED_Enums.h).
+static const char * OpLabel(int op)
+{
+	switch (op) {
+	case ramp_operation_GeneralAviation:	return "Private";
+	case ramp_operation_Airline:			return "Passenger";
+	case ramp_operation_Cargo:				return "Cargo";
+	case ramp_operation_Military:			return "Military/Gov";
+	default:								return "None";
+	}
+}
+
+void	WED_ModerationDescribe(WED_RampPosition * ramp, WED_Airport * apt, WED_ModerationEntry & out)
+{
+	out = WED_ModerationEntry();
+	out.verify = WED_ModerationEntry::verify_None;
+	out.n_to_check = 0;
+	for (int k = 0; k < 6; ++k) out.weights[k] = 0;
+	if (!ramp) return;
+
+	ramp->GetName(out.ramp_name);
+	out.op_type     = ramp->GetRampOperationType();
+	out.op_label    = OpLabel(out.op_type);
+	out.ramp_type   = ENUM_Desc(ramp->GetType());
+	out.auto_filled = ramp->IsAutoFilled();
+	out.updated     = ramp->GetClassWeights(out.weights);
+	const char * letter = ENUM_Desc(ramp->GetWidth());
+	out.size_letter = (letter && *letter) ? letter[0] : '?';
+
+	set<int> eq;
+	ramp->GetEquipment(eq);
+	for (set<int>::const_iterator e = eq.begin(); e != eq.end(); ++e)
+		out.equipment += string(out.equipment.empty() ? "" : ", ") + ENUM_Desc(*e);
+
+	string apt_name;
+	if (apt) AirportIds(apt, out.icao, apt_name);
+
+	WED_LiveryData * d = WED_GetLiveryData(false);
+	vector<string> served;
+	if (d && apt)
+	{
+		string ident;
+		apt->GetICAO(ident);
+		if (!d->airports.GetCountry(out.icao, out.country)) d->airports.GetCountry(Upper(ident), out.country);
+		if (!d->airports.GetAirlines(out.icao, served))     d->airports.GetAirlines(Upper(ident), served);
+	}
+	std::set<string> served_set;
+	for (size_t i = 0; i < served.size(); ++i) served_set.insert(Upper(served[i]));
+
+	const bool pax_cargo = out.op_type == ramp_operation_Airline || out.op_type == ramp_operation_Cargo;
+	if (pax_cargo)
+		out.verify = out.auto_filled   ? WED_ModerationEntry::verify_Assumed
+				   : !served.empty()   ? WED_ModerationEntry::verify_Database
+									   : WED_ModerationEntry::verify_NoData;
+	else if (out.op_type == ramp_operation_Military)
+		out.verify = WED_ModerationEntry::verify_Country;
+
+	vector<string> sorted_codes;
+	std::istringstream ss(ramp->GetAirlines());
+	string code;
+	while (ss >> code)
+	{
+		WED_ModerationCode c;
+		c.code    = Upper(code);
+		c.verdict = WED_ModerationCode::v_Plain;
+		sorted_codes.push_back(c.code);
+
+		WED_AirlineDirectoryEntry e;
+		const bool known = d && d->directory.Lookup(c.code, e);
+		if (known) c.country = e.country;
+		const string name = known ? e.name : c.code + " airline";
+		const bool pseudo = WED_IsGenericAirlinerCode(c.code) || c.code == "XPGA" || c.code == "XPMI";
+
+		switch (out.verify) {
+		case WED_ModerationEntry::verify_Assumed:
+			c.verdict = WED_ModerationCode::v_Assumed;
+			break;
+		case WED_ModerationEntry::verify_Database:
+			if (pseudo)							c.verdict = WED_ModerationCode::v_Plain;
+			else if (known && served_set.count(c.code))	c.verdict = WED_ModerationCode::v_Ok;
+			else
+			{
+				c.verdict    = WED_ModerationCode::v_Check;
+				c.search_url = WED_ModerationSearchURL(name, apt_name, out.icao);
+			}
+			break;
+		case WED_ModerationEntry::verify_Country:
+			if (pseudo || c.country.empty() || out.country.empty())	c.verdict = WED_ModerationCode::v_Plain;
+			else c.verdict = c.country == out.country ? WED_ModerationCode::v_Ok : WED_ModerationCode::v_Foreign;
+			break;
+		default:
+			break;
+		}
+		if (c.verdict == WED_ModerationCode::v_Check || c.verdict == WED_ModerationCode::v_Foreign) ++out.n_to_check;
+		out.codes.push_back(c);
+	}
+
+	std::sort(sorted_codes.begin(), sorted_codes.end());
+	sorted_codes.erase(std::unique(sorted_codes.begin(), sorted_codes.end()), sorted_codes.end());
+	out.signature = out.op_label + "|";
+	for (size_t i = 0; i < sorted_codes.size(); ++i) out.signature += sorted_codes[i] + " ";
+	out.signature += "|";
+	out.signature += out.updated ? WED_ModerationWeightsText(out.weights) : string(1, out.size_letter);
 }

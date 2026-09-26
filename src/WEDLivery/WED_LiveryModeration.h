@@ -69,4 +69,56 @@ WED_RampPosition *	WED_ModerationStep(IResolver * resolver, int dir);
 // and offer to open a web search for each. Nothing is shown otherwise.
 void	WED_ModerationPrompt(WED_RampPosition * ramp, WED_Airport * apt);
 
+// ---- One stand, everything a moderator reads off it (the map callout) ----
+//
+// Verification depends on the stand's operation type and on where its list came
+// from:
+//   Airline / Cargo, auto-filled   the list came from the airport database: assumed right
+//   Airline / Cargo, by hand       each code checked against the database's list for this
+//                                  airport; a code it does not list gets a search. Listing
+//                                  FEWER than the database is fine.
+//   Airline / Cargo, no database   nothing to check against - said so
+//   Military                       each operator's country against the airport's
+//   GA / None                      no check; GA shows its spawn weights
+struct WED_ModerationCode {
+	enum Verdict {
+		v_Plain,		// nothing to check (GA, no database)
+		v_Assumed,		// auto-filled from the database
+		v_Ok,			// the database lists it here / same country
+		v_Check,		// not listed here, or not an operator at all: search it
+		v_Foreign		// a military operator of another country
+	};
+	std::string		code;			// upper case
+	std::string		country;		// IOC, "" if unknown
+	int				verdict;
+	std::string		search_url;		// for v_Check
+};
+
+struct WED_ModerationEntry {
+	enum Verify { verify_None, verify_Assumed, verify_Database, verify_NoData, verify_Country };
+
+	std::string		icao;			// the airport's icao_code metadata, else its ID
+	std::string		country;		// the airport's IOC country, "" if unknown
+	std::string		ramp_name;
+	int				op_type;		// ramp_operation_*
+	std::string		op_label;		// "Passenger", "Military/Gov" - the Liveries tab's words
+	std::string		equipment;		// "Heavy Jets, Jets"
+	std::string		ramp_type;		// "Gate"
+	bool			updated;		// carries 1313 weights; false = legacy size letter only
+	bool			auto_filled;	// the watermark
+	char			size_letter;	// the 1301 letter, 'A'..'F'
+	int				weights[6];		// valid when updated
+	std::vector<WED_ModerationCode>	codes;
+	int				verify;
+	int				n_to_check;		// v_Check + v_Foreign
+	// Equal for two stands that would park the same thing: operation type, the
+	// airline set and the size letter or weights. The callout colours by it.
+	std::string		signature;
+};
+
+void	WED_ModerationDescribe(WED_RampPosition * ramp, WED_Airport * apt, WED_ModerationEntry & out);
+
+// "C60 D30 E10" - the weights as whole percentages, or "" when all zero.
+std::string	WED_ModerationWeightsText(const int w[6]);
+
 #endif /* WED_LIVERYMODERATION_H */
