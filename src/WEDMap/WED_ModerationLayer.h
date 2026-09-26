@@ -104,7 +104,7 @@ private:
 	struct Flag { unsigned int tex; int w, h; };
 
 	struct Hit {
-		enum Kind { hit_Card, hit_Pin, hit_Tray, hit_Search, hit_Chip, hit_Legend, hit_Focus, hit_Panel, hit_Filter, hit_Sort };
+		enum Kind { hit_Card, hit_Pin, hit_Tray, hit_Search, hit_Chip, hit_Legend, hit_Focus, hit_Panel, hit_Filter, hit_Sort, hit_Copy };
 		int				kind;
 		float			x0, y0, x1, y1;
 		int				ramp_id;		// or the legend row
@@ -139,6 +139,7 @@ private:
 	void				DrawChips(GUI_GraphState * g, std::vector<Callout> & cs);
 	void				DrawLegend(GUI_GraphState * g, std::vector<Callout> & cs);
 	void				DrawOverview(GUI_GraphState * g);
+	void				DrawCopyButton(GUI_GraphState * g, float x, float y_top);
 	void				Focus(int ramp_id);
 
 	std::vector<Hit>				mHits;			// from the last frame, for clicks and hover
@@ -156,6 +157,7 @@ private:
 	std::set<std::string>			mReviewed;
 	int								mListFilter;	// overview: 0 all, 1 not listed here, 2 no data, 3 foreign
 	int								mListSort;		// overview: 0 by name, 1 most to verify first
+	double							mCopiedUntil;		// the "Copied!" flash, steady-clock seconds
 	float							mOverviewBottom;	// the overview's lower edge this frame, screen y; <0 = not shown
 	int								mListScroll;	// overview: first row shown
 	float							mListBox[4];	// overview: the list's rectangle, for the wheel

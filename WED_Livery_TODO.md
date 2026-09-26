@@ -56,9 +56,14 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
   - **Op type None** stands draw a grey silhouette. Chips show "A" (auto-filled) and "None".
 - **Review status: session only, by design (Eric, 2026-09-26).** Reviewing a stand reviews every stand with the same setup; whether each is in the right place is the moderator's own look.
 - **Overview list:** filter chips (All / Not listed / No data / Foreign) and sort (name / most to verify first).
-- **This afternoon (Eric, 2026-09-26):**
-  - Export a moderation report: the overview as text, to paste into a Gateway review.
-  - Compare two versions of an airport. This is a big change.
+- **Moderation report, done 2026-09-26.**
+  - "Copy Summary to Clipboard" sits at the foot of the overview; a green "Copied!" shows for 2 s.
+  - The report gives the WED and index versions, the counts, the validator's static-aircraft warnings word for word, and the stands to check by setup.
+  - **One pipeline:** `WED_LiveryParksNothing` is the validator's R14 check, and the overview and the report call it. On LFPG, 108 report lines matched 108 validator lines exactly.
+  - It reads only the stand, the airport and the shipped data, so the same WED on the same X-Plane reproduces it on the Gateway.
+  - The overview gained a "Parks nothing" filter.
+  - A setup's signature now includes equipment, since equipment decides what can park.
+- **Dropped (Eric, 2026-09-26):** comparing two versions of an airport. That belongs to the Gateway's version history.
 - **Rotate view, done 2026-09-26 (approach B: turn the picture, not the map).**
   - **What it does:**
     - The Rotate button enters rotate mode, still north up.

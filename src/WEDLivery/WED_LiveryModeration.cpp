@@ -23,6 +23,10 @@
 
 #include "WED_LiveryModeration.h"
 #include "WED_LiveryRules.h"
+#include "WED_LiveryIndex.h"
+#include "WED_Version.h"
+#include "WED_Document.h"
+#include "GISUtils.h"
 #include "WED_Airport.h"
 #include "WED_RampPosition.h"
 #include "WED_ToolUtils.h"		// WED_GetCurrentAirport, WED_GetSelect
@@ -167,7 +171,7 @@ void	WED_ModerationRamps(WED_Airport * apt, vector<WED_RampPosition *> & out)
 
 bool	WED_ModerationHasIssue(const WED_ModerationEntry & e)
 {
-	return e.n_to_check > 0 || e.verify == WED_ModerationEntry::verify_NoData;
+	return e.n_to_check > 0 || e.verify == WED_ModerationEntry::verify_NoData || e.parks_nothing;
 }
 
 WED_RampPosition *	WED_ModerationStep(IResolver * resolver, int dir, bool issues_only)
@@ -229,6 +233,138 @@ void	WED_ModerationPrompt(WED_RampPosition * ramp, WED_Airport * apt)
 		for (size_t i = 0; i < to_check.size() && i < kMaxTabs; ++i)
 			WED_ModerationOpenSearch(to_check[i]->search_url);
 }
+
+// Which stands an operator may appear on: the operation class on its OPERATOR
+// record against the stand's operation type, the pseudo-codes by name. The same
+// rule as the Liveries tab's cards (WED_LiveryPane::OperatorMatchesRampOp) and
+// spec R18's op_class_matches. Unknown to the directory: an airline, fail open.
+static bool LiveryOperatorFits(const string & code_uc, int op, const WED_AirlineDirectory & dir)
+{
+	if (code_uc == "XPGA") return op == ramp_operation_GeneralAviation;
+	if (code_uc == "XPMI") return op == ramp_operation_Military;
+	if (WED_IsGenericAirlinerCode(code_uc)) return op == ramp_operation_Airline || op == ramp_operation_Cargo;
+	WED_AirlineDirectoryEntry e;
+	if (!dir.Lookup(code_uc, e)) return op == ramp_operation_Airline;
+	switch (e.op_class) {
+	case WED_AirlineDirectoryEntry::op_Pax:		return op == ramp_operation_Airline;
+	case WED_AirlineDirectoryEntry::op_Cargo:	return op == ramp_operation_Cargo;
+	case WED_AirlineDirectoryEntry::op_GA:		return op == ramp_operation_GeneralAviation;
+	default:									return op == ramp_operation_Military;	// Military, Gov
+	}
+}
+
+// R14, as a warning: can anything park here at all? Only the static aircraft are
+// at stake - the airline list still drives ATC and AI parking whatever the index
+// says - so this never blocks an export. Needs livery_index.txt; without one
+// (an X-Plane before 12.5) there is nothing to check against and it stays quiet.
+//
+// Airline and cargo stands draw from their list. GA stands never read it (R28),
+// and a military stand with nothing listed draws any military livery of its size
+// (spec 4.1): those two are checked against the whole library, and when nothing
+// fits the warning says it is the size that rules everything out.
+bool	WED_LiveryParksNothing(WED_RampPosition * ramp, WED_Airport * apt, string & out_msg)
+{
+	out_msg.clear();
+	if (!ramp || !apt) return false;
+	const string airlines = ramp->GetAirlines();
+	int wts[6];
+	const bool weighted = ramp->GetClassWeights(wts);
+	int op = ramp->GetRampOperationType();
+	if (op == ramp_operation_None) return false;			// parks nothing by definition (R29)
+	const bool pool = op == ramp_operation_GeneralAviation || (op == ramp_operation_Military && airlines.empty());
+	if (!pool && airlines.empty()) return false;		// an airline stand with no list: nothing was asked for
+
+	// The same data and the same rule as the Liveries tab - range (R26) and the
+	// stand's equipment type included - so the two never disagree about a stand.
+	WED_LiveryData * d = WED_GetLiveryData(true);
+	if (!d) return false;					// no index (X-Plane before 12.5): nothing to check against
+
+	bool allowed[6] = { false, false, false, false, false, false };
+	bool any = false;
+	if (weighted)
+	{
+		for (int k = 0; k < 6; ++k) { allowed[k] = wts[k] > 0; any |= allowed[k]; }
+		if (!any) return false;			// all zero: the author said nothing parks here (V2)
+	}
+	else
+	{
+		int lo = ENUM_Export(ramp->GetWidthMin()), hi = ENUM_Export(ramp->GetWidth());
+		if (lo > hi) std::swap(lo, hi);
+		for (int k = 0; k < 6; ++k) allowed[k] = (k >= lo && k <= hi);
+	}
+
+	string country;
+	{
+		string icao;
+		apt->GetICAO(icao);
+		string meta = apt->ContainsMetaDataKey("icao_code") ? apt->GetMetaDataValue("icao_code") : string();
+		for (auto & c : icao) c = (char) toupper((unsigned char) c);
+		for (auto & c : meta) c = (char) toupper((unsigned char) c);
+		if (!d->airports.GetCountry(!meta.empty() ? meta : icao, country)) d->airports.GetCountry(icao, country);
+	}
+	Point2 here;
+	ramp->GetLocation(gis_Geo, here);
+	set<int> equipment;
+	ramp->GetEquipment(equipment);
+
+	vector<string> candidates;
+	if (pool)
+		d->index.GetAirlineCodes(candidates);
+	else
+	{
+		std::istringstream codes(airlines);
+		string code;
+		while (codes >> code)
+		{
+			for (auto & c : code) c = (char) toupper((unsigned char) c);
+			candidates.push_back(code);
+		}
+	}
+
+	bool any_livery = false;
+	for (size_t n = 0; n < candidates.size(); ++n)
+	{
+		const string & code = candidates[n];
+		if (!LiveryOperatorFits(code, op, d->directory)) continue;
+		const vector<const WED_LiveryIndexEntry *> * all = d->index.GetForAirline(code);
+		if (!all) continue;
+		for (size_t i = 0; i < all->size(); ++i)
+		{
+			const WED_LiveryIndexEntry & e = *(*all)[i];
+			if (e.size_class < 'A' || e.size_class > 'F' || !allowed[e.size_class - 'A']) continue;
+			any_livery = true;
+			int eq = WED_LiveryEquipment(e);
+			if (eq != -1 && !equipment.empty() && !equipment.count(eq)) continue;
+			if (WED_LiveryAllowedAt(e, d->directory, country, here.y(), here.x()) != livery_allow_Yes) continue;
+			return false;			// something can park
+		}
+	}
+
+	string classes, name;
+	ramp->GetName(name);
+	for (int k = 0; k < 6; ++k)
+		if (allowed[k]) classes += (char) ('A' + k);
+
+	string why;
+	if (pool)
+	{
+		const char * kind = op == ramp_operation_GeneralAviation ? "general aviation" : "military";
+		why = string("no ") + kind + " aircraft matches its size (" + classes + ")";
+		if (any_livery)
+			why += op == ramp_operation_Military && !country.empty()
+				? " that may park in " + country + " and fits its equipment type"
+				: " and fits its equipment type";
+		why += " - the size rules out everything X-Plane has";
+	}
+	else
+		why = "none of its operators (" + airlines + ") " +
+			(any_livery ? string("has a static livery at size ") + classes + " that can reach this airport and fits its equipment type"
+						: string("has a static livery at size ") + classes + " for this operation type");
+	out_msg = string("Ramp start '") + name + "': " + why +
+		", so X-Plane will park no static aircraft here. ATC and AI parking are unaffected.";
+	return true;
+}
+
 
 // ---- the callout model ----
 
@@ -345,6 +481,7 @@ void	WED_ModerationDescribe(WED_RampPosition * ramp, WED_Airport * apt, WED_Mode
 	}
 
 	out.signature = WED_ModerationSignature(ramp);
+	out.parks_nothing = WED_LiveryParksNothing(ramp, apt, out.parks_nothing_msg);
 }
 
 string	WED_ModerationSignature(WED_RampPosition * ramp)
@@ -363,6 +500,12 @@ string	WED_ModerationSignature(WED_RampPosition * ramp)
 	int w[6];
 	if (ramp->GetClassWeights(w)) sig += WED_ModerationWeightsText(w);
 	else { const char * l = ENUM_Desc(ramp->GetWidth()); sig += (l && *l) ? l : "?"; }
+	// equipment decides what can park (an E stand for jets only takes no 747),
+	// so two stands that differ in it are not the same setup
+	set<int> eq;
+	ramp->GetEquipment(eq);
+	sig += "|";
+	for (set<int>::const_iterator e = eq.begin(); e != eq.end(); ++e) { char b[16]; snprintf(b, sizeof(b), "%d,", *e); sig += b; }
 	return sig;
 }
 
@@ -554,4 +697,101 @@ void	WED_ModerationOpenSearch(const string & url)
 	}
 #endif
 	GUI_LaunchURL(url.c_str());
+}
+
+// ---- the moderation report ----
+
+string	WED_ModerationReport(WED_Airport * apt, const std::set<string> & reviewed)
+{
+	if (!apt) return string();
+	const string NL = "\n";
+	vector<WED_RampPosition *> ramps;
+	WED_ModerationRamps(apt, ramps);
+
+	string icao, city, name;
+	AirportIds(apt, icao, city);
+	apt->GetName(name);
+
+	// setups in the order their first stand appears; each lists its stands
+	struct Setup { WED_ModerationEntry e; vector<string> stands; vector<string> parks; bool reviewed; };
+	vector<string> parks;			// the validator's message for each stand, in its own words
+	vector<Setup> setups;
+	std::map<string, size_t> at;
+	int n_issue = 0, n_auto = 0, n_none = 0, n_rev = 0;
+	for (size_t i = 0; i < ramps.size(); ++i)
+	{
+		WED_ModerationEntry e;
+		WED_ModerationDescribe(ramps[i], apt, e);
+		if (e.auto_filled) ++n_auto;
+		if (e.op_type == ramp_operation_None) ++n_none;
+		const bool rev = reviewed.count(e.signature) > 0;
+		if (rev) ++n_rev;
+		if (!WED_ModerationHasIssue(e)) continue;
+		++n_issue;
+		std::map<string, size_t>::iterator f = at.find(e.signature);
+		if (f == at.end()) { Setup su; su.e = e; su.reviewed = rev; at[e.signature] = setups.size(); setups.push_back(su); f = at.find(e.signature); }
+		setups[f->second].stands.push_back(e.ramp_name);
+		if (e.parks_nothing) { setups[f->second].parks.push_back(e.ramp_name); parks.push_back(e.parks_nothing_msg); }
+	}
+	std::set<string> all_setups;
+	for (size_t i = 0; i < ramps.size(); ++i) all_setups.insert(WED_ModerationSignature(ramps[i]));
+
+	char buf[256];
+	string r = "WED moderation summary - " + icao + " " + name + NL;
+	WED_LiveryData * d = WED_GetLiveryData(false);
+	r += string("Checked with WED ") + WED_VERSION_STRING + ", livery index " + (d ? d->index.DescribeVersion() : string("(none)")) +
+		 ". The same WED on the same X-Plane reproduces every line below." + NL + NL;
+	snprintf(buf, sizeof(buf), "%d ramp starts, %d to check, %d unique setups, %d auto-filled, %d \"None\", %d reviewed this session.",
+		(int) ramps.size(), n_issue, (int) all_setups.size(), n_auto, n_none, n_rev);
+	r += buf + NL;
+
+	// what Validate lists for this airport's liveries - the same functions
+	string skipped;
+	if (WED_Document * doc = dynamic_cast<WED_Document *>(apt->GetArchive()->GetResolver()))
+		skipped = doc->DescribeDiscardedRowsFor(icao);
+	if (!skipped.empty() || !parks.empty())
+	{
+		r += NL + "Validator warnings (static aircraft):" + NL;
+		if (!skipped.empty()) r += "- " + skipped + NL;
+		for (size_t i = 0; i < parks.size(); ++i) r += "- " + parks[i] + NL;
+	}
+
+	if (!setups.empty())
+	{
+		r += NL + "Stands to check, by setup:" + NL;
+		for (size_t i = 0; i < setups.size(); ++i)
+		{
+			const Setup & su = setups[i];
+			string st;
+			const size_t kShow = 8;
+			for (size_t k = 0; k < su.stands.size() && k < kShow; ++k) st += (k ? ", " : "") + su.stands[k];
+			if (su.stands.size() > kShow) { snprintf(buf, sizeof(buf), " and %d more", (int) (su.stands.size() - kShow)); st += buf; }
+			r += "- " + st + (su.reviewed ? "  [reviewed]" : "") + NL;
+			r += "    " + su.e.op_label + ", " + (su.e.equipment.empty() ? string() : su.e.equipment + ", ") + (su.e.updated ? WED_ModerationWeightsText(su.e.weights) : string("size ") + su.e.size_letter) +
+				 ", airlines: " + (su.e.codes.empty() ? string("none listed") : string()) ;
+			for (size_t k = 0; k < su.e.codes.size(); ++k) r += (k ? " " : "") + su.e.codes[k].code;
+			r += NL;
+			string why;
+			for (size_t k = 0; k < su.e.codes.size(); ++k)
+			{
+				const WED_ModerationCode & c = su.e.codes[k];
+				if (c.verdict == WED_ModerationCode::v_Check)
+					why += (why.empty() ? "" : "; ") + c.code + " not listed as serving " + icao;
+				else if (c.verdict == WED_ModerationCode::v_Foreign)
+					why += (why.empty() ? "" : "; ") + c.code + " is military of " + (c.country.empty() ? string("another country") : c.country);
+			}
+			if (su.e.verify == WED_ModerationEntry::verify_NoData) why += (why.empty() ? "" : "; ") + string("no airport data to check the operators against");
+			if (!su.parks.empty())
+			{
+				string at = su.parks.size() == su.stands.size() ? string("all of them") : string();
+				for (size_t k = 0; k < su.parks.size() && at.empty(); ++k) at += string(k ? ", " : "") + su.parks[k];
+				if (at.empty()) for (size_t k = 0; k < su.parks.size(); ++k) at += string(k ? ", " : "") + su.parks[k];
+				why += (why.empty() ? "" : "; ") + string("parks nothing (validator): ") + at;
+			}
+			r += "    " + why + NL;
+		}
+	}
+	else
+		r += NL + "Nothing to check." + NL;
+	return r;
 }

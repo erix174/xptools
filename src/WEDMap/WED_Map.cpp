@@ -302,9 +302,15 @@ void		WED_Map::Draw(GUI_GraphState * state)
 	{
 		// what is going on, and how to get out, in the screen's own frame
 		char rbuf[160];
-		snprintf(rbuf, sizeof(rbuf), "Rotate view %.0f deg - drag along a row to level it; then drag to select, Alt+drag for a new line, Shift+right-drag turns in 90s; other tools turn it back north up", view_rot);
 		const float amber[4] = { 1.0f, 0.75f, 0.3f, 1.0f };
-		GUI_FontDraw(state, font_UI_Basic, amber, b[0] + 5, b[3] - 4.0 * GUI_GetLineHeight(font_UI_Basic), rbuf);
+		const double lh = GUI_GetLineHeight(font_UI_Basic);
+		snprintf(rbuf, sizeof(rbuf), "Rotate view %.0f deg - any other tool turns it back north up", view_rot);
+		GUI_FontDraw(state, font_UI_Basic, amber, b[0] + 5, b[3] - 4.0 * lh, rbuf);
+		// the second line says what the next drag does - and how to start over
+		const char * how = mHasRef
+			? "Drag: select    Alt+drag: new reference line    Shift+right-drag: turn in 90s from it"
+			: "Drag along a row of stands to level the view on it    Shift+right-drag: turn freely";
+		GUI_FontDraw(state, font_UI_Basic, amber, b[0] + 5, b[3] - 5.0 * lh, how);
 	}
 	if (view_rot != 0)
 	{

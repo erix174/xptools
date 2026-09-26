@@ -25,6 +25,7 @@
 #include "WED_Document.h"
 #include "WED_LiveryIndex.h"
 #include "WED_LiveryRules.h"
+#include "WED_LiveryModeration.h"
 #include <sstream>
 #include "WED_ValidateList.h"
 #include "WED_ValidateATCRunwayChecks.h"
@@ -1147,130 +1148,15 @@ static void ValidateATCFlows(const vector<WED_ATCFlow*>& flows, const vector<WED
 //------------------------------------------------------------------------------------------------------------------------------------
 #pragma mark -
 
-// Which stands an operator may appear on: the operation class on its OPERATOR
-// record against the stand's operation type, the pseudo-codes by name. The same
-// rule as the Liveries tab's cards (WED_LiveryPane::OperatorMatchesRampOp) and
-// spec R18's op_class_matches. Unknown to the directory: an airline, fail open.
-static bool LiveryOperatorFits(const string & code_uc, int op, const WED_AirlineDirectory & dir)
-{
-	if (code_uc == "XPGA") return op == ramp_operation_GeneralAviation;
-	if (code_uc == "XPMI") return op == ramp_operation_Military;
-	if (WED_IsGenericAirlinerCode(code_uc)) return op == ramp_operation_Airline || op == ramp_operation_Cargo;
-	WED_AirlineDirectoryEntry e;
-	if (!dir.Lookup(code_uc, e)) return op == ramp_operation_Airline;
-	switch (e.op_class) {
-	case WED_AirlineDirectoryEntry::op_Pax:		return op == ramp_operation_Airline;
-	case WED_AirlineDirectoryEntry::op_Cargo:	return op == ramp_operation_Cargo;
-	case WED_AirlineDirectoryEntry::op_GA:		return op == ramp_operation_GeneralAviation;
-	default:									return op == ramp_operation_Military;	// Military, Gov
-	}
-}
-
-// R14, as a warning: can anything park here at all? Only the static aircraft are
-// at stake - the airline list still drives ATC and AI parking whatever the index
-// says - so this never blocks an export. Needs livery_index.txt; without one
-// (an X-Plane before 12.5) there is nothing to check against and it stays quiet.
-//
-// Airline and cargo stands draw from their list. GA stands never read it (R28),
-// and a military stand with nothing listed draws any military livery of its size
-// (spec 4.1): those two are checked against the whole library, and when nothing
-// fits the warning says it is the size that rules everything out.
+// R14, as a warning: can anything park here at all? The check itself is
+// WED_LiveryParksNothing - one pipeline, shared with the Moderation View's
+// overview and report, so what a moderator reads and what Validate lists are
+// the same finding in the same words. Never blocks an export.
 static void ValidateRampLiveries(WED_RampPosition * ramp, const AptGate_t & g, validation_error_vector & msgs, WED_Airport * apt)
 {
-	int op = ramp->GetRampOperationType();
-	if (op == ramp_operation_None) return;			// parks nothing by definition (R29)
-	const bool pool = op == ramp_operation_GeneralAviation || (op == ramp_operation_Military && g.airlines.empty());
-	if (!pool && g.airlines.empty()) return;		// an airline stand with no list: nothing was asked for
-
-	// The same data and the same rule as the Liveries tab - range (R26) and the
-	// stand's equipment type included - so the two never disagree about a stand.
-	WED_LiveryData * d = WED_GetLiveryData(true);
-	if (!d) return;					// no index (X-Plane before 12.5): nothing to check against
-
-	bool allowed[6] = { false, false, false, false, false, false };
-	bool any = false;
-	if (g.class_weights.size() == 6)
-	{
-		for (int k = 0; k < 6; ++k) { allowed[k] = g.class_weights[k] > 0; any |= allowed[k]; }
-		if (!any) return;			// all zero: the author said nothing parks here (V2)
-	}
-	else
-	{
-		int lo = ENUM_Export(ramp->GetWidthMin()), hi = ENUM_Export(ramp->GetWidth());
-		if (lo > hi) std::swap(lo, hi);
-		for (int k = 0; k < 6; ++k) allowed[k] = (k >= lo && k <= hi);
-	}
-
-	string country;
-	{
-		string icao;
-		apt->GetICAO(icao);
-		string meta = apt->ContainsMetaDataKey("icao_code") ? apt->GetMetaDataValue("icao_code") : string();
-		for (auto & c : icao) c = (char) toupper((unsigned char) c);
-		for (auto & c : meta) c = (char) toupper((unsigned char) c);
-		if (!d->airports.GetCountry(!meta.empty() ? meta : icao, country)) d->airports.GetCountry(icao, country);
-	}
-	Point2 here;
-	ramp->GetLocation(gis_Geo, here);
-	set<int> equipment;
-	ramp->GetEquipment(equipment);
-
-	vector<string> candidates;
-	if (pool)
-		d->index.GetAirlineCodes(candidates);
-	else
-	{
-		std::istringstream codes(g.airlines);
-		string code;
-		while (codes >> code)
-		{
-			for (auto & c : code) c = (char) toupper((unsigned char) c);
-			candidates.push_back(code);
-		}
-	}
-
-	bool any_livery = false;
-	for (size_t n = 0; n < candidates.size(); ++n)
-	{
-		const string & code = candidates[n];
-		if (!LiveryOperatorFits(code, op, d->directory)) continue;
-		const vector<const WED_LiveryIndexEntry *> * all = d->index.GetForAirline(code);
-		if (!all) continue;
-		for (size_t i = 0; i < all->size(); ++i)
-		{
-			const WED_LiveryIndexEntry & e = *(*all)[i];
-			if (e.size_class < 'A' || e.size_class > 'F' || !allowed[e.size_class - 'A']) continue;
-			any_livery = true;
-			int eq = WED_LiveryEquipment(e);
-			if (eq != -1 && !equipment.empty() && !equipment.count(eq)) continue;
-			if (WED_LiveryAllowedAt(e, d->directory, country, here.y(), here.x()) != livery_allow_Yes) continue;
-			return;					// something can park
-		}
-	}
-
-	string classes, name;
-	ramp->GetName(name);
-	for (int k = 0; k < 6; ++k)
-		if (allowed[k]) classes += (char) ('A' + k);
-
-	string why;
-	if (pool)
-	{
-		const char * kind = op == ramp_operation_GeneralAviation ? "general aviation" : "military";
-		why = string("no ") + kind + " aircraft matches its size (" + classes + ")";
-		if (any_livery)
-			why += op == ramp_operation_Military && !country.empty()
-				? " that may park in " + country + " and fits its equipment type"
-				: " and fits its equipment type";
-		why += " - the size rules out everything X-Plane has";
-	}
-	else
-		why = "none of its operators (" + g.airlines + ") " +
-			(any_livery ? string("has a static livery at size ") + classes + " that can reach this airport and fits its equipment type"
-						: string("has a static livery at size ") + classes + " for this operation type");
-	msgs.push_back(validation_error_t(string("Ramp start '") + name + "': " + why +
-		", so X-Plane will park no static aircraft here. ATC and AI parking are unaffected.",
-		warn_ramp_livery_parks_nothing, ramp, apt));
+	string msg;
+	if (WED_LiveryParksNothing(ramp, apt, msg))
+		msgs.push_back(validation_error_t(msg, warn_ramp_livery_parks_nothing, ramp, apt));
 }
 
 static int ValidateOneRampPosition(WED_RampPosition* ramp, validation_error_vector& msgs, WED_Airport * apt, const vector<WED_Runway *>& runways)

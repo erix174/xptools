@@ -33,6 +33,9 @@
 #include "GUI_Fonts.h"
 #include "GUI_GraphState.h"
 #include "GUI_Pane.h"
+#include <chrono>
+#include "WED_Map.h"
+#include "GUI_Clipboard.h"
 #include "ISelection.h"
 #include "IOperation.h"
 
@@ -384,7 +387,7 @@ static string	VerifyText(const WED_ModerationEntry & e, const float ** col)
 
 WED_ModerationLayer::WED_ModerationLayer(GUI_Pane * host, WED_MapZoomerNew * zoomer, IResolver * resolver) :
 	WED_MapLayer(host, zoomer, resolver), mPinnedID(-1), mTrayID(-1), mOpenID(-1), mLegendRow(-1), mListScroll(0),
-	mListFilter(0), mListSort(0), mOverviewBottom(-1)
+	mListFilter(0), mListSort(0), mOverviewBottom(-1), mCopiedUntil(0)
 {
 	mListBox[0] = mListBox[1] = mListBox[2] = mListBox[3] = 0;
 }
@@ -1107,6 +1110,39 @@ void	WED_ModerationLayer::DrawLegend(GUI_GraphState * g, vector<Callout> & cs)
 	}
 }
 
+static double	NowSec(void)
+{
+	return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
+// "Copy Summary to Clipboard", left-aligned at the foot of the overview; a
+// green "Copied!" beside it for two seconds after a click.
+void	WED_ModerationLayer::DrawCopyButton(GUI_GraphState * g, float x, float y_top)
+{
+	const char * cap = "Copy Summary to Clipboard";
+	const float lh = LineH(), asc = Asc();
+	const float w = TextW(cap) + 16, h = lh + 6;
+	const float bx0 = x, bx1 = x + w, bt = y_top, bb = y_top - h;
+	int mx, my;
+	MouseOnScreen(GetZoomer(), GetHost(), mx, my);
+	const bool over = Inside((float) mx, (float) my, bx0, bb, bx1, bt);
+	const float face[4] = { 1, 1, 1, over ? 0.22f : 0.12f };
+	g->SetState(0, 0, 0, 0, 1, 0, 0);
+	Fill(bx0, bb, bx1, bt, face);
+	glColor4fv(kMuted);
+	glBegin(GL_LINE_LOOP);
+		glVertex2f(bx0, bb); glVertex2f(bx1, bb); glVertex2f(bx1, bt); glVertex2f(bx0, bt);
+	glEnd();
+	Txt(g, kWhite, bx0 + 8, bb + (h - asc) * 0.5f, cap);
+	Hit hc = { Hit::hit_Copy, bx0, bb, bx1, bt, 0, "" };
+	mHits.push_back(hc);
+	if (NowSec() < mCopiedUntil)
+	{
+		Txt(g, kGreen, bx1 + 10, bb + (h - asc) * 0.5f, "Copied!");
+		GetHost()->Refresh();					// until the two seconds are up
+	}
+}
+
 // Select one stand and bring it to the middle of the map, at this zoom.
 void	WED_ModerationLayer::Focus(int ramp_id)
 {
@@ -1145,9 +1181,10 @@ void	WED_ModerationLayer::DrawOverview(GUI_GraphState * g)
 
 	vector<WED_RampPosition *> ramps;
 	WED_ModerationRamps(apt, ramps);
-	struct Row { int id; string name; string sig; int n; bool reviewed; int kind; };	// kind: 1 not listed, 2 no data, 3 foreign
+	// mask: 1 not listed here, 2 no airport data, 4 foreign military, 8 parks nothing (validator)
+	struct Row { int id; string name; string sig; int n; bool reviewed; int mask; bool parks; };
 	vector<Row> issues;
-	int n_kind[4] = { 0, 0, 0, 0 };
+	int n_kind[5] = { 0, 0, 0, 0, 0 };
 	set<string> sigs;
 	int n_auto = 0, n_none = 0;
 	string icao, country;
@@ -1162,10 +1199,15 @@ void	WED_ModerationLayer::DrawOverview(GUI_GraphState * g)
 		if (WED_ModerationHasIssue(e))
 		{
 			sIssueIDs.insert(ramps[i]->GetID());
-			const int kind = e.verify == WED_ModerationEntry::verify_NoData ? 2 : e.verify == WED_ModerationEntry::verify_Country ? 3 : 1;
-			++n_kind[0]; ++n_kind[kind];
-			Row r = { ramps[i]->GetID(), e.ramp_name, e.signature, e.n_to_check, mReviewed.count(e.signature) > 0, kind };
-			if (mListFilter == 0 || mListFilter == kind) issues.push_back(r);
+			int mask = 0;
+			if (e.n_to_check && e.verify == WED_ModerationEntry::verify_Database)	mask |= 1;
+			if (e.verify == WED_ModerationEntry::verify_NoData)						mask |= 2;
+			if (e.n_to_check && e.verify == WED_ModerationEntry::verify_Country)	mask |= 4;
+			if (e.parks_nothing)														mask |= 8;
+			++n_kind[0];
+			for (int k = 1; k <= 4; ++k) if (mask & (1 << (k - 1))) ++n_kind[k];
+			Row r = { ramps[i]->GetID(), e.ramp_name, e.signature, e.n_to_check, mReviewed.count(e.signature) > 0, mask, e.parks_nothing };
+			if (mListFilter == 0 || (mask & (1 << (mListFilter - 1)))) issues.push_back(r);
 		}
 	}
 	if (mListSort == 1)
@@ -1178,14 +1220,15 @@ void	WED_ModerationLayer::DrawOverview(GUI_GraphState * g)
 	GetZoomer()->GetPixelBounds(b[0], b[1], b[2], b[3]);
 	const float lh = LineH(), asc = Asc();
 	const float x0 = (float) b[0] + 10, w = 380, x1 = x0 + w;
-	const float top = (float) b[3] - 10 - 3 * lh - 8;			// below the map's own three lines
+	WED_Map * map = dynamic_cast<WED_Map *>(GetHost());
+	const float top = (float) b[3] - 10 - (map && map->IsRotateMode() ? 5 : 3) * lh - 8;	// below the map's own lines
 	const int kRows = 10;
 	const int shown = (int) issues.size() < kRows ? (int) issues.size() : kRows;
 	const int max_scroll = (int) issues.size() - shown;
 	if (mListScroll > max_scroll) mListScroll = max_scroll;
 	if (mListScroll < 0) mListScroll = 0;
 	const float rh = lh + 4;
-	const float body_h = kPad + 2 * RowH() + 6 + (n_issue_total == 0 ? RowH() : RowH() + lh + (issues.empty() ? rh : shown * rh) + lh) + kPad;
+	const float body_h = kPad + 2 * RowH() + 6 + (n_issue_total == 0 ? RowH() : RowH() + lh + (issues.empty() ? rh : shown * rh) + lh) + 6 + RowH() + kPad;
 	const float edge = top - HeadH(), bottom = edge - body_h;
 	mOverviewBottom = bottom;
 
@@ -1248,14 +1291,15 @@ void	WED_ModerationLayer::DrawOverview(GUI_GraphState * g)
 	if (n_issue_total == 0)
 	{
 		Txt(g, kGreen, x0 + kPad, y - asc, "Nothing to check at this airport.");
+		DrawCopyButton(g, x0 + kPad, y - RowH() - 6);
 		return;
 	}
 
 	// filter chips and the sort toggle
 	{
-		const char * names[4] = { "All", "Not listed", "No data", "Foreign" };
+		const char * names[5] = { "All", "Not listed", "No data", "Foreign", "Parks nothing" };
 		float fx = x0 + kPad;
-		for (int f = 0; f < 4; ++f)
+		for (int f = 0; f < 5; ++f)
 		{
 			if (f > 0 && n_kind[f] == 0) continue;
 			snprintf(buf, sizeof(buf), "%s %d", names[f], n_kind[f]);
@@ -1307,7 +1351,8 @@ void	WED_ModerationLayer::DrawOverview(GUI_GraphState * g)
 		// in words: "2 to verify", or why there is nothing to verify against
 		string right;
 		if (row.n) { snprintf(buf, sizeof(buf), "%d to verify", row.n); right = buf; }
-		else right = "no airport data";
+		else if (row.mask & 2) right = "no airport data";
+		if (row.parks) right += string(right.empty() ? "" : ", ") + "parks nothing";
 		Txt(g, kAmber, x1 - kPad - TextW(right), ty, right.c_str());
 		if (row.reviewed)
 		{
@@ -1330,6 +1375,8 @@ void	WED_ModerationLayer::DrawOverview(GUI_GraphState * g)
 		Fill(x1 - 4, tt - th, x1 - 1, tt, kMuted);
 	}
 	Txt(g, kMuted, x0 + kPad, y - asc - 2, "Shift+X / Ctrl+Shift+X: next / previous stand to check");
+	y -= lh + 6;
+	DrawCopyButton(g, x0 + kPad, y);
 }
 
 // Cards, chips, the overview and the badges stay level with the screen when the
@@ -1467,6 +1514,13 @@ int		WED_ModerationLayer::HandleClickDown(int inX, int inY, int inButton, GUI_Ke
 			if (pass == 1 && h.kind == Hit::hit_Pin)
 			{
 				mPinnedID = mPinnedID == h.ramp_id ? -1 : h.ramp_id;
+				GetHost()->Refresh();
+				return 1;
+			}
+			if (pass == 1 && h.kind == Hit::hit_Copy)
+			{
+				GUI_SetTextToClipboard(WED_ModerationReport(WED_GetCurrentAirport(GetResolver()), mReviewed));
+				mCopiedUntil = NowSec() + 2.0;
 				GetHost()->Refresh();
 				return 1;
 			}

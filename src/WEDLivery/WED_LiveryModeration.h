@@ -29,6 +29,7 @@
 // should only happen for a moderator asks WED_ModerationEnabled(), the one
 // switch the preference checkbox will drive.
 
+#include <set>
 #include <string>
 #include <vector>
 
@@ -115,6 +116,10 @@ struct WED_ModerationEntry {
 	std::vector<WED_ModerationCode>	codes;
 	int				verify;
 	int				n_to_check;		// v_Check + v_Foreign
+	// The validator's own finding for this stand (WED_LiveryParksNothing), word
+	// for word: the overview and the report show exactly what Validate lists.
+	bool			parks_nothing;
+	std::string		parks_nothing_msg;
 	// Equal for two stands that would park the same thing: operation type, the
 	// airline set and the size letter or weights. The callout colours by it.
 	std::string		signature;
@@ -123,8 +128,22 @@ struct WED_ModerationEntry {
 void	WED_ModerationDescribe(WED_RampPosition * ramp, WED_Airport * apt, WED_ModerationEntry & out);
 
 // Needs a moderator: an operator to check (not listed here, or from another
-// country), or an airline stand with no airport data to check it against.
+// country), an airline stand with no airport data to check it against, or a
+// stand the validator says parks nothing.
 bool	WED_ModerationHasIssue(const WED_ModerationEntry & e);
+
+// THE livery check behind Validate's warn_ramp_livery_parks_nothing (R14): true
+// when nothing in the livery index can park at this stand, with the message
+// the validator lists. The Moderation View calls the same function, so the two
+// never disagree. It reads only the stand, the airport and the shipped data
+// (livery_index.txt, WED_AirportDatabase.txt), so any WED of the same version
+// on the same X-Plane reproduces it - on the Gateway too.
+bool	WED_LiveryParksNothing(WED_RampPosition * ramp, WED_Airport * apt, std::string & out_msg);
+
+// The Moderation View's report, as plain text for the clipboard: airport,
+// counts, the data it was checked against, rows the import skipped, then each
+// stand that needs a look with what the validator and the operator check say.
+std::string	WED_ModerationReport(WED_Airport * apt, const std::set<std::string> & reviewed_setups);
 
 // "C60 D30 E10" - the weights as whole percentages, or "" when all zero.
 std::string	WED_ModerationWeightsText(const int w[6]);
