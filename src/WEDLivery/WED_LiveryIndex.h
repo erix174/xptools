@@ -25,12 +25,18 @@
 	WED_LiveryIndex - THEORY OF OPERATION
 
 	Reads livery_index.txt, the catalogue of every static-aircraft livery that
-	ships with X-Plane. One row per livery:
+	ships with X-Plane. Schema 4, one row per livery (spec §6.2):
 
-		<TYPE> *** <CLASS> *** <AIRLINE> *** <REG> *** <REG COUNTRY> *** <NOTE> *** <path>
+		<TYPE> *** <CLASS> *** <AIRLINE> *** <REG> *** <REG CTY> *** <NOTE> *** <RANGE_KM> *** <SCOPE> *** <OP> *** <path>
 
-		B738 *** C *** UAL *** N78540 *** USA *** Retro   *** jet/B738_UAL_Legacy/...
-		B738 *** C *** UAL *** N79521 *** USA *** Default *** jet/B738_UAL_Modern/...
+		B738 *** C *** UAL *** N78540 *** USA *** Retro   *** 5700 ***      *** Pax *** jet/B738_UAL_Legacy/...
+		B752 *** D *** AIO *** C32A   ***     *** Default *** 7200 *** HOME *** Military *** jet/B752/757_C32A.obj
+
+	ahead of them one OPERATOR record per operator (name, country, operation
+	class, fleet, hub ICAOs - read by WED_AirlineDirectory). NOTE `Obsolete` is
+	the one reserved value: such a row is held but never indexed (R25). The hub
+	ICAOs are placed from the install's Global Airports on a worker thread
+	(PollHubs), which is what the range rule R26 measures from.
 
 	CLASS is the ICAO wingspan class A-F - which ramp size the aircraft needs. It
 	is carried per row rather than in a separate type-to-class file on purpose: at

@@ -53,6 +53,7 @@ Inside `src/` (only WED-relevant entries shown here; see `src/README.txt` for th
 | `WEDTCE/`          | Texture coordinate editor (UV editor for orthophotos)             |
 | `WEDLibrary/`      | Library / asset browser pane                                       |
 | `WEDImportExport/` | apt.dat, DSF, gateway, scenery-pack import/export                  |
+| `WEDLivery/`       | Static-aircraft liveries: the Static Liveries tab, auto-fill, moderation (2.8) |
 | `WEDFileCache/`    | Disk cache for downloaded assets                                   |
 | `WEDNetwork/`      | Gateway client / live-collab server                                |
 | `WEDResources/`    | Icons, fonts, splash, line/pavement art                            |
@@ -405,6 +406,38 @@ The actual asset discovery / path resolution lives in `WED_LibraryMgr` (in WEDCo
 | `WED_NWLinkAdapter`    | Bridges document changes to network sync.               |
 | `WED_NWInfoLayer`      | Map layer for showing network status / conflicts.       |
 | `WED_NWDefs`           | Protocol message definitions.                           |
+
+---
+
+## 12b. WEDLivery — Static Aircraft Liveries (2.8)
+
+Which airlines' aircraft park at a ramp start, and at which sizes. The file format
+(row `1313`, six per-class spawn weights) and every rule are in
+`WED_LiveryFormatSpec.md`; this is the code map. Nothing here is on the export
+path except through `WED_RampPosition` (`class_weights`, `auto_filled`) and
+`AptIO.cpp` (row `1313`).
+
+| File | Role |
+|------|------|
+| `WED_LiveryIndex` | Reads the install's `apt_aircraft/livery_index.txt` (schema 4): one row per livery, `Obsolete` rows held but not indexed, hubs placed from Global Airports on a worker thread. |
+| `WED_AirlineDirectory` | The OPERATOR records of the same file: name, country, operation class, fleet. |
+| `WED_AirportDatabase` | Per airport: country and the airlines that serve it (`WED_AirportDatabase.txt` beside WED). Feeds the Recommended tier. |
+| `WED_LiveryRules` | **The one allow rule** (`WED_LiveryAllowedAt`: op class, range R26, HOME R27), equipment by asset folder, the legacy letter→weights table, and the shared index (`WED_GetLiveryData`). The tab, auto-fill and the validator all call it. |
+| `WED_LiveryAutoFill` | Airport > Auto-Populate and the tab's Populate button. Extends, never overwrites; one undo step. |
+| `WED_LiveryModeration` | Ramp-to-ramp stepping (Ctrl+Shift+. / ,) and the "operators to check" prompt with a web search. |
+| `WED_LiveryThumbnailCache` | Renders a livery `.obj` to a card image on worker threads; LRU. |
+| `WED_LiveryPane*` | The Static Liveries tab, split by concern: `WED_LiveryPane.cpp` state, selection, cards and the coverage readout; `…Layout` rectangles and hit tests; `…Input` mouse and the edits it makes; `…Draw` drawing and animation; `…Rows` the airline list tiers. `WED_LiveryPaneInternal.h` is private to them. |
+| `WED_Flag*`, `WED_IocCountryCodes` | The country flag banner, and apt.dat country → IOC code. |
+| `WED_MandatoryHeader` | The two-line stamp every hand-maintained data file in this family must start with. |
+
+**Validation** lives in `WED_Validate.cpp` (`ValidateRampLiveries`: a stand whose
+listed operators can park nothing is a waivable warning, never an export block).
+
+**Data tools** are in `tools/scripts/airline_research/`: `gen_livery_index.py`
+(merges new assets into the hand-maintained index), `livery_obsolete_radius.py`
+(what an `Obsolete` mark would empty), `livery_sample_expect.py` (expected
+results of `docs/livery_sample/`), `measure_empty_stands.py` (spec §4.5 against
+Global Airports), `check_wed_export.py`.
 
 ---
 
