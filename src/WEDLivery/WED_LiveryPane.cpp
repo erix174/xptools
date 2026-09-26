@@ -409,11 +409,11 @@ void	WED_LiveryPane::EnsureRows(void)
 //                       "hub" is wherever its owner lives; measuring either would
 //                       filter out exactly the aircraft that turn up at every
 //                       small field on earth. No range rule.
-//   Military and Gov  - ONLY on home soil. An F-15 does not park at Beijing and a
-//                       PLAAF 737 does not park at Denver, however far either can
-//                       fly; the constraint is sovereignty, not fuel. Operator
-//                       country (directory) must equal the airport's. Either
-//                       unknown -> allowed, fail open.
+//   Military and Gov  - anywhere, never range-checked, EXCEPT a row marked HOME
+//                       (R27): a head-of-state 757 or an air force's own-marked
+//                       airliner parks only in its operator's country. An F-15
+//                       at a foreign base is unremarkable; a C-32 is not. Either
+//                       country unknown -> allowed, fail open.
 //   Everything else   - the range rule, R26.
 //
 // The reason a livery was refused comes back so the readout can name it: only
@@ -426,6 +426,13 @@ WED_LiveryPane::Allow	WED_LiveryPane::LiveryAllowedHere(const WED_LiveryIndexEnt
 	case livery_allow_ForeignMilitary:	return allow_ForeignMilitary;
 	default:							return allow_Yes;
 	}
+}
+
+string	WED_LiveryPane::OperatorCountry(const string & code_uc) const
+{
+	WED_AirlineDirectoryEntry e;
+	if (mAirlineDirectory.Lookup(code_uc, e) && !e.country.empty()) return e.country;
+	return code_uc;
 }
 
 // Which operation classes a ramp's operation type admits. Pseudo-codes are the
@@ -620,6 +627,15 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 		card.name = mAirlineDirectory.GetName(code_uc);
 		if (card.name.empty()) card.name = code_uc;
 
+		// No registration read off any of its liveries (United's 767) left the card
+		// without a flag, beside Delta's with one. The operator's own country is
+		// the same answer for an airline card.
+		if (card.ioc_country.empty())
+		{
+			WED_AirlineDirectoryEntry d;
+			if (mAirlineDirectory.Lookup(code_uc, d)) card.ioc_country = d.country;
+		}
+
 		string key = code_uc;
 		for (size_t ci = 0; ci < key.size(); ++ci)
 			key[ci] = (char) tolower((unsigned char) key[ci]);
@@ -717,6 +733,10 @@ void	WED_LiveryPane::RecomputeCoverage(void)
 	c.airlines_eligible = 0;
 	c.lo_class          = 'A';
 	c.hi_class          = 'F';
+	c.pool_mode         = false;
+	c.op_type           = ramp_operation_None;
+	c.pool_models       = 0;
+	c.pool_home         = 0;
 
 	// EnsureLoaded() is a no-op for a path it has already tried, success or
 	// failure, so this is safe to call as often as the readout is refreshed - and
@@ -891,6 +911,64 @@ void	WED_LiveryPane::RecomputeCoverage(void)
 				{
 					c.lo_class = (char) ('A' + w_lo);
 					c.hi_class = (char) ('A' + w_hi);
+				}
+			}
+
+			// General aviation never reads its list (R28), and a military stand
+			// with nothing listed draws any military livery of its size (§4.1).
+			// Both would otherwise read as "no operators listed - parks nothing",
+			// which is exactly backwards. Military with a list gets the same
+			// country count over the operators that can actually park.
+			const int op = ramp->GetRampOperationType();
+			c.op_type = op;
+			const bool is_ga  = op == ramp_operation_GeneralAviation;
+			const bool is_mil = op == ramp_operation_Military;
+			if (is_ga || is_mil)
+			{
+				c.pool_mode = is_ga || codes.empty();
+				vector<string> pool_codes;
+				if (c.pool_mode) mLiveryIndex.GetAirlineCodes(pool_codes);
+				else             pool_codes.assign(codes.begin(), codes.end());
+
+				const bool weighted_here = c.weighted && c.empty_cause != Coverage::empty_ByChoice;
+				int fill_w = 0, total_w = 0;
+				for (int k = lo; k <= hi; ++k)
+				{
+					if (weighted_here) { if (wts[k] == 0) continue; total_w += wts[k]; }
+					bool class_has = false;
+					for (size_t i = 0; i < pool_codes.size(); ++i)
+					{
+						string uc = pool_codes[i];
+						for (size_t n = 0; n < uc.size(); ++n) uc[n] = (char) toupper((unsigned char) uc[n]);
+						if (!OperatorMatchesRampOp(uc, op)) continue;
+
+						vector<const WED_LiveryIndexEntry *> hits;
+						mLiveryIndex.GetForAirlineAndClass(uc, (char) ('A' + k), hits);
+						for (size_t h = 0; h < hits.size(); ++h)
+						{
+							if (LiveryAllowedHere(*hits[h], here) != allow_Yes) continue;
+							class_has = true;
+							if (!c.pool_mode) { c.countries.insert(OperatorCountry(uc)); continue; }
+							++c.pool_models;
+							if (is_ga)
+							{
+								if (!mAirportCountry.empty() && hits[h]->reg_country == mAirportCountry) ++c.pool_home;
+							}
+							else
+								c.countries.insert(uc == "XPMI" ? string() : OperatorCountry(uc));
+						}
+					}
+					if (class_has && weighted_here) fill_w += wts[k];
+				}
+
+				if (c.pool_mode)
+				{
+					c.sole_operator.clear();		// the list is not what parks here
+					if (weighted_here && total_w > 0)
+					{
+						c.p_occupied  = (float) fill_w / (float) total_w;
+						c.empty_cause = fill_w ? Coverage::empty_None : Coverage::empty_Unfillable;
+					}
 				}
 			}
 		}

@@ -25,6 +25,28 @@
 
 // Drawing and animation.
 
+// "USA, CHN and generic types" - the countries a military stand draws from, the
+// generic XPMI airframes ("" in the set) named last. Six at most, then a count.
+static string	MilitaryCountryList(const std::set<string> & countries)
+{
+	vector<string> named;
+	for (std::set<string>::const_iterator i = countries.begin(); i != countries.end(); ++i)
+		if (!i->empty()) named.push_back(*i);
+	const bool generic = countries.count(string()) > 0;
+	string out;
+	const size_t shown = named.size() > 6 ? 6 : named.size();
+	for (size_t i = 0; i < shown; ++i)
+		out += (i == 0 ? "" : (i + 1 == shown && !generic && shown == named.size()) ? " and " : ", ") + named[i];
+	if (shown < named.size())
+	{
+		char buf[32];
+		snprintf(buf, sizeof(buf), " and %d more", (int) (named.size() - shown));
+		out += buf;
+	}
+	if (generic) out += out.empty() ? "generic military types only" : " and generic types";
+	return out;
+}
+
 
 // Loads the country's flag source raster, projects it through the fixed
 // pole/mask/ink UV mesh (WED_FlagProjector - see that file's header for the
@@ -1534,7 +1556,58 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			else
 				snprintf(range, sizeof(range), "%c-%c", mCoverage.lo_class, mCoverage.hi_class);
 
-			if (mCoverage.airlines_listed == 0)
+			if (mCoverage.pool_mode && !(mCoverage.weighted && mCoverage.empty_cause == Coverage::empty_ByChoice))
+			{
+				// GA (R28) and an unlisted military stand (§4.1) draw from the
+				// whole library at their sizes, so the list is not the question -
+				// what the library holds, and where it comes from, is.
+				const bool ga = mCoverage.op_type == ramp_operation_GeneralAviation;
+				const int pct = mCoverage.weighted ? (int) (mCoverage.p_occupied * 100.0f + 0.5f) : 100;
+				char when[32] = "";
+				if (pct < 100) snprintf(when, sizeof(when), ", %d%% of the time", pct);
+
+				if (mCoverage.pool_models == 0)
+				{
+					head_col = col_warn;
+					if (ga)
+					{
+						snprintf(head,   sizeof(head),   "Nothing can park here - no GA aircraft at size %s", range);
+						snprintf(detail, sizeof(detail), "X-Plane ships no general aviation livery at this size.");
+					}
+					else
+					{
+						snprintf(head,   sizeof(head),   "This stand parks nothing - no military aircraft at size %s may park here", range);
+						snprintf(detail, sizeof(detail),
+							"Every military livery at this size is marked for its own country only. List an operator, or change the size.");
+					}
+				}
+				else if (ga)
+				{
+					snprintf(head, sizeof(head), "GA aircraft from all over the world, size %s%s", range, when);
+					head_col = pct >= 95 ? col_good : col_warn;
+					const string & cty = mAirportCountry;
+					if (cty.empty())
+						snprintf(detail, sizeof(detail), "%d GA models fit this stand.", mCoverage.pool_models);
+					else if (mCoverage.pool_home > 0)
+						snprintf(detail, sizeof(detail),
+							"%d GA models fit. About 70%% of the time it is one of the %d registered in %s.",
+							mCoverage.pool_models, mCoverage.pool_home, cty.c_str());
+					else
+						snprintf(detail, sizeof(detail),
+							"%d GA models fit. None is registered in %s, so every one comes from abroad.",
+							mCoverage.pool_models, cty.c_str());
+				}
+				else
+				{
+					snprintf(head, sizeof(head), "Military aircraft from %s%s",
+						MilitaryCountryList(mCoverage.countries).c_str(), when);
+					head_col = pct >= 95 ? col_good : col_warn;
+					snprintf(detail, sizeof(detail),
+						"No operator is listed, so any of the %d military liveries at size %s that may park here can appear.",
+						mCoverage.pool_models, range);
+				}
+			}
+			else if (mCoverage.airlines_listed == 0)
 			{
 				snprintf(head,   sizeof(head),   "This stand parks nothing - no operators listed");
 				head_col = col_warn;
@@ -1628,6 +1701,18 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			snprintf(detail, sizeof(detail), "Each stand measured against its own size range and operator list.");
 		}
 
+		// A military stand with a list: the same country line as the unlisted
+		// case, over the operators that can actually park. The old headline -
+		// how many listed operators - moves under it.
+		if (mCoverage.stands == 1 && !mCoverage.pool_mode && mCoverage.op_type == ramp_operation_Military &&
+			!mCoverage.countries.empty() && head_col == col_good)
+		{
+			string was = string(head) + ". " + detail;
+			snprintf(head, sizeof(head), "Military aircraft from %s",
+				MilitaryCountryList(mCoverage.countries).c_str());
+			snprintf(detail, sizeof(detail), "%s", was.c_str());
+		}
+
 		// Variety collapse outranks the ordinary "it works" line, because from
 		// the author's side nothing looks wrong: the stand spawns aircraft, the
 		// occupancy reads high, and every one of them is the same airline. It
@@ -1693,6 +1778,17 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		// stand that had anything to say.)
 		float avail_w = (float) (b[2] - b[0]) - pad * 2;
 		vector<string> body = WrapText(font_UI_Basic, detail, avail_w);
+
+		// The headline is one line and elided to fit. When that cut something -
+		// a military stand drawing from eight countries - the details open with
+		// the whole sentence, so expanding always shows what the line started.
+		const float head_w = (float) b[2] - pad * 2 - line_h - (b[0] + pad);
+		const string head_text = ElideToWidth(font_UI_Basic, head, head_w);
+		if (head_text != head)
+		{
+			vector<string> full = WrapText(font_UI_Basic, head, avail_w);
+			body.insert(body.begin(), full.begin(), full.end());
+		}
 		if (!range_line.empty())
 		{
 			vector<string> more = WrapText(font_UI_Basic, range_line, avail_w);
@@ -1748,7 +1844,6 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			state->SetState(0,0,0,0,0,0,0);
 		}
 
-		string head_text = ElideToWidth(font_UI_Basic, head, (float) b[2] - pad * 2 - line_h - (b[0] + pad));
 		GUI_FontDraw(state, font_UI_Basic, head_col,  b[0] + pad, cov_top - line_h * 0.9f, head_text.c_str());
 		for (size_t li = 0; li < body.size(); ++li)
 			GUI_FontDraw(state, font_UI_Basic, col_muted, b[0] + pad,

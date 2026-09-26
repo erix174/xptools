@@ -237,6 +237,18 @@ private:
 		// to every P(empty) check in the design.
 		std::string	sole_operator;
 		char	lo_class, hi_class;	// 'A'..'F'
+		// Stands that draw from the whole library rather than from their list:
+		// general aviation always (R28), and military with no operator listed
+		// (spec §4.1). Single-stand only. pool_models counts the liveries that can
+		// park here at the stand's sizes; pool_home the GA ones registered in the
+		// airport's country (R28's 70%). countries: the military operators' home
+		// countries - the pool's, or the eligible listed operators' - with ""
+		// standing for the generic XPMI airframes.
+		bool	pool_mode;
+		int		op_type;			// ramp_operation_*, single stand
+		int		pool_models;
+		int		pool_home;
+		std::set<std::string>	countries;
 	};
 	void				RecomputeCoverage(void);
 	// Cheap because the index is already resident; still not something to run per
@@ -279,6 +291,9 @@ private:
 	// Whether one livery may appear at this stand, and if not, why - see the .cpp.
 	enum Allow { allow_Yes, allow_OutOfRange, allow_ForeignMilitary };
 	Allow								LiveryAllowedHere(const WED_LiveryIndexEntry & e, const Point2 & here) const;
+	// An operator's home country (IOC) from the directory; the code itself when
+	// the directory does not know it, so the readout never names a blank.
+	std::string							OperatorCountry(const std::string & code_uc) const;
 	std::string							mAirportCountry;	// IOC, from the airport strip's lookup; empty when unknown
 	// Lines the coverage readout currently needs; see CoverageHeight().
 	int									mCoverageLineCount;

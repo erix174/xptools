@@ -1941,9 +1941,9 @@ B752 *** D *** AIO       ***           ***     *** Default    *** 7200  *** HOME
 B752 *** D *** FAG       *** ARG01     *** ARG *** Default    *** 7200  *** HOME *** Military *** jet/B752/757_FAA_ARG01.obj
 B752 *** D *** KAF       *** 5701      *** KAZ *** Default    *** 7200  *** HOME *** Military *** jet/B752/757_KAF_5701.obj
 B752 *** D *** KRC       *** NZ7571    *** NZL *** Default    *** 7200  *** HOME *** Military *** jet/B752/757_RNZAF_NZ7571.obj
-BE9L *** A *** CNV       *** 1058      *** USA *** Training   *** 2400  ***      *** Military *** turboprop/BE9L_navy/BE9L_navy_static.obj
+BE9L *** A *** CNV       *** 1058      *** USA *** Training   *** 2400  *** HOME *** Military *** turboprop/BE9L_navy/BE9L_navy_static.obj
 C172 *** A *** XPMI      ***           ***     *** Olive      *** 1270  ***      *** Military *** prop/C172_olive/C172_olive_static.obj
-CL60 *** B *** AIO       *** N488CR    *** USA *** Default    *** 7400  ***      *** Military *** jet/CL60/CL60_N488CR.obj
+CL60 *** B *** AIO       *** N488CR    *** USA *** Default    *** 7400  *** HOME *** Military *** jet/CL60/CL60_N488CR.obj
 DC10 *** D *** AIO       *** 392814    *** USA *** Obsolete   *** 9600  *** HOME *** Military *** heavy/DC10_AIO/DC10_AIO_static.obj
 E2   *** C *** CNV       ***           ***     *** Default    *** 2700  *** HOME *** Military *** turboprop/E2/E2_Hawkeye_static.obj
 F15  *** A *** AIO       ***           ***     *** Default    *** 3900  ***      *** Military *** fighter/F15/F15EX_cft_usaf.obj
@@ -1951,10 +1951,10 @@ F15  *** A *** AIO       ***           ***     *** Default    *** 3900  ***     
 F18S *** A *** CNV       ***           ***     *** Default    *** 2300  ***      *** Military *** fighter/F18/FA_18E_static.obj
 F4   *** A *** XPMI      ***           ***     *** Default    *** 2600  ***      *** Military *** fighter/F4/F4_static.obj
 H60  *** B *** CNV       ***           ***     *** Default    *** 830   ***      *** Military *** helo/H60/SH60_Seahawk_static.obj
-J328 *** B *** AIO       *** N3220U    *** USA *** Default    *** 1665  ***      *** Military *** jet/J328_AIO/J328_AIO_static.obj
+J328 *** B *** AIO       *** N3220U    *** USA *** Default    *** 1665  *** HOME *** Military *** jet/J328_AIO/J328_AIO_static.obj
 P180 *** A *** IAM       ***           ***     *** Default    *** 2800  *** HOME *** Military *** turboprop/P180_AM/P180_AM_static.obj
 P46T *** A *** XPMI      ***           ***     *** Default    *** 3300  ***      *** Military *** turboprop/P46T/M500_MIL.obj
-PC12 *** B *** AIO       *** 80519     *** USA *** Default    *** 3400  ***      *** Military *** turboprop/PC12/PC12_US_Army.obj
+PC12 *** B *** AIO       *** 80519     *** USA *** Default    *** 3400  *** HOME *** Military *** turboprop/PC12/PC12_US_Army.obj
 # -- Gov -----------------------------------------------------------------------
 B752 *** D *** DOJ       *** N119NA    *** USA *** Default    *** 7200  *** HOME *** Gov      *** jet/B752/757_USDOJ_N119NA.obj
 S76  *** A *** HMF       *** SEJRM     *** SWE *** Obsolete   *** 760   *** HOME *** Gov      *** helo/S76_coastguard/S76_coastguard_static.obj

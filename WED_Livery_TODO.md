@@ -25,8 +25,13 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
 
 - Moderation mode: further details from Eric. Notes for the auto-fill watermark
   and op type None are detected but not shown anywhere yet.
-- Military country line (point 5 of Eric's nine-point list); the other eight
-  points are not recorded anywhere - ask Eric.
+- Eric's nine-point design list of 2026-09-17: DONE.
+  - Points 1, 2 and 7-9 were already built.
+  - Points 3 and 4 (exact "###% chance" wording) are waived: Eric accepted the occupancy readout instead.
+  - Point 5: the military readout names the countries it draws from.
+  - Point 6: GA reads "from all over the world", with the home-registered share (R28).
+  - All done 2026-09-25.
+- US transport and trainer military rows marked HOME (CL60, J328, PC12 AIO; BE9L CNV). Fighters and the H-60 stay free to park abroad (Eric, 2026-09-25).
 - Mac / Linux build and run - never done.
 - Upstream PRs: five local branches off `origin/wed_270_release`, all built. Worktree `WED/xptools-upstream`, backed up to `local`.
   - `upstream/save-and-doubleclick`
