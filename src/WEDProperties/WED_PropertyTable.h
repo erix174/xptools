@@ -113,6 +113,9 @@ public:
 	virtual	int		DoubleClickCell(
 						int							cell_x,
 						int							cell_y);
+	virtual	int		ClickSelectedCell(
+						int							cell_x,
+						int							cell_y);
 
 	virtual	void					GetLegalDropOperations(
 											int&						allow_between_col,

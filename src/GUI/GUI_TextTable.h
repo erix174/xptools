@@ -239,6 +239,11 @@ public:
 	virtual	int		DoubleClickCell(
 						int							cell_x,
 						int							cell_y)=0;
+	// A plain click on a cell that is already selected, before it opens for
+	// editing. Return 1 to take the click instead.
+	virtual	int		ClickSelectedCell(
+						int							cell_x,
+						int							cell_y) { return 0; }
 
 	virtual	void					GetLegalDropOperations(
 											int&						allow_between_col,
