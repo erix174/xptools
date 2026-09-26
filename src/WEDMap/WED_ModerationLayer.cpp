@@ -133,6 +133,63 @@ static float	RowH(void)		{ return LineH() + 3.0f; }
 static float	HeadH(void)		{ return LineH() + 8.0f; }
 static const float kPad = 6.0f;
 
+// THE NECK: every leader of a callout meets at one hub, and a single segment - the
+// neck - runs from the hub to the card or chip. Its length and weight say how
+// many stands share the entry: 2.5x the base for one stand, growing with each
+// more, capped at 10x, so a popular entry stands out before a word is read.
+static float	NeckLen(size_t stands, float base)
+{
+	float f = 2.5f + 0.75f * (float) (stands - 1);
+	return base * (f > 10.0f ? 10.0f : f);
+}
+
+static float	NeckWidth(size_t stands)
+{
+	float w = 1.5f + 0.25f * (float) (stands - 1);
+	return w > 4.0f ? 4.0f : w;
+}
+
+// Leaders from every stand to the hub, an arrowhead at each stand, the neck, and
+// a dot on the hub when more than one line meets there.
+static void	DrawLeaders(const vector<std::pair<float, float> > & stands, float hub_x, float hub_y, float end_x,
+							const float col[4], float line_w, float arrow)
+{
+	glColor4fv(col);
+	glLineWidth(line_w);
+	glBegin(GL_LINES);
+	for (size_t k = 0; k < stands.size(); ++k)
+	{
+		glVertex2f(stands[k].first + arrow * 0.6f, stands[k].second);
+		glVertex2f(hub_x, hub_y);
+	}
+	glEnd();
+	glBegin(GL_TRIANGLES);
+	for (size_t k = 0; k < stands.size(); ++k)
+	{
+		const float ax = stands[k].first, ay = stands[k].second;
+		glVertex2f(ax, ay);
+		glVertex2f(ax + arrow, ay - arrow * 0.5f);
+		glVertex2f(ax + arrow, ay + arrow * 0.5f);
+	}
+	glEnd();
+	glLineWidth(NeckWidth(stands.size()));
+	glBegin(GL_LINES);
+		glVertex2f(hub_x, hub_y); glVertex2f(end_x, hub_y);
+	glEnd();
+	glLineWidth(1.0f);
+	if (stands.size() > 1)
+	{
+		glBegin(GL_TRIANGLE_FAN);
+		glVertex2f(hub_x, hub_y);
+		for (int i = 0; i <= 12; ++i)
+		{
+			float a = (float) i / 12.0f * 6.2831853f;
+			glVertex2f(hub_x + cosf(a) * 3.0f, hub_y + sinf(a) * 3.0f);
+		}
+		glEnd();
+	}
+}
+
 // Verdict marks, drawn rather than typed: the UI font has no check or cross.
 static void	DrawMark(GUI_GraphState * g, int verdict, float x, float cy, float s)
 {
@@ -495,35 +552,10 @@ void	WED_ModerationLayer::DrawCard(GUI_GraphState * g, Callout & c, bool pinned,
 	g->SetState(0, 0, 0, 0, 1, 0, 0);
 	if (leader)
 	{
-		// stand -> elbow -> the card's top-left corner, arrowhead at the stand
-		// The shared stands join the card's own leader at its elbow, so a group
-		// reads as one line fanning out to its stands.
-		glColor4fv(stroke);
-		glLineWidth(2.0f);
-		glBegin(GL_LINE_STRIP);
-			glVertex2f(c.ax + 6, c.ay);
-			glVertex2f(x0 - 16, c.ay);
-			glVertex2f(x0 - 16, edge);
-			glVertex2f(x0, edge);
-		glEnd();
-		glLineWidth(1.5f);
-		glBegin(GL_LINES);
-		for (size_t k = 0; k < c.others.size(); ++k)
-		{
-			glVertex2f(c.others[k].first + 6, c.others[k].second);
-			glVertex2f(x0 - 16, edge);
-		}
-		glEnd();
-		glBegin(GL_TRIANGLES);
-		for (size_t k = 0; k <= c.others.size(); ++k)
-		{
-			const float ax = k == 0 ? c.ax : c.others[k - 1].first, ay = k == 0 ? c.ay : c.others[k - 1].second;
-			glVertex2f(ax, ay);
-			glVertex2f(ax + 10, ay - 5);
-			glVertex2f(ax + 10, ay + 5);
-		}
-		glEnd();
-		glLineWidth(1.0f);
+		// every stand -> one hub -> the neck -> the card's top-left corner
+		vector<std::pair<float, float> > stands(1, std::make_pair(c.ax, c.ay));
+		stands.insert(stands.end(), c.others.begin(), c.others.end());
+		DrawLeaders(stands, x0 - NeckLen(stands.size(), 16.0f), edge, x0, stroke, 2.0f, 10.0f);
 	}
 
 	Fill(x0, bottom, x1, edge, kFill);
@@ -776,23 +808,10 @@ void	WED_ModerationLayer::DrawChips(GUI_GraphState * g, vector<Callout> & cs)
 
 		// leader from the stand to the chip
 		g->SetState(0, 0, 0, 0, 1, 0, 0);
-		float lead[4] = { stroke[0], stroke[1], stroke[2], 0.8f };
-		glColor4fv(lead);
-		glLineWidth(1.5f);
-		for (size_t k = 0; k <= c.others.size(); ++k)
-		{
-			const float ax = k == 0 ? c.ax : c.others[k - 1].first, ay = k == 0 ? c.ay : c.others[k - 1].second;
-			glBegin(GL_LINE_STRIP);
-				glVertex2f(ax + 6, ay);
-				glVertex2f(cx0 - 14, mid);
-				glVertex2f(cx0, mid);
-			glEnd();
-			glBegin(GL_TRIANGLES);
-				glVertex2f(ax, ay);
-				glVertex2f(ax + 8, ay - 4);
-				glVertex2f(ax + 8, ay + 4);
-			glEnd();
-		}
+		float lead[4] = { stroke[0], stroke[1], stroke[2], 0.85f };
+		vector<std::pair<float, float> > stands(1, std::make_pair(c.ax, c.ay));
+		stands.insert(stands.end(), c.others.begin(), c.others.end());
+		DrawLeaders(stands, cx0 - NeckLen(stands.size(), 14.0f), mid, cx0, lead, 1.5f, 8.0f);
 
 		Fill(cx0, bot, cx1, top, kFill);
 		glColor4fv(stroke);
