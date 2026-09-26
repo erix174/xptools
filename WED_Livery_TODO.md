@@ -1,9 +1,9 @@
 # Livery picker — open items
 
-The one live list for `feature/ramp-livery-picker`. Supersedes the open-item
-sections of `WED_LiveryRoadmap.md` and `WED_ProjectNotes.md`, which are stale and
-are to be archived out of the tree before the upstream PR. Local planning only:
-this file does not go upstream either.
+The one live list for `feature/ramp-livery-picker`. The Roadmap, both audits and
+ProjectNotes it replaced were archived on 2026-09-25 to
+`WED/livery_history/2026-09-25_superseded_docs/`, outside the tree. Local
+planning only: this file does not go upstream either.
 
 Last updated 2026-09-25.
 
@@ -32,8 +32,7 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
   validator country fix, AptIO unknown-row policy + discarded-row reporting,
   DEV logging hooks, parking PNGs, GUI text field word select / wider edit).
 - Docs: spec draft 8 (move §6.7–6.8 before §7, R26–R28 into §1 with vectors,
-  schema 4 grammar); rewrite the Brief as the one overview; archive Roadmap,
-  both audits, ProjectNotes.
+  schema 4 grammar); rewrite the Brief as the one overview.
 - `WED_LiveryPane.cpp` (~5,900 lines) - decomposition plan in the 09-25 audit.
 - Data: 7 suspicious operator records and 419 country-level hubs from the
   09-19 enrichment report; `Obsolete` marks for retired airframes (e.g.
