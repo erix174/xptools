@@ -70,9 +70,9 @@ icao_code` wins over the header ident; datum, else first-runway midpoint), so WE
 and the sim measure from the same points. Military/Gov records carry no hubs.
 Pseudo-operators: `XPGA` general aviation, `XPMI` military, `XPZZ_<TYPE>` a
 generic airliner of that type — never placed automatically. Today: 298 liveries,
-1,499 operator records, 32 `Obsolete` marks (12 superseded assets, which alone
-empty nothing, and 20 retired airframes, which withdraw 14 airline/class pairs
-on purpose).
+1,499 operator records, 44 `Obsolete` marks (12 superseded assets, which alone
+empty nothing; 20 retired airframes and 12 liveries of defunct operators, which
+withdraw 25 airline/class pairs on purpose).
 
 **One Gateway constraint to know about.** Gateway caps the `1301` airline string
 below 100 characters, about 24 codes. Airline codes are now
