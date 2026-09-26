@@ -31,6 +31,7 @@ class	WED_MapPane;
 class	WED_MapPreviewPane;
 class	WED_MapPreviewWindow;
 class	WED_TCEPane;
+class	GUI_TabPane;
 class	WED_Document;
 class	WED_PropertyPane;
 class	WED_PropertyTable;
