@@ -31,6 +31,7 @@
 #include "GUI_GraphState.h"
 #include "WED_Colors.h"
 #include "GUI_DrawUtils.h"
+#include "WED_HandleToolBase.h"
 #include "GUI_Fonts.h"
 #include "WED_Menus.h"
 #include "XESConstants.h"
@@ -64,7 +65,7 @@
 WED_Map::WED_Map(IResolver * in_resolver, GUI_Commander * cmdr) : GUI_Commander(cmdr), mResolver(in_resolver), mTool(NULL), mClickLayer(NULL),
 					mIsDownCount(0), mIsDownExtraCount(0),
 					mSelectTool(NULL), mRotateMode(false), mRotating(false), mRotStartAngle(0), mRotStartView(0),
-					mClickHeld(false), mArrowOn(false), mArrowX0(0), mArrowY0(0), mArrowX1(0), mArrowY1(0),
+					mClickHeld(false), mArrowOn(false), mBoxOn(false), mAltAtDown(false), mArrowX0(0), mArrowY0(0), mArrowX1(0), mArrowY1(0),
 					mHasRef(false), mRefRotation(0)
 {
 		int k_reg[4] = { 0, 0, 4, 2 };
@@ -144,7 +145,7 @@ void		WED_Map::SetRotateMode(bool on)
 	if (on && mSelectTool && mTool != mSelectTool) on = false;		// the select tool only
 	mRotateMode = on;
 	mRotating = false;
-	mClickHeld = mArrowOn = false;
+	mClickHeld = mArrowOn = mBoxOn = false;
 	mHasRef = false;
 	if (!on) SetViewRotation(0.0);			// north up; turning on starts from where it is
 	Refresh();
@@ -268,6 +269,16 @@ void		WED_Map::Draw(GUI_GraphState * state)
 		glMatrixMode(GL_MODELVIEW);
 		glPopMatrix();
 	}
+	if (mBoxOn)
+	{
+		state->SetState(0,0,0,0,1,0,0);
+		glColor4fv(WED_Color_RGBA(wed_Marquee));
+		glLineWidth(1.0);
+		glBegin(GL_LINE_LOOP);
+			glVertex2i(mArrowX0, mArrowY0); glVertex2i(mArrowX1, mArrowY0);
+			glVertex2i(mArrowX1, mArrowY1); glVertex2i(mArrowX0, mArrowY1);
+		glEnd();
+	}
 	if (mArrowOn)
 	{
 		// the measuring arrow, drawn as a placed object's heading handle
@@ -291,7 +302,7 @@ void		WED_Map::Draw(GUI_GraphState * state)
 	{
 		// what is going on, and how to get out, in the screen's own frame
 		char rbuf[160];
-		snprintf(rbuf, sizeof(rbuf), "Rotate view %.0f deg - drag along a row to level it, then Shift+right-drag turns in 90s from it; other tools turn it back north up", view_rot);
+		snprintf(rbuf, sizeof(rbuf), "Rotate view %.0f deg - drag along a row to level it; then drag to select, Alt+drag for a new line, Shift+right-drag turns in 90s; other tools turn it back north up", view_rot);
 		const float amber[4] = { 1.0f, 0.75f, 0.3f, 1.0f };
 		GUI_FontDraw(state, font_UI_Basic, amber, b[0] + 5, b[3] - 4.0 * GUI_GetLineHeight(font_UI_Basic), rbuf);
 	}
@@ -566,7 +577,8 @@ int			WED_Map::MouseDown(int x, int y, int button)
 	{
 		// held until it is known to be a click or a measuring drag
 		mClickHeld = true;
-		mArrowOn = false;
+		mArrowOn = mBoxOn = false;
+		mAltAtDown = (GetModifiersNow() & gui_OptionAltFlag) != 0;
 		GUI_Pane::GetMouseLocNow(&mArrowX0, &mArrowY0);		// screen coords
 		mArrowX1 = mArrowX0; mArrowY1 = mArrowY0;
 		Refresh();
@@ -603,7 +615,12 @@ void		WED_Map::MouseDrag(int x, int y, int button)
 	if (mClickHeld && button == 0)
 	{
 		GUI_Pane::GetMouseLocNow(&mArrowX1, &mArrowY1);
-		if (!mArrowOn && (abs(mArrowX1 - mArrowX0) > 8 || abs(mArrowY1 - mArrowY0) > 8)) mArrowOn = true;
+		if (!mArrowOn && !mBoxOn && (abs(mArrowX1 - mArrowX0) > 8 || abs(mArrowY1 - mArrowY0) > 8))
+		{
+			// the first drag measures; after that, dragging selects, and Alt measures again
+			if (!mHasRef || mAltAtDown)	mArrowOn = true;
+			else						mBoxOn = true;
+		}
 		Refresh();
 		return;
 	}
@@ -633,7 +650,19 @@ void		WED_Map::MouseUp  (int x, int y, int button)
 	{
 		mClickHeld = false;
 		--mIsDownCount;
-		if (mArrowOn)
+		if (mBoxOn)
+		{
+			// The box is level with the screen: its corners go to the map through
+			// the rotation, and the select tool picks what lies inside that quad.
+			mBoxOn = false;
+			const Point2 scr[4] = { Point2(mArrowX0, mArrowY0), Point2(mArrowX1, mArrowY0),
+									Point2(mArrowX1, mArrowY1), Point2(mArrowX0, mArrowY1) };
+			Point2 q[4];
+			for (int i = 0; i < 4; ++i) q[i] = PixelToLL(ScreenToMapPixel(scr[i]));
+			if (WED_HandleToolBase * ht = dynamic_cast<WED_HandleToolBase *>(mSelectTool))
+				ht->SelectInQuad(q, GetModifiersNow());
+		}
+		else if (mArrowOn)
 		{
 			// Level the arrow: turn by the least that puts it on 0/90/180/270.
 			mArrowOn = false;

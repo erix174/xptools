@@ -104,7 +104,7 @@ private:
 	struct Flag { unsigned int tex; int w, h; };
 
 	struct Hit {
-		enum Kind { hit_Card, hit_Pin, hit_Tray, hit_Search, hit_Chip, hit_Legend, hit_Focus, hit_Panel };
+		enum Kind { hit_Card, hit_Pin, hit_Tray, hit_Search, hit_Chip, hit_Legend, hit_Focus, hit_Panel, hit_Filter, hit_Sort };
 		int				kind;
 		float			x0, y0, x1, y1;
 		int				ramp_id;		// or the legend row
@@ -149,7 +149,14 @@ private:
 	std::vector<std::vector<int> >	mLegendIDs;		// legend: each row's ramp ids, for the click
 	std::string						mPendingURL;	// a "?" pressed: opened on the mouse-up
 	std::map<std::string, Flag>		mFlags;
-	std::set<int>					mReviewed;		// Moderation View: stands looked at this session
+	// Moderation View: what has been looked at this session. By SETUP, not by
+	// stand: stands with one signature are the same entry, so reviewing one
+	// reviews them all - whether each sits in the right place is the
+	// moderator's own look at the map.
+	std::set<std::string>			mReviewed;
+	int								mListFilter;	// overview: 0 all, 1 not listed here, 2 no data, 3 foreign
+	int								mListSort;		// overview: 0 by name, 1 most to verify first
+	float							mOverviewBottom;	// the overview's lower edge this frame, screen y; <0 = not shown
 	int								mListScroll;	// overview: first row shown
 	float							mListBox[4];	// overview: the list's rectangle, for the wheel
 };

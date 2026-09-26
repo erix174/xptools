@@ -383,7 +383,8 @@ static string	VerifyText(const WED_ModerationEntry & e, const float ** col)
 // ---- the layer ----
 
 WED_ModerationLayer::WED_ModerationLayer(GUI_Pane * host, WED_MapZoomerNew * zoomer, IResolver * resolver) :
-	WED_MapLayer(host, zoomer, resolver), mPinnedID(-1), mTrayID(-1), mOpenID(-1), mLegendRow(-1), mListScroll(0)
+	WED_MapLayer(host, zoomer, resolver), mPinnedID(-1), mTrayID(-1), mOpenID(-1), mLegendRow(-1), mListScroll(0),
+	mListFilter(0), mListSort(0), mOverviewBottom(-1)
 {
 	mListBox[0] = mListBox[1] = mListBox[2] = mListBox[3] = 0;
 }
@@ -891,6 +892,7 @@ void	WED_ModerationLayer::DrawChips(GUI_GraphState * g, vector<Callout> & cs)
 	}
 	std::sort(order.begin(), order.end(), [&key](size_t a, size_t b) { return key[a] > key[b]; });
 	float next_top = (float) b[3] - kTopClear;
+	if (left && mOverviewBottom > 0) next_top = Min(next_top, mOverviewBottom - 12);	// under the overview, which is top left
 	vector<float> tops(order.size());
 	for (size_t oi = 0; oi < order.size(); ++oi)
 	{
@@ -1120,7 +1122,7 @@ void	WED_ModerationLayer::Focus(int ramp_id)
 	Point2 ll;
 	r->GetLocation(gis_Geo, ll);
 	GetZoomer()->CenterOn(ll);			// keeps the zoom: see WED_MapZoomerNew::CenterOn
-	mReviewed.insert(ramp_id);
+	mReviewed.insert(WED_ModerationSignature(r));
 	GetHost()->Refresh();
 }
 
@@ -1143,8 +1145,9 @@ void	WED_ModerationLayer::DrawOverview(GUI_GraphState * g)
 
 	vector<WED_RampPosition *> ramps;
 	WED_ModerationRamps(apt, ramps);
-	struct Row { int id; string name; string sig; int n; bool reviewed; };
+	struct Row { int id; string name; string sig; int n; bool reviewed; int kind; };	// kind: 1 not listed, 2 no data, 3 foreign
 	vector<Row> issues;
+	int n_kind[4] = { 0, 0, 0, 0 };
 	set<string> sigs;
 	int n_auto = 0, n_none = 0;
 	string icao, country;
@@ -1159,12 +1162,17 @@ void	WED_ModerationLayer::DrawOverview(GUI_GraphState * g)
 		if (WED_ModerationHasIssue(e))
 		{
 			sIssueIDs.insert(ramps[i]->GetID());
-			Row r = { ramps[i]->GetID(), e.ramp_name, e.signature, e.n_to_check, mReviewed.count(ramps[i]->GetID()) > 0 };
-			issues.push_back(r);
+			const int kind = e.verify == WED_ModerationEntry::verify_NoData ? 2 : e.verify == WED_ModerationEntry::verify_Country ? 3 : 1;
+			++n_kind[0]; ++n_kind[kind];
+			Row r = { ramps[i]->GetID(), e.ramp_name, e.signature, e.n_to_check, mReviewed.count(e.signature) > 0, kind };
+			if (mListFilter == 0 || mListFilter == kind) issues.push_back(r);
 		}
 	}
+	if (mListSort == 1)
+		std::stable_sort(issues.begin(), issues.end(), [](const Row & a, const Row & b) { return a.n > b.n; });
 	int n_rev = 0;
-	for (size_t i = 0; i < ramps.size(); ++i) if (mReviewed.count(ramps[i]->GetID())) ++n_rev;
+	for (size_t i = 0; i < ramps.size(); ++i) if (mReviewed.count(WED_ModerationSignature(ramps[i]))) ++n_rev;
+	const int n_issue_total = n_kind[0];
 
 	double b[4];
 	GetZoomer()->GetPixelBounds(b[0], b[1], b[2], b[3]);
@@ -1177,8 +1185,9 @@ void	WED_ModerationLayer::DrawOverview(GUI_GraphState * g)
 	if (mListScroll > max_scroll) mListScroll = max_scroll;
 	if (mListScroll < 0) mListScroll = 0;
 	const float rh = lh + 4;
-	const float body_h = kPad + 2 * RowH() + 6 + (issues.empty() ? RowH() : lh + shown * rh + lh) + kPad;
+	const float body_h = kPad + 2 * RowH() + 6 + (n_issue_total == 0 ? RowH() : RowH() + lh + (issues.empty() ? rh : shown * rh) + lh) + kPad;
 	const float edge = top - HeadH(), bottom = edge - body_h;
+	mOverviewBottom = bottom;
 
 	// a solid "!" badge beside every stand to check - "worth noting" - so they
 	// stand out from the greyed rest
@@ -1232,16 +1241,44 @@ void	WED_ModerationLayer::DrawOverview(GUI_GraphState * g)
 	}
 	y -= RowH();
 	snprintf(buf, sizeof(buf), "%d to check    %d unique setups    %d auto-filled    %d \"None\"",
-		(int) issues.size(), (int) sigs.size(), n_auto, n_none);
-	Txt(g, issues.empty() ? kMuted : kAmber, x0 + kPad, y - asc, Elide(buf, w - kPad * 2).c_str());
+		n_issue_total, (int) sigs.size(), n_auto, n_none);
+	Txt(g, n_issue_total == 0 ? kMuted : kAmber, x0 + kPad, y - asc, Elide(buf, w - kPad * 2).c_str());
 	y -= RowH() + 6;
 
-	if (issues.empty())
+	if (n_issue_total == 0)
 	{
 		Txt(g, kGreen, x0 + kPad, y - asc, "Nothing to check at this airport.");
 		return;
 	}
-	Txt(g, kMuted, x0 + kPad, y - asc, "To check - click one to select it:");
+
+	// filter chips and the sort toggle
+	{
+		const char * names[4] = { "All", "Not listed", "No data", "Foreign" };
+		float fx = x0 + kPad;
+		for (int f = 0; f < 4; ++f)
+		{
+			if (f > 0 && n_kind[f] == 0) continue;
+			snprintf(buf, sizeof(buf), "%s %d", names[f], n_kind[f]);
+			const float tw = TextW(buf), bx0 = fx - 3, bx1 = fx + tw + 3, bt = y + 1, bb = y - lh - 1;
+			if (mListFilter == f)
+			{
+				const float on[4] = { 1.0f, 0.75f, 0.3f, 0.35f };
+				g->SetState(0, 0, 0, 0, 1, 0, 0);
+				Fill(bx0, bb, bx1, bt, on);
+			}
+			Txt(g, mListFilter == f ? kWhite : kMuted, fx, y - asc, buf);
+			Hit hfl = { Hit::hit_Filter, bx0, bb, bx1, bt, f, "" };
+			mHits.push_back(hfl);
+			fx = bx1 + 8;
+		}
+		const char * sort = mListSort == 0 ? "Sort: name" : "Sort: most first";
+		const float sx = x1 - kPad - TextW(sort);
+		Txt(g, kMuted, sx, y - asc, sort);
+		Hit hs = { Hit::hit_Sort, sx - 3, y - lh - 1, x1, y + 1, 0, "" };
+		mHits.push_back(hs);
+		y -= RowH();
+	}
+	Txt(g, kMuted, x0 + kPad, y - asc, issues.empty() ? "Nothing of this kind." : "Click one to select it:");
 	if (max_scroll > 0)
 	{
 		snprintf(buf, sizeof(buf), "%d-%d of %d, scroll for more", mListScroll + 1, mListScroll + shown, (int) issues.size());
@@ -1351,10 +1388,11 @@ void	WED_ModerationLayer::DrawOverlays(GUI_GraphState * g)
 	// fills. Off while drawing, on again after.
 	glDisable(GL_CULL_FACE);
 
+	mOverviewBottom = -1;
 	if (sModerationView)
 	{
 		// one stand shown on its own counts as looked at
-		if (cs.size() == 1) mReviewed.insert(cs[0].id);
+		if (cs.size() == 1) mReviewed.insert(cs[0].e.signature);
 		const std::set<int> before = sIssueIDs;
 		DrawOverview(g);
 		if (before != sIssueIDs) GetHost()->Refresh();		// the silhouettes used last frame's set
@@ -1429,6 +1467,20 @@ int		WED_ModerationLayer::HandleClickDown(int inX, int inY, int inButton, GUI_Ke
 			if (pass == 1 && h.kind == Hit::hit_Pin)
 			{
 				mPinnedID = mPinnedID == h.ramp_id ? -1 : h.ramp_id;
+				GetHost()->Refresh();
+				return 1;
+			}
+			if (pass == 1 && h.kind == Hit::hit_Filter)
+			{
+				mListFilter = h.ramp_id;
+				mListScroll = 0;
+				GetHost()->Refresh();
+				return 1;
+			}
+			if (pass == 1 && h.kind == Hit::hit_Sort)
+			{
+				mListSort = 1 - mListSort;
+				mListScroll = 0;
 				GetHost()->Refresh();
 				return 1;
 			}

@@ -118,6 +118,10 @@ private:
 	// measuring never clears the selection.
 	bool				mClickHeld;			// a left-down given to no layer, not yet to the tool
 	bool				mArrowOn;			// ...and it became a drag: the arrow is out
+	// Once there is a reference line, a plain left-drag is a marquee instead,
+	// drawn level with the screen; Alt+left-drag draws a new reference.
+	bool				mBoxOn;
+	bool				mAltAtDown;
 	int					mArrowX0, mArrowY0, mArrowX1, mArrowY1;	// screen coords
 	// The reference the last arrow set: the view rotation that put it on an
 	// axis. Shift+right-drag then detents at it and every 90 from it - and has

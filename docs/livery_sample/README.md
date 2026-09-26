@@ -1,12 +1,12 @@
 # Sample apt.dat — row 1313 to play with
 
 Two droppable scenery packages for the format in `WED_LiveryFormatSpec.md`
-(draft 8). 24 stands in a row, each demonstrating one thing, named so you can
+(draft 8). 25 stands in a row, each demonstrating one thing, named so you can
 tell them apart from the ground.
 
 ```
 ZZZ_livery_format_sample/           the real thing: 1313, plus 1312/1314 as unknown rows
-ZZZ_livery_format_sample_stripped/  same 24 stands, rows 1312-1314 removed
+ZZZ_livery_format_sample_stripped/  same 25 stands, rows 1312-1314 removed
 ```
 
 ## Install
@@ -93,6 +93,7 @@ what WED's readout lists under its headline.
 | `25-MIXED-STAND` | C 50 / E 50, `cca ual` | CCA at C; **empty 50%** | UAL's C types out of range; UAL has no current E type |
 | `26-CARGO-SPLIT` | D, `cargo fdx` | FDX `B752` or `B763` | FedEx's Hong Kong and Tokyo hubs put both in range. Its `DC10` (MD-10) is `Obsolete` |
 | `27-DOMESTIC-FAR` | C, `cca` | CCA A320, B738 | domestic control |
+| `28-DOUBLE-1313` | C, `cca`, two 1313 rows | CCA at C | R24: the first 1313 wins; the second is skipped, listed on import and in the validator ("unreadable 1313") |
 
 ### The one that matters most
 
@@ -165,5 +166,3 @@ write the same two rows.
 - **A new stand:** copy the last `1300`/`1301`/`1313` group and advance the
   longitude by `0.001116` (95 m).
 
-Still missing: a stand carrying **two `1313` rows**, to exercise R24's
-first-wins rule. `livery_sample_expect.py` reports it when one exists.

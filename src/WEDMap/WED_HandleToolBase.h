@@ -39,6 +39,11 @@ class	IGISEntity;
 
 class	WED_HandleToolBase : public WED_MapToolNew, GUI_Commander_Notifiable {
 public:
+	// Select what lies inside a convex quadrilateral in lat/lon - the marquee of
+	// a rotated view, drawn level with the screen. Same rules as the tool's own
+	// box: Shift extends, Ctrl toggles, otherwise it replaces the selection.
+			void				SelectInQuad(const Point2 quad_ll[4], GUI_KeyFlags mods);
+
 
 						 WED_HandleToolBase(
 										const char *			tool_name,

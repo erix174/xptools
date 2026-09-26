@@ -129,7 +129,9 @@ for line in open(APT, encoding="utf-8", errors="replace"):
             cur["weights"] = [int(x) for x in w]
         else:
             cur["notes"].append("1313 malformed, dropped (R5)")
-    elif t[0].isdigit() and t[0] not in ("1300", "1301", "1302", "1313") and int(t[0]) >= 1310:
+    # the stand-row block 1310-1399: anything there but 1313 is a row this reader
+    # does not know (1400 truck parking and the rest are real, other rows)
+    elif t[0].isdigit() and 1310 <= int(t[0]) <= 1399 and t[0] != "1313":
         cur["notes"].append(f"row {t[0]} unknown, skipped (R15)")
 
 print(f"# {APT}\n# index {INDEX}, {len(HUBS)} hubs placed, airport country {country or '?'}\n")

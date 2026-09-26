@@ -54,9 +54,11 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
     - Shift+X is deliberately not a menu accelerator: Windows accelerators are global and would eat capital X in every text field.
     - Greyed outside moderation.
   - **Op type None** stands draw a grey silhouette. Chips show "A" (auto-filled) and "None".
-- **Review status, open (Eric to confirm first):**
-  - "Reviewed" is session-only today.
-  - To persist it we need to know whether a Gateway upload carries earth.wed.xml. If it does not, the file has no carrier for it, and the Gateway would need its own field.
+- **Review status: session only, by design (Eric, 2026-09-26).** Reviewing a stand reviews every stand with the same setup; whether each is in the right place is the moderator's own look.
+- **Overview list:** filter chips (All / Not listed / No data / Foreign) and sort (name / most to verify first).
+- **This afternoon (Eric, 2026-09-26):**
+  - Export a moderation report: the overview as text, to paste into a Gateway review.
+  - Compare two versions of an airport. This is a big change.
 - **Rotate view, done 2026-09-26 (approach B: turn the picture, not the map).**
   - **What it does:**
     - The Rotate button enters rotate mode, still north up.
@@ -72,12 +74,14 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
   - The angle lives in the window only, so a document always opens north up.
   - Moderation cards, chips, overview and badges stay level with the screen.
   - **Still to do:**
-    - Marquee under rotation. It is withheld today with the other drags; the Marquee tool itself turns the view off.
-    - WED_MapBkgnd's axis-aligned rectangle.
+    - Nothing open. The marquee under rotation is built (below). The background rectangle is fine per Eric.
+  - **Marquee under rotation (2026-09-26):**
+    - The first drag in rotate mode draws the reference line; after that a plain left-drag is a marquee, level with the screen. Alt+drag draws a new reference.
+    - Selects what lies inside the quad the box covers on the map (`WED_HandleToolBase::SelectInQuad`). Shift extends, Ctrl toggles.
 
 - **Map view, open:**
   - Mac and Linux search windows are untested: they use `open -na` and `--app`.
-  - The legend tier was only seen with a lowered threshold: the sample has 24 stands.
+  - Big-airport run 2026-09-26: LFPG from Global Airports, 520 ramps, plus test stands T1-T7 (package `ZZY_moderation_bigtest_LFPG` in the Steam install - delete when done). Checked: similarity colours, chips and grouping, the overview (260 to check, grouped review), rotate + marquee, and the validator (discarded 1313 / unknown row; GA, military and airline "parks nothing"). The legend tier (>40 setups on screen) still wants a zoomed-out run.
 
 ## Open, no decision needed
 
@@ -86,7 +90,7 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
   - 419 country-level hubs ("approx") - barely matter for range.
   - AHY B752 is stored, not confirmed retired.
   - `CYH` liveries (China Eastern Yunnan, B6147 and Peacock B6143) were wrongly marked defunct; restored 2026-09-26. Open: they fly as CES today, so re-code them to CES (or `ces_1`) so a stand listing `ces` can draw them? Eric to decide.
-- **Sample:** a stand carrying two `1313` rows (R24).
+- **Sample:** stand `28-DOUBLE-1313` added for R24 (2026-09-26).
 
 ## Upstream PRs (ready, not sent)
 
