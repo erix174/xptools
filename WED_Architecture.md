@@ -53,7 +53,7 @@ Inside `src/` (only WED-relevant entries shown here; see `src/README.txt` for th
 | `WEDTCE/`          | Texture coordinate editor (UV editor for orthophotos)             |
 | `WEDLibrary/`      | Library / asset browser pane                                       |
 | `WEDImportExport/` | apt.dat, DSF, gateway, scenery-pack import/export                  |
-| `WEDLivery/`       | Static-aircraft liveries: the Static Liveries tab, auto-fill, moderation (2.8) |
+| `WEDLivery/`       | Static-aircraft liveries (2.8): the Static Liveries tab, auto-fill, the moderation model (its map overlays live in `WEDMap/`) |
 | `WEDFileCache/`    | Disk cache for downloaded assets                                   |
 | `WEDNetwork/`      | Gateway client / live-collab server                                |
 | `WEDResources/`    | Icons, fonts, splash, line/pavement art                            |
@@ -264,7 +264,7 @@ Two parallel hierarchies: **layers** render, **tools** edit. Both derive from `W
 |----------------------|---------------------------------------------------------------------|
 | `WED_Map`            | The map pane. Owns layers + active tool, dispatches draw and input. |
 | `WED_MapPane`        | Wraps `WED_Map` with toolbar, tool buttons, preview pane.            |
-| `WED_MapZoomerNew`   | Zoom/pan state and screen↔world coordinate transforms.               |
+| `WED_MapZoomerNew`   | Zoom/pan state and screen↔world coordinate transforms; moderation's view rotation (§12c). |
 | `WED_MapBkgnd`       | Background layer (orthophoto / elevation tiles).                     |
 
 ### 7.2 Layers (rendering)
@@ -280,6 +280,7 @@ and calls `DrawEntityVisualization` / `DrawEntityStructure` per layer per entity
 | `WED_ATCLayer`       | ATC taxi routes / flow visualization.   |
 | `WED_BoundaryLayer`  | Airport boundaries.                     |
 | `WED_DebugLayer`     | Bounding boxes, etc.                    |
+| `WED_ModerationLayer`| Moderator overlays, screen space (§12c). |
 
 ### 7.3 Tools (input)
 
@@ -424,21 +425,178 @@ path except through `WED_RampPosition` (`class_weights`, `auto_filled`) and
 | `WED_AirportDatabase` | Per airport: country and the airlines that serve it (`WED_AirportDatabase.txt` beside WED). Feeds the Recommended tier. |
 | `WED_LiveryRules` | **The one allow rule** (`WED_LiveryAllowedAt`: op class, range R26, HOME R27), equipment by asset folder, the legacy letter→weights table, and the shared index (`WED_GetLiveryData`). The tab, auto-fill and the validator all call it. |
 | `WED_LiveryAutoFill` | Airport > Auto-Populate and the tab's Populate button. Extends, never overwrites; one undo step. |
-| `WED_LiveryModeration` | Ramp-to-ramp stepping (Ctrl+Shift+. / ,), the "operators to check" prompt, and `WED_ModerationDescribe` - one stand's entry and verdicts, which the map callouts draw. |
-| `WEDMap/WED_ModerationLayer` | The map callouts for selected ramp starts: leader + card, operator tray, similarity colour, pin-and-compare. |
+| `WED_LiveryModeration` | The moderation model: one stand's entry and verdicts, the parks-nothing check the validator also uses, stepping, the report. See §12c. |
+| `WEDMap/WED_ModerationLayer`, `…Toolbar` | The moderator's map overlays and tool buttons. See §12c. |
 | `WED_LiveryThumbnailCache` | Renders a livery `.obj` to a card image on worker threads; LRU. |
 | `WED_LiveryPane*` | The Static Liveries tab, split by concern: `WED_LiveryPane.cpp` state, selection, cards and the coverage readout; `…Layout` rectangles and hit tests; `…Input` mouse and the edits it makes; `…Draw` drawing and animation; `…Rows` the airline list tiers. `WED_LiveryPaneInternal.h` is private to them. |
 | `WED_Flag*`, `WED_IocCountryCodes` | The country flag banner, and apt.dat country → IOC code. |
 | `WED_MandatoryHeader` | The two-line stamp every hand-maintained data file in this family must start with. |
 
-**Validation** lives in `WED_Validate.cpp` (`ValidateRampLiveries`: a stand whose
-listed operators can park nothing is a waivable warning, never an export block).
+**Validation** lives in `WED_Validate.cpp`. `ValidateRampLiveries` is a thin
+wrapper: the check itself is `WED_LiveryParksNothing` (in `WED_LiveryModeration`),
+which raises `warn_ramp_livery_parks_nothing` when nothing in the index can park at
+the stand - its listed operators for an airline/cargo stand, the whole library for
+a GA stand or an unlisted military one. A warning, never an export block. Rows the
+import could not read come from `WED_Document::DescribeDiscardedRowsFor`
+(`warn_apt_dat_rows_not_imported`).
 
 **Data tools** are in `tools/scripts/airline_research/`: `gen_livery_index.py`
-(merges new assets into the hand-maintained index), `livery_obsolete_radius.py`
-(what an `Obsolete` mark would empty), `livery_sample_expect.py` (expected
-results of `docs/livery_sample/`), `measure_empty_stands.py` (spec §4.5 against
-Global Airports), `check_wed_export.py`.
+(merges new assets into the hand-maintained index), `merge_airport_database.py`
+(builds `WED_AirportDatabase.txt`), `livery_obsolete_radius.py` (what an
+`Obsolete` mark would empty), `livery_sample_expect.py` (expected results of
+`docs/livery_sample/`), `measure_empty_stands.py` (spec §4.5 against Global
+Airports), `check_wed_export.py`, `check_1313_roundtrip.py`.
+
+---
+
+## 12c. Moderation Mode (2.8)
+
+Tools for a Gateway moderator checking a submitted airport's stands without
+clicking through each one. **One switch:** `WED_ModerationEnabled()` returns
+`gModeratorMode`, the Preferences checkbox, persisted as `ModeratorMode` in
+`WED_Document::Read/WriteGlobalPrefs`. Every caller asks it at draw, click or
+command time - never caches it - so ticking or clearing the box applies at once
+in open documents, no restart. (Older moderator code in `WED_PropertyTable` and
+`WED_GatewayImport` reads `gModeratorMode` directly; same value.)
+
+| File | Role |
+|------|------|
+| `WEDLivery/WED_LiveryModeration` | The model. No drawing. |
+| `WEDMap/WED_ModerationLayer` | Everything drawn over the map: tint, callouts, Moderation View overview. |
+| `WEDMap/WED_ModerationToolbar` | Two toggles in the foot of the map tool column; art `WEDResources/moderation_tools.png`. |
+| `WEDMap/WED_Map`, `WED_MapZoomerNew` | View rotation (moderation only). |
+| `WEDProperties/WED_PropertyTable` | Moderator hierarchy shortcuts. |
+
+### The model — `WED_LiveryModeration.{h,cpp}`
+
+| Function | Does |
+|----------|------|
+| `WED_ModerationDescribe(ramp, apt, entry)` | Everything a moderator reads off one stand, as a `WED_ModerationEntry`: op type/label, equipment, weights or size letter, the auto-fill watermark, and a `WED_ModerationCode` verdict per listed operator. How it verifies depends on op type and origin: airline/cargo auto-filled → `v_Assumed`; by hand → each code against `WED_AirportDatabase`'s served list (`v_Ok` / `v_Check` + search URL; listing *fewer* is fine); no database row → `verify_NoData`; military → operator country vs airport country (`v_Foreign`); GA/None → nothing. Also fills `parks_nothing` from `WED_LiveryParksNothing`. |
+| `WED_ModerationSignature(ramp)` | "The same setup": op type, sorted unique airline set, weights text (or size letter), equipment set. Two stands with equal signatures park the same thing; colour, grouping and "reviewed" all key on it. |
+| `WED_ModerationColour(sig, rgba)` | Signature → colour. Session-stable slots, golden-ratio hue steps from a random seed, shared by every layer. |
+| `WED_ModerationHasIssue(entry)` | Needs a look: an operator to check (`v_Check`/`v_Foreign`), `verify_NoData`, or `parks_nothing`. Drives stepping, the Moderation View highlight and the report. |
+| `WED_LiveryParksNothing(ramp, apt, msg)` | **The** shared check behind the validator's `warn_ramp_livery_parks_nothing`, the overview's "Parks nothing" filter and the report. Same data and rule as the Liveries tab (`WED_LiveryAllowedAt`, `WED_LiveryEquipment`). One pipeline, so the three never disagree; it reads only the stand, the airport and shipped data, so any WED of the same version reproduces it. |
+| `WED_ModerationRamps` / `WED_ModerationStep(res, dir, issues_only)` | All ramp starts of the current airport in hierarchy order; select the next/previous one (wrapping), optionally only those with an issue. |
+| `WED_ModerationNotes` / `WED_ModerationPrompt` | The older per-stand notes list and the "operators to check - search the web?" dialog (capped at five searches), shown on Ctrl+Shift+. / , in moderator mode. |
+| `WED_ModerationReport(apt, reviewed)` | Plain-text summary for the clipboard: counts, WED + index version, validator warnings verbatim, then stands to check grouped by setup. |
+| `WED_ModerationSearchURL` / `WED_ModerationOpenSearch` | "Does <operator> fly to <ICAO> <city>" as a Google URL; opened in a small chromeless Edge/Chrome `--app` window beside the cursor (Windows: placed afterwards with `SetWindowPos` from a worker thread), else the default browser. Call only after the click is over. |
+
+**Commands** (`WED_Menus`, handled in `WED_DocumentWindow::HandleCommand`):
+`wed_NextRampStart`/`wed_PrevRampStart` (Ctrl+Shift+. / ,, any mode) and
+`wed_NextIssueStand`/`wed_PrevIssueStand` (Shift+X via `WED_MapPane::Map_KeyPress`
+so it does not steal capital X from text fields; Ctrl+Shift+X; moderator only).
+Both centre the stand with `WED_MapPane::CenterOnPoint` (zoom kept) and show the
+Static Liveries tab.
+
+### The map overlays — `WED_ModerationLayer.{h,cpp}`
+
+A `WED_MapLayer` that draws nothing per entity (`GetCaps`: no vis/structure, wants
+clicks); all its work is in `DrawSelected` → `DrawOverlays`, which undoes the view
+rotation so every overlay is in **screen space**. Anchors are placed with
+`MapPixelToScreen(LLToPixel(ll))`; incoming click/wheel points arrive in map pixels
+and are turned back the same way.
+
+- **Tint.** `WED_ModerationTintFor(ramp)` is called by `WED_StructureLayer` and
+  `WED_ATCLayer` for the ramp silhouette: the signature's colour, grey for op
+  type None, and in Moderation View grey/dimmed for stands without an issue.
+- **Callouts** for the selected ramp starts (`Collect` → `Group`: on-screen stands
+  with one signature share one callout; the tier counts those, not stands):
+  **cards** for ≤ 5 (`kMaxCards`), **chips** in a column on whichever side covers
+  fewer stands for ≤ 40 (`kMaxChips`; hovering opens the card), else a **legend**
+  of distinct setups (≤ 24 rows; hover rings the stands, click selects them).
+  Leaders from each member stand meet at one **hub**, and a single **neck**
+  (`NeckLen`/`NeckWidth`, heavier for more stands) runs to the card or chip.
+  A card's tray lists operators with flags and verdicts; "?" opens a search.
+- **Pin and compare.** The pin (or Shift+click on a chip) makes a stand the base;
+  `Diff` gives the others +/-/~ lines or counts. The base stays shown while other
+  stands are selected.
+- **Moderation View** (`WED_ModerationViewOn`, the toolbar's first button):
+  `DrawOverview` puts an airport panel top-left - counts, reviewed progress,
+  filter chips (All / Not listed / No data / Foreign / Parks nothing, as a bit
+  mask), sort (name / most to verify), a scrolling list of stands to check (click
+  = `Focus`: select and `CenterOn`), and **Copy Summary to Clipboard**
+  (`WED_ModerationReport`). "Reviewed" is **by setup**, this session only: a setup
+  counts once one of its stands has been shown alone or focused. It also refreshes
+  `sIssueIDs`, which the tint reads next frame, and badges each stand to check.
+- **Hit testing.** Each frame records `Hit` rectangles; hover state is read from
+  last frame's hits. `HandleClickDown` tests in three passes (search, then
+  controls, then any card/chip/panel body so the tool beneath does not drop the
+  selection). A search is deferred to `HandleClickUp`: a browser that opens on
+  mouse-down steals the up.
+
+### The toolbar — `WED_ModerationToolbar.{h,cpp}`
+
+A plain `GUI_Pane` (independent toggles, not a `GUI_ToolBar`), placed by
+`WED_MapPane` at the bottom of the tool column. Draws, clicks and tips only while
+`WED_ModerationEnabled()`. Tool 0 toggles Moderation View; tool 1 calls
+`WED_MapPane::ToggleViewRotate`. `moderation_tools.png` is laid out like
+`map_tools.png`: normal half, then selected half, one cell per tool.
+
+### View rotation — `WED_MapZoomerNew` + `WED_Map`
+
+- **Zoomer.** `mViewRotation` (degrees CCW about the centre of the pixel bounds).
+  Everything else in the zoomer stays in unrotated **map pixels**, so tools, handles
+  and hit tests are untouched. `ScreenToMapPixel` / `MapPixelToScreen` convert;
+  `GetMapVisibleBounds` samples the rotated screen edge; `CenterOn(ll)` recentres
+  at the exact zoom. `SetViewRotation` bumps the cache key.
+- **Map.** `WED_Map::Draw` wraps the layer passes in one `glRotated`; mouse points
+  go through `ToMap` on arrival (`GetMouseLocNow` too). Rotate mode (`SetRotateMode`):
+  a left-drag draws a reference arrow and turns the view to level it; once there is
+  a reference, a left-drag is a screen-level marquee whose corners go through
+  `ScreenToMapPixel` to `WED_HandleToolBase::SelectInQuad` (Alt+drag draws a new
+  reference); Shift+right-drag turns freely, with 5° detents at the reference and
+  every 90° from it. A plain click is held back and replayed to the select tool.
+- **Guard rails.** Only with the select tool (`SetSelectTool`, the Vertex tool);
+  `SetTool` to anything else, or `Draw` finding moderator mode cleared, puts it
+  north up. While rotated, drags are not passed to the tool and its mouse-up is
+  replayed at the down point, so nothing is moved in a rotated frame. Per window;
+  documents open north up.
+- **Layers that must stay level** undo the turn themselves: `WED_ModerationLayer`
+  and `WED_SlippyMap`'s status line and attribution. The slippy tiles rotate with
+  the map, and their coverage follows `GetMapVisibleBounds`.
+
+### Hierarchy shortcuts and other glue
+
+- `WED_PropertyTable` (moderator mode, hierarchy view only): single click on an
+  airport → `ModeratorShowAirport` (open and unhide all its folders, ESRI imagery,
+  zoom, Selection tab); double click on Taxiways / Draped Polygons / Ground Vehicles
+  → `ModeratorFocusFolder` (hide sibling folders, imagery off, pick the tab). Both
+  change Hidden flags inside an undoable command. The single click on an
+  already-selected name goes through the new `GUI_TextTable` content hook
+  `ClickSelectedCell`, which takes the click before the cell opens for renaming.
+- `WED_GatewayImport`: in moderator mode each imported airport is collapsed too,
+  so a multi-airport import lists one line per airport.
+- `WED_DocumentWindow`: `wed_MapSelection` / `Pavement` / `ATC` / `3D` now switch the
+  property tab strip as well as the map filter, so the shortcuts above land on the
+  matching tab.
+
+### How to: add a moderation check that shows in the validator, the overview and the report
+
+1. If Validate should list it, write it as `bool WED_LiveryXxx(ramp, apt, string& msg)`
+   beside `WED_LiveryParksNothing`, reading only the stand, the airport and shipped
+   data. Add a `warn_*` code in `WED_Validate.h` and call it from
+   `ValidateRampLiveries`.
+2. Add the result to `WED_ModerationEntry` and fill it in `WED_ModerationDescribe`.
+3. Include it in `WED_ModerationHasIssue`. Shift+X stepping, the Moderation View
+   highlight, badges and the report's grouping follow from that.
+4. Overview: give it a bit in `DrawOverview`'s mask, a name in the filter chips
+   (grow `n_kind`), and text on its row.
+5. Report: add the message to "Validator warnings" and a clause to the per-setup
+   line in `WED_ModerationReport`. Use the same message string everywhere.
+
+### How to: add something only moderators see
+
+- Gate it on `WED_ModerationEnabled()` where it is used (`Draw`, `MouseDown`,
+  `CanHandleCommand`), not when it is built, so the preference applies live.
+- Map drawing goes in `WED_ModerationLayer::DrawOverlays` (screen space, already
+  gated). Record a `Hit` for anything clickable.
+- A command: an enum in `WED_Menus.h`, a row in `WED_Menus.cpp`, a case in
+  `WED_DocumentWindow::HandleCommand`, and the gate in `CanHandleCommand`. Don't
+  bind a bare letter as a menu accelerator: it takes that key from every text field
+  (see Shift+X in `Map_KeyPress`).
+- A toolbar button: raise `kTools`, add a tip, widen both halves of
+  `moderation_tools.png`, and handle it in `MouseDown`/`IsOn`. Note `CellSize`
+  divides the art by `Columns()`, so a third tool also needs that changed.
 
 ---
 
@@ -548,6 +706,8 @@ Once those are familiar, the rest of the tree reads itself.
 
 - **Coordinate systems:** WED uses lat/lon in degrees for storage. The map converts to
   screen pixels via `WED_MapZoomerNew`. Beware of code that assumes meters.
+  When the view is rotated (§12c), zoomer "pixels" are *map* pixels, not screen
+  pixels: anything that must sit level on screen converts with `MapPixelToScreen`.
 - **Bounds caching:** `WED_Entity` caches its bounding box. If you mutate geometry
   outside the property system, you may need to call the appropriate dirty-flag method.
 - **Pointers vs. paths:** Don't cache `WED_Thing*` across operations that might delete
