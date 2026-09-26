@@ -119,6 +119,12 @@ private:
 	bool				mClickHeld;			// a left-down given to no layer, not yet to the tool
 	bool				mArrowOn;			// ...and it became a drag: the arrow is out
 	int					mArrowX0, mArrowY0, mArrowX1, mArrowY1;	// screen coords
+	// The reference the last arrow set: the view rotation that put it on an
+	// axis. Shift+right-drag then detents at it and every 90 from it - and has
+	// no detent at all until an arrow has been drawn: 90 degrees from nothing
+	// means nothing. A new arrow replaces it; leaving rotate mode clears it.
+	bool				mHasRef;
+	double				mRefRotation;
 
 			void		ToMap(int& x, int& y) const;
 			double		ScreenAngle(int x, int y) const;

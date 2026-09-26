@@ -64,7 +64,8 @@
 WED_Map::WED_Map(IResolver * in_resolver, GUI_Commander * cmdr) : GUI_Commander(cmdr), mResolver(in_resolver), mTool(NULL), mClickLayer(NULL),
 					mIsDownCount(0), mIsDownExtraCount(0),
 					mSelectTool(NULL), mRotateMode(false), mRotating(false), mRotStartAngle(0), mRotStartView(0),
-					mClickHeld(false), mArrowOn(false), mArrowX0(0), mArrowY0(0), mArrowX1(0), mArrowY1(0)
+					mClickHeld(false), mArrowOn(false), mArrowX0(0), mArrowY0(0), mArrowX1(0), mArrowY1(0),
+					mHasRef(false), mRefRotation(0)
 {
 		int k_reg[4] = { 0, 0, 4, 2 };
 		int k_act[4] = { 0, 0, 4, 2 };
@@ -144,6 +145,7 @@ void		WED_Map::SetRotateMode(bool on)
 	mRotateMode = on;
 	mRotating = false;
 	mClickHeld = mArrowOn = false;
+	mHasRef = false;
 	if (!on) SetViewRotation(0.0);			// north up; turning on starts from where it is
 	Refresh();
 }
@@ -289,7 +291,7 @@ void		WED_Map::Draw(GUI_GraphState * state)
 	{
 		// what is going on, and how to get out, in the screen's own frame
 		char rbuf[160];
-		snprintf(rbuf, sizeof(rbuf), "Rotate view %.0f deg - drag along a row to level it, Shift+right-drag to turn; other tools turn it back north up", view_rot);
+		snprintf(rbuf, sizeof(rbuf), "Rotate view %.0f deg - drag along a row to level it, then Shift+right-drag turns in 90s from it; other tools turn it back north up", view_rot);
 		const float amber[4] = { 1.0f, 0.75f, 0.3f, 1.0f };
 		GUI_FontDraw(state, font_UI_Basic, amber, b[0] + 5, b[3] - 4.0 * GUI_GetLineHeight(font_UI_Basic), rbuf);
 	}
@@ -587,8 +589,13 @@ void		WED_Map::MouseDrag(int x, int y, int button)
 	if (mRotating && button == 1)
 	{
 		double r = mRotStartView + (ScreenAngle(x, y) - mRotStartAngle);
-		const double detent = floor(r / 45.0 + 0.5) * 45.0;		// a detent every 45 degrees
-		if (fabs(r - detent) < 4.0) r = detent;
+		if (mHasRef)
+		{
+			// detents at the reference line's axis and every 90 from it
+			const double k = floor((r - mRefRotation) / 90.0 + 0.5);
+			const double detent = mRefRotation + k * 90.0;
+			if (fabs(r - detent) < 5.2) r = detent;
+		}
 		SetViewRotation(r);
 		Refresh();
 		return;
@@ -633,6 +640,8 @@ void		WED_Map::MouseUp  (int x, int y, int button)
 			const double a = atan2((double) (mArrowY1 - mArrowY0), (double) (mArrowX1 - mArrowX0)) * RAD_TO_DEG;
 			const double snap = floor(a / 90.0 + 0.5) * 90.0;
 			SetViewRotation(GetViewRotation() + (snap - a));
+			mHasRef = true;
+			mRefRotation = GetViewRotation();
 		}
 		else if (mTool)
 		{

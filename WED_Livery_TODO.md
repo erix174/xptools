@@ -62,7 +62,7 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
     - The Rotate button enters rotate mode, still north up.
     - A left-drag draws a measuring arrow, in the same style as a placed object's heading handle. On release the view turns by the least that puts the arrow on 0, 90, 180 or 270 degrees.
     - A left-click without a drag still selects: the click is held back from the tool until it is known to be a click.
-    - Shift+right-drag turns the view freely, with a detent every 45 degrees.
+    - Shift+right-drag turns the view. With no reference line it turns freely, with no detent. Once an arrow has been drawn, it has a detent at that line's level and at every 90 degrees from it, within 5.2 degrees. A new arrow replaces the reference; leaving rotate mode clears it.
     - Clicking the button again puts the view north up.
     - A status line and a north arrow show while it is turned.
   - **Guard rails:**
