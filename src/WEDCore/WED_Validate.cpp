@@ -648,7 +648,7 @@ static void ValidateDSFRecursive(WED_Thing * who, WED_LibraryMgr* lib_mgr, valid
 
 			if (gExportTarget == wet_gateway)
 			{
-				if (t == 2) // don't warn about set_AGL if the .agp has scrapers
+				if (t == 2) // an .agp with scrapers is exempt from the +/-100m limit below
 				{
 					const agp_t* agp;
 					string vpath;
@@ -662,15 +662,13 @@ static void ValidateDSFRecursive(WED_Thing * who, WED_LibraryMgr* lib_mgr, valid
 								break;
 							}
 				}
+				// set_AGL is fine: the object keeps its height over the mesh when the
+				// mesh changes, and XP12 assets such as the 3D sidewalks need it. Only
+				// set_MSL, which does not follow the mesh, is refused.
 				if (t == 1)
 				{
 					msgs.push_back(validation_error_t("The use of set_MSL is not allowed on the scenery gateway.", 
 						err_object_custom_elev, who, parent_apt));
-				}
-				else if (t == 2)
-				{
-					msgs.push_back(validation_error_t(string("The use of ") + hgt_str + " is discouraged on the scenery gateway. Use only in well justified cases.",
-						warn_object_custom_elev, who, parent_apt));
 				}
 			}
 
