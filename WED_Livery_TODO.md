@@ -24,15 +24,11 @@ Nothing here is sent before the feature is complete (Eric's call, 2026-09-25).
 | Release manager | 2.8 targets X-Plane 12.5 only. `earth.wed.xml` stays readable by 2.7 (operation types are stored under their original names). |
 | WED maintainers | Six small upstream PRs, independent of the feature - see below. |
 
-## For Eric to decide
+## Decided 2026-09-25 (evening)
 
-1. **Delta CRJ-200 and Air France CRJ-100 `Obsolete` marks.**
-   - They are the only class-B aircraft that can fill 3,215 airline stands: 1,915 of them at 487 airports, and 1,300 at 360 (spec §4.5, `measure_empty_stands.py --by-mark`).
-   - Keeping the marks is accurate to today's fleets. Unmarking them keeps those stands populated with an aircraft the operator no longer flies. Auto-fill softens the effect, because it adds other operators to a stand.
-2. **Military and GA stands that park nothing get no validator warning.** The warning covers Airline and Cargo stands only. Example: a military class-D stand at a Chinese base with no operator listed parks nothing, because every class-D military livery is HOME. The Liveries tab readout already says so in red. Proposal: the same waivable warning for Military and GA.
-3. **The installed sample package** in both `Custom Scenery` folders is older than `docs/livery_sample/`.
-   - Stands 21 and 26 were fixed on 2026-09-25.
-   - Replacing it means deleting its `earth.wed.xml`, which was Eric's test document there, so that WED re-imports the apt.dat.
+- **The CRJ `Obsolete` marks stay**, Delta's CRJ-200 included. A batch of new CRJs is coming soon to fill those stands.
+- **Military and GA stands that park nothing now warn**, with the same waivable `warn_ramp_livery_parks_nothing`. The message names the size as the cause. The check also gained the operation-class filter the tab always had: a cargo operator no longer satisfies a passenger stand.
+- **The installed sample packages were replaced** by `docs/livery_sample/` in both installs. The old ones were kept in the session scratchpad only.
 
 ## Next: Moderation Mode
 

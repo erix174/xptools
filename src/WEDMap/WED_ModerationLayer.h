@@ -64,6 +64,13 @@
 
 class WED_RampPosition;
 
+// The colour of a ramp start's callout, for the layers that draw its aircraft
+// silhouette: while a stand has a card, its outline wears the card's colour
+// instead of the default green, so a stand and its card read as one even where
+// cards cannot sit next to their stands. False when the stand has no card.
+// (From the last frame drawn - the silhouettes are drawn before the callouts.)
+bool	WED_ModerationTintFor(const WED_RampPosition * ramp, float out_rgb[3]);
+
 class	WED_ModerationLayer : public WED_MapLayer {
 public:
 
@@ -71,6 +78,7 @@ public:
 	virtual				~WED_ModerationLayer();
 
 	virtual	int			HandleClickDown(int inX, int inY, int inButton, GUI_KeyFlags modifiers);
+	virtual	void		HandleClickUp  (int inX, int inY, int inButton, GUI_KeyFlags modifiers);
 	virtual	void		DrawSelected(bool inCurrent, GUI_GraphState * g);
 	virtual	void		GetCaps(bool& draw_ent_v, bool& draw_ent_s, bool& cares_about_sel, bool& wants_clicks);
 
@@ -107,6 +115,8 @@ private:
 	std::vector<Hit>				mHits;			// from the last frame, for clicks
 	int								mPinnedID;		// WED_Persistent id, -1 = none
 	int								mTrayID;		// the card whose tray is open, -1 = none
+	std::string						mPendingURL;	// a "?" pressed: opened on the mouse-up
+	std::map<int, std::vector<float> >	mLastTints;	// the tints the silhouettes were drawn with
 	std::map<std::string, int>		mSigIndex;		// signature -> colour slot, stable for the session
 	float							mHueSeed;
 	std::map<std::string, Flag>		mFlags;

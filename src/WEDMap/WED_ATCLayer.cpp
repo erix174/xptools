@@ -8,6 +8,7 @@
 
 #include "WED_Airport.h"
 #include "WED_ATCLayer.h"
+#include "WED_ModerationLayer.h"
 #include "WED_RampPosition.h"
 #include "WED_RoadEdge.h"
 #include "WED_TaxiRoute.h"
@@ -270,10 +271,13 @@ bool	WED_ATCLayer::DrawEntityStructure		(bool inCurrent, IGISEntity * entity, GU
 	{
 		auto pos = dynamic_cast<WED_RampPosition *>(entity);
 		DebugAssert(pos);
+		// Green, or the colour of the stand's moderation callout while it has one.
+		float rgb[3] = { 0, 1, 0 };
+		const bool tinted = WED_ModerationTintFor(pos, rgb);
 		if(GetZoomer()->GetPPM() > 5)
-			glColor4f(0, 1, 0, 0.2); // avoid getting more opaque when StructureLayer preview kicks in as well
+			glColor4f(rgb[0], rgb[1], rgb[2], tinted ? 0.35 : 0.2); // avoid getting more opaque when StructureLayer preview kicks in as well
 		else
-			glColor4f(0, 1, 0, 0.4);
+			glColor4f(rgb[0], rgb[1], rgb[2], tinted ? 0.7 : 0.4);
 		WED_ATCLayer_DrawAircraft(pos, g, GetZoomer());
 
 		Point2 tips[4];

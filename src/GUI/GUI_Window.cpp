@@ -694,7 +694,16 @@ void			GUI_Window::SetBoundsSafe(int x1, int y1, int x2, int y2)
 
 void			GUI_Window::ClickDown(int inX, int inY, int inButton)
 {
-	DebugAssert(mMouseFocusPane[inButton] == NULL);
+	// A down while the last down still has its pane: that click's up went to
+	// another window - a browser opened from the click, a modal, an alt-tab
+	// mid-press. This used to assert and terminate WED on the NEXT click
+	// anywhere. Finish the lost click instead, which also ends the defer the
+	// lost down began, then take this one normally.
+	if (mMouseFocusPane[inButton] != NULL)
+	{
+		LOG_MSG("W/Win mouse-up for button %d was lost; finishing that click first\n", inButton);
+		ClickUp(inX, inY, inButton);
+	}
 	this->GetRootForCommander()->BeginDefer();
 	mMouseFocusPane[inButton] = InternalMouseDown(Client2OGL_X(inX, mWindow), Client2OGL_Y(inY, mWindow), inButton);
 

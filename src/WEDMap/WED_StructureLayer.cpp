@@ -22,6 +22,7 @@
  */
 
 #include "WED_StructureLayer.h"
+#include "WED_ModerationLayer.h"
 #include "IGIS.h"
 #include "GUI_GraphState.h"
 #include "WED_Colors.h"
@@ -378,7 +379,9 @@ bool		WED_StructureLayer::DrawEntityStructure		(bool inCurrent, IGISEntity * ent
 				{
 					if (sub_class == WED_RampPosition::sClass && GetZoomer()->GetPPM() > 5)
 					{
-						glColor4f(0, 1, 0, 0.2);
+						float rgb[3] = { 0, 1, 0 };
+						const bool tinted = WED_ModerationTintFor(ramp, rgb);	// the callout's colour, see WED_ModerationLayer.h
+						glColor4f(rgb[0], rgb[1], rgb[2], tinted ? 0.35 : 0.2);
 						WED_ATCLayer_DrawAircraft(ramp, g, GetZoomer());
 						glColor4fv(WED_Color_RGBA(struct_color));
 					}

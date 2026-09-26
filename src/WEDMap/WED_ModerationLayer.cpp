@@ -51,6 +51,17 @@ using std::string;
 using std::vector;
 using std::set;
 
+static std::map<int, std::vector<float> > sTints;		// ramp id -> rgb, last frame
+
+bool	WED_ModerationTintFor(const WED_RampPosition * ramp, float out_rgb[3])
+{
+	if (!ramp || sTints.empty()) return false;
+	std::map<int, std::vector<float> >::const_iterator i = sTints.find(ramp->GetID());
+	if (i == sTints.end()) return false;
+	out_rgb[0] = i->second[0]; out_rgb[1] = i->second[1]; out_rgb[2] = i->second[2];
+	return true;
+}
+
 // Callouts are for reading a handful of stands; a whole airport's worth would
 // only be noise on top of the map.
 static const size_t kMaxCallouts = 40;
@@ -94,6 +105,15 @@ static string	Elide(const string & s, float w)
 	string t = s;
 	while (!t.empty() && TextW(t + "...") > w) t.erase(t.size() - 1);
 	return t + "...";
+}
+
+// Text over the map: a 1-pixel black shadow keeps it legible on the 40% card
+// fill and on the bare imagery behind the header row.
+static void	Txt(GUI_GraphState * g, const float col[4], float x, float y, const char * s, int align = align_Left)
+{
+	const float shadow[4] = { 0, 0, 0, 0.85f * col[3] };
+	GUI_FontDraw(g, font_UI_Basic, shadow, x + 1, y - 1, s, align);
+	GUI_FontDraw(g, font_UI_Basic, col, x, y, s, align);
 }
 
 static void	Rect(float x0, float y0, float x1, float y1, const float c[4], bool fill)
@@ -363,16 +383,20 @@ void	WED_ModerationLayer::DrawCard(GUI_GraphState * g, Callout & c, bool pinned)
 	const float x0 = c.x0, x1 = c.x1, y1 = c.y1, y0 = c.y0;
 	const float label_w = TextW("Airlines") + 10.0f;
 
-	// leader: stand -> elbow -> card, with the arrowhead at the stand
+	// The header row (flag, ICAO, name, pin) floats above the card's top edge;
+	// the card itself is only its top and left edges over a 40% black fill.
 	const float head_mid = y1 - HeadH() * 0.5f;
+	const float edge = y1 - HeadH();		// the top edge, where the leader lands
+
+	// leader: stand -> elbow -> the card's top-left corner, arrowhead at the stand
 	g->SetState(0, 0, 0, 0, 1, 0, 0);
 	glColor4fv(stroke);
 	glLineWidth(2.0f);
 	glBegin(GL_LINE_STRIP);
 		glVertex2f(c.ax + 6, c.ay);
 		glVertex2f(x0 - 16, c.ay);
-		glVertex2f(x0 - 16, head_mid);
-		glVertex2f(x0, head_mid);
+		glVertex2f(x0 - 16, edge);
+		glVertex2f(x0, edge);
 	glEnd();
 	glBegin(GL_TRIANGLES);
 		glVertex2f(c.ax, c.ay);				// clockwise, see DrawMark
@@ -380,13 +404,15 @@ void	WED_ModerationLayer::DrawCard(GUI_GraphState * g, Callout & c, bool pinned)
 		glVertex2f(c.ax + 10, c.ay + 5);
 	glEnd();
 
-	// card body, stroke, and a stroke-tinted header strip
-	const float bg[4] = { 0.09f, 0.09f, 0.10f, 0.93f };
-	Rect(x0, y0, x1, y1, bg, true);
-	const float tint[4] = { stroke[0] * 0.35f, stroke[1] * 0.35f, stroke[2] * 0.35f, 0.95f };
-	Rect(x0, y1 - HeadH(), x1, y1, tint, true);
+	const float fill[4] = { 0, 0, 0, 0.4f };
+	Rect(x0, y0, x1, edge, fill, true);
+	glColor4fv(stroke);
 	glLineWidth(pinned ? 3.0f : 2.0f);
-	Rect(x0, y0, x1, y1, stroke, false);
+	glBegin(GL_LINE_STRIP);
+		glVertex2f(x0, y0);
+		glVertex2f(x0, edge);
+		glVertex2f(x1, edge);
+	glEnd();
 	glLineWidth(1.0f);
 
 	// header: flag, ICAO, ramp name - left-aligned and tight
@@ -398,7 +424,7 @@ void	WED_ModerationLayer::DrawCard(GUI_GraphState * g, Callout & c, bool pinned)
 		hx += (lh - 2) * (float) f->w / (float) f->h + 5;
 	}
 	const float base_y = hb + (lh - asc) * 0.5f + 1;
-	GUI_FontDraw(g, font_UI_Basic, kWhite, hx, base_y, e.icao.c_str());
+	Txt(g, kWhite, hx, base_y, e.icao.c_str());
 	hx += TextW(e.icao) + 7;
 	const float pin_x = x1 - kPad - 7;
 	float name_end = pin_x - 10;
@@ -406,9 +432,9 @@ void	WED_ModerationLayer::DrawCard(GUI_GraphState * g, Callout & c, bool pinned)
 	{
 		const float bw = TextW("BASE");
 		name_end -= bw + 6;
-		GUI_FontDraw(g, font_UI_Basic, stroke, pin_x - 10 - bw, base_y, "BASE");
+		Txt(g, stroke, pin_x - 10 - bw, base_y, "BASE");
 	}
-	GUI_FontDraw(g, font_UI_Basic, kWhite, hx, base_y, Elide(e.ramp_name, name_end - hx).c_str());
+	Txt(g, kWhite, hx, base_y, Elide(e.ramp_name, name_end - hx).c_str());
 
 	// pin: filled when this is the base
 	g->SetState(0, 0, 0, 0, 1, 0, 0);
@@ -431,23 +457,23 @@ void	WED_ModerationLayer::DrawCard(GUI_GraphState * g, Callout & c, bool pinned)
 	float y = y1 - HeadH() - kPad;
 	const float vx = x0 + kPad + label_w;
 	const float room = x1 - kPad - vx;
-	GUI_FontDraw(g, font_UI_Basic, kMuted, x0 + kPad, y - asc, "Airlines");
-	GUI_FontDraw(g, font_UI_Basic, kWhite, vx, y - asc, Elide(AirlinesText(e), room).c_str());
+	Txt(g, kMuted, x0 + kPad, y - asc, "Airlines");
+	Txt(g, kWhite, vx, y - asc, Elide(AirlinesText(e), room).c_str());
 	y -= RowH();
 
 	string st = StateText(e);
-	GUI_FontDraw(g, font_UI_Basic, e.updated ? kWhite : kAmber, x0 + kPad, y - asc, st.c_str());
-	GUI_FontDraw(g, font_UI_Basic, kWhite, x0 + kPad + Max(label_w, TextW(st) + 10), y - asc, SizeText(e).c_str());
+	Txt(g, e.updated ? kWhite : kAmber, x0 + kPad, y - asc, st.c_str());
+	Txt(g, kWhite, x0 + kPad + Max(label_w, TextW(st) + 10), y - asc, SizeText(e).c_str());
 	y -= RowH();
 
-	GUI_FontDraw(g, font_UI_Basic, kMuted, x0 + kPad, y - asc, Elide(KindText(e), x1 - x0 - kPad * 2).c_str());
+	Txt(g, kMuted, x0 + kPad, y - asc, Elide(KindText(e), x1 - x0 - kPad * 2).c_str());
 	y -= RowH();
 
 	for (size_t i = 0; i < c.diff.size(); ++i)
 	{
 		const int k = c.diff_kind[i];
 		const float * col = k == -1 ? kRed : k == 0 ? kAmber : kGreen;		// +, same: green
-		GUI_FontDraw(g, font_UI_Basic, col, x0 + kPad, y - asc, Elide(c.diff[i], x1 - x0 - kPad * 2).c_str());
+		Txt(g, col, x0 + kPad, y - asc, Elide(c.diff[i], x1 - x0 - kPad * 2).c_str());
 		y -= lh;
 	}
 
@@ -463,7 +489,7 @@ void	WED_ModerationLayer::DrawCard(GUI_GraphState * g, Callout & c, bool pinned)
 	if (open) { glVertex2f(x0 + kPad, ty + 3); glVertex2f(x0 + kPad + 8, ty + 3); glVertex2f(x0 + kPad + 4, ty - 3); }
 	else      { glVertex2f(x0 + kPad + 1, ty + 4); glVertex2f(x0 + kPad + 7, ty); glVertex2f(x0 + kPad + 1, ty - 4); }
 	glEnd();
-	GUI_FontDraw(g, font_UI_Basic, vcol, x0 + kPad + 14, y - asc, Elide(vt, x1 - x0 - kPad * 2 - 14).c_str());
+	Txt(g, vcol, x0 + kPad + 14, y - asc, Elide(vt, x1 - x0 - kPad * 2 - 14).c_str());
 	Hit th = { Hit::hit_Tray, x0, y0, x1, y + 1, c.id, "" };
 	mHits.push_back(th);
 
@@ -524,11 +550,14 @@ void	WED_ModerationLayer::DrawTray(GUI_GraphState * g, Callout & c)
 
 	float stroke[4];
 	ColourFor(e.signature, stroke);
-	const float bg[4] = { 0.12f, 0.12f, 0.13f, 0.97f };
+	const float fill[4] = { 0, 0, 0, 0.4f };
 	g->SetState(0, 0, 0, 0, 1, 0, 0);
-	Rect(x0, bot, x1, top, bg, true);
+	Rect(x0, bot, x1, top, fill, true);
+	glColor4fv(stroke);
 	glLineWidth(2.0f);
-	Rect(x0, bot, x1, top, stroke, false);
+	glBegin(GL_LINES);
+		glVertex2f(x0, bot); glVertex2f(x0, top);
+	glEnd();
 	glLineWidth(1.0f);
 	Hit panel = { Hit::hit_Tray, x0, bot, x1, top, c.id, "" };
 	mHits.push_back(panel);
@@ -536,7 +565,7 @@ void	WED_ModerationLayer::DrawTray(GUI_GraphState * g, Callout & c)
 	float y = top - kPad;
 	for (size_t i = 0; i < lines.size(); ++i)
 	{
-		GUI_FontDraw(g, font_UI_Basic, kMuted, x0 + kPad, y - asc, lines[i].c_str());
+		Txt(g, kMuted, x0 + kPad, y - asc, lines[i].c_str());
 		y -= lh;
 	}
 
@@ -553,7 +582,7 @@ void	WED_ModerationLayer::DrawTray(GUI_GraphState * g, Callout & c)
 			DrawFlag(g, f->tex, f->w, f->h, x, iy_bot + 3, lh - 4);
 			x += (lh - 4) * (float) f->w / (float) f->h + 4;
 		}
-		GUI_FontDraw(g, font_UI_Basic, kWhite, x, iy_top - asc - 2, k.code.c_str());
+		Txt(g, kWhite, x, iy_top - asc - 2, k.code.c_str());
 		x += TextW(k.code) + 4;
 		const float ms = lh * 0.55f;
 		DrawMark(g, k.verdict, x, iy_top - item_h * 0.5f, ms);
@@ -564,12 +593,13 @@ void	WED_ModerationLayer::DrawTray(GUI_GraphState * g, Callout & c)
 		}
 		if (k.verdict != WED_ModerationCode::v_Plain) x += ms + 2;
 		if (i + 1 < e.codes.size())
-			GUI_FontDraw(g, font_UI_Basic, kMuted, x, iy_top - asc - 2, ",");
+			Txt(g, kMuted, x, iy_top - asc - 2, ",");
 	}
 }
 
 void	WED_ModerationLayer::DrawSelected(bool inCurrent, GUI_GraphState * g)
 {
+	sTints.clear();
 	if (!WED_ModerationEnabled()) { mHits.clear(); return; }
 
 	// Which tray is open: the one the mouse was over last frame.
@@ -640,13 +670,28 @@ void	WED_ModerationLayer::DrawSelected(bool inCurrent, GUI_GraphState * g)
 	Callout * open = NULL;
 	for (size_t i = 0; i < cs.size(); ++i)
 	{
+		float rgba[4];
+		ColourFor(cs[i].e.signature, rgba);
+		sTints[cs[i].id] = std::vector<float>(rgba, rgba + 3);
 		DrawCard(g, cs[i], cs[i].id == mPinnedID);
 		if (cs[i].id == mTrayID) open = &cs[i];
 	}
 	if (open) DrawTray(g, *open);		// last, over everything
 
+	// The silhouettes were drawn this frame with the previous frame's tints;
+	// if those changed, one more frame puts the right colours on them.
+	if (sTints != mLastTints) { mLastTints = sTints; GetHost()->Refresh(); }
+
 	g->SetState(0, 0, 0, 0, 0, 0, 0);
 	glLineWidth(1.0f);
+}
+
+void	WED_ModerationLayer::HandleClickUp(int inX, int inY, int inButton, GUI_KeyFlags modifiers)
+{
+	if (mPendingURL.empty()) return;
+	string url;
+	url.swap(mPendingURL);
+	GUI_LaunchURL(url.c_str());
 }
 
 int		WED_ModerationLayer::HandleClickDown(int inX, int inY, int inButton, GUI_KeyFlags modifiers)
@@ -662,7 +707,10 @@ int		WED_ModerationLayer::HandleClickDown(int inX, int inY, int inButton, GUI_Ke
 			if (!Inside(x, y, h.x0, h.y0, h.x1, h.y1)) continue;
 			if (pass == 0 && h.kind == Hit::hit_Search)
 			{
-				GUI_LaunchURL(h.url.c_str());
+				// Not now: a browser opened on the mouse-DOWN takes the focus,
+				// the up goes to the browser, and WED's window is left holding
+				// a click that never ends. Open it once this click is over.
+				mPendingURL = h.url;
 				return 1;
 			}
 			if (pass == 1 && h.kind == Hit::hit_Pin)
