@@ -22,6 +22,8 @@
  */
 
 #include "WED_RampPosition.h"
+#include <set>
+#include <sstream>
 #include "AptDefs.h"
 #include "WED_EnumSystem.h"
 #include "GISUtils.h"
@@ -261,6 +263,18 @@ string	WED_RampPosition::CorrectAirlinesString(const string &a)
 	}
 	
 	cleaned_airlines_str.erase(std::unique(cleaned_airlines_str.begin(), cleaned_airlines_str.end(), two_adjacent_spaces), cleaned_airlines_str.end());
+
+	// A code listed twice is listed once, silently: the first stays where it
+	// was. A repeat adds nothing to what may park and only eats the length limit.
+	{
+		std::istringstream in(cleaned_airlines_str);
+		std::set<string> seen;
+		string code, out;
+		while (in >> code)
+			if (seen.insert(code).second)
+				out += (out.empty() ? "" : " ") + code;
+		cleaned_airlines_str.swap(out);
+	}
 
 	// Bound the result, cutting at a token boundary so truncation can never
 	// invent a code that was never written.

@@ -279,11 +279,15 @@ correctly.
   silently dropped. The index writes codes upper case; a reader compares them
   without regard to case.
 
-  **Known constraint: Gateway caps the `1301` airline string below 100
-  characters** (`err_ramp_airlines_too_long`, Gateway target only, raised at
-  `size() >= 100`) — so 99 characters, 25 three-letter codes. WED's auto-fill stops short of it, so a busy hub cannot list
-  every airline that serves it. Whether the cap can be raised is a question for
-  the Gateway team, not for this format.
+  **Known constraint: the `1301` airline string has a length cap for Gateway
+  submissions** (`err_ramp_airlines_too_long`, Gateway target only). WED 2.7
+  capped it at 99 characters (25 three-letter codes), which kept busy hubs from
+  listing every airline that serves them. **WED 2.8 raises it to 299 characters**
+  (75 three-letter codes; `kGatewayAirlinesMaxChars`, Eric 2026-09-27), pending
+  the Gateway team and Jim confirming that neither the server nor the sim's
+  reader has a shorter limit - where the old 100 came from is not recorded.
+  Auto-fill and the Liveries tab stop at the last whole code before the cap, and
+  WED drops a code listed twice, silently.
 - **R11** — Weights are non-negative integers in `0..1000`.
 - **R14** — A writer SHOULD NOT emit weights (or a size range) pointing
   exclusively at classes that no listed airline can fill. WED reports it as a
@@ -1770,7 +1774,7 @@ name):
 |---|---|
 | None | nothing - None means no static aircraft (R29) |
 | any, no weights | updates the stand to weights as R17's Update does (2026-09-27): today's step-down from its letter, the fall-through folded in against the operators it lists after the fill, a token 1 kept on the top class. It parks what it parked; the author tunes from there. (Before 2026-09-27 a fixed table was used - D: B10 C40 D50 - which changed what legacy stands parked.) |
-| Passenger (Airline) / Cargo | adds the airport's recommended operators of that operation class that have an eligible livery at a weighted class (range R26 included) and fit the stand's equipment type; never `XPZZ_*`; stops short of Gateway's 100-character airline string (R10) |
+| Passenger (Airline) / Cargo | adds the airport's recommended operators of that operation class that have an eligible livery at a weighted class (range R26 included) and fit the stand's equipment type; never `XPZZ_*`; stops at the last whole code before the Gateway's 299-character cap (R10) |
 | Military/Gov (Military) | adds the airport country's own military and government operators with such a livery; if there are none, nothing is added and the sim draws military by size |
 | Private/BizJet (General Aviation) | weights only (R28) |
 
@@ -2241,9 +2245,8 @@ existing apt.dat is covered the day the index is.
    refuse one. If a bump happens as well, new WED writes a version old X-Plane
    refuses, while Gateway serves both. Who generates which version for whom?
    This needs Jim and the release manager.
-4. **Gateway's airline-string cap.** The `1301` airline string must be under 100
-   characters for a Gateway submission — at most 99, which is 25 three-letter
-   codes (R10). A
+4. **Gateway's airline-string cap.** WED 2.7 kept the `1301` airline string under
+   100 characters for a Gateway submission; WED 2.8 raises it to 299 (R10). A
    busy hub is served by more airlines than that, and auto-fill stops short. The
    Gateway team should say whether it can be raised, and to what, and confirm the
    server's own validation accepts R10's suffixed codes (`ryr_1`, `afr_f`,
@@ -2292,7 +2295,7 @@ this table.
 | Moderation (§6.7f): stepping through stands (all, or only those to check), map callouts, notes, web search, a plain-text report to the clipboard | **done** — shown only in Moderator Mode: `WED_ModerationEnabled()` reads `gModeratorMode`, which the preferences save as `ModeratorMode` (`WED_Document.cpp`) |
 | Rotate view for moderation (a measuring arrow levels the map; 90-degree detents) | **done** — Moderator Mode only |
 | Hidden-items prompt before export or Gateway submission (`WED_ModerationConfirmHidden`): show all and export, export as is, or cancel | **done** — Moderator Mode only |
-| Validator: R10 code shape, Gateway 100-character cap, R14 `warn_ramp_livery_parks_nothing` | **done** - R14's three wordings (ahead of the art / out of reach / weights point where the operators do not fly) and the Validation list's one-click Fix (R14) |
+| Validator: R10 code shape, Gateway 299-character cap (was 99), R14 `warn_ramp_livery_parks_nothing` | **done** - R14's three wordings (ahead of the art / out of reach / weights point where the operators do not fly) and the Validation list's one-click Fix (R14) |
 | Sample package `docs/livery_sample/` — ZBAA, 25 stands incl. the range cases and an R24 stand | **done**; README regenerated from `livery_sample_expect.py` (2026-09-26) |
 | **X-Plane: R17/R18 three-stage selection, R25–R30, reading the index** | **open** — the sim side of this spec |
 | **Index shipped with X-Plane 12.5 under `apt_aircraft/`** | **open** — Laminar release |

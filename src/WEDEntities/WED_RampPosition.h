@@ -29,6 +29,12 @@
 
 struct	AptGate_t;
 
+// The longest airline string a Gateway submission may carry: validation refuses
+// more, auto-fill and the Liveries tab stop at the last whole code before it.
+// Raised from 99 (WED 2.7) to 299 by Eric, 2026-09-27 - pending the Gateway team
+// and Jim confirming neither the server nor the sim has a shorter limit.
+static const size_t kGatewayAirlinesMaxChars = 299;
+
 class	WED_RampPosition : public WED_GISPoint_Heading {
 
 DECLARE_PERSISTENT(WED_RampPosition)

@@ -80,8 +80,9 @@ bucket suffix: some differ on purpose (`EJU` is filed under `_ezy`, `CES_1`
 under `_cyh`, `CHH` under `_hna`, `MAY`/`RUK`/`RYS` under `_ryr`; the full list
 is in the spec's appendix).
 
-**One Gateway constraint to know about.** Gateway caps the `1301` airline string
-below 100 characters: 25 three-letter codes at most. Airline codes are now
+**One Gateway constraint to know about.** WED caps the `1301` airline string for
+Gateway submissions: 99 characters in 2.7, raised to 299 (75 three-letter codes)
+in 2.8 - please confirm the sim's reader has no shorter limit. Airline codes are now
 `[a-z0-9]{3,4}(_[a-z0-9]{1,6})?`, lower case (`dal`, `afr_f`, `xpzz_b752`), and
 WED's validator rejects anything else (R10). The Gateway team should say
 whether the cap can be raised, and confirm the server accepts suffixed codes.

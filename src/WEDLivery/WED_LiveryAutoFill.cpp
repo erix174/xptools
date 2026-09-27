@@ -49,7 +49,7 @@ using std::set;
 
 // Gateway rejects an airline string of 100 characters or more; auto-fill stops
 // adding codes before it would get there, so it can never make a stand invalid.
-static const size_t kMaxAirlinesChars = 99;
+static const size_t kMaxAirlinesChars = kGatewayAirlinesMaxChars;
 
 static string Upper(string s)
 {

@@ -1233,7 +1233,7 @@ static int ValidateOneRampPosition(WED_RampPosition* ramp, validation_error_vect
 		// three letters - and they are not: a subsidiary or cargo division carries
 		// a suffix (ryr_1, afr_f) and the generic airliners carry the type they
 		// are (xpzz_b752). See WED_RampPosition::IsValidAirlineCode for the shape.
-		if (gExportTarget == wet_gateway && airlines_str.size() >= 100)
+		if (gExportTarget == wet_gateway && airlines_str.size() > kGatewayAirlinesMaxChars)
 		{
 			msgs.push_back(validation_error_t(string("Ramp start airlines string '") + orig_airlines_str + "' is too long.", err_ramp_airlines_too_long, ramp, apt));
 			return is_ai_capable;
