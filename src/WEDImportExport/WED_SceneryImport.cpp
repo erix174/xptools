@@ -66,7 +66,7 @@ bool WED_SceneryImport(string scn_path, WED_Thing* wrl, bool limited)
         string id;
         a->GetICAO(id);
         for (int i = 0; i < id.length(); i++)
-            id[i] = toupper(id[i]);
+            id[i] = (char) toupper((unsigned char) id[i]);
 
         // Exclusion zones come before any filter tags, i.e are not associated with airports and therefore get imported 
         // indiscriminately with EVERY airport and even at the off-airport level. So skip exclusions for now.

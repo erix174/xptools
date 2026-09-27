@@ -294,7 +294,7 @@ bool	WED_ResourceMgr::GetObj(const string& vpath, XObj8 const *& obj, int varian
 	// now reach here from data files rather than only from the library's own
 	// table, so a short or empty one is no longer impossible.
 	if(vpath.size() < 4) return false;
-	if(toupper(vpath[vpath.size()-3]) != 'O') return false;   // save time by not trying to load .agp's
+	if(toupper((unsigned char) vpath[vpath.size()-3]) != 'O') return false;   // save time by not trying to load .agp's
 
 //printf("GetObj %s' V=%d\n", path.c_str(), variant);
 	auto i = mObj.find(vpath);

@@ -1237,7 +1237,7 @@ void	WED_ModerationLayer::Focus(int ramp_id)
 //     |    ...
 //     | Shift+X / Ctrl+Shift+X step through them
 // Reviewed = shown as the one selected stand while the view is on, this session
-// only: keeping it needs a home in the file, which is an open question (TODO).
+// only, by design (Eric, 2026-09-26): nothing about it is saved.
 void	WED_ModerationLayer::DrawOverview(GUI_GraphState * g)
 {
 	WED_Airport * apt = WED_GetCurrentAirport(GetResolver());

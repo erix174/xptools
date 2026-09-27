@@ -114,7 +114,7 @@ spawn, computed by `tools/scripts/airline_research/livery_sample_expect.py`.
 | Coverage readout — "This ramp will spawn … 70% of the time", empty and single-operator warnings (spec §4.5) | **done** |
 | Auto-fill of an airport's stands, never overwriting the author (spec §6.7f) | **done** |
 | Moderation (Moderator Mode only): stepping through stands, flags for operators to check (not listed at the airport, or foreign military), stands with no airport data and stands that park nothing, web search, clipboard report | **done** |
-| Validator: code shape and 100-char cap (errors), R14 "this stand parks nothing" (`warn_ramp_livery_parks_nothing`, a warning; Airline/Cargo stands against their list, GA and unlisted military stands against the whole library; all-zero weights exempt) | **done** — the distinct "ahead of the art" wording and one-click fix of spec R14 are not implemented in 2.8; the Liveries tab draws that distinction |
+| Validator: code shape and 100-char cap (errors), R14 "this stand parks nothing" (`warn_ramp_livery_parks_nothing`, a warning; Airline/Cargo stands against their list, GA and unlisted military stands against the whole library; all-zero weights exempt) | **done** — with R14's three wordings and a one-click Fix in the Validation list |
 | **Sim implementation** of R17, R18, R25–R30 and reading the index | **open** — asks 3 and 4 |
 | **Row code and version policy** | **open** — asks 1 and 2 |
 | **Mac / Linux build and run of WED** | **open** — never done |

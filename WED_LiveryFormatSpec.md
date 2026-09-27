@@ -970,7 +970,7 @@ FedEx's ATR 42 still has a live replacement.)
 Two more pairs have the same shape and are **not** marked: the Piaggio P180s
 `P180_static.obj` / `P180_avanti_white.obj` (both `ISERG`) and
 `P180_ferrari_static.obj` / `P180_avanti_ferrari.obj` (both `IFXRB`). Whether
-they are superseded pairs is not yet decided.
+they are superseded pairs was decided on 2026-09-27: they stay unmarked (Eric).
 
 One more pair looks like one and is not: `F15EX_cft` / `F15EX` are genuinely
 different airframes (conformal tanks) that the index cannot currently tell
@@ -2280,6 +2280,8 @@ this table.
 |---|---|
 | Read and write `1313` (`AptIO.cpp`), entity property, weights mode (§6.8) | **done** — written on every X-Plane 12 export, Gateway included |
 | Reader robustness: unknown rows skipped and reported (R15, §9) | **done** — listed after import; `warn_apt_dat_rows_not_imported` |
+| Row `1315 A/M` (R30): the auto-fill mark in apt.dat, read back on import | **done** |
+| Legacy stands judged by today's step-down; Update to spawn weights (tab and Airport menu) | **done** (R17) |
 | `livery_index.txt` schema 4 — 298 liveries, 1,548 operator records, header, hubs | **done**; generator merges, never overwrites (§6.7b) |
 | Index reader (`WED_LiveryIndex`), hub placement from Global Airports | **done** — drives every livery feature below |
 | Liveries tab: operator cards with real aircraft previews, size range / weights, flags, recommendations | **done** |
@@ -2290,7 +2292,7 @@ this table.
 | Moderation (§6.7f): stepping through stands (all, or only those to check), map callouts, notes, web search, a plain-text report to the clipboard | **done** — shown only in Moderator Mode: `WED_ModerationEnabled()` reads `gModeratorMode`, which the preferences save as `ModeratorMode` (`WED_Document.cpp`) |
 | Rotate view for moderation (a measuring arrow levels the map; 90-degree detents) | **done** — Moderator Mode only |
 | Hidden-items prompt before export or Gateway submission (`WED_ModerationConfirmHidden`): show all and export, export as is, or cancel | **done** — Moderator Mode only |
-| Validator: R10 code shape, Gateway 100-character cap, R14 `warn_ramp_livery_parks_nothing` | **done**; R14's distinct "ahead of the art" wording and one-click fix are not implemented in 2.8 (the Liveries tab draws the distinction) |
+| Validator: R10 code shape, Gateway 100-character cap, R14 `warn_ramp_livery_parks_nothing` | **done** - R14's three wordings (ahead of the art / out of reach / weights point where the operators do not fly) and the Validation list's one-click Fix (R14) |
 | Sample package `docs/livery_sample/` — ZBAA, 25 stands incl. the range cases and an R24 stand | **done**; README regenerated from `livery_sample_expect.py` (2026-09-26) |
 | **X-Plane: R17/R18 three-stage selection, R25–R30, reading the index** | **open** — the sim side of this spec |
 | **Index shipped with X-Plane 12.5 under `apt_aircraft/`** | **open** — Laminar release |

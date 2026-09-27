@@ -44,11 +44,9 @@
 	visually equivalent or better at the mask boundary - it just means WED
 	can't independently double-check the SVG mask's coverage against it.
 
-	Asset location is currently a temporary dev-machine constant (see the
-	.cpp) rather than going through WED's real resource-embedding pipeline
-	(WED.rc / GUI_LoadResource / cmake WED_RESOURCE_FILES) - that packaging
-	step is real, necessary work but a separate follow-up from this first
-	testable pass; see the .cpp for the exact TODO.
+	The artwork ships as a loose flags/ tree beside WED's data files and is
+	found through WedDataFileDir() (see the .cpp and cmake/WED.cmake), not
+	through the embedded-resource pipeline.
 */
 
 #ifndef WED_FLAGASSETS_H

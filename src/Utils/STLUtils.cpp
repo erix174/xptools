@@ -28,12 +28,12 @@
 
 bool ci_char_traits::eq(char c1, char c2)
 {
-	return std::toupper(c1) == std::toupper(c2);
+	return std::toupper((unsigned char) c1) == std::toupper((unsigned char) c2);
 }
 
 bool ci_char_traits::lt(char c1, char c2)
 {
-	return std::toupper(c1) <  std::toupper(c2);
+	return std::toupper((unsigned char) c1) <  std::toupper((unsigned char) c2);
 }
 
 // toupper() and the rest of <cctype> take an INT that must be either EOF or a

@@ -475,7 +475,10 @@ in open documents, no restart. (Older moderator code in `WED_PropertyTable` and
 | `WED_ModerationSignature(ramp)` | "The same setup": op type, sorted unique airline set, weights text (or size letter), equipment set. Two stands with equal signatures park the same thing; colour, grouping and "reviewed" all key on it. |
 | `WED_ModerationColour(sig, rgba)` | Signature → colour. Session-stable slots, golden-ratio hue steps from a random seed, shared by every layer. |
 | `WED_ModerationHasIssue(entry)` | Needs a look: an operator to check (`v_Check`/`v_Foreign`), `verify_NoData`, or `parks_nothing`. Drives stepping, the Moderation View highlight and the report. |
-| `WED_LiveryParksNothing(ramp, apt, msg)` | **The** shared check behind the validator's `warn_ramp_livery_parks_nothing`, the overview's "Parks nothing" filter and the report. Same data and rule as the Liveries tab (`WED_LiveryAllowedAt`, `WED_LiveryEquipment`). One pipeline, so the three never disagree; it reads only the stand, the airport and shipped data, so any WED of the same version reproduces it. |
+| `WED_LiveryParksNothing(ramp, apt, msg)` | **The** shared check behind the validator's `warn_ramp_livery_parks_nothing`, the overview's "Parks nothing" filter, the Liveries tab's multi-stand count and the report. Built on one static analysis, `AnalyseStand` (classes the stand opens, classes a fitting livery exists at, whether the library has anything there), which also picks R14's wording: ahead of the art / out of reach / weights pointing where the operators do not fly. Same data and rule as the tab (`WED_LiveryFitsStand`, `WED_LiveryOperatorFitsRampOp`). A legacy stand (no 1313) opens every class at or below its letter - today's step-down falls through (spec R17). |
+| `WED_LiveryParksNothingFixable` / `WED_LiveryFixParksNothing` | R14's one-click Fix, behind the Validation list's **Fix** button (`WED_ValidateList.cpp`): weights on classes nothing fits move to the nearest fitting class at or below the stand's top; weighted stands only; the result text names a lowered 1301 letter (R23). |
+| `WED_LiveryLegacyUpdateWeights` | Updating a legacy stand to 1313: `WED_LegacyStepDownWeights` (0.75 x 0.25^k, `WED_LiveryRules`) with the fall-through folded in and a token 1 kept on the top class, so the stand parks what it parked and keeps its size. Used by the tab's "Set Spawn Weights" and Airport > Update Legacy Stands to Spawn Weights (`WED_DoLiveryLegacyUpdate`, `WED_LiveryAutoFill.cpp`). |
+| `WED_ModerationConfirmHidden(root)` | Moderator Mode, before Export Scenery Pack / Submit to Gateway: lists hidden items (hidden items are not exported) and offers Show All and Export (nested items too, one undo step), Export As Is or Cancel. |
 | `WED_ModerationRamps` / `WED_ModerationStep(res, dir, issues_only)` | All ramp starts of the current airport in hierarchy order; select the next/previous one (wrapping), optionally only those with an issue. |
 | `WED_ModerationNotes` / `WED_ModerationPrompt` | The older per-stand notes list and the "operators to check - search the web?" dialog (capped at five searches), shown on Ctrl+Shift+. / , in moderator mode. |
 | `WED_ModerationReport(apt, reviewed)` | Plain-text summary for the clipboard: counts, WED + index version, validator warnings verbatim, then stands to check grouped by setup. |
@@ -544,7 +547,7 @@ A plain `GUI_Pane` (independent toggles, not a `GUI_ToolBar`), placed by
   a left-drag draws a reference arrow and turns the view to level it; once there is
   a reference, a left-drag is a screen-level marquee whose corners go through
   `ScreenToMapPixel` to `WED_HandleToolBase::SelectInQuad` (Alt+drag draws a new
-  reference); Shift+right-drag turns freely, with 5° detents at the reference and
+  reference); Shift+right-drag turns freely, with 5.2° detents at the reference and
   every 90° from it. A plain click is held back and replayed to the select tool.
 - **Guard rails.** Only with the select tool (`SetSelectTool`, the Vertex tool);
   `SetTool` to anything else, or `Draw` finding moderator mode cleared, puts it
@@ -599,6 +602,14 @@ A plain `GUI_Pane` (independent toggles, not a `GUI_ToolBar`), placed by
   divides the art by `Columns()`, so a third tool also needs that changed.
 
 ---
+
+### 12d. apt.dat rows added in 2.8
+
+- **1313** - six spawn weights (spec R4/R5/R11/R17/R20/R23/R24). `AptIO.cpp`, `apt_startup_loc_weights`; `WED_RampPosition::Import/Export`.
+- **1315 A|M** - who set the stand's static-aircraft data (spec R30): `A` auto-filled, `M` hand-set with weights, absent otherwise. `apt_startup_loc_origin`; written after 1313 on X-Plane 12 exports; read back into the auto-fill watermark on import, so a Gateway moderator sees it.
+- Unknown rows are skipped and recorded on the airport (`AptInfo_t::discarded_rows`), shown as `warn_apt_dat_rows_not_imported` and in the moderation report, both keyed by the airport ID.
+
+The pinned base card (Moderation View) is kept in view: `WED_ModerationLayer::DrawDockedBase` docks it bottom left whenever its own card is not on screen; its header (`hit_GoTo`) centres the map on the stand without touching zoom or selection. Centring everywhere goes through `WED_MapZoomerNew::CenterOn`, which keeps pixels per metre.
 
 ## 13. WEDResources
 

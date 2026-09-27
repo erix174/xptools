@@ -694,7 +694,7 @@ If WED knows nothing about an operator or its range, the aircraft is allowed. Va
 | Military/Gov   | Adds the military and government operators of the airport's own country that have such an aircraft. If there are none, it adds nothing, and X-Plane picks military aircraft by size. |
 | Private/BizJet | Weights only. |
 
-WED marks each stand it fills as auto-filled. The mark is saved in the WED project, not in apt.dat, and is removed as soon as you change anything on that stand other than its weights.
+WED marks each stand it fills as auto-filled. The mark is saved in the WED project and exported to apt.dat (row 1315, which X-Plane ignores), so a moderator who imports the airport from the Gateway sees it. It is removed as soon as you change anything on that stand other than its weights.
 
 #### Creating Taxi Signs ####
 

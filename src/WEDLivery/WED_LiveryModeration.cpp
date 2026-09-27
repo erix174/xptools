@@ -236,13 +236,15 @@ void	WED_ModerationPrompt(WED_RampPosition * ramp, WED_Airport * apt)
 			WED_ModerationOpenSearch(to_check[i]->search_url);
 }
 
-// The topmost hidden things under t: a hidden folder is listed, not its contents.
-static void	CollectHidden(WED_Thing * t, vector<WED_Thing *> & out)
+// Hidden things under t. top_only: the topmost only (a hidden folder is listed,
+// not its contents) - for the message; otherwise all of them, nested ones too,
+// so Show All leaves nothing hidden inside a folder it un-hid.
+static void	CollectHidden(WED_Thing * t, vector<WED_Thing *> & out, bool top_only = true)
 {
 	WED_Entity * e = dynamic_cast<WED_Entity *>(t);
-	if (e && e->GetHidden()) { out.push_back(t); return; }
+	if (e && e->GetHidden()) { out.push_back(t); if (top_only) return; }
 	for (int n = 0; n < t->CountChildren(); ++n)
-		CollectHidden(t->GetNthChild(n), out);
+		CollectHidden(t->GetNthChild(n), out, top_only);
 }
 
 bool	WED_ModerationConfirmHidden(WED_Thing * root)
@@ -269,6 +271,9 @@ bool	WED_ModerationConfirmHidden(WED_Thing * root)
 	if (ans == 0) return false;
 	if (ans == 1)
 	{
+		vector<WED_Thing *> all;
+		CollectHidden(root, all, false);
+		hidden.swap(all);
 		hidden[0]->StartCommand("Show All");
 		for (size_t i = 0; i < hidden.size(); ++i)
 		{
@@ -956,7 +961,13 @@ string	WED_ModerationReport(WED_Airport * apt, const std::set<string> & reviewed
 	// what Validate lists for this airport's liveries - the same functions
 	string skipped;
 	if (WED_Document * doc = dynamic_cast<WED_Document *>(apt->GetArchive()->GetResolver()))
-		skipped = doc->DescribeDiscardedRowsFor(icao);
+	{
+		// keyed by the airport ID, as the import recorded them and as Validate
+		// looks them up - not the icao_code metadata the header shows
+		string ident;
+		apt->GetICAO(ident);
+		skipped = doc->DescribeDiscardedRowsFor(ident);
+	}
 	if (!skipped.empty() || !parks.empty())
 	{
 		r += NL + "Validator warnings (static aircraft):" + NL;
