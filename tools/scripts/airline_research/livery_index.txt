@@ -587,7 +587,7 @@ OPERATOR	***	HAL			***	Hawaiian Airlines								***	USA	***	Pax			***	72		***	PH
 OPERATOR	***	HAT			***	Air Horizont									***	MLT	***	Pax			***	5		***	LMML
 OPERATOR	***	HBH			***	Hebei Airlines									***	CHN	***	Pax			***	29		***	ZBSJ
 OPERATOR	***	HBR			***	Hebridean Air Services							***	GBR	***	Pax			***	1		***	EGEO
-OPERATOR	***	HES			***	Harbour Air										***	CAN	***	Pax			***	37		***	CYHC CYWH
+OPERATOR	***	HES			***	Harbour Air										***	CAN	***	Pax			***	37		***	CYWH
 OPERATOR	***	HFA			***	airHaifa										***	ISR	***	Pax			***	6		***	LLHA
 OPERATOR	***	HFM			***	Hi Fly Malta									***	MLT	***	Pax			***	9		***	LMML
 OPERATOR	***	HFY			***	Hi Fly											***	POR	***	Pax			***	10		***	LPPT
