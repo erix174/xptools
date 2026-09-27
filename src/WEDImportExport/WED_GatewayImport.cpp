@@ -944,7 +944,7 @@ void WED_GatewayImportDialog::ReceiveMessage(
 		{
 			set<int> sel;
 			mICAO_AptProvider.GetSelection(sel);
-			mNextButton->SetDescriptor(sel.size() < 2 ? "Next" : gModeratorMode ? "Import Accepted" : "Import Recommened");
+			mNextButton->SetDescriptor(sel.size() < 2 ? "Next" : gModeratorMode ? "Import Accepted" : "Import Recommended");
 		}
 	}
 }

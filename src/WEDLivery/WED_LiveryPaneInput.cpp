@@ -285,15 +285,31 @@ void	WED_LiveryPane::ToggleCode(const string & icao)
 	const int n_with = CountRampsWithCode(icao);
 	const bool clear_all = (n_with == (int) mSelectedRamps.size());
 
+	// The Gateway refuses an airline string of 100 characters or more (validator,
+	// R10). A code that would push a stand past it is not added there - whole
+	// codes only, never a truncated one - and the button line says so.
+	const size_t kGatewayMaxChars = 99;
+	int refused = 0;
 	mArchive->StartCommand("Set Ramp Start Airlines");
 	for (size_t i = 0; i < mSelectedRamps.size(); ++i)
 	{
 		set<string> codes = ParseCodes(mSelectedRamps[i]->GetAirlines());
 		if (clear_all)	codes.erase(icao);
 		else			codes.insert(icao);
-		mSelectedRamps[i]->SetAirlines(WED_RampPosition::CorrectAirlinesString(CodesToString(codes)));
+		const string next = WED_RampPosition::CorrectAirlinesString(CodesToString(codes));
+		if (!clear_all && gExportTarget == wet_gateway && next.size() > kGatewayMaxChars) { ++refused; continue; }
+		mSelectedRamps[i]->SetAirlines(next);
 	}
 	mArchive->CommitCommand();
+	if (refused)
+	{
+		string lc = icao;
+		for (size_t c = 0; c < lc.size(); ++c) lc[c] = (char) tolower((unsigned char) lc[c]);
+		mPopulateFlash = refused == 1 ? "Gateway limit: " + lc + " not added"
+									  : "Gateway limit: " + lc + " not added on " + std::to_string(refused) + " stands";
+		mPopulateDetail = "The Gateway takes at most 99 characters of airline codes per stand.";
+		mPopulateFlashUntil = PaneClockNow() + 4.0;
+	}
 
 	// This is the edit the readout exists for: ticking an operator off is the
 	// cheapest way to empty a stand without noticing.

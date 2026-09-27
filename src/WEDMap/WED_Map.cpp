@@ -66,7 +66,7 @@
 WED_Map::WED_Map(IResolver * in_resolver, GUI_Commander * cmdr) : GUI_Commander(cmdr), mResolver(in_resolver), mTool(NULL), mClickLayer(NULL),
 					mIsDownCount(0), mIsDownExtraCount(0),
 					mSelectTool(NULL), mRotateMode(false), mRotating(false), mRotStartAngle(0), mRotStartView(0),
-					mClickHeld(false), mArrowOn(false), mBoxOn(false), mAltAtDown(false), mArrowX0(0), mArrowY0(0), mArrowX1(0), mArrowY1(0),
+					mClickHeld(false), mOrphanUp(-1), mArrowOn(false), mBoxOn(false), mAltAtDown(false), mArrowX0(0), mArrowY0(0), mArrowX1(0), mArrowY1(0),
 					mHasRef(false), mRefRotation(0)
 {
 		int k_reg[4] = { 0, 0, 4, 2 };
@@ -145,6 +145,10 @@ void		WED_Map::SetRotateMode(bool on)
 {
 	if (on && mSelectTool && mTool != mSelectTool) on = false;		// the select tool only
 	mRotateMode = on;
+	// A turn or a held click cut off by the mode change still has its mouse-up
+	// coming: that up belongs to the gesture, not to a pan or a tool.
+	if (mRotating)	mOrphanUp = 1;
+	if (mClickHeld)	mOrphanUp = 0;
 	mRotating = false;
 	mClickHeld = mArrowOn = mBoxOn = false;
 	mHasRef = false;
@@ -649,6 +653,13 @@ void		WED_Map::MouseDrag(int x, int y, int button)
 
 void		WED_Map::MouseUp  (int x, int y, int button)
 {
+	if (mOrphanUp >= 0 && button == mOrphanUp)
+	{
+		mOrphanUp = -1;
+		--mIsDownCount;
+		Refresh();
+		return;
+	}
 	if (mRotating && button == 1)
 	{
 		--mIsDownCount;

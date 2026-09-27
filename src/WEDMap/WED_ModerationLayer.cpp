@@ -1502,6 +1502,9 @@ void	WED_ModerationLayer::HandleClickUp(int inX, int inY, int inButton, GUI_KeyF
 	if (mPendingURL.empty()) return;
 	string url;
 	url.swap(mPendingURL);
+	// Like any button: released away from the "?", nothing opens.
+	{ Point2 sp = GetZoomer()->MapPixelToScreen(Point2(inX, inY)); inX = (int) floor(sp.x() + 0.5); inY = (int) floor(sp.y() + 0.5); }
+	if (!Inside((float) inX, (float) inY, mPendingBox[0], mPendingBox[1], mPendingBox[2], mPendingBox[3])) return;
 	WED_ModerationOpenSearch(url);
 }
 
@@ -1523,6 +1526,7 @@ int		WED_ModerationLayer::HandleClickDown(int inX, int inY, int inButton, GUI_Ke
 				// the up goes to the browser, and WED's window is left holding
 				// a click that never ends. Open it once this click is over.
 				mPendingURL = h.url;
+				mPendingBox[0] = h.x0; mPendingBox[1] = h.y0; mPendingBox[2] = h.x1; mPendingBox[3] = h.y1;
 				return 1;
 			}
 			if (pass == 1 && h.kind == Hit::hit_Pin)

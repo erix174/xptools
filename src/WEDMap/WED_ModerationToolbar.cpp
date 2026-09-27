@@ -38,7 +38,7 @@ static const char * kArt = "moderation_tools.png";
 static const int kTools = 2;
 static const char * kTips[kTools] = {
 	"Moderation View - highlight the ramp starts to check, and show the airport overview",
-	"Rotate view (select tool only) - drag along a row to level it; then drag to select (Alt+drag: new line); Shift+right-drag turns in 90-degree steps from the line; click again for north up"
+	"Rotate view (select tool only) - drag along a row to level it; then drag to select (Alt+drag: new line); Shift+right-drag turns the view, snapping to the line and every 90 degrees from it; click again for north up"
 };
 
 WED_ModerationToolbar::WED_ModerationToolbar(WED_MapPane * map) : mMap(map)

@@ -149,7 +149,8 @@ private:
 	int								mOpenID;		// chips: the chip whose card is open
 	int								mLegendRow;		// legend: the row under the mouse
 	std::vector<std::vector<int> >	mLegendIDs;		// legend: each row's ramp ids, for the click
-	std::string						mPendingURL;	// a "?" pressed: opened on the mouse-up
+	std::string						mPendingURL;	// a "?" pressed: opened on the mouse-up...
+	float							mPendingBox[4];	// ...if it is still over the "?" (screen frame)
 	std::map<std::string, Flag>		mFlags;
 	// Moderation View: what has been looked at this session. By SETUP, not by
 	// stand: stands with one signature are the same entry, so reviewing one

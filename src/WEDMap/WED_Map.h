@@ -117,6 +117,7 @@ private:
 	// click is held back from the tool until it is known not to be a drag, so
 	// measuring never clears the selection.
 	bool				mClickHeld;			// a left-down given to no layer, not yet to the tool
+	int					mOrphanUp;			// button whose mouse-up ends a gesture a mode change cut off, -1 none
 	bool				mArrowOn;			// ...and it became a drag: the arrow is out
 	// Once there is a reference line, a plain left-drag is a marquee instead,
 	// drawn level with the screen; Alt+left-drag draws a new reference.
