@@ -344,7 +344,11 @@ correctly.
   above the stand's current top, because the `1301` letter is the stand's
   physical size for ATC and AI parking (R23). A stand whose operators only fly
   larger aircraft is therefore not fixable there; list another operator. One
-  undo step for the whole selection; each fixed row says what changed.
+  undo step for the whole selection; each fixed row says what changed. Moving
+  the largest weight down does lower the `1301` letter (R23: the size follows
+  the largest weight), and the message and the fixed row say so ("stand size
+  D -> C, AI and ATC follow"). Only stands with weights are fixable: a legacy
+  stand already falls through (R17).
 - **R19** - **apt.dat has no comment syntax. A writer MUST NOT emit comment lines.**
   There is no `#` form, no `//` form, and nothing else. Confirmed against the
   shipped data: **zero** lines begin with `#` in the 12,351,496-line Global
