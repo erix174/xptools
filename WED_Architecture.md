@@ -608,6 +608,7 @@ A plain `GUI_Pane` (independent toggles, not a `GUI_ToolBar`), placed by
 - **1313** - six spawn weights (spec R4/R5/R11/R17/R20/R23/R24). `AptIO.cpp`, `apt_startup_loc_weights`; `WED_RampPosition::Import/Export`.
 - **1315 A|M** - who set the stand's static-aircraft data (spec R30): `A` auto-filled, `M` hand-set with weights, absent otherwise. `apt_startup_loc_origin`; written after 1313 on X-Plane 12 exports; read back into the auto-fill watermark on import, so a Gateway moderator sees it.
 - Unknown rows are skipped and recorded on the airport (`AptInfo_t::discarded_rows`), shown as `warn_apt_dat_rows_not_imported` and in the moderation report, both keyed by the airport ID.
+- **1301 airline string** - `WED_RampPosition::CorrectAirlinesString` is the one place it is normalised on entry: lower case, single spaces, a repeated code dropped silently (first one kept), bounded at 1024 characters. The Gateway limit is `kGatewayAirlinesMaxChars` (299, `WED_RampPosition.h`), shared by the validator, auto-fill and the Liveries tab's card ticking, which stop at the last whole code.
 
 The pinned base card (Moderation View) is kept in view: `WED_ModerationLayer::DrawDockedBase` docks it bottom left whenever its own card is not on screen; its header (`hit_GoTo`) centres the map on the stand without touching zoom or selection. Centring everywhere goes through `WED_MapZoomerNew::CenterOn`, which keeps pixels per metre.
 

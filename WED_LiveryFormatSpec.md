@@ -84,7 +84,7 @@ format itself is still one row.
   `[a-z0-9]{3,4}(_[a-z0-9]{1,6})?`, lower case in `1301`; anything else is a
   validator error. Gateway caps the
   `1301` airline string below 100 characters, 25 three-letter codes - recorded as a
-  known constraint.
+  known constraint. (Draft 9: WED 2.8 raises it to 299, R10.)
 - **Operation type `none` means no static aircraft (R29).** The sim reads it
   exactly as six zero weights. `earth.wed.xml` keeps operation types under their
   original names (General Aviation, Airline, Cargo, Military); the Liveries tab
@@ -304,7 +304,9 @@ correctly.
   that operation class, and the warning says the size rules out everything
   X-Plane has. None parks nothing by definition (R29) and is never checked.
   **All-zero weights are exempt** — they are the author saying nothing parks here
-  (V2). A stand without weights is checked against its size range. "Can fill" is
+  (V2). A stand without weights is the legacy format and is checked the way the
+  sim parks it (R17): every class at or below its `1301` letter counts, so it
+  parks nothing only when nothing fits at any of them. "Can fill" is
   the same `eligible()` the sim uses (§4.1), range (R26) and `HOME` (R27)
   included, and WED adds the stand's equipment type. The Liveries tab's
   multi-stand count, the Moderation View and its report call the same function,
