@@ -30,6 +30,7 @@
 #include "GISUtils.h"
 #include "WED_Airport.h"
 #include "WED_RampPosition.h"
+#include "WED_Entity.h"
 #include "WED_ToolUtils.h"		// WED_GetCurrentAirport, WED_GetSelect
 #include "ISelection.h"
 #include "IOperation.h"
@@ -233,6 +234,54 @@ void	WED_ModerationPrompt(WED_RampPosition * ramp, WED_Airport * apt)
 	if (ConfirmMessage(msg.c_str(), "Search", "Skip"))
 		for (size_t i = 0; i < to_check.size() && i < kMaxTabs; ++i)
 			WED_ModerationOpenSearch(to_check[i]->search_url);
+}
+
+// The topmost hidden things under t: a hidden folder is listed, not its contents.
+static void	CollectHidden(WED_Thing * t, vector<WED_Thing *> & out)
+{
+	WED_Entity * e = dynamic_cast<WED_Entity *>(t);
+	if (e && e->GetHidden()) { out.push_back(t); return; }
+	for (int n = 0; n < t->CountChildren(); ++n)
+		CollectHidden(t->GetNthChild(n), out);
+}
+
+bool	WED_ModerationConfirmHidden(WED_Thing * root)
+{
+	if (!root || !WED_ModerationEnabled()) return true;
+	vector<WED_Thing *> hidden;
+	CollectHidden(root, hidden);
+	if (hidden.empty()) return true;
+
+	string names;
+	const size_t kShow = 8;
+	for (size_t i = 0; i < hidden.size() && i < kShow; ++i)
+	{
+		string nm;
+		hidden[i]->GetName(nm);
+		names += "\n  - " + nm;
+	}
+	if (hidden.size() > kShow) names += "\n  and " + std::to_string(hidden.size() - kShow) + " more";
+	const string msg = std::to_string(hidden.size()) + (hidden.size() == 1 ? " item is" : " items are") +
+		" hidden, and hidden items are not exported:" + names +
+		"\n\nShow everything before exporting?";
+
+	const int ans = ConfirmMessage(msg.c_str(), "Show All and Export", "Cancel", "Export As Is");
+	if (ans == 0) return false;
+	if (ans == 1)
+	{
+		hidden[0]->StartCommand("Show All");
+		for (size_t i = 0; i < hidden.size(); ++i)
+		{
+			int idx = hidden[i]->FindProperty("Hidden");
+			if (idx == -1) continue;
+			PropertyVal_t val;
+			val.prop_kind = prop_Bool;
+			val.int_val = 0;
+			hidden[i]->SetNthProperty(idx, val);
+		}
+		hidden[0]->CommitCommand();
+	}
+	return true;
 }
 
 // R14, as a warning: can anything park here at all? Only the static aircraft are

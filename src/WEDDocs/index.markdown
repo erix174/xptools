@@ -1184,7 +1184,7 @@ In Moderator Mode the hierarchy pane sets up the map for you:
 * A double click on the **Taxiways** or **Draped Polygons** folder shows only that folder, hides its sibling folders and turns the imagery off.
 * A double click on the **Ground Vehicles** folder shows it together with **Ground Routes**, hides the other folders and switches to the Taxi Routes tab.
 
-Showing and hiding folders is an ordinary edit that can be undone. Hidden items are not exported, so click the airport name to show everything again before you export.
+Showing and hiding folders is an ordinary edit that can be undone. Hidden items are not exported, so in Moderator Mode **Export Scenery Pack** and **Submit to Airport Scenery Gateway** first list anything hidden and offer **Show All and Export** (one undo step), **Export As Is** or **Cancel**. Clicking the airport name also shows everything again.
 
 #### The Moderation Tools ####
 

@@ -23,6 +23,7 @@
 
 #include "XDefs.h"
 #include "WED_GatewayExport.h"
+#include "WED_LiveryModeration.h"		// WED_ModerationConfirmHidden
 #include "WED_MetaDataKeys.h"
 
 #if HAS_GATEWAY
@@ -347,6 +348,8 @@ void WED_DoExportToGateway(WED_Document * resolver)
 		WED_Airport * apt = SAFE_CAST(WED_Airport,WED_HasSingleSelectionOfType(resolver, WED_Airport::sClass));
 
 		if(!apt)
+			return;
+		if (!WED_ModerationConfirmHidden(apt))
 			return;
 
 		new WED_GatewayExportDialog(apt, resolver);

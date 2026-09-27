@@ -134,6 +134,14 @@ void	WED_ModerationDescribe(WED_RampPosition * ramp, WED_Airport * apt, WED_Mode
 // stand the validator says parks nothing.
 bool	WED_ModerationHasIssue(const WED_ModerationEntry & e);
 
+// Before an export or a Gateway submission, in Moderator Mode: hidden items are
+// not exported, and the moderator's hierarchy shortcuts hide whole folders. If
+// anything under root is hidden, ask: show everything (one undo step) and go
+// on, go on as it is, or stop. Returns false to stop. Outside Moderator Mode,
+// or with nothing hidden, returns true without asking.
+class WED_Thing;
+bool	WED_ModerationConfirmHidden(WED_Thing * root);
+
 // THE livery check behind Validate's warn_ramp_livery_parks_nothing (R14): true
 // when nothing in the livery index can park at this stand, with the message
 // the validator lists. The Moderation View calls the same function, so the two

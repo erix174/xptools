@@ -22,6 +22,7 @@
  */
 
 #include "WED_SceneryPackExport.h"
+#include "WED_LiveryModeration.h"		// WED_ModerationConfirmHidden
 
 #include "DSFLib.h"
 #include "IResolver.h"
@@ -704,6 +705,8 @@ void	WED_DoExportPack(WED_Document * resolver, WED_MapPane * pane)
 	// Just don't ever export if we are invalid.  Avoid the case where we write junk to a file!
 	// Special case: in Tyler's bulk-Gateway-export-mode, the suitability for export is to be established with other means,
 	// ... and if the export blows up or something, it's Tyler's fault :(
+	if (!WED_ModerationConfirmHidden(WED_GetWorld(resolver)))
+		return;
 	if(!WED_ValidateApt(resolver, pane))
 		return;
 
