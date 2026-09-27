@@ -138,6 +138,21 @@ int		WED_LiveryEquipment(const WED_LiveryIndexEntry & e)
 	return -1;
 }
 
+void	WED_LegacyStepDownWeights(int top_class, int out_w[6])
+{
+	if (top_class < 0 || top_class > 5) top_class = 2;
+	for (int k = 0; k < 6; ++k) out_w[k] = 0;
+	double left = 1.0;
+	int sum = 0;
+	for (int k = top_class; k >= 1; --k)
+	{
+		out_w[k] = (int) (left * 0.75 * 1000.0 + 0.5);
+		sum += out_w[k];
+		left *= 0.25;
+	}
+	out_w[0] = 1000 - sum;					// A takes the remainder
+}
+
 void	WED_LegacyClassWeights(int size_class, int out_w[6])
 {
 	static const int kTable[6][6] = {

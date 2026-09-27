@@ -186,8 +186,8 @@ float	WED_LiveryPane::SliderHeight(void) const
 	// of dead space explaining its own absence. The Simple Mode button moves onto
 	// the weights section's title row - see WeightButtonRect().
 	if (SelectionHasWeights()) return 0;
-	// title row + A-F label row + track/ball row, plus padding
-	return GUI_GetLineHeight(font_UI_Basic) * 3 + 16;
+	// title row + A-F label row + step-down share row + track/ball row, plus padding
+	return GUI_GetLineHeight(font_UI_Basic) * 4 + 16;
 }
 
 float	WED_LiveryPane::WeightsHeight(void) const
@@ -586,27 +586,12 @@ int		WED_LiveryPane::SliderHandleForXY(int bounds[4], int x, int y) const
 	float track_x0  = bounds[0] + 4 + handle_r;
 	float track_x1  = bounds[2] - 4 - handle_r;
 
-	int minIdx = WidthEnumToIndex(mSelectedRamps[0]->GetWidthMin());
+	// Legacy format: the letter is the one ball (the step-down reaches A by itself).
 	int maxIdx = WidthEnumToIndex(mSelectedRamps[0]->GetWidth());
-	float min_x = track_x0 + (track_x1 - track_x0) * minIdx / 5.0f;
 	float max_x = track_x0 + (track_x1 - track_x0) * maxIdx / 5.0f;
 
 	if (y < track_y - handle_r*1.5f || y > track_y + handle_r*1.5f) return -1;
-
-	if (minIdx == maxIdx)
-	{
-		// single overlapping ball - direction (min vs max) isn't known yet
-		if (fabs((double)(x - min_x)) <= handle_r*1.5) return 2;
-		return -1;
-	}
-
-	bool near_min = fabs((double)(x - min_x)) <= handle_r*1.5;
-	bool near_max = fabs((double)(x - max_x)) <= handle_r*1.5;
-
-	if (near_min && near_max)
-		return (fabs((double)(x-min_x)) <= fabs((double)(x-max_x))) ? 0 : 1;
-	if (near_min) return 0;
-	if (near_max) return 1;
+	if (fabs((double)(x - max_x)) <= handle_r*1.5) return 1;
 	return -1;
 }
 

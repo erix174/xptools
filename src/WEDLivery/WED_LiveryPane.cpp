@@ -486,10 +486,9 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 	}
 	else
 	{
-		int lo = WidthEnumToIndex(ramp->GetWidthMin());
+		// legacy format: the sim steps down from the letter all the way to A
 		int hi = WidthEnumToIndex(ramp->GetWidth());
-		if (lo > hi) std::swap(lo, hi);
-		for (int k = lo; k <= hi; ++k) use_class[k] = true;
+		for (int k = 0; k <= hi; ++k) use_class[k] = true;
 	}
 
 	// EVERY operator the directory knows, not just the ticked ones: a card has to
@@ -767,9 +766,11 @@ void	WED_LiveryPane::RecomputeCoverage(void)
 	{
 		WED_RampPosition * ramp = mSelectedRamps[i];
 
-		int lo = WidthEnumToIndex(ramp->GetWidthMin());
+		// Legacy format (no 1313): the sim steps down from the letter to A and
+		// falls through any class with nothing to park - so every class at or
+		// below the letter is in play. Weights, below, narrow it.
+		int lo = 0;
 		int hi = WidthEnumToIndex(ramp->GetWidth());
-		if (lo > hi) std::swap(lo, hi);		// defensive; the slider cannot produce it
 
 		// With a 1313 row the size letter is DERIVED - R23 writes only the largest
 		// weighted class into 1301 - so width_min..width collapses to one class

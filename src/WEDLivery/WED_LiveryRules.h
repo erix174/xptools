@@ -104,4 +104,14 @@ int				WED_LiveryEquipment(const WED_LiveryIndexEntry & e);
 // load (R18) - the weights are never renormalised onto the classes that exist.
 void			WED_LegacyClassWeights(int size_class, int out_w[6]);
 
+// TODAY'S STEP-DOWN, as weights. A stand with no 1313 row is the legacy format:
+// the sim takes its 1301 letter 75% of the time and hands 75% of what is left to
+// each smaller class in turn, class A taking the remainder - share
+// 0.75 x 0.25^k, k classes below the top. Integers summing to 1000
+// (D: A15 B47 C188 D750). One difference that this cannot carry: a legacy draw
+// on a class with nothing to park steps on down, a weight does not (R18) - so
+// judging a legacy stand, "parks nothing" means nothing fits at the letter or
+// ANY class below it.
+void			WED_LegacyStepDownWeights(int top_class, int out_w[6]);
+
 #endif /* WED_LIVERYRULES_H */

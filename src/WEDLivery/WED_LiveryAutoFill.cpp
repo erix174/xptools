@@ -35,6 +35,7 @@
 #include "WED_ToolUtils.h"		// WED_GetCurrentAirport
 #include "PlatformUtils.h"		// ConfirmMessage, DoUserAlert
 #include "ISelection.h"
+#include "WED_LiveryModeration.h"	// WED_LiveryLegacyUpdateWeights
 #include <map>
 
 #include <set>
@@ -174,9 +175,9 @@ WED_AutoFillPlan	WED_PlanLiveryAutoFill(WED_Airport * apt, const vector<WED_Ramp
 		}
 		else
 		{
-			int lo = ENUM_Export(ramp->GetWidthMin()), hi = ENUM_Export(ramp->GetWidth());
-			if (lo > hi) std::swap(lo, hi);
-			for (int k = 0; k < 6; ++k) classes[k] = (k >= lo && k <= hi);
+			// legacy format: the step-down reaches every class at or below the letter
+			const int hi = ENUM_Export(ramp->GetWidth());
+			for (int k = 0; k < 6; ++k) classes[k] = (k <= hi);
 		}
 
 		set<int> equipment;
@@ -299,6 +300,51 @@ int		WED_CanLiveryAutoFill(IResolver * resolver)
 	std::map<WED_Airport *, vector<WED_RampPosition *> > by_apt;
 	SelectedRampsByAirport(resolver, by_apt);
 	return !by_apt.empty();
+}
+
+int		WED_CanLiveryLegacyUpdate(IResolver * resolver)
+{
+	return WED_CanLiveryAutoFill(resolver);
+}
+
+void	WED_DoLiveryLegacyUpdate(IResolver * resolver)
+{
+	std::map<WED_Airport *, vector<WED_RampPosition *> > by_apt;
+	SelectedRampsByAirport(resolver, by_apt);
+	vector<std::pair<WED_RampPosition *, WED_Airport *> > todo;
+	int total = 0;
+	for (auto & kv : by_apt)
+		for (auto r : kv.second)
+		{
+			++total;
+			int w[6];
+			if (r->GetClassWeights(w)) continue;							// already the new format
+			if (r->GetRampOperationType() == ramp_operation_None) continue;	// parks nothing either way
+			todo.push_back(std::make_pair(r, kv.first));
+		}
+	if (todo.empty())
+	{
+		DoUserAlert("Every selected stand already has spawn weights (or is set to None).");
+		return;
+	}
+	char msg[512];
+	snprintf(msg, sizeof(msg), "Update %d of %d selected stands from the legacy format to spawn weights?\n\n"
+			 "Each gets today's step-down (75%% at its size, 75%% of the rest to each smaller class), "
+			 "and a size nothing can park at hands its share down - so every stand parks what it parks now.",
+			 (int) todo.size(), total);
+	if (!ConfirmMessage(msg, "Update", "Cancel")) return;
+
+	WED_Thing * wrl = WED_GetWorld(resolver);
+	wrl->StartCommand("Update Legacy Stands to Spawn Weights");
+	for (auto & t : todo)
+	{
+		int stored[6];
+		if (t.first->HasStoredWeights(stored)) { t.first->SetWeightsInUse(true); continue; }
+		int w[6];
+		WED_LiveryLegacyUpdateWeights(t.first, t.second, w);
+		t.first->SetClassWeights(w);
+	}
+	wrl->CommitCommand();
 }
 
 void	WED_DoLiveryAutoFill(IResolver * resolver)

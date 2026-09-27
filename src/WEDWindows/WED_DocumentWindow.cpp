@@ -490,6 +490,7 @@ int	WED_DocumentWindow::HandleCommand(int command)
 
 	case wed_UpdateMetadata:     WED_DoUpdateMetadata(mDocument); return 1;
 	case wed_AutoFillLiveries:   WED_DoLiveryAutoFill(mDocument); return 1;
+	case wed_UpdateLegacyLiveries: WED_DoLiveryLegacyUpdate(mDocument); return 1;
 	case wed_NextRampStart:
 	case wed_PrevRampStart:
 		// Moderation's walk through the stands: select the next one, bring it to
@@ -659,6 +660,7 @@ int	WED_DocumentWindow::CanHandleCommand(int command, string& ioName, int& ioChe
 	case wed_EditApt:	return WED_CanSetCurrentAirport(mDocument, ioName);
 	case wed_UpdateMetadata:     return WED_CanUpdateMetadata(mDocument);
 	case wed_AutoFillLiveries:   return WED_CanLiveryAutoFill(mDocument);
+	case wed_UpdateLegacyLiveries: return WED_CanLiveryLegacyUpdate(mDocument);
 	case wed_NextRampStart:
 	case wed_PrevRampStart:      return WED_GetCurrentAirport(mDocument) != NULL;
 	// Moderation only: greyed outside it (WED's menus are built once, so an

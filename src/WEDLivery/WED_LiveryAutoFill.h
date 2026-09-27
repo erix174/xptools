@@ -111,4 +111,11 @@ class IResolver;
 int					WED_CanLiveryAutoFill(IResolver * resolver);
 void				WED_DoLiveryAutoFill(IResolver * resolver);
 
+// Airport > Update Legacy Stands to Spawn Weights: every selected stand still in
+// the legacy format (no 1313) gets today's step-down written out as weights,
+// fall-through folded in (WED_LiveryLegacyUpdateWeights) - it parks what it
+// parked, and from then on the new rules apply. One undo step.
+int					WED_CanLiveryLegacyUpdate(IResolver * resolver);
+void				WED_DoLiveryLegacyUpdate(IResolver * resolver);
+
 #endif /* WED_LIVERYAUTOFILL_H */

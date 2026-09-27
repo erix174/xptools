@@ -156,6 +156,7 @@ enum {
 	wed_AddATCWindRule,
 	wed_UpgradeRamps,
 	wed_AutoFillLiveries,
+	wed_UpdateLegacyLiveries,
 	wed_NextRampStart,
 	wed_PrevRampStart,
 	wed_NextIssueStand,

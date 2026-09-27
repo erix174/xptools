@@ -255,6 +255,7 @@ static const GUI_MenuItem_t kAirportMenu[] = {
 {	"Next Stand to Check  (Shift+X on the map)",	0,	0,					0,	wed_NextIssueStand},
 {	"Previous Stand to Check",	'X',	gui_ControlFlag+gui_ShiftFlag,		0,	wed_PrevIssueStand},
 {	"Auto-Populate Static Aircraft (Selected Ramps Only)...",	0,	0,	0,	wed_AutoFillLiveries},
+{	"Update Legacy Stands to Spawn Weights (Selected Ramps Only)...",	0,	0,	0,	wed_UpdateLegacyLiveries},
 {	"Upgrade Jetways",			0,		0,									0,	wed_UpgradeJetways},
 {	"Upgrade Art",				0,		0,									0,	wed_UpgradeArt},
 {	"Age Pavement",				0,		0,									0,	wed_AgePavement},

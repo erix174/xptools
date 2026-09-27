@@ -22,6 +22,7 @@
  */
 
 #include "WED_LiveryPaneInternal.h"
+#include "WED_LiveryModeration.h"		// WED_LiveryLegacyUpdateWeights
 
 // Mouse input, and the edits it makes.
 
@@ -63,12 +64,11 @@ void	WED_LiveryPane::SeedWeightsFromSizeRange(void)
 			continue;
 		}
 
-		int lo = WidthEnumToIndex(r->GetWidthMin());
-		int hi = WidthEnumToIndex(r->GetWidth());
-		if (lo > hi) std::swap(lo, hi);
-
+		// UPDATE from the legacy format: today's step-down, written out as weights
+		// (0.75 x 0.25^k from the letter down) - the stand starts exactly where
+		// the sim had it, and from here the author tunes it.
 		int w[6];
-		for (int k = 0; k < 6; ++k) w[k] = (k >= lo && k <= hi) ? 1 : 0;
+		WED_LiveryLegacyUpdateWeights(r, WED_GetParentAirport(r), w);
 		r->SetClassWeights(w);
 	}
 	mArchive->CommitCommand();
@@ -535,15 +535,12 @@ int		WED_LiveryPane::MouseDown(int x, int y, int button)
 	int handle = SelectionHasWeights() ? -1 : SliderHandleForXY(b, x, y);
 	if (handle >= 0)
 	{
-		int minIdx = WidthEnumToIndex(mSelectedRamps[0]->GetWidthMin());
+		// Legacy format: one control, the letter. The step-down reaches A from
+		// wherever it is, so the range's lower end is pinned there.
 		int maxIdx = WidthEnumToIndex(mSelectedRamps[0]->GetWidth());
-
-		// Anchor = the ball NOT being grabbed (stays fixed all gesture); current =
-		// the grabbed ball's own position. When they overlap it doesn't matter
-		// which is "the" anchor since both equal the same value anyway.
-		mDragAnchorIndex  = (handle == 0) ? maxIdx : minIdx;
-		mDragCurrentIndex = (handle == 0) ? minIdx : maxIdx;
-		mDragHandle = handle;
+		mDragAnchorIndex  = 0;
+		mDragCurrentIndex = maxIdx;
+		mDragHandle = 1;
 
 		mArchive->StartCommand("Set Ramp Start Size");
 		return 1;

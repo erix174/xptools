@@ -335,9 +335,12 @@ static void	AnalyseStand(WED_RampPosition * ramp, WED_Airport * apt, StandAnalys
 	}
 	else
 	{
-		a.lo = ENUM_Export(ramp->GetWidthMin()); a.hi = ENUM_Export(ramp->GetWidth());
-		if (a.lo > a.hi) std::swap(a.lo, a.hi);
-		for (int k = 0; k < 6; ++k) a.allowed[k] = (k >= a.lo && k <= a.hi);
+		// Legacy format (no 1313): the sim steps down from the letter and keeps
+		// going past any class with nothing to park, so every class at or below
+		// the letter counts. WED's own lower size bound never reaches apt.dat.
+		a.hi = ENUM_Export(ramp->GetWidth());
+		a.lo = 0;
+		for (int k = 0; k < 6; ++k) a.allowed[k] = (k <= a.hi);
 	}
 	a.checked = true;
 
@@ -423,11 +426,9 @@ static int	NearestFit(const StandAnalysis & a, int from)
 static bool	FixableAnalysis(const StandAnalysis & a)
 {
 	if (!ParksNothing(a)) return false;
-	if (!a.weighted)
-	{
-		for (int k = a.lo - 1; k >= 0; --k) if (a.fits[k]) return true;
-		return false;
-	}
+	// A legacy stand already falls through to anything smaller; what is left
+	// when it parks nothing is not a size question. Update it to weights first.
+	if (!a.weighted) return false;
 	for (int k = 0; k < 6; ++k) if (a.allowed[k] && NearestFit(a, k) >= 0) return true;
 	return false;
 }
@@ -449,7 +450,7 @@ bool	WED_LiveryParksNothing(WED_RampPosition * ramp, WED_Airport * apt, string &
 		if (a.fits[k] && k <= top) fit_classes += (char) ('A' + k);
 	}
 	const bool fixable = FixableAnalysis(a);
-	const char * weights_or_size = a.weighted ? "its spawn weights" : "its size range";
+	const char * weights_or_size = a.weighted ? "its spawn weights" : "its size (legacy format, stepping down to A)";
 
 	// R14's cases, which must not read alike.
 	string why;
@@ -477,8 +478,45 @@ bool	WED_LiveryParksNothing(WED_RampPosition * ramp, WED_Airport * apt, string &
 	out_msg = string("Ramp start '") + name + "': " + why +
 		", so X-Plane will park no static aircraft here. ATC and AI parking are unaffected.";
 	if (fixable)
-		out_msg += " Fixable: select it and press Fix - " + string(weights_or_size) + " move onto " + fit_classes + ".";
+	{
+		int w[6], new_top = -1;
+		for (int k = 0; k < 6; ++k) w[k] = a.wts[k];
+		for (int k = 0; k < 6; ++k)
+			if (a.wts[k] > 0 && !a.fits[k]) { const int t = NearestFit(a, k); if (t >= 0) { w[t] += a.wts[k]; w[k] -= a.wts[k]; } }
+		for (int k = 5; k >= 0; --k) if (w[k] > 0) { new_top = k; break; }
+		out_msg += " Fixable: select it and press Fix - " + string(weights_or_size) + " move onto " + fit_classes;
+		if (new_top >= 0 && new_top != top)
+			out_msg += string(", and the stand's size becomes ") + (char) ('A' + new_top) + " (was " + (char) ('A' + top) + "; AI and ATC follow it)";
+		out_msg += ".";
+	}
 	return true;
+}
+
+// Updating a legacy stand to weights: today's step-down, with its fall-through
+// folded in - a class nothing can park at hands its share to the next class
+// below that something can, which is where the legacy draw would have gone. A
+// share with nothing below it stays where it is: legacy parked nothing there
+// either. So the stand parks exactly what it parked before the update.
+void	WED_LiveryLegacyUpdateWeights(WED_RampPosition * ramp, WED_Airport * apt, int out_w[6])
+{
+	const int top = ramp ? ENUM_Export(ramp->GetWidth()) : 2;
+	WED_LegacyStepDownWeights(top, out_w);
+	StandAnalysis a;
+	AnalyseStand(ramp, apt, a);
+	if (!a.checked) return;				// nothing to judge against: the plain step-down
+	for (int k = top; k >= 1; --k)
+		if (out_w[k] > 0 && !a.fits[k])
+			for (int j = k - 1; j >= 0; --j)
+				if (a.fits[j])
+				{
+					// The top class keeps a token 1: under R23 the 1301 letter is the
+					// largest weighted class, and an update is not the author saying
+					// the stand got smaller - AI and ATC must still see its size.
+					const int keep = (k == top) ? 1 : 0;
+					out_w[j] += out_w[k] - keep;
+					out_w[k] = keep;
+					break;
+				}
 }
 
 bool	WED_LiveryParksNothingFixable(WED_RampPosition * ramp, WED_Airport * apt)
@@ -501,7 +539,7 @@ bool	WED_LiveryFixParksNothing(WED_RampPosition * ramp, WED_Airport * apt, strin
 	string name;
 	ramp->GetName(name);
 	char buf[256];
-	if (a.weighted)
+	const int old_top = StandTop(a);
 	{
 		int w[6];
 		for (int k = 0; k < 6; ++k) w[k] = a.wts[k];
@@ -514,23 +552,20 @@ bool	WED_LiveryFixParksNothing(WED_RampPosition * ramp, WED_Airport * apt, strin
 				w[k] -= a.wts[k];
 			}
 		ramp->SetClassWeights(w);
+		int new_top = -1;
+		for (int k = 5; k >= 0; --k) if (w[k] > 0) { new_top = k; break; }
 		if (out_what)
 		{
 			snprintf(buf, sizeof(buf), "Ramp start '%s': weights now %d %d %d %d %d %d (A-F)",
 					 name.c_str(), w[0], w[1], w[2], w[3], w[4], w[5]);
 			*out_what = buf;
-		}
-	}
-	else
-	{
-		int t = -1;
-		for (int k = a.lo - 1; k >= 0; --k) if (a.fits[k]) { t = k; break; }
-		if (t < 0) return false;
-		ramp->SetWidthMin(ENUM_Import(ENUM_Domain(ramp->GetWidth()), t));
-		if (out_what)
-		{
-			snprintf(buf, sizeof(buf), "Ramp start '%s': size range now %c-%c", name.c_str(), (char) ('A' + t), (char) ('A' + a.hi));
-			*out_what = buf;
+			// R23: the 1301 letter follows the largest weight - say so, since
+			// AI and ATC read it as the stand's size.
+			if (new_top >= 0 && new_top != old_top)
+			{
+				snprintf(buf, sizeof(buf), "; stand size %c -> %c (AI and ATC follow)", (char) ('A' + old_top), (char) ('A' + new_top));
+				*out_what += buf;
+			}
 		}
 	}
 	return true;

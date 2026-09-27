@@ -156,6 +156,11 @@ bool	WED_LiveryParksNothing(WED_RampPosition * ramp, WED_Airport * apt, std::str
 // size range's lower end - onto the nearest such class. Call inside a command;
 // out_what says what changed.
 bool	WED_LiveryParksNothingFixable(WED_RampPosition * ramp, WED_Airport * apt);
+
+// The weights a legacy stand (no 1313) is updated to: today's step-down from its
+// letter (WED_LegacyStepDownWeights) with the fall-through folded in, so it parks
+// what it parked before. Before the update, the stand must still be legacy.
+void	WED_LiveryLegacyUpdateWeights(WED_RampPosition * ramp, WED_Airport * apt, int out_w[6]);
 bool	WED_LiveryFixParksNothing(WED_RampPosition * ramp, WED_Airport * apt, std::string * out_what);
 
 // The Moderation View's report, as plain text for the clipboard: airport,

@@ -1231,12 +1231,14 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		float track_x0 = b[0] + pad + handle_r;
 		float track_x1 = b[2] - pad - handle_r;
 
+		// LEGACY FORMAT (no 1313): one control, the letter. The sim steps down
+		// from it to A, so the bar always starts at A, and the row under the
+		// letters shows the share each class gets (0.75 x 0.25^k).
 		int minIdx = 0, maxIdx = 5;
 		if (!mSelectedRamps.empty())
-		{
-			minIdx = WidthEnumToIndex(mSelectedRamps[0]->GetWidthMin());
 			maxIdx = WidthEnumToIndex(mSelectedRamps[0]->GetWidth());
-		}
+		int legacy_w[6];
+		WED_LegacyStepDownWeights(maxIdx, legacy_w);
 
 		float * lbl_col    = WED_Color_RGBA(wed_Table_Text);
 		float * track_col  = WED_Color_RGBA(wed_Table_Gridlines);
@@ -1260,7 +1262,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		glEnd();
 
 		// title, so it's unmistakable what this control is
-		GUI_FontDraw(state, font_UI_Basic, header_col2, b[0] + pad, slider_top - line_h * 0.9f, "Size (ICAO Wingspan Category)");
+		GUI_FontDraw(state, font_UI_Basic, header_col2, b[0] + pad, slider_top - line_h * 0.9f, "Size (legacy step-down)");
 
 		for (int i = 0; i < 6; ++i)
 		{
@@ -1273,6 +1275,21 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			if (lx < (float) b[0] + 2)          lx = (float) b[0] + 2;
 			if (lx + tw > (float) b[2] - 2)     lx = (float) b[2] - 2 - tw;
 			GUI_FontDraw(state, font_UI_Basic, lbl_col, lx, slider_top - line_h * 1.9f, kWidthLabels[i]);
+
+			// the step-down share, under its letter
+			if (i <= maxIdx)
+			{
+				char pct[16];
+				const double share = legacy_w[i] / 10.0;
+				if (share >= 9.95)	snprintf(pct, sizeof(pct), "%.0f%%", share);
+				else				snprintf(pct, sizeof(pct), "%.1f%%", share);
+				float pw = GUI_MeasureRange(font_UI_Basic, pct, pct + strlen(pct));
+				float px = fx - pw * 0.5f;
+				if (px < (float) b[0] + 2)          px = (float) b[0] + 2;
+				if (px + pw > (float) b[2] - 2)     px = (float) b[2] - 2 - pw;
+				float pct_col[4] = { 0.62f, 0.62f, 0.64f, 1.0f };
+				GUI_FontDraw(state, font_UI_Basic, i == maxIdx ? lbl_col : pct_col, px, slider_top - line_h * 2.9f, pct);
+			}
 		}
 
 		state->SetState(0,0,0,0,0,0,0);
@@ -1316,14 +1333,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		// balls overlap, hit-testing reports "2" for either - light up both
 		// (they're at the same spot, so this draws once in practice) so an
 		// overlapped pair doesn't look unresponsive.
-		bool ring_min = (mHoverSliderHandle == 0 || mDragHandle == 0 || mHoverSliderHandle == 2 || mDragHandle == 2);
-		bool ring_max = (mHoverSliderHandle == 1 || mDragHandle == 1 || mHoverSliderHandle == 2 || mDragHandle == 2);
-
-		if (ring_min)
-		{
-			glColor4f(1.0f, 0.85f, 0.3f, 1.0f);
-			DrawCircleOutline(min_x, track_y, handle_r + 3);
-		}
+		bool ring_max = (mHoverSliderHandle >= 0 || mDragHandle >= 0);
 		if (ring_max)
 		{
 			glColor4f(1.0f, 0.85f, 0.3f, 1.0f);
@@ -1332,12 +1342,6 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 
 		// min ball (orange), max ball (blue), each with a dark outline for contrast -
 		// min drawn first so the max ball wins on top when the two happen to overlap
-		glColor4f(0.9f, 0.6f, 0.2f, 1.0f);
-		DrawFilledCircle(min_x, track_y, handle_r);
-		glColor4f(0.05f, 0.05f, 0.05f, 1.0f);
-		DrawCircleOutline(min_x, track_y, handle_r);
-		DrawGrabberDashes(min_x, track_y, handle_r);
-
 		glColor4f(0.3f, 0.6f, 0.9f, 1.0f);
 		DrawFilledCircle(max_x, track_y, handle_r);
 		glColor4f(0.05f, 0.05f, 0.05f, 1.0f);
@@ -1674,16 +1678,18 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 				snprintf(head,   sizeof(head),   "This stand parks nothing");
 				head_col = col_warn;
 				snprintf(detail, sizeof(detail),
-					"None of the %d listed operators has a model at size %s. Widen the range, or list an operator that flies one.",
-					mCoverage.airlines_listed, range);
+					"Legacy step-down %s: none of the %d listed operators has a model at any of these sizes. List an operator that flies one.",
+					range, mCoverage.airlines_listed);
 			}
 			else
 			{
 				snprintf(head,   sizeof(head),   "Parks aircraft from %d of %d listed operators",
 					mCoverage.airlines_eligible, mCoverage.airlines_listed);
 				head_col = col_good;
-				snprintf(detail, sizeof(detail), "%d of %d sizes in %s can be filled.",
-					mCoverage.classes_filled, mCoverage.classes_in_range, range);
+				// legacy format: a class with nothing to park steps on down, so the
+				// stand always finds something - Set Spawn Weights updates it to 1313
+				snprintf(detail, sizeof(detail), "Legacy step-down %s: %d of %d sizes can be filled, the rest step down. Set Spawn Weights updates it.",
+					range, mCoverage.classes_filled, mCoverage.classes_in_range);
 			}
 		}
 		else if (mCoverage.stands_empty > 0)

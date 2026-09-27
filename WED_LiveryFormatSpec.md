@@ -382,6 +382,23 @@ correctly.
   and raised as the validation warning `warn_apt_dat_rows_not_imported`.
 - **R17** — Three-stage selection (§4) applies **only** to stands carrying a `1313`
   row. A stand without one MUST keep today's behaviour, unchanged.
+
+  **WED treats such a stand as the legacy format** and judges it by today's
+  step-down: the letter takes 75%, and each smaller class 75% of what is left
+  (share 0.75 x 0.25^k, class A the remainder: D is A 1.5%, B 4.7%, C 19%,
+  D 75%). A draw on a class with nothing to park steps on down, so a legacy
+  stand parks nothing only when nothing fits at its letter or any class below
+  it (R14, the Liveries tab, auto-fill and the Moderation View all use this).
+  WED's own lower size bound never reaches apt.dat and plays no part.
+
+  **Update.** "Set Spawn Weights" on the Liveries tab, or Airport > Update
+  Legacy Stands to Spawn Weights, writes that step-down out as a `1313`, with
+  the fall-through folded in: a class nothing can park at hands its share to
+  the next class below that something can, and a share with nothing below it
+  stays (legacy parked nothing there either). The top class keeps a token
+  weight of 1, so the `1301` letter - the stand's size for AI and ATC, R23 -
+  does not change. The stand then parks what it parked before, under the new
+  rules from there on.
 - **R18** — **Stage 2 and stage 3 MUST ask the index the same question.** An
   airline with no usable livery in the class just drawn is not a stage-2
   candidate at all. "Usable" means every filter at once: the class, the
