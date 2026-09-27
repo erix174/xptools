@@ -60,8 +60,8 @@ Draft 9 records the fixes of 2026-09-26, and one addition of 2026-09-27:
   appendix records that moderation follows the Moderator Mode preference.
 - **Index data `20260927-r1`.** CYH is re-coded `CES_1` and its two liveries
   are no longer marked; still 42 `Obsolete` marks. Gol's 737 moves from `GOL`
-  (Cargolaar, Namibia) to Gol's own designator `GLO`; 20 OPERATOR records are
-  added for codes the airport database already used (1,518 in all), none with
+  (Cargolaar, Namibia) to Gol's own designator `GLO`; 50 OPERATOR records are
+  added for codes the airport database uses (1,548 in all), none with
   a livery, so no livery-derived count changes. Counts derived from the index
   (§6.3, §6.5, §8.6) and every `AptIO.cpp` line reference are re-checked against
   this data and the current source.
@@ -1412,7 +1412,7 @@ must ship it from the same build as the assets it describes.**
 ### 6.5 Index invariants a consumer may rely on
 
 Verified mechanically against the shipped file (`20260927-r1`: 298 livery rows,
-1,518 OPERATOR records); a generator change that breaks one of these is a
+1,548 OPERATOR records); a generator change that breaks one of these is a
 regression.
 
 - **I1** — The file begins with the two header lines `I` and
@@ -2259,7 +2259,7 @@ this table.
 |---|---|
 | Read and write `1313` (`AptIO.cpp`), entity property, weights mode (§6.8) | **done** — written on every X-Plane 12 export, Gateway included |
 | Reader robustness: unknown rows skipped and reported (R15, §9) | **done** — listed after import; `warn_apt_dat_rows_not_imported` |
-| `livery_index.txt` schema 4 — 298 liveries, 1,518 operator records, header, hubs | **done**; generator merges, never overwrites (§6.7b) |
+| `livery_index.txt` schema 4 — 298 liveries, 1,548 operator records, header, hubs | **done**; generator merges, never overwrites (§6.7b) |
 | Index reader (`WED_LiveryIndex`), hub placement from Global Airports | **done** — drives every livery feature below |
 | Liveries tab: operator cards with real aircraft previews, size range / weights, flags, recommendations | **done** |
 | Coverage readout: P(empty), per-operator share, "only X will ever park here" (§4.5) | **done** |

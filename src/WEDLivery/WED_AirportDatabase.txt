@@ -783,10 +783,10 @@ EDUY *** DE *** <NA>
 EDVE *** DE *** <NA>
 EDVK *** DE *** MHV, SWU
 EDWE *** DE ***
-EDWG *** DE *** FRS
+EDWG *** DE *** 
 EDWJ *** DE ***
-EDWR *** DE *** OLT
-EDWS *** DE *** FRS
+EDWR *** DE *** OFD
+EDWS *** DE *** 
 EDWY *** DE *** <NA>
 EDWZ *** DE ***
 EDXB *** DE *** <NA>
@@ -1426,7 +1426,7 @@ HJJJ *** SS *** MSR, ETH, FDB, KQA
 HKAM *** KE ***
 HKEL *** KE *** JMA, SEW, ACP, KQA, ETH
 HKJK *** KE *** ABY, AFR, ATC, LNK, SKK, BAW, BEL, CSN, MSR, UAE, ETH, ETD, FDB, KNE, GFA, IGO, KQA, KLM, QTR, OMS, SVA, DTA, THY, AZB, ACP, FDX, PRF, RWD, REU, DLH, MSC, FDT, JMA, XLK, TMN, UGD, SEW
-HKKE *** KE *** XAK, IHO, SLK, RRV
+HKKE *** KE *** XAK, IHO, XLK, RRV
 HKKI *** KE *** JMA, KQA, XLK
 HKLK *** KE *** <NA>
 HKLO *** KE *** FFV
@@ -1470,7 +1470,7 @@ HSNN *** SD ***
 HSOB *** SD *** <NA>
 HSPN *** SD *** BDR, MSR, ETH, QTR, OMS, SUD, TQQ, THY, BFL
 HSSG *** SD *** <NA>
-HSSK *** SD *** SUD, BDR, TRQ, KAC
+HSSK *** SD *** SUD, BDR, TQQ, KAC
 HSSM *** SS ***
 HSSW *** SD *** <NA>
 HSWW *** SS ***
@@ -1479,7 +1479,7 @@ HTBU *** TZ *** ATC
 HTDA *** TZ *** ATC, AZW, LNK, MSR, UAE, ETH, FDB, IGO, KQA, KLM, LAM, MWI, OMA, PRF, QTR, RWD, SEW, SAA, THY, UGD, AZB, ACP, AUK, CSV
 HTDO *** TZ *** ATC
 HTGW *** TZ *** ATC
-HTIR *** TZ *** ATC, UAR, PRF
+HTIR *** TZ *** ATC, AUK, PRF
 HTKA *** TZ *** ATC
 HTKJ *** TZ *** AFR, ATC, BEL, EDW, ETH, FDB, KQA, KLM, NOS, QTR, THY, UGD, PRF, RWD
 HTMA *** TZ ***
@@ -1488,12 +1488,12 @@ HTMT *** TZ *** PRF, ATC
 HTMU *** TZ *** ATC
 HTMW *** TZ *** ATC, PRF, ACP, ETH, RWD
 HTNJ *** TZ *** <NA>
-HTPE *** TZ *** ATC, UAR, CSV
+HTPE *** TZ *** ATC, AUK, CSV
 HTSN *** TZ ***
 HTSO *** TZ *** ATC
 HTSY *** TZ *** ATC, PRF
 HTTB *** TZ *** ATC
-HTTG *** TZ *** CSV, UAR
+HTTG *** TZ *** CSV, AUK
 HTZA *** TZ *** AFR, LNK, ATC, AIZ, CFG, OCN, EDW, MSR, ETH, ETD, FDB, ISR, JMA, KQA, KLM, LOT, MWI, NOS, OMA, PRF, QTR, RWD, XLK, THY, UGD, ACP, TFL, SFR
 HUAR *** UG ***
 HUEN *** UG *** ABY, ATC, BDR, MSR, UAE, ETH, FDB, KNE, JMA, KQA, MWI, QTR, RWD, TQQ, THY, UGD, ETD, DRK, BGL, BFL, KLM
@@ -1974,7 +1974,7 @@ KPBG *** US *** AAY
 KPBI *** US *** AAL, DAL, UAL, SWA, JBU, AAY, FFT, VXP, MXY, SCX, ACA, POE, BHS, JSX, SKW, RPA, ENY, EDV, FDX, UPS
 KPCW *** US ***
 KPDK *** US ***
-KPDT *** US *** BTQ, MPE
+KPDT *** US *** BTQ
 KPDX *** US *** ASA, DAL, FFT, UAL, SWA, AAL, SCX, ACA, JBU, AAY, BAW, CFG, ICE, KLM, VOI, WJA
 KPGA *** US ***
 KPGD *** US *** AAY, SCX
@@ -2064,7 +2064,7 @@ KSJX *** US ***
 KSKA *** US *** <NA>
 KSKX *** US ***
 KSLC *** US *** AMX, ROU, ASA, AAL, DAL, FFT, JBU, RSY, KLM, SWA, SCX, UAL, VOI, WJA, ENY, JIA, PDT, RPA, SKW, EDV, AWI, ASH, UCA, GJS, ACA
-KSLE *** US *** AMF, MPE
+KSLE *** US *** AMF
 KSLK *** US *** KAP
 KSLN *** US *** UAL
 KSMF *** US *** AMX, ACA, ASA, AAL, DAL, FFT, HAL, JBU, SWA, UAL, VOI, ENY, JIA, PDT, RPA, SKW, EDV, AWI, ASH, UCA, GJS
@@ -2109,7 +2109,7 @@ KTUL *** US *** ASA, AAY, AAL, DAL, SWA, SCX, UAL, ENY, JIA, PDT, RPA, SKW, EDV,
 KTUP *** US *** VTE
 KTUS *** US *** ASA, AAL, DAL, FFT, SWA, SCX, UAL, ENY, JIA, PDT, RPA, SKW, EDV, AWI, ASH, UCA, GJS
 KTVC *** US *** AAL, UAL, DAL, JBU, AAY
-KTVF *** US *** LYM, AIP, FRG, BMJ, CPT
+KTVF *** US *** LYM, FRG, BMJ, CPT
 KTVL *** US *** <NA>
 KTWF *** US *** DAL, MXA
 KTXK *** US *** AAL
@@ -2576,7 +2576,7 @@ MGPB *** GT ***
 MGQZ *** GT *** TGU
 MGRB *** GT *** <NA>
 MGRT *** GT *** TGU
-MGTK *** GT *** TGM, AVA
+MGTK *** GT *** TGU, AVA
 MH-0004 *** MH ***
 MH-AUL *** MH ***
 MH-JEJ *** MH ***
@@ -2988,7 +2988,7 @@ OIKB *** IR *** IRM, IRA
 OIKJ *** IR *** IRM
 OIKK *** IR *** IRM, IRA
 OIKM *** IR *** IRM
-OIKQ *** IR *** QSM, IRA, IRC, IRK, IRB, CPN, TBZ, MRJ, PYA, IRZ, SPN, TBN, VRH, IZG, IRU, FDB
+OIKQ *** IR *** QSM, IRA, IRC, KIS, IRB, CPN, TBZ, MRJ, PYA, IRZ, TBN, VRH, IZG, IRU, FDB
 OIKR *** IR *** VRH
 OIKY *** IR *** IRG, PRS
 OIMB *** IR *** IRM
@@ -3000,11 +3000,11 @@ OIMT *** IR *** IRM
 OING *** IR *** IRC, PYA, PRS
 OINN *** IR *** IRA
 OINR *** IR *** IRA
-OINZ *** IR *** IRA, IRC, IRK, QSM, CPN, TBZ, IRZ, TBN, VRH
+OINZ *** IR *** IRA, IRC, KIS, QSM, CPN, TBZ, IRZ, TBN, VRH
 OISF *** IR *** 
 OISJ *** IR *** IRA
 OISL *** IR *** IRA, ABY, FDB
-OISR *** IR *** CPN, IRA, IRK, KIS
+OISR *** IR *** CPN, IRA, KIS
 OISS *** IR *** IRA, IRM, QTR, THY
 OISY *** IR *** IRM
 OITL *** IR *** IRM
@@ -3021,7 +3021,7 @@ OIZJ *** IR *** IRM
 OJAI *** JO *** RJA, SVA, KNE, MSR, JAV, THY, MEA, UAE, FDB, IAW, ETD, QTR, ABY, KAC, AEE, DLH, ETH, BAW, DAH, IYE, ADY, MSC, TKJ, AUA, DNA, EWG, GFA, OMA, PGT, ROT, WZZ
 OJAM *** JO *** KNE, RJA
 OJAQ *** JO *** RJA, THY
-OKKK *** KW *** ABY, MSC, AXB, AKJ, TBZ, BBC, MSR, UAE, ETH, ETD, FDB, KNE, GFA, HIM, IGO, IRA, JZR, KMF, KAC, MEA, NMA, NIA, OMA, PIA, PGT, QTR, RJA, SVA, SPN, ALK, SYR, TRQ, THY, VRH, IYE, CLX, ICV, DHK
+OKKK *** KW *** ABY, MSC, AXB, AKJ, TBZ, BBC, MSR, UAE, ETH, ETD, FDB, KNE, GFA, HIM, IGO, IRA, JZR, KMF, KAC, MEA, NMA, NIA, OMA, PIA, PGT, QTR, RJA, SVA, ALK, SYR, TQQ, THY, VRH, IYE, CLX, ICV, DHK
 OLBA *** LB *** MEA, THY, UAE, FDB, RJA, MSR, IAW, QTR, ETD, KAC, AFR, CYP, ETH, AEE, SXS, ABY, EWG, SWR, DLH, LOT, SAS, ROT, DAH, ADY, TKJ, JZR, PGT, OMS, SDR, TVF, UBD
 OLH *** US ***
 OLRA *** LB *** <NA>
@@ -3254,7 +3254,7 @@ PFWS *** US ***
 PFYU *** US ***
 PFZK *** US ***
 PGM *** US ***
-PGRO *** MP *** SMA
+PGRO *** MP *** 
 PGSN *** MP *** UAL, JJA, CRK, PAL
 PGUA *** GU *** <NA>
 PGUM *** GU *** KAL, JAL, UAL, PAL
@@ -4022,7 +4022,7 @@ TTPP *** TT *** BWA, TCI, JBU, AAL, ACA, CMP, UAL, BAW, KLM, BHS
 TTW *** LK ***
 TUPJ *** VG *** KAP, TCI, AAL
 TUPW *** VG *** KAP
-TVSA *** VC *** ACA, AAL, BWA, IWY, JBU, MAW, SVG, VIR, WIA, AJT, SNC, FDX
+TVSA *** VC *** ACA, AAL, BWA, IWY, JBU, MAW, SVG, VIR, WIA, AJT, FDX
 TVSB *** VC ***
 TVSC *** VC *** MAW, SVD
 TVSM *** VC *** MAW, SVG
@@ -4144,7 +4144,7 @@ UHWE *** RU *** <NA>
 UHWP *** RU ***
 UHWW *** RU *** AFL, SBI, CHH, CCA, SVR, CSN, SYL, KOR
 UIAA *** RU *** SBI, SVR, AFL, SYL, CCA, RWZ
-UIAR *** RU *** IKT
+UIAR *** RU *** 
 UIBB *** RU *** SBI
 UIIH *** RU ***
 UIII *** RU *** SBI, AFL, SVR, UTA, SYL, CCA, UZB, DRU
@@ -4333,7 +4333,7 @@ UZFA *** UZ ***
 UZFF *** UZ ***
 UZFN *** UZ ***
 UZNN *** UZ ***
-UZNU *** UZ *** UZB, AFL, AHY, SVR, SDM, FAD, TUR, SMK, QNT, CTR
+UZNU *** UZ *** UZB, AFL, AHY, SVR, SDM, FAD, SMK, QNT
 UZSA *** UZ *** UZB
 UZSB *** UZ ***
 UZSK *** UZ ***
@@ -4738,7 +4738,7 @@ WAMO *** ID *** SQS
 WAMP *** ID *** 
 WAMW *** ID *** BTK, SQS, WON
 WAOC *** ID ***
-WAOI *** ID *** BTK, NIH, WON
+WAOI *** ID *** BTK, WON
 WAOK *** ID *** WON
 WAON *** ID ***
 WAOO *** ID *** GIA, LNI, AXM
@@ -4827,14 +4827,14 @@ WICC *** ID *** GIA
 WICN *** ID ***
 WIDD *** ID *** GIA, LNI, AXM, SJY, JJA
 WIDN *** ID *** BTK, CTV, SQS
-WIDO *** ID *** WON, NIH
+WIDO *** ID *** WON
 WIEB *** ID ***
 WIEE *** ID *** GIA, LNI, AXM, TGW
 WIGG *** ID *** GIA, CTV, BTK, LNI, SJV
 WIHH *** ID *** BTK, CTV, PAS, TNU, WON, SQS
 WIHP *** ID *** <NA>
 WIII *** ID *** GIA, LNI, AWQ, SJY, SIA, TGW, AXM, KLM, MAS, THA, ETH, SVA, CSN, CPA, EVA, CAL, JEC, CXA, CDG, CCA, ANA, AAR, BTK, CEB, CES, CTV, MSR, UAE, ETD, CHH, IGO, JAL, DKH, KAL, LKE, LKN, OMA, PAL, PAS, QFA, QTR, RBA, CSZ, CQH, ALK, SJX, SJV, TLM, TNU, THY, TWB, VJC, HVN
-WIJB *** ID *** NIH, BTK
+WIJB *** ID *** BTK
 WIJI *** ID *** WON
 WIJJ *** ID *** GIA, SJY
 WIKK *** ID *** CTV, GIA, LNI, LKN, SJY, SJV
@@ -4854,9 +4854,9 @@ WIMS *** ID *** WON
 WIMU *** ID *** SQS
 WIOG *** ID ***
 WIOK *** ID ***
-WIOM *** ID *** XAR
+WIOM *** ID *** 
 WIOO *** ID *** GIA, LNI, SJY, AXM, TGW
-WIOP *** ID *** WON, NIH
+WIOP *** ID *** WON
 WIOS *** ID *** WON
 WIPB *** ID *** BTK
 WIPP *** ID *** GIA, LNI, SJY, AXM, TGW
@@ -5344,7 +5344,7 @@ ZGYY *** CN *** JXX, TMG
 ZGZH *** CN *** CES, YZR, CHH, CSH, CXA, CCA, CSC
 ZGZJ *** CN *** CCA, CSC, CES, CSH, CSN, CSZ
 ZHCC *** CN *** AAH, CSN, CHH, CSZ, CHB, YZR, CXA, CDG, CSC, CSH, CES, CCA, KAL, AZE, KHV, CGH, OTC, BTK, CBJ, CPA, UEA, CQN, CGZ, EPA, ESR, FZA, GES, CJX, DKH, KNA, CDC, LKE, QDA, RLH, TGW, CQH, TLM, GCR, CUH, JYH
-ZHEC *** CN *** CSS, CES, CGN, OKA, ETD, DAN, IGO
+ZHEC *** CN *** CSS, CES, CGN, OKA, ETD, IGO
 ZHES *** CN *** CSN, CES, CHB
 ZHHH *** CN *** CSC, CCA, CES, CSN, CHH, CXA, CDG, YZR, CSH, CQN, CSZ, AAH, CHB, CGH, AXM, CBJ, CPA, UEA, CGZ, GES, GDC, DKH, KAL, KNA, CDC, LKE, MDA, QDA, RLH, TGW, CQH, AIQ, GCR, TWB, CUH, JYH, OKA
 ZHJZ *** CN *** CGH, CBJ, CES, HXA, CSN, EPA, CHH, KNA, CDC, CXA

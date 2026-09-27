@@ -170,6 +170,7 @@ OPERATOR	***	ABV			***	ASL Airlines UK									***	GBR	***	Pax			***	2		***	EGNX
 OPERATOR	***	ABY			***	Air Arabia										***	UAE	***	Pax			***	62		***	OMSJ
 OPERATOR	***	ACA			***	Air Canada										***	CAN	***	Pax			***	236		***	CYYZ CYVR CYUL
 OPERATOR	***	ACI			***	Aircalin										***	FRA	***	Pax			***	4		***	NWWW
+OPERATOR	***	ACN			***	Azul Conecta									***	BRA	***	Pax			***	30		***	SBJD SBKP
 OPERATOR	***	ACS			***	ASSL Air										***	PAK	***	Pax			***	2		***	OPKC
 OPERATOR	***	ACW			***	Fly Across										***	MEX	***	Pax			***	4		***	MMMX
 OPERATOR	***	ACY			***	Alpha Crux										***	RUS	***	Pax			***	1		***	UUWW
@@ -187,6 +188,7 @@ OPERATOR	***	AFL			***	Aeroflot - Russian Airlines						***	RUS	***	Pax			***	17
 OPERATOR	***	AFR			***	Air France										***	FRA	***	Pax			***	226		***	LFPG LFPO
 OPERATOR	***	AFW			***	Africa World Airlines							***	GHA	***	Pax			***	7		***	DGAA
 OPERATOR	***	AGR			***	ACE - Air Charters Europe						***	BEL	***	Pax			***	4		***	EBBR
+OPERATOR	***	AGU			***	Angara Airlines									***	RUS	***	Pax			***	0		***	UIII
 OPERATOR	***	AHX			***	Amakusa Airlines								***	JPN	***	Pax			***	1		***	RJDA
 OPERATOR	***	AHY			***	AZAL Azerbaijan Airlines						***	AZE	***	Pax			***	49		***	UBBB
 OPERATOR	***	AIA			***	Amelia											***	FRA	***	Pax			***	4		***	LFBO
@@ -269,6 +271,7 @@ OPERATOR	***	AXM			***	AirAsia											***	MAS	***	Pax			***	104		***	WMKK WMK
 OPERATOR	***	AXV			***	AVA Airlines									***	IRI	***	Pax			***	5		***	OIIE
 OPERATOR	***	AYG			***	Ascend Airways Malaysia							***	MAS	***	Pax			***	2		***	WMKK
 OPERATOR	***	AYN			***	FlyArystan										***	KAZ	***	Pax			***	28		***	UAAA UACC
+OPERATOR	***	AYR			***	FlyArystan										***	KAZ	***	Pax			***	40		***	UAAA UACC
 OPERATOR	***	AYT			***	Ayit Aviation									***	ISR	***	Pax			***	3		***	LLBG
 OPERATOR	***	AZA			***	Alitalia										***	ITA	***	Pax			***	0		***	LIRF LIMC
 OPERATOR	***	AZB			***	Zambia Airways									***	ZAM	***	Pax			***	2		***	FLKK
@@ -457,6 +460,7 @@ OPERATOR	***	EDW			***	Edelweiss										***	SUI	***	Pax			***	23		***	LSZH
 OPERATOR	***	EFW			***	BA Euroflyer									***	GBR	***	Pax			***	28		***	EGKK
 OPERATOR	***	EFY			***	Clic											***	COL	***	Pax			***	22		***	SKBO
 OPERATOR	***	EGF			***	American Eagle Airlines							***	USA	***	Pax			***	0		***	KDFW KORD KMIA
+OPERATOR	***	EGU			***	Eagle Air (Uganda)								***	UGA	***	Pax			***	0		***	HUEN
 OPERATOR	***	EIN			***	Aer Lingus										***	IRL	***	Pax			***	64		***	EIDW EICK EINN
 OPERATOR	***	EIX			***	Stellaer 212									***	IRL	***	Pax			***	4		***	EIDW
 OPERATOR	***	EJA			***	NetJets Aviation								***	USA	***	Pax			***	244		***	KCMH
@@ -483,6 +487,7 @@ OPERATOR	***	EWL			***	Eurowings Europe Malta							***	MLT	***	Pax			***	29		**
 OPERATOR	***	EWR			***	EWA Air											***	FRA	***	Pax			***	2		***	FMCZ
 OPERATOR	***	EWU			***	East-West Express								***	UKR	***	Pax			***	1		***	UKBB
 OPERATOR	***	EWZ			***	East Wing										***	KAZ	***	Pax			***	1		***	UAAA
+OPERATOR	***	EXP			***	Island Air Express								***	USA	***	Pax			***	5		***	PAKW
 OPERATOR	***	EXS			***	Jet2											***	GBR	***	Pax			***	139		***	EGCC EGNM EGSS
 OPERATOR	***	EXV			***	FitsAir											***	SRI	***	Pax			***	2		***	VCBI
 OPERATOR	***	EXZ			***	Eastafrican										***	KEN	***	Pax			***	2		***	HKJK
@@ -580,6 +585,7 @@ OPERATOR	***	GTS			***	Transair										***	SEN	***	Pax			***	4		***	GOBD
 OPERATOR	***	GTV			***	Aerogaviota										***	CUB	***	Pax			***	4		***	MUHA
 OPERATOR	***	GUG			***	Avianca Guatemala								***	GUA	***	Pax			***	1		***	MGGT
 OPERATOR	***	GUM			***	Gum Air											***	SUR	***	Pax			***	2		***	SMZO
+OPERATOR	***	GUN			***	Grant Aviation									***	USA	***	Pax			***	32		***	PANC PAEN PADU
 OPERATOR	***	GWG			***	Green Africa Airways							***	NGR	***	Pax			***	2		***	DNMM DNAA
 OPERATOR	***	GXA			***	GlobalX Air										***	USA	***	Pax			***	21		***	KMIA
 OPERATOR	***	GZP			***	Gazpromavia										***	RUS	***	Pax			***	18		***	UUMO
@@ -630,6 +636,7 @@ OPERATOR	***	IOS			***	Isles of Scilly Skybus							***	GBR	***	Pax			***	9		***
 OPERATOR	***	IRA			***	Iran Air										***	IRI	***	Pax			***	29		***	OIII OIIE
 OPERATOR	***	IRB			***	Iran Airtour									***	IRI	***	Pax			***	18		***	OIII
 OPERATOR	***	IRC			***	Iran Aseman Airlines							***	IRI	***	Pax			***	8		***	OIII
+OPERATOR	***	IRG			***	Karun Airlines									***	IRI	***	Pax			***	8		***	OIAW OIII
 OPERATOR	***	IRM			***	Mahan Air										***	IRI	***	Pax			***	38		***	OIIE
 OPERATOR	***	IRS			***	Sahand Airlines									***	IRI	***	Pax			***	1		***	OITT
 OPERATOR	***	IRT			***	Toos Airlines									***	IRI	***	Pax			***	2		***	OIMM
@@ -717,6 +724,7 @@ OPERATOR	***	LBR			***	Air Borealis									***	CAN	***	Pax			***	11		***	CYYR
 OPERATOR	***	LBT			***	Nouvelair Tunisie								***	TUN	***	Pax			***	19		***	DTMB
 OPERATOR	***	LCT			***	TAR Aerolíneas									***	MEX	***	Pax			***	12		***	MMQT
 OPERATOR	***	LDA			***	Lauda Europe									***	MLT	***	Pax			***	26		***	LOWW LMML
+OPERATOR	***	LDE			***	LADE											***	ARG	***	Pax			***	4		***	SAVC SADP
 OPERATOR	***	LER			***	LASER Airlines									***	VEN	***	Pax			***	10		***	SVMI
 OPERATOR	***	LGL			***	Luxair											***	LUX	***	Pax			***	25		***	ELLX
 OPERATOR	***	LGT			***	Longtail Aviation								***	BER	***	Pax			***	1		***	TXKF
@@ -724,6 +732,7 @@ OPERATOR	***	LHX			***	Lufthansa City									***	GER	***	Pax			***	23		***	EDDM
 OPERATOR	***	LIL			***	Fly Lili										***	ROU	***	Pax			***	5		***	LROP
 OPERATOR	***	LKE			***	Lucky Air										***	CHN	***	Pax			***	53		***	ZPPP
 OPERATOR	***	LKN			***	NAM Air											***	INA	***	Pax			***	11		***	WIII
+OPERATOR	***	LLL			***	Lao Skyway										***	LAO	***	Pax			***	13		***	VLVT
 OPERATOR	***	LLM			***	Yamal Airlines									***	RUS	***	Pax			***	26		***	USDD USTR
 OPERATOR	***	LLR			***	Alliance Air									***	IND	***	Pax			***	21		***	VIDP VOBL
 OPERATOR	***	LMB			***	Lad Airways										***	IRI	***	Pax			***	1		***	OIII
@@ -786,11 +795,13 @@ OPERATOR	***	MTO			***	Marathon Airlines								***	GRE	***	Pax			***	4		***	LGA
 OPERATOR	***	MUH			***	Mukhtara Air									***	INA	***	Pax			***	2		***	WIII
 OPERATOR	***	MUI			***	Trans Air										***	USA	***	Pax			***	1		***	PHNL
 OPERATOR	***	MUS			***	Air Adelphi										***	VIN	***	Pax			***	5		***	TVSA
+OPERATOR	***	MWG			***	AirBorneo										***	MAS	***	Pax			***	14		***	WBGG WBKK
 OPERATOR	***	MWI			***	Malawi Airlines									***	MAW	***	Pax			***	3		***	FWKI
 OPERATOR	***	MXA			***	Mexicana										***	MEX	***	Pax			***	8		***	MMSM
 OPERATOR	***	MXD			***	Batik Air Malaysia								***	MAS	***	Pax			***	48		***	WMKK
 OPERATOR	***	MXE			***	Mex – Moçambique Expresso						***	MOZ	***	Pax			***	4		***	FQMA
 OPERATOR	***	MXY			***	Breeze Airways									***	USA	***	Pax			***	64		***	KCHS KTPA KPVU
+OPERATOR	***	MYD			***	Maya Island Air									***	BIZ	***	Pax			***	10		***	MZBZ
 OPERATOR	***	MYP			***	Mann Yadanarpon Airlines						***	MYA	***	Pax			***	3		***	VYYY
 OPERATOR	***	MYW			***	MyWay Airlines									***	GEO	***	Pax			***	2		***	UGTB
 OPERATOR	***	MZB			***	Zebu Air										***	MAW	***	Pax			***	3		***	FWKI
@@ -838,6 +849,7 @@ OPERATOR	***	OBS			***	Iberojet										***	POR	***	Pax			***	2		***	LPPT
 OPERATOR	***	OCN			***	Discover Airlines								***	GER	***	Pax			***	34		***	EDDF EDDM
 OPERATOR	***	OEW			***	One Airways										***	ESP	***	Pax			***	1		***	LEMD
 OPERATOR	***	OEY			***	Rimbun Air										***	INA	***	Pax			***	8		***	WAJJ
+OPERATOR	***	OFD			***	Ostfriesischer Flug-Dienst						***	GER	***	Pax			***	5		***	EDWE EDWR
 OPERATOR	***	OGN			***	Originair										***	NZL	***	Pax			***	3		***	NZNS
 OPERATOR	***	OKA			***	Okay Airways									***	CHN	***	Pax			***	21		***	ZBTJ
 OPERATOR	***	OLA			***	Overland Airways								***	NGR	***	Pax			***	8		***	DNMM
@@ -878,6 +890,7 @@ OPERATOR	***	PRS			***	Pars Air										***	IRI	***	Pax			***	6		***	OIII
 OPERATOR	***	PSC			***	Pascan Aviation									***	CAN	***	Pax			***	11		***	CYQB
 OPERATOR	***	PST			***	Air Panama										***	PAN	***	Pax			***	3		***	MPMG
 OPERATOR	***	PTA			***	Parata Air										***	KOR	***	Pax			***	5		***	RKSI
+OPERATOR	***	PTK			***	Kamchatka Aviation Enterprise					***	RUS	***	Pax			***	0		***	UHPP
 OPERATOR	***	PTR			***	Porter Airlines									***	CAN	***	Pax			***	83		***	CYTZ CYYZ CYOW
 OPERATOR	***	PTW			***	Pattaya Airways									***	THA	***	Pax			***	2		***	VTBU
 OPERATOR	***	PUE			***	Plus Ultra										***	ESP	***	Pax			***	7		***	LEMD
@@ -959,6 +972,7 @@ OPERATOR	***	SBS			***	Seaborne Airlines								***	USA	***	Pax			***	1		***	TIS
 OPERATOR	***	SCE			***	Grand Canyon Scenic Airlines					***	USA	***	Pax			***	4		***	KBVU
 OPERATOR	***	SCW			***	SkyWest Charter									***	USA	***	Pax			***	7		***	KSLC
 OPERATOR	***	SCX			***	Sun Country Airlines							***	USA	***	Pax			***	68		***	KMSP
+OPERATOR	***	SDA			***	Sounds Air										***	NZL	***	Pax			***	4		***	NZWN NZPN
 OPERATOR	***	SDM			***	Rossiya - Russian Airlines						***	RUS	***	Pax			***	132		***	ULLI UUEE
 OPERATOR	***	SDR			***	Sundair											***	GER	***	Pax			***	4		***	EDDB
 OPERATOR	***	SEB			***	Euroavia Airlines								***	CYP	***	Pax			***	1		***	LCLK
@@ -1014,6 +1028,7 @@ OPERATOR	***	SPQ			***	Sun PhuQuoc Airways								***	VIE	***	Pax			***	19		***	
 OPERATOR	***	SPR			***	PAL Aerospace									***	CAN	***	Pax			***	6		***	CYYT
 OPERATOR	***	SQB			***	South Air										***	PAK	***	Pax			***	2		***	OPKC
 OPERATOR	***	SQP			***	SkyUp Airlines									***	UKR	***	Pax			***	2		***	UKBB
+OPERATOR	***	SQS			***	Susi Air										***	INA	***	Pax			***	49		***	WAFF WAMH WAGG
 OPERATOR	***	SQY			***	SkyUp Nistru									***	MDA	***	Pax			***	1		***	LUKK
 OPERATOR	***	SRQ			***	Cebgo											***	PHI	***	Pax			***	18		***	RPLL RPVM
 OPERATOR	***	SRU			***	Star Perú										***	PER	***	Pax			***	8		***	SPJC
@@ -1077,6 +1092,7 @@ OPERATOR	***	THU			***	Thunder Airlines								***	CAN	***	Pax			***	14		***	CYQ
 OPERATOR	***	THY			***	Turkish Airlines								***	TUR	***	Pax			***	417		***	LTFM
 OPERATOR	***	TIN			***	Air Tindi										***	CAN	***	Pax			***	16		***	CYZF
 OPERATOR	***	TJK			***	Tajik Air										***	TJK	***	Pax			***	1		***	UTDD
+OPERATOR	***	TJT			***	Twin Jet										***	FRA	***	Pax			***	12		***	LFML
 OPERATOR	***	TKJ			***	AJet											***	TUR	***	Pax			***	138		***	LTFJ LTAC
 OPERATOR	***	TKN			***	Fly Kish Airlines								***	IRI	***	Pax			***	4		***	OIBK
 OPERATOR	***	TLM			***	Thai Lion Air									***	THA	***	Pax			***	36		***	VTBD
@@ -1088,6 +1104,7 @@ OPERATOR	***	TNU			***	TransNusa										***	INA	***	Pax			***	16		***	WIII
 OPERATOR	***	TOK			***	Toki Air										***	JPN	***	Pax			***	3		***	RJSN
 OPERATOR	***	TOM			***	TUI Airways										***	GBR	***	Pax			***	75		***	EGCC EGKK
 OPERATOR	***	TON			***	Lulutai Airlines								***	TGA	***	Pax			***	1		***	NFTF
+OPERATOR	***	TOS			***	Tropic Air										***	BIZ	***	Pax			***	15		***	MZBZ MZBE
 OPERATOR	***	TOW			***	AirTanker										***	GBR	***	Pax			***	4		***	EGVN
 OPERATOR	***	TPC			***	Air Calédonie									***	FRA	***	Pax			***	3		***	NWWM
 OPERATOR	***	TQQ			***	Tarco Aviation									***	SUD	***	Pax			***	5		***	HSSS
@@ -1113,6 +1130,7 @@ OPERATOR	***	TWB			***	Trinity Airways									***	KOR	***	Pax			***	48		***	RKS
 OPERATOR	***	TWC			***	Canadian Airways Congo							***	CGO	***	Pax			***	4		***	FCBB
 OPERATOR	***	TWI			***	Tailwind Airlines								***	TUR	***	Pax			***	5		***	LTFM LTAI
 OPERATOR	***	TYA			***	NordStar Airlines								***	RUS	***	Pax			***	9		***	UNKL UOOO
+OPERATOR	***	TZK			***	Tajik Air										***	TJK	***	Pax			***	5		***	UTDD
 OPERATOR	***	TZP			***	ZIPAIR											***	JPN	***	Pax			***	8		***	RJAA
 OPERATOR	***	UAE			***	Emirates										***	UAE	***	Pax			***	289		***	OMDB
 OPERATOR	***	UAL			***	United Airlines									***	USA	***	Pax			***	1138	***	KORD KIAH KDEN KSFO KEWR KIAD KLAX
@@ -1145,6 +1163,7 @@ OPERATOR	***	VAW			***	Fly2Sky											***	BUL	***	Pax			***	9		***	LBSF
 OPERATOR	***	VBB			***	ALK Airlines									***	BUL	***	Pax			***	2		***	LBSF
 OPERATOR	***	VBW			***	Air Burkina										***	BUR	***	Pax			***	2		***	DFFD
 OPERATOR	***	VCV			***	Conviasa										***	VEN	***	Pax			***	24		***	SVMI
+OPERATOR	***	VES			***	Vieques Air Link								***	PUR	***	Pax			***	11		***	TJVQ TJRV
 OPERATOR	***	VFC			***	VASCO - Vietnam Air Services Company			***	VIE	***	Pax			***	6		***	VVTS
 OPERATOR	***	VID			***	Via Air											***	CAF	***	Pax			***	1		***	FEFF
 OPERATOR	***	VIR			***	Virgin Atlantic									***	GBR	***	Pax			***	43		***	EGLL EGCC
@@ -1185,6 +1204,7 @@ OPERATOR	***	WMT			***	Wizz Air Malta									***	MLT	***	Pax			***	128		***	LMM
 OPERATOR	***	WON			***	Wings Air										***	INA	***	Pax			***	77		***	WIII
 OPERATOR	***	WPT			***	World2Fly Portugal								***	POR	***	Pax			***	1		***	LPPT
 OPERATOR	***	WRC			***	Windrose Airlines								***	UKR	***	Pax			***	8		***	UKBB
+OPERATOR	***	WRF			***	Wright Air Service								***	USA	***	Pax			***	15		***	PAFA
 OPERATOR	***	WSA			***	Solaris Aero									***	RUS	***	Pax			***	3		***	UUWW
 OPERATOR	***	WSG			***	Wasaya Airways									***	CAN	***	Pax			***	8		***	CYQT
 OPERATOR	***	WSN			***	Advanced Air									***	USA	***	Pax			***	4		***	KHHR
@@ -1226,6 +1246,7 @@ OPERATOR	***	ACL			***	AerCaribe Cargo									***	COL	***	Cargo		***	6		***	SKB
 OPERATOR	***	ACP			***	Astral Aviation									***	KEN	***	Cargo		***	3		***	HKJK
 OPERATOR	***	ADB			***	Antonov Airlines								***	UKR	***	Cargo		***	7		***	UKKM
 OPERATOR	***	ADZ			***	Compass Air Cargo								***	BUL	***	Cargo		***	7		***	LBSF
+OPERATOR	***	AER			***	Alaska Central Express							***	USA	***	Cargo		***	15		***	PANC
 OPERATOR	***	AFR_F		***	Air France Cargo								***	FRA	***	Cargo		***	2		***	LFPG
 OPERATOR	***	AHK			***	air hongKong									***	HKG	***	Cargo		***	14		***	VHHH
 OPERATOR	***	AHW			***	Sky Capital Cargo								***	BAN	***	Cargo		***	2		***	VGHS
@@ -1245,6 +1266,7 @@ OPERATOR	***	AZS			***	Aviacon Zitotrans								***	RUS	***	Cargo		***	1		***	US
 OPERATOR	***	BCS			***	EAT Leipzig										***	GER	***	Cargo		***	35		***	EDDP
 OPERATOR	***	BDA			***	Blue Dart Aviation								***	IND	***	Cargo		***	8		***	VOMM
 OPERATOR	***	BGA			***	Airbus Transport International					***	FRA	***	Cargo		***	8		***	LFBO EDHI
+OPERATOR	***	BMJ			***	Bemidji Airlines								***	USA	***	Cargo		***	46		***	KBJI KMSP
 OPERATOR	***	BOL			***	TAB Cargo										***	BOL	***	Cargo		***	1		***	SLLP
 OPERATOR	***	BOX			***	AeroLogic										***	GER	***	Cargo		***	28		***	EDDP
 OPERATOR	***	BPC			***	Braspress Air Cargo								***	BRA	***	Cargo		***	3		***	SBKP
@@ -1349,6 +1371,7 @@ OPERATOR	***	NCR			***	National Airlines								***	USA	***	Cargo		***	17		***	K
 OPERATOR	***	NPT			***	West Atlantic UK								***	GBR	***	Cargo		***	9		***	EGNX
 OPERATOR	***	OAH			***	Afcom Cargo										***	IND	***	Cargo		***	3		***	VOMM
 OPERATOR	***	PAC			***	Polar Air Cargo									***	USA	***	Cargo		***	5		***	KCVG PANC
+OPERATOR	***	PCM			***	West Air										***	USA	***	Cargo		***	30		***	KFAT
 OPERATOR	***	PKW			***	Sierra West Airlines							***	USA	***	Cargo		***	3		***	KOAK
 OPERATOR	***	PLS			***	Placar Linhas Aéreas							***	BRA	***	Cargo		***	2		***	SBKP
 OPERATOR	***	PPQ			***	Personas y Paquetes por Aire					***	MEX	***	Cargo		***	1		***	MMMX
@@ -1421,6 +1444,7 @@ OPERATOR	***	XPC3		***	TCS Express										***	PAK	***	Cargo		***	1		***	OPKC
 OPERATOR	***	XPC4		***	XCargo											***	USA	***	Cargo		***	4		***	KMIA
 OPERATOR	***	XRC			***	Express Air Cargo								***	TUN	***	Cargo		***	3		***	DTTA
 # -- GA ------------------------------------------------------------------------
+OPERATOR	***	AAD			***	Arrendamientos Aereos							***	PAN	***	GA			***	0		***	MPMG
 OPERATOR	***	ADJ			***	Aladdin Jet										***	CHN	***	GA			***	1		***	ZBAA
 OPERATOR	***	ADN			***	Aero-Dienst										***	GER	***	GA			***	2		***	EDDN
 OPERATOR	***	AHF			***	Aspen Helicopters								***	USA	***	GA			***	1		***	KOXR
@@ -1519,6 +1543,7 @@ OPERATOR	***	HYD			***	Hydro-Quebec									***	CAN	***	GA			***	4		***	CYUL
 OPERATOR	***	HYP			***	Hyperion Aviation								***	MLT	***	GA			***	1		***	LMML
 OPERATOR	***	HZS			***	Aviation Horizons								***	KSA	***	GA			***	1		***	OERK
 OPERATOR	***	IFA			***	FAI rent-a-jet									***	GER	***	GA			***	7		***	EDDN
+OPERATOR	***	IHO			***	748 Air Services								***	KEN	***	GA			***	0		***	HKNW
 OPERATOR	***	IJM			***	International Jet Management					***	AUT	***	GA			***	2		***	LOWW
 OPERATOR	***	JAG			***	Alpha Sky										***	KAZ	***	GA			***	4		***	UACC
 OPERATOR	***	JBE			***	Sino Jet Beijing								***	CHN	***	GA			***	1		***	ZBAA
@@ -1542,6 +1567,7 @@ OPERATOR	***	KNT			***	Flightpath										***	CAN	***	GA			***	1		***	CYYZ
 OPERATOR	***	KPO			***	Fly Alliance									***	USA	***	GA			***	2		***	KORL
 OPERATOR	***	KTO			***	Aeroservicios Kratos							***	MEX	***	GA			***	1		***	MMTO
 OPERATOR	***	KXP			***	MJets Air										***	MAS	***	GA			***	6		***	WMSA
+OPERATOR	***	KZS			***	Kazaviaspas										***	KAZ	***	GA			***	0		***	UACC
 OPERATOR	***	LDX			***	SPARFELL Austria								***	AUT	***	GA			***	4		***	LOWW
 OPERATOR	***	LET			***	Aerolíneas Ejecutivas							***	MEX	***	GA			***	2		***	MMTO
 OPERATOR	***	LIF			***	Air Methods										***	USA	***	GA			***	1		***	KAPA
@@ -1557,6 +1583,7 @@ OPERATOR	***	LXC			***	CAE Aviation									***	LUX	***	GA			***	1		***	ELLX
 OPERATOR	***	LXE			***	Amelia Executive								***	AUT	***	GA			***	1		***	LOWW
 OPERATOR	***	LXJ			***	Flexjet											***	USA	***	GA			***	216		***	KCLE
 OPERATOR	***	MAT			***	MAC Jet Charter									***	USA	***	GA			***	1		***	KTEB
+OPERATOR	***	MAW			***	Mustique Airways								***	VIN	***	GA			***	6		***	TVSA TVSM
 OPERATOR	***	MBK			***	Chrono Jet										***	CAN	***	GA			***	3		***	CYUL
 OPERATOR	***	MDN			***	McDan Aviation San Marino						***	SMR	***	GA			***	1		***	LIPR
 OPERATOR	***	MDO			***	Mel Air											***	MLT	***	GA			***	5		***	LMML
@@ -1581,6 +1608,7 @@ OPERATOR	***	NTG			***	FlyMex											***	MEX	***	GA			***	4		***	MMTO
 OPERATOR	***	NTN			***	National Airways Corporation					***	RSA	***	GA			***	2		***	FALA
 OPERATOR	***	NVS			***	Nouvelle Air Affaires Gabon						***	GAB	***	GA			***	1		***	FOOL
 OPERATOR	***	NXU			***	Nexus Flight Operations							***	KSA	***	GA			***	1		***	OERK
+OPERATOR	***	OAO			***	2nd Arkhangelsk United Aviation Division		***	RUS	***	GA			***	0		***	ULAA
 OPERATOR	***	OKC			***	Private Jets									***	USA	***	GA			***	1		***	KFLL
 OPERATOR	***	OME			***	Omega Aerial Refueling Services					***	USA	***	GA			***	13		***	KVCV
 OPERATOR	***	OPT			***	Flight Options									***	USA	***	GA			***	1		***	KCLE
@@ -1619,6 +1647,7 @@ OPERATOR	***	SJJ			***	SpiritJets										***	USA	***	GA			***	1		***	KTEB
 OPERATOR	***	SMF			***	San Marino Executive Aviation					***	SMR	***	GA			***	3		***	LIPR
 OPERATOR	***	STQ			***	Star Wings Dortmund								***	GER	***	GA			***	4		***	EDLW
 OPERATOR	***	STT			***	Western Aircraft								***	USA	***	GA			***	5		***	KBOI
+OPERATOR	***	SVD			***	SVG Air											***	VIN	***	GA			***	8		***	TVSA TVSC
 OPERATOR	***	SVW			***	Global Jet Luxembourg							***	LUX	***	GA			***	5		***	ELLX
 OPERATOR	***	SWY			***	Sky Jet											***	SUI	***	GA			***	1		***	LSGG
 OPERATOR	***	SYN			***	Syncrude Canada									***	CAN	***	GA			***	1		***	CYMM
@@ -1640,6 +1669,7 @@ OPERATOR	***	VAJ			***	Avcon Jet San Marino							***	SMR	***	GA			***	1		***	LI
 OPERATOR	***	VCJ			***	Avcon Jet Malta									***	MLT	***	GA			***	1		***	LMML
 OPERATOR	***	VGK			***	Vega Jet										***	KAZ	***	GA			***	1		***	UAAA
 OPERATOR	***	VGT			***	Avantis Aviation								***	GAB	***	GA			***	1		***	FOOL
+OPERATOR	***	VGV			***	Vologda Aviation Enterprise						***	RUS	***	GA			***	0		***	ULWW
 OPERATOR	***	VIP			***	TAG Aviation UK									***	GBR	***	GA			***	1		***	EGLF
 OPERATOR	***	VJA			***	Vista America									***	USA	***	GA			***	55		***	KTEB
 OPERATOR	***	VJH			***	VistaJet Germany								***	GER	***	GA			***	18		***	EDDM
