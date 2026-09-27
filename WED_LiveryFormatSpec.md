@@ -1769,7 +1769,7 @@ name):
 | operation type | what auto-fill does |
 |---|---|
 | None | nothing - None means no static aircraft (R29) |
-| any, no weights | converts the one size letter to weights: A: A100; B: A30 B70; C: B30 C70; D: B10 C40 D50; E: C10 D30 E60; F: D10 E50 F40. A draw that lands on a class where no listed operator is eligible parks nothing for that load (§4.1); weights are never renormalised |
+| any, no weights | updates the stand to weights as R17's Update does (2026-09-27): today's step-down from its letter, the fall-through folded in against the operators it lists after the fill, a token 1 kept on the top class. It parks what it parked; the author tunes from there. (Before 2026-09-27 a fixed table was used - D: B10 C40 D50 - which changed what legacy stands parked.) |
 | Passenger (Airline) / Cargo | adds the airport's recommended operators of that operation class that have an eligible livery at a weighted class (range R26 included) and fit the stand's equipment type; never `XPZZ_*`; stops short of Gateway's 100-character airline string (R10) |
 | Military/Gov (Military) | adds the airport country's own military and government operators with such a livery; if there are none, nothing is added and the sim draws military by size |
 | Private/BizJet (General Aviation) | weights only (R28) |

@@ -689,7 +689,7 @@ If WED knows nothing about an operator or its range, the aircraft is allowed. Va
 | Operation type | What auto-populate does |
 | -------------- | ----------------------- |
 | None           | Nothing. None means no static aircraft. |
-| Any other, no weights yet | The menu command gives the stand weights based on its size: A: A100; B: A30 B70; C: B30 C70; D: B10 C40 D50; E: C10 D30 E60; F: D10 E50 F40. **Populate This Ramp** keeps the stand's size range instead. A stand in Simple Mode keeps its range either way. |
+| Any other, no weights yet | The menu command updates the stand to spawn weights exactly as **Set Spawn Weights** does: today's step-down from its size, with any size nothing listed can park at handing its share down (the stand keeps its size). **Populate This Ramp** keeps the stand's legacy format instead. A stand in Simple Mode keeps its range either way. |
 | Passenger, Cargo | Adds the airlines WED's airport data lists for this airport that are of that kind, have an aircraft at the stand's sizes and equipment type, and are within range. It never adds `xpzz_` codes and stops before the 100-character limit. At an airport with no data it adds nothing. |
 | Military/Gov   | Adds the military and government operators of the airport's own country that have such an aircraft. If there are none, it adds nothing, and X-Plane picks military aircraft by size. |
 | Private/BizJet | Weights only. |

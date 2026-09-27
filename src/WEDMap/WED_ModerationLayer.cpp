@@ -588,8 +588,8 @@ float	WED_ModerationLayer::TrayLines(const Callout & c, vector<string> & lines) 
 		if (e.updated) { for (int k = 0; k < 6; ++k) w[k] = e.weights[k]; }
 		else
 		{
-			WED_LegacyClassWeights(e.size_letter >= 'A' && e.size_letter <= 'F' ? e.size_letter - 'A' : 0, w);
-			snprintf(buf, sizeof(buf), " (from size %c)", e.size_letter);
+			WED_LegacyStepDownWeights(e.size_letter >= 'A' && e.size_letter <= 'F' ? e.size_letter - 'A' : 0, w);
+			snprintf(buf, sizeof(buf), " (legacy step-down from %c)", e.size_letter);
 			src = buf;
 		}
 		string wt = WED_ModerationWeightsText(w);

@@ -169,7 +169,10 @@ WED_AutoFillPlan	WED_PlanLiveryAutoFill(WED_Airport * apt, const vector<WED_Ramp
 			// them ("Simple Mode") keeps them parked and is filled against its
 			// size range below - converting it would overwrite their distribution.
 		{
-			WED_LegacyClassWeights(ENUM_Export(ramp->GetWidth()), w);
+			// today's step-down (Eric, 2026-09-27), the same as Update: the stand
+			// starts from what it parked; the fall-through is folded in when the
+			// plan is applied, against the operators it then lists
+			WED_LegacyStepDownWeights(ENUM_Export(ramp->GetWidth()), w);
 			out.set_weights = true;
 			for (int k = 0; k < 6; ++k) { out.weights[k] = w[k]; classes[k] = w[k] > 0; }
 		}
@@ -235,8 +238,14 @@ int		WED_ApplyLiveryAutoFill(const WED_AutoFillPlan & plan, bool own_command)
 	{
 		const WED_AutoFillRamp & r = plan.ramps[i];
 		if (!r.Changes()) continue;
-		if (r.set_weights) r.ramp->SetClassWeights(r.weights);
 		if (!r.added.empty()) r.ramp->SetAirlines(r.airlines_after);
+		if (r.set_weights)
+		{
+			// still legacy here: fold the fall-through against the list just written
+			int w[6];
+			WED_LiveryLegacyUpdateWeights(r.ramp, plan.airport, w);
+			r.ramp->SetClassWeights(w);
+		}
 		r.ramp->SetAutoFilled(true);			// last: the setters above clear it
 		++n;
 	}
