@@ -463,8 +463,10 @@ correctly.
 
 - **R30** — **Row `1315 A|M` says who set the stand's static-aircraft data.**
   `A`: WED's auto-fill, and no author has changed the stand since. `M`: an
-  author, by hand, in a tool that writes weights. Absent: nothing said - a
-  stand no 2.8 tool has touched. It binds to the most recent `1300` like
+  author set it in WED 2.8 or later - weights, the operation type (None
+  included), the size or the airline list, on the Liveries tab or in the
+  property grid, or Fix. Absent: nothing said - a stand no 2.8 tool has
+  touched. It binds to the most recent `1300` like
   `1313` (R20), the first valid one wins (R24), and anything other than exactly
   one token `A` or `M` is discarded (R4). **It changes nothing about what
   parks** - the sim MUST ignore it for selection; readers other than editors
@@ -473,9 +475,21 @@ correctly.
   Why it exists: the Gateway keeps only apt.dat, and a moderator needs to see
   which stands were auto-filled (assumed right from WED's airport data) and
   which an author chose. WED writes it for X-Plane 12 exports, after `1313`
-  when there is one: `A` for an auto-filled stand, `M` for a hand-set stand
-  that has weights, nothing otherwise, so legacy scenery gains no rows. WED
-  reads it back into the auto-fill mark on import.
+  when there is one: `A` for an auto-filled stand, `M` for a stand an author
+  set in 2.8 (an edit of an auto-filled stand turns it from `A` to `M`),
+  nothing otherwise, so legacy scenery gains no rows. WED reads both back on
+  import.
+
+  **The 2.8 fingerprint.** A stand carrying `1313` or `1315` is a 2.8 stand.
+  In apt.dat, `none` alone cannot tell "no static aircraft" (R29) from 2.7's
+  "not set", which 2.7 wrote too. WED's legacy ramp upgrade - run on every
+  Gateway-target export and on the Gateway's own bulk export
+  (`GATEWAY_IMPORT_MODE`) - turns `none` into airline or GA, rewrites airline
+  lists and removes static aircraft objects on ramp starts. It skips 2.8 stands
+  entirely, and near a 2.8 stand that parks nothing (None, or all-zero weights)
+  it removes no object. A new stand placed with the tool and never set keeps no
+  mark and is upgraded as before. **The Gateway's bulk export must run WED 2.8
+  or later** for the fingerprint to hold in the global apt.dat.
 
 ---
 

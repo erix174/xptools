@@ -257,8 +257,11 @@ namespace
 
 void dummyPrintf(void * ref, const char * fmt, ...) { return; }
 
-static void	DoHueristicAnalysisAndAutoUpgrade(IResolver* resolver)
+// Returns how many static aircraft objects were removed for overlapping a
+// ramp start where X-Plane parks its own.
+static int	DoHueristicAnalysisAndAutoUpgrade(IResolver* resolver)
 {
+	int removed_statics = 0;
 	LOG_MSG("I/exp Starting upgrade heuristics\n");
 	WED_Thing * wrl = WED_GetWorld(resolver);
 	vector<WED_Airport*> apts;
@@ -357,7 +360,7 @@ static void	DoHueristicAnalysisAndAutoUpgrade(IResolver* resolver)
 		added_country_codes += add_iso3166_country_metadata(**apt_itr);
 
 		//-- upgrade Ramp Positions with XP10.45 data to get parked A/C -------------
-		wed_upgrade_ramps(*apt_itr);
+		wed_upgrade_ramps(*apt_itr, &removed_statics);
 
 #if 0  // this was good in 10.45, but not needed any for gateway airports as of 2022
 		//-- Agp and obj upgrades to create more ground traffic --------------------------------
@@ -684,7 +687,9 @@ static void	DoHueristicAnalysisAndAutoUpgrade(IResolver* resolver)
 	auto t1 = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> elapsed = t1 - t0;
 	LOG_MSG("I/exp Done with upgrade heuristics on %d apts, took %lf sec\n", (int) apts.size(), elapsed.count());
+	LOG_MSG("I/exp Removed %d static aircraft objects on ramp starts that park aircraft\n", removed_statics);
 	LOG_FLUSH();
+	return removed_statics;
 }
 
 int		WED_CanExportPack(IResolver* resolver, string& ioname)
@@ -711,10 +716,11 @@ void	WED_DoExportPack(WED_Document * resolver, WED_MapPane * pane)
 		return;
 
 	auto uMgr = resolver->GetUndoMgr();
+	int removed_statics = 0;
 	if (gExportTarget == wet_gateway)
 	{
 		uMgr->MarkUndo();
-		DoHueristicAnalysisAndAutoUpgrade(resolver);
+		removed_statics = DoHueristicAnalysisAndAutoUpgrade(resolver);
 	}
 #endif
 	ILibrarian * l = WED_GetLibrarian(resolver);
@@ -733,6 +739,16 @@ void	WED_DoExportPack(WED_Document * resolver, WED_MapPane * pane)
 	{
 		if (uMgr->UndoToMark())
 			DoUserAlert("Some of the upgrade heuristics applied during export could not be undone. Scenery was permanently altered by export.");
+		else if (removed_statics > 0)
+		{
+			// Silent until 2.8 - a forum thread spent weeks on "5 of my 13 static
+			// aircraft are missing". They are still in the project.
+			char msg[400];
+			snprintf(msg, sizeof(msg), "The exported scenery leaves out %d static aircraft object%s placed on ramp starts where X-Plane parks its own aircraft - "
+					 "they would stand inside each other. They are still in your project. To keep one, move it off the ramp start, or set that ramp start to None.",
+					 removed_statics, removed_statics == 1 ? "" : "s");
+			DoUserAlert(msg);
+		}
 	}
 #endif
 		if(!problem_children.empty())

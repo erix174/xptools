@@ -90,6 +90,17 @@ public:
 	bool	IsAutoFilled(void) const;
 	void	SetAutoFilled(bool on);
 
+	// An author set this stand's static aircraft in WED 2.8 or later (Liveries
+	// tab, the grid's operation type or airlines, Fix, a weight edit). Written as
+	// 1315 M and read back from it (R30), so it survives the Gateway.
+	void	MarkLiverySet(void);
+
+	// The 2.8 fingerprint: this stand carries a 1313 or a 1315 row when exported
+	// - weights, the auto-fill mark, or the set-in-2.8 mark. Legacy upgrades
+	// (wed_upgrade_ramps) never touch a stand that has it: its operation type,
+	// even None, and its airline list are the author's.
+	bool	HasLiveryFingerprint(void) const;
+
 	bool	WeightsInUse(void) const;
 	void	SetWeightsInUse(bool in_use);
 	bool	HasStoredWeights(int out_w[6]) const;
@@ -132,6 +143,7 @@ private:
 	WED_PropStringText		class_weights;	// "" = no 1313 row; see GetClassWeights()
 	WED_PropBoolText		weights_mode;	// weights in use (1) or parked while the size range rules (0)
 	WED_PropBoolText		auto_filled;	// the auto-fill watermark - see IsAutoFilled()
+	WED_PropBoolText		livery_set;		// set by an author in 2.8 - see MarkLiverySet()
 
 	bool					mLegacyWidthOnly;	// true while parsing an XML element that had no width_min attribute
 

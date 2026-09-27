@@ -4715,7 +4715,20 @@ static string get_xplane_codes(int width_enum, const set<int>& eq, int ops_type,
 	return out;
 }
 
-int wed_upgrade_ramps(WED_Thing* who)
+// Will X-Plane park its own static aircraft here? A 2.8 stand set to None, or
+// with all-zero weights, parks nothing, so a static the author placed on it is
+// no double and stays. Legacy stands are judged as before: all of them.
+static bool parks_static_aircraft(WED_RampPosition * r)
+{
+	if (!r->HasLiveryFingerprint()) return true;
+	if (r->GetRampOperationType() == ramp_operation_None) return false;
+	int w[6];
+	if (r->GetClassWeights(w))
+		return w[0] + w[1] + w[2] + w[3] + w[4] + w[5] > 0;
+	return true;
+}
+
+int wed_upgrade_ramps(WED_Thing* who, int * out_removed_statics)
 {
 	auto rmgr = WED_GetResourceMgr(who->GetArchive()->GetResolver());
 	auto lmgr = WED_GetLibraryMgr(who->GetArchive()->GetResolver());
@@ -4739,6 +4752,13 @@ int wed_upgrade_ramps(WED_Thing* who)
 
 	for (auto r : ramps)
 	{
+		// A 2.8 stand (1313 or 1315, see HasLiveryFingerprint) is the author's:
+		// its operation type - None is a choice now, "no static aircraft" - and
+		// its airline list, picked against the livery index, are not upgraded.
+		// This is the only thing between a 2.8 airport and this 10.45-era code,
+		// which also runs on the Gateway's own bulk export (GATEWAY_IMPORT_MODE).
+		if (r->HasLiveryFingerprint()) continue;
+
 		if (r->GetRampOperationType() == ramp_operation_None)
 		{
 			// fill in ops types
@@ -4814,6 +4834,7 @@ int wed_upgrade_ramps(WED_Thing* who)
 	{
 		for(auto r : ramps)
 		{
+			if (!parks_static_aircraft(r)) continue;
 			Point2 rp; double rs;
 			center_and_radius_for_ramp_start(r, rp, rs);
 
@@ -4824,6 +4845,7 @@ int wed_upgrade_ramps(WED_Thing* who)
 				o.obj->SetParent(NULL, 0);
 				o.obj->Delete();
 				did_work = 1;
+				if (out_removed_statics) ++*out_removed_statics;
 				break;
 			}
 		}

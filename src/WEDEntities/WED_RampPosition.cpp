@@ -48,6 +48,7 @@ WED_RampPosition::WED_RampPosition(WED_Archive * a, int i) : WED_GISPoint_Headin
 	class_weights(this,PROP_Name(".Class Weights",      XML_Name("ramp_start","weights")),""),
 	weights_mode (this,PROP_Name(".Weights Mode",       XML_Name("ramp_start","weights_mode")), 0),
 	auto_filled  (this,PROP_Name(".Auto Filled",        XML_Name("ramp_start","auto_filled")), 0),
+	livery_set   (this,PROP_Name(".Livery Set",         XML_Name("ramp_start","livery_set")), 0),
 	mLegacyWidthOnly(false)
 {
 }
@@ -108,6 +109,7 @@ void	WED_RampPosition::Import(const AptGate_t& x, void (* print_func)(void *, co
 	// keeps only apt.dat, so this is how a moderator sees what was auto-filled.
 	// Set last: the setters above clear the watermark as a human edit would.
 	auto_filled = (x.livery_origin == 'A');
+	livery_set  = (x.livery_origin == 'M');
 }
 
 void	WED_RampPosition::Export(		 AptGate_t& x) const
@@ -143,9 +145,31 @@ void	WED_RampPosition::Export(		 AptGate_t& x) const
 	}
 
 	// 1315 (R30): A for a stand auto-fill set and nobody has changed since; M
-	// for one an author set in 2.8 by hand (it has weights); nothing for a
-	// stand no 2.8 tool has touched, so legacy scenery gains no rows.
-	x.livery_origin = IsAutoFilled() ? 'A' : (x.class_weights.size() == 6 ? 'M' : 0);
+	// for one an author set in 2.8 by hand (weights, or the set-in-2.8 mark);
+	// nothing for a stand no 2.8 tool has touched, so legacy scenery gains no
+	// rows. HasLiveryFingerprint() must say yes exactly when 1313 or 1315 is
+	// written here.
+	x.livery_origin = IsAutoFilled() ? 'A' : ((x.class_weights.size() == 6 || livery_set.value) ? 'M' : 0);
+}
+
+void	WED_RampPosition::MarkLiverySet(void)	{ if (!livery_set.value) livery_set = true; }
+
+bool	WED_RampPosition::HasLiveryFingerprint(void) const
+{
+	int w[6];
+	return GetClassWeights(w) || IsAutoFilled() || livery_set.value != 0;
+}
+
+// A human edit of an auto-filled stand drops the A mark - and the stand stays
+// a 2.8 stand, now hand-set (M). Only a stand that had the mark gets the M, so
+// legacy upgrades calling these setters on untouched stands mark nothing.
+static void	DropAutoFill(WED_PropBoolText & auto_filled, WED_PropBoolText & livery_set)
+{
+	if (auto_filled.value)
+	{
+		auto_filled = false;
+		livery_set = true;
+	}
 }
 
 // Each setter below is a human edit of something auto-fill decided or relied
@@ -153,25 +177,25 @@ void	WED_RampPosition::Export(		 AptGate_t& x) const
 // the distribution is what an author is expected to do after a fill.
 void	WED_RampPosition::SetType(int	rt)
 {
-	if (rt != ramp_type.value) auto_filled = false;
+	if (rt != ramp_type.value) DropAutoFill(auto_filled, livery_set);
 	ramp_type = rt;
 }
 
 void	WED_RampPosition::SetEquipment(const set<int>&	et)
 {
-	if (et != equip_type.value) auto_filled = false;
+	if (et != equip_type.value) DropAutoFill(auto_filled, livery_set);
 	equip_type = et;
 }
 
 void	WED_RampPosition::SetWidth(int		w)
 {
-	if (w != width.value) auto_filled = false;
+	if (w != width.value) DropAutoFill(auto_filled, livery_set);
 	width = w;
 }
 
 void	WED_RampPosition::SetWidthMin(int		w)
 {
-	if (w != width_min.value) auto_filled = false;
+	if (w != width_min.value) DropAutoFill(auto_filled, livery_set);
 	width_min = w;
 }
 
@@ -211,7 +235,7 @@ void	WED_RampPosition::EndElement(void)
 
 void	WED_RampPosition::SetRampOperationType(int ait)
 {
-	if (ait != ramp_op_type.value) auto_filled = false;
+	if (ait != ramp_op_type.value) DropAutoFill(auto_filled, livery_set);
 	ramp_op_type = ait;
 }
 
@@ -334,7 +358,14 @@ void	WED_RampPosition::SetNthProperty(int n, const PropertyVal_t& val)
 	{
 		PropertyVal_t before;
 		GetNthProperty(n, before);
-		if (!SamePropVal(before, v)) auto_filled = false;
+		if (!SamePropVal(before, v))
+		{
+			DropAutoFill(auto_filled, livery_set);
+			// the grid is always a person: operation type and airlines set here
+			// are the author's 2.8 choice (a None typed here stays None)
+			if (n == PropertyItemNumber(&airlines) || n == PropertyItemNumber(&ramp_op_type))
+				livery_set = true;
+		}
 	}
 	WED_GISPoint_Heading::SetNthProperty(n, v);
 }
@@ -350,7 +381,7 @@ void	WED_RampPosition::SetAirlines(const string &a)
 	// the first click then wrote the code a second time in lower case
 	// ("aal dal aal"), which round-tripped straight back out to apt.dat.
 	string cleaned = CorrectAirlinesString(a);
-	if (cleaned != airlines.value) auto_filled = false;
+	if (cleaned != airlines.value) DropAutoFill(auto_filled, livery_set);
 	airlines = cleaned;
 }
 
@@ -430,16 +461,18 @@ void	WED_RampPosition::SetClassWeights(const int w[6])
 	snprintf(buf, sizeof(buf), "%d %d %d %d %d %d", w[0], w[1], w[2], w[3], w[4], w[5]);
 	class_weights = CorrectWeightsString(buf);
 	weights_mode  = true;						// setting weights is choosing to use them
+	MarkLiverySet();
 }
 
 bool	WED_RampPosition::WeightsInUse(void) const		{ return weights_mode.value != 0; }
-void	WED_RampPosition::SetWeightsInUse(bool in_use)	{ weights_mode = in_use; }
+void	WED_RampPosition::SetWeightsInUse(bool in_use)	{ weights_mode = in_use; MarkLiverySet(); }
 
 void	WED_RampPosition::ClearClassWeights(void)
 {
 	// Back to "no 1313 row on this stand", which is NOT the same as all-zero.
 	class_weights = string();
 	weights_mode  = false;
+	MarkLiverySet();
 }
 
 string  WED_RampPosition::GetAirlines() const

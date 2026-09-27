@@ -170,7 +170,10 @@ void	WED_LiveryPane::SetRampOpFilter(int wed_ramp_op_enum)
 
 	mArchive->StartCommand("Set Ramp Operation Type");
 	for (size_t i = 0; i < mSelectedRamps.size(); ++i)
+	{
 		mSelectedRamps[i]->SetRampOperationType(wed_ramp_op_enum);
+		mSelectedRamps[i]->MarkLiverySet();
+	}
 	mArchive->CommitCommand();
 
 	mCoverageDirty = true;
@@ -192,6 +195,7 @@ void	WED_LiveryPane::ApplyDragRange(void)
 	{
 		mSelectedRamps[i]->SetWidthMin(IndexToWidthEnum(lo));
 		mSelectedRamps[i]->SetWidth(IndexToWidthEnum(hi));
+		mSelectedRamps[i]->MarkLiverySet();
 	}
 
 	// Live during the drag, not just on mouse-up: watching the covered-class
@@ -303,6 +307,7 @@ void	WED_LiveryPane::ToggleCode(const string & icao)
 		const string next = WED_RampPosition::CorrectAirlinesString(CodesToString(codes));
 		if (!clear_all && gExportTarget == wet_gateway && next.size() > kGatewayMaxChars) { ++refused; continue; }
 		mSelectedRamps[i]->SetAirlines(next);
+		mSelectedRamps[i]->MarkLiverySet();
 	}
 	mArchive->CommitCommand();
 	if (refused)
