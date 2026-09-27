@@ -150,6 +150,14 @@ bool	WED_ModerationConfirmHidden(WED_Thing * root);
 // on the same X-Plane reproduces it - on the Gateway too.
 bool	WED_LiveryParksNothing(WED_RampPosition * ramp, WED_Airport * apt, std::string & out_msg);
 
+// R14's one-click fix. Fixable when something the stand may list fits it at a
+// class at or below its current top (a fix never enlarges a stand: the 1301
+// letter is its physical size for ATC and AI). The fix moves weights - or the
+// size range's lower end - onto the nearest such class. Call inside a command;
+// out_what says what changed.
+bool	WED_LiveryParksNothingFixable(WED_RampPosition * ramp, WED_Airport * apt);
+bool	WED_LiveryFixParksNothing(WED_RampPosition * ramp, WED_Airport * apt, std::string * out_what);
+
 // The Moderation View's report, as plain text for the clipboard: airport,
 // counts, the data it was checked against, rows the import skipped, then each
 // stand that needs a look with what the validator and the operator check say.

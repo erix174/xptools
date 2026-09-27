@@ -322,14 +322,29 @@ correctly.
   author for an aircraft that is coming, which is exactly the capability §8.3
   argues the format exists to preserve.
 
-  **What 2.8 implements of this.** The single-stand readout in the Liveries tab
-  draws the distinction (`WED_LiveryPane.cpp`, `empty_NoArtYet` /
-  `empty_OutOfRange` / `empty_Unfillable`). The validator does not: its one
-  message names the operators and the size, and says whether they have a livery
-  at that size at all or only none that reaches and fits the equipment, but not
-  whether *any* asset exists at that size - so the F1 gate gets the same
-  warning as the R1 gate. The different validator wording and the one-click fix
-  are **not implemented in 2.8**.
+  **What 2.8 implements of this.** One analysis (`AnalyseStand`,
+  `WED_LiveryModeration.cpp`) feeds the warning, its wording and the fix, and
+  the Liveries tab's readout draws the same three distinctions
+  (`empty_NoArtYet` / `empty_OutOfRange` / `empty_Unfillable`).
+
+  - **Ahead of the art** - nothing in the library at an open class: "X-Plane has
+    no static aircraft at size F yet - nothing can park here until one ships".
+    Nothing to fix.
+  - **Out of reach** - the operators fly that size, but no livery reaches from a
+    hub or fits the equipment: the operators and the size are named.
+  - **Weights are wrong** - the weights (or the size range) point where the
+    listed operators have no livery: "its spawn weights (F) point where none of
+    its operators (...) has a static livery".
+
+  **The one-click fix** is the Validation list's **Fix** button, shown when
+  the selection holds a fixable stand; the message says "Fixable: select it and
+  press Fix". It moves each weight on a class nothing fits to the nearest
+  class that something does - for a stand without weights, it moves the size
+  range's lower end down - and it **never makes a stand larger**: nothing moves
+  above the stand's current top, because the `1301` letter is the stand's
+  physical size for ATC and AI parking (R23). A stand whose operators only fly
+  larger aircraft is therefore not fixable there; list another operator. One
+  undo step for the whole selection; each fixed row says what changed.
 - **R19** - **apt.dat has no comment syntax. A writer MUST NOT emit comment lines.**
   There is no `#` form, no `//` form, and nothing else. Confirmed against the
   shipped data: **zero** lines begin with `#` in the 12,351,496-line Global

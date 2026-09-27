@@ -291,55 +291,74 @@ bool	WED_ModerationConfirmHidden(WED_Thing * root)
 //
 // Airline and cargo stands draw from their list. GA stands never read it (R28),
 // and a military stand with nothing listed draws any military livery of its size
-// (spec 4.1): those two are checked against the whole library, and when nothing
-// fits the warning says it is the size that rules everything out.
-bool	WED_LiveryParksNothing(WED_RampPosition * ramp, WED_Airport * apt, string & out_msg)
+// (spec 4.1): those two are checked against the whole library.
+//
+// One analysis feeds the warning, its wording (R14's table) and the fix, so the
+// three cannot drift apart.
+namespace {
+struct StandAnalysis {
+	bool	checked = false;		// false: nothing to judge (None, no list, all zero, no index)
+	bool	weighted = false;
+	int		wts[6] = { 0, 0, 0, 0, 0, 0 };
+	int		lo = 0, hi = 0;			// size range when not weighted
+	bool	allowed[6] = { false, false, false, false, false, false };	// classes the stand opens
+	bool	fits[6] = { false, false, false, false, false, false };		// classes some candidate livery fits HERE
+	bool	listed_at_allowed = false;	// a candidate has a livery at an open class, range/equipment aside
+	bool	library_at_allowed = false;	// X-Plane has ANY livery at an open class
+	bool	pool = false;
+	int		op = 0;
+	string	country;
+};
+}
+
+static void	AnalyseStand(WED_RampPosition * ramp, WED_Airport * apt, StandAnalysis & a)
 {
-	out_msg.clear();
-	if (!ramp || !apt) return false;
+	a = StandAnalysis();
+	if (!ramp || !apt) return;
 	const string airlines = ramp->GetAirlines();
-	int wts[6];
-	const bool weighted = ramp->GetClassWeights(wts);
-	int op = ramp->GetRampOperationType();
-	if (op == ramp_operation_None) return false;			// parks nothing by definition (R29)
-	const bool pool = op == ramp_operation_GeneralAviation || (op == ramp_operation_Military && airlines.empty());
-	if (!pool && airlines.empty()) return false;		// an airline stand with no list: nothing was asked for
+	a.weighted = ramp->GetClassWeights(a.wts);
+	a.op = ramp->GetRampOperationType();
+	if (a.op == ramp_operation_None) return;				// parks nothing by definition (R29)
+	a.pool = a.op == ramp_operation_GeneralAviation || (a.op == ramp_operation_Military && airlines.empty());
+	if (!a.pool && airlines.empty()) return;				// an airline stand with no list: nothing was asked for
 
 	// The same data and the same rule as the Liveries tab - range (R26) and the
 	// stand's equipment type included - so the two never disagree about a stand.
 	WED_LiveryData * d = WED_GetLiveryData(true);
-	if (!d) return false;					// no index (X-Plane before 12.5): nothing to check against
+	if (!d) return;
 
-	bool allowed[6] = { false, false, false, false, false, false };
 	bool any = false;
-	if (weighted)
+	if (a.weighted)
 	{
-		for (int k = 0; k < 6; ++k) { allowed[k] = wts[k] > 0; any |= allowed[k]; }
-		if (!any) return false;			// all zero: the author said nothing parks here (V2)
+		for (int k = 0; k < 6; ++k) { a.allowed[k] = a.wts[k] > 0; any |= a.allowed[k]; }
+		if (!any) return;			// all zero: the author said nothing parks here (V2)
 	}
 	else
 	{
-		int lo = ENUM_Export(ramp->GetWidthMin()), hi = ENUM_Export(ramp->GetWidth());
-		if (lo > hi) std::swap(lo, hi);
-		for (int k = 0; k < 6; ++k) allowed[k] = (k >= lo && k <= hi);
+		a.lo = ENUM_Export(ramp->GetWidthMin()); a.hi = ENUM_Export(ramp->GetWidth());
+		if (a.lo > a.hi) std::swap(a.lo, a.hi);
+		for (int k = 0; k < 6; ++k) a.allowed[k] = (k >= a.lo && k <= a.hi);
 	}
+	a.checked = true;
 
-	string country;
 	{
 		string icao;
 		apt->GetICAO(icao);
 		string meta = apt->ContainsMetaDataKey("icao_code") ? apt->GetMetaDataValue("icao_code") : string();
 		for (auto & c : icao) c = (char) toupper((unsigned char) c);
 		for (auto & c : meta) c = (char) toupper((unsigned char) c);
-		if (!d->airports.GetCountry(!meta.empty() ? meta : icao, country)) d->airports.GetCountry(icao, country);
+		if (!d->airports.GetCountry(!meta.empty() ? meta : icao, a.country)) d->airports.GetCountry(icao, a.country);
 	}
 	Point2 here;
 	ramp->GetLocation(gis_Geo, here);
 	set<int> equipment;
 	ramp->GetEquipment(equipment);
 
+	for (int k = 0; k < 6; ++k)
+		if (a.allowed[k] && d->index.CountAtClass((char) ('A' + k)) > 0) a.library_at_allowed = true;
+
 	vector<string> candidates;
-	if (pool)
+	if (a.pool)
 		d->index.GetAirlineCodes(candidates);
 	else
 	{
@@ -351,49 +370,171 @@ bool	WED_LiveryParksNothing(WED_RampPosition * ramp, WED_Airport * apt, string &
 			candidates.push_back(code);
 		}
 	}
-
-	bool any_livery = false;
 	for (size_t n = 0; n < candidates.size(); ++n)
 	{
 		const string & code = candidates[n];
-		if (!WED_LiveryOperatorFitsRampOp(code, op, d->directory)) continue;
+		if (!WED_LiveryOperatorFitsRampOp(code, a.op, d->directory)) continue;
 		const vector<const WED_LiveryIndexEntry *> * all = d->index.GetForAirline(code);
 		if (!all) continue;
 		for (size_t i = 0; i < all->size(); ++i)
 		{
 			const WED_LiveryIndexEntry & e = *(*all)[i];
-			if (e.size_class < 'A' || e.size_class > 'F' || !allowed[e.size_class - 'A']) continue;
-			any_livery = true;
-			if (WED_LiveryFitsStand(e, d->directory, country, here.y(), here.x(), equipment) != livery_allow_Yes) continue;
-			return false;			// something can park
+			if (e.size_class < 'A' || e.size_class > 'F') continue;
+			const int k = e.size_class - 'A';
+			if (a.allowed[k]) a.listed_at_allowed = true;
+			if (!a.fits[k] && WED_LiveryFitsStand(e, d->directory, a.country, here.y(), here.x(), equipment) == livery_allow_Yes)
+				a.fits[k] = true;
 		}
 	}
+}
 
-	string classes, name;
-	ramp->GetName(name);
-	for (int k = 0; k < 6; ++k)
-		if (allowed[k]) classes += (char) ('A' + k);
-
-	string why;
-	if (pool)
-	{
-		const char * kind = op == ramp_operation_GeneralAviation ? "general aviation" : "military";
-		why = string("no ") + kind + " aircraft matches its size (" + classes + ")";
-		if (any_livery)
-			why += op == ramp_operation_Military && !country.empty()
-				? " that may park in " + country + " and fits its equipment type"
-				: " and fits its equipment type";
-		why += " - the size rules out everything X-Plane has";
-	}
-	else
-		why = "none of its operators (" + airlines + ") " +
-			(any_livery ? string("has a static livery at size ") + classes + " that can reach this airport and fits its equipment type"
-						: string("has a static livery at size ") + classes + " for this operation type");
-	out_msg = string("Ramp start '") + name + "': " + why +
-		", so X-Plane will park no static aircraft here. ATC and AI parking are unaffected.";
+static bool	ParksNothing(const StandAnalysis & a)
+{
+	if (!a.checked) return false;
+	for (int k = 0; k < 6; ++k) if (a.allowed[k] && a.fits[k]) return false;
 	return true;
 }
 
+// The largest class the stand may already hold: a fix never makes a stand bigger.
+// 1301's letter is the stand's physical size for ATC and AI parking (R23 derives
+// it from the largest weight), so moving aircraft onto a larger class would
+// quietly let bigger aircraft onto a stand drawn for smaller ones.
+static int	StandTop(const StandAnalysis & a)
+{
+	if (!a.weighted) return a.hi;
+	for (int k = 5; k >= 0; --k) if (a.wts[k] > 0) return k;
+	return -1;
+}
+
+// The nearest class at or below the stand's top that something fits; -1 if none.
+// On a tie the smaller class: a smaller aircraft still fits a stand drawn larger.
+static int	NearestFit(const StandAnalysis & a, int from)
+{
+	const int top = StandTop(a);
+	for (int dist = 1; dist < 6; ++dist)
+	{
+		const int lower = from - dist, upper = from + dist;
+		if (lower >= 0 && a.fits[lower]) return lower;
+		if (upper <= top && upper < 6 && a.fits[upper]) return upper;
+	}
+	return -1;
+}
+
+static bool	FixableAnalysis(const StandAnalysis & a)
+{
+	if (!ParksNothing(a)) return false;
+	if (!a.weighted)
+	{
+		for (int k = a.lo - 1; k >= 0; --k) if (a.fits[k]) return true;
+		return false;
+	}
+	for (int k = 0; k < 6; ++k) if (a.allowed[k] && NearestFit(a, k) >= 0) return true;
+	return false;
+}
+
+bool	WED_LiveryParksNothing(WED_RampPosition * ramp, WED_Airport * apt, string & out_msg)
+{
+	out_msg.clear();
+	StandAnalysis a;
+	AnalyseStand(ramp, apt, a);
+	if (!ParksNothing(a)) return false;
+
+	const string airlines = ramp->GetAirlines();
+	string classes, name, fit_classes;
+	ramp->GetName(name);
+	const int top = StandTop(a);
+	for (int k = 0; k < 6; ++k)
+	{
+		if (a.allowed[k]) classes += (char) ('A' + k);
+		if (a.fits[k] && k <= top) fit_classes += (char) ('A' + k);
+	}
+	const bool fixable = FixableAnalysis(a);
+	const char * weights_or_size = a.weighted ? "its spawn weights" : "its size range";
+
+	// R14's cases, which must not read alike.
+	string why;
+	if (!a.library_at_allowed)
+		// ahead of the art: nothing to fix - it starts working the day one ships
+		why = string("X-Plane has no static aircraft at size ") + classes + " yet - nothing can park here until one ships";
+	else if (a.pool)
+	{
+		const char * kind = a.op == ramp_operation_GeneralAviation ? "general aviation" : "military";
+		why = string("no ") + kind + " aircraft matches its size (" + classes + ")";
+		if (a.listed_at_allowed)
+			why += a.op == ramp_operation_Military && !a.country.empty()
+				? " that may park in " + a.country + " and fits its equipment type"
+				: " and fits its equipment type";
+	}
+	else if (a.listed_at_allowed)
+		// they fly this size, but nothing reaches from a hub or fits the equipment
+		why = "none of its operators (" + airlines + ") has a static livery at size " + classes +
+			  " that can reach this airport and fits its equipment type";
+	else
+		// the weights (or the range) point where these operators do not fly: a mistake
+		why = string(weights_or_size) + " (" + classes + ") point where none of its operators (" + airlines +
+			  ") has a static livery";
+
+	out_msg = string("Ramp start '") + name + "': " + why +
+		", so X-Plane will park no static aircraft here. ATC and AI parking are unaffected.";
+	if (fixable)
+		out_msg += " Fixable: select it and press Fix - " + string(weights_or_size) + " move onto " + fit_classes + ".";
+	return true;
+}
+
+bool	WED_LiveryParksNothingFixable(WED_RampPosition * ramp, WED_Airport * apt)
+{
+	StandAnalysis a;
+	AnalyseStand(ramp, apt, a);
+	return FixableAnalysis(a);
+}
+
+// Inside the caller's command. Weights: each weight on a class nothing fits here
+// moves to the nearest class that something does, never above the stand's top -
+// the total is kept. A size range: its lower end moves down to the nearest
+// fitting class, so the 1301 letter (the top) is unchanged.
+bool	WED_LiveryFixParksNothing(WED_RampPosition * ramp, WED_Airport * apt, string * out_what)
+{
+	StandAnalysis a;
+	AnalyseStand(ramp, apt, a);
+	if (!FixableAnalysis(a)) return false;
+
+	string name;
+	ramp->GetName(name);
+	char buf[256];
+	if (a.weighted)
+	{
+		int w[6];
+		for (int k = 0; k < 6; ++k) w[k] = a.wts[k];
+		for (int k = 0; k < 6; ++k)
+			if (a.wts[k] > 0 && !a.fits[k])
+			{
+				const int t = NearestFit(a, k);
+				if (t < 0) continue;
+				w[t] += a.wts[k];
+				w[k] -= a.wts[k];
+			}
+		ramp->SetClassWeights(w);
+		if (out_what)
+		{
+			snprintf(buf, sizeof(buf), "Ramp start '%s': weights now %d %d %d %d %d %d (A-F)",
+					 name.c_str(), w[0], w[1], w[2], w[3], w[4], w[5]);
+			*out_what = buf;
+		}
+	}
+	else
+	{
+		int t = -1;
+		for (int k = a.lo - 1; k >= 0; --k) if (a.fits[k]) { t = k; break; }
+		if (t < 0) return false;
+		ramp->SetWidthMin(ENUM_Import(ENUM_Domain(ramp->GetWidth()), t));
+		if (out_what)
+		{
+			snprintf(buf, sizeof(buf), "Ramp start '%s': size range now %c-%c", name.c_str(), (char) ('A' + t), (char) ('A' + a.hi));
+			*out_what = buf;
+		}
+	}
+	return true;
+}
 
 // ---- the callout model ----
 

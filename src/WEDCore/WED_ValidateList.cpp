@@ -41,12 +41,15 @@
 #include "WED_Airport.h"
 #include "WED_ToolUtils.h"
 #include "GUI_Application.h"
+#include "WED_RampPosition.h"
+#include "WED_LiveryModeration.h"		// R14's fix
 
 enum {
 	kMsg_FilterChanged = WED_PRIVATE_MSG_BASE,
 	kMsg_ZoomTo,
 	kMsg_ZoomOut,
-	kMsg_Cancel
+	kMsg_Cancel,
+	kMsg_Fix
 };
 
 static int import_bounds_default[4] = { 0, 0, 800, 300 };
@@ -210,6 +213,16 @@ WED_ValidateDialog::WED_ValidateDialog(WED_Document * resolver, WED_MapPane * pa
 	mZoomOutBtn->SetParent(holder);
 	mZoomOutBtn->AddListener(this);
 
+	// R14: a stand whose weights or size point where its operators do not fly
+	// can be fixed from here. Hidden until the selection holds one.
+	mFixBtn = new GUI_Button("push_buttons.png",btn_Push,k_reg, k_hil,k_reg,k_hil);
+	mFixBtn->SetBounds(185,5,290,GUI_GetImageResourceHeight("push_buttons.png") / 3);
+	mFixBtn->SetSticky(1,1,0,0);
+	mFixBtn->SetDescriptor("Fix");
+	mFixBtn->SetMsg(kMsg_Fix,0);
+	mFixBtn->SetParent(holder);
+	mFixBtn->AddListener(this);
+
 	packer->PackPane(holder,gui_Pack_Bottom);
 	packer->PackPane(mScroller,gui_Pack_Center);
 
@@ -220,6 +233,22 @@ WED_ValidateDialog::WED_ValidateDialog(WED_Document * resolver, WED_MapPane * pa
 
 WED_ValidateDialog::~WED_ValidateDialog()
 {
+}
+
+void WED_ValidateDialog::UpdateFixButton(void)
+{
+	set<int>	selected;
+	mMsgTable.GetSelection(selected);
+	bool any = false;
+	for (auto i : selected)
+	{
+		if (any) break;
+		if (msgs_orig[i].err_code != warn_ramp_livery_parks_nothing) continue;
+		for (auto t : msgs_orig[i].bad_objects)
+			if (WED_RampPosition * r = dynamic_cast<WED_RampPosition *>(t))
+				if (WED_LiveryParksNothingFixable(r, msgs_orig[i].airport)) { any = true; break; }
+	}
+	if (any) mFixBtn->Show(); else mFixBtn->Hide();
 }
 
 void WED_ValidateDialog::ReceiveMessage(
@@ -235,6 +264,7 @@ void WED_ValidateDialog::ReceiveMessage(
 	case GUI_TABLE_CONTENT_CHANGED:
 		mZoomBtn->Show();
 		mZoomOutBtn->Show();
+		UpdateFixButton();
 	case kMsg_ZoomTo:
 		{
 			WED_Thing * wrl = WED_GetWorld(mResolver);
@@ -254,6 +284,32 @@ void WED_ValidateDialog::ReceiveMessage(
 	case kMsg_ZoomOut:
 		mZoom *= 1.4;
 		mMapPane->ZoomShowSel(mZoom);
+		break;
+	case kMsg_Fix:
+		{
+			// One undo step for everything selected. Each fixed row says what it
+			// did, and stays in the list so the author sees the change.
+			set<int>	selected;
+			mMsgTable.GetSelection(selected);
+			WED_Thing * wrl = WED_GetWorld(mResolver);
+			bool started = false;
+			for (auto i : selected)
+			{
+				if (msgs_orig[i].err_code != warn_ramp_livery_parks_nothing) continue;
+				for (auto t : msgs_orig[i].bad_objects)
+					if (WED_RampPosition * r = dynamic_cast<WED_RampPosition *>(t))
+						if (WED_LiveryParksNothingFixable(r, msgs_orig[i].airport))
+						{
+							if (!started) { wrl->StartCommand("Fix Static Aircraft Size"); started = true; }
+							string what;
+							if (WED_LiveryFixParksNothing(r, msgs_orig[i].airport, &what))
+								mMsgs[i].name = "Fixed: " + what;
+						}
+			}
+			if (started) wrl->CommitCommand();
+			mMsgTable.AptVectorChanged();
+			UpdateFixButton();
+		}
 		break;
 	case msg_DocumentDestroyed:
 	case kMsg_Cancel:

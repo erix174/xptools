@@ -61,6 +61,8 @@ private:
 	GUI_Header *			mHeader;
 	GUI_Button *			mZoomBtn;
 	GUI_Button *			mZoomOutBtn;
+	GUI_Button *			mFixBtn;		// R14's one-click fix, shown when the selection has a fixable stand
+	void					UpdateFixButton(void);
 
 	GUI_TextTable			mTextTable;
 	GUI_TextTableHeader		mTextTableHeader;
