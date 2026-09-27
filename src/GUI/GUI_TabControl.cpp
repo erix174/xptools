@@ -76,12 +76,6 @@ void		GUI_TabControl::SetDescriptor(const string& inDesc)
 	}
 
 	mWidths.resize(mItems.size());
-	// resize() only default-fills NEW elements, so any enabled/disabled flag
-	// already set survives a later SetDescriptor - against a list that may have
-	// been renumbered by it. Harmless today because GUI_TabPane::AddPane() calls
-	// this for every pane before anything calls SetItemEnabled(), but a caller who
-	// re-titles tabs at runtime would inherit stale flags by position.
-	mEnabled.resize(mItems.size(), true);
 	for (int n = 0; n < mItems.size(); ++n)
 	{
 		// create 2-line header if there is a '+' in it
@@ -135,27 +129,18 @@ void		GUI_TabControl::Draw(GUI_GraphState * state)
 		float x = bounds[0] + TAB_PADDING;
 		float h = GUI_GetLineHeight(font_UI_Basic);
 		float y = (bounds[1] + bounds[3]) * 0.5 - h * 0.4;
-
-		float dimmed[4] = { mTextColor[0], mTextColor[1], mTextColor[2], mTextColor[3] };
-		if(n < mEnabled.size() && !mEnabled[n])
-		{
-			dimmed[0] *= 0.4f;
-			dimmed[1] *= 0.4f;
-			dimmed[2] *= 0.4f;
-			dimmed[3] *= 0.6f;
-		}
-
+		
 		auto pos = mItems[n].find('+');
 		if(pos > 0 && pos < mItems[n].length())
 		{
-
+			
 			y += 0.5 * h;
-			GUI_FontDrawScaled(state, font_UI_Basic, dimmed, x, y, 0, y+h, mItems[n].c_str(), mItems[n].c_str() + pos, align_Left);
+			GUI_FontDrawScaled(state, font_UI_Basic, mTextColor, x, y, 0, y+h, mItems[n].c_str(), mItems[n].c_str() + pos, align_Left);
 			y -= h;
-			GUI_FontDrawScaled(state, font_UI_Basic, dimmed, x, y, 0, y+h, mItems[n].c_str() + pos + 1, mItems[n].data() + mItems[n].size(), align_Left);
+			GUI_FontDrawScaled(state, font_UI_Basic, mTextColor, x, y, 0, y+h, mItems[n].c_str() + pos + 1, mItems[n].data() + mItems[n].size(), align_Left);
 		}
 		else
-			GUI_FontDraw(state, font_UI_Basic, dimmed, x, y, mItems[n].c_str());
+			GUI_FontDraw(state, font_UI_Basic, mTextColor, x, y, mItems[n].c_str());
 
 		bounds[0] += mWidths[n];
 	}
@@ -173,9 +158,6 @@ int			GUI_TabControl::MouseDown(int x, int y, int button)
 		if (x > bounds[0] &&
 			x < bounds[2])
 		{
-			if (n < mEnabled.size() && !mEnabled[n])
-				return 1;			// claim the click, but a disabled tab can't be tracked/switched to
-
 			mTrackBtn = n;
 			mHilite = 1;
 			Refresh();
@@ -231,19 +213,5 @@ void		GUI_TabControl::SetValue(float inValue)
 {
 	GUI_Control::SetValue(inValue);
 	Refresh();
-}
-
-void		GUI_TabControl::SetItemEnabled(int n, bool enabled)
-{
-	if (n < 0 || n >= mEnabled.size()) return;
-	if (mEnabled[n] == enabled) return;
-	mEnabled[n] = enabled;
-	Refresh();
-}
-
-bool		GUI_TabControl::IsItemEnabled(int n) const
-{
-	if (n < 0 || n >= mEnabled.size()) return true;
-	return mEnabled[n];
 }
 

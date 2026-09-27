@@ -726,7 +726,6 @@ set(WED_RESOURCE_FILES
 	${CMAKE_SOURCE_DIR}/src/WEDResources/parking_spots/ClassD.png
 	${CMAKE_SOURCE_DIR}/src/WEDResources/parking_spots/ClassE.png
 	${CMAKE_SOURCE_DIR}/src/WEDResources/parking_spots/ClassF.png
-	${CMAKE_SOURCE_DIR}/src/WEDResources/livery_selected.png
 	${CMAKE_SOURCE_DIR}/src/WEDResources/icons/navmap_airport.png
 	${CMAKE_SOURCE_DIR}/src/WEDResources/icons/navmap_seaport.png
 	${CMAKE_SOURCE_DIR}/src/WEDResources/ArrowHeadRoadS.png

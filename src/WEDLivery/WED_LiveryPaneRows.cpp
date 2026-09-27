@@ -51,13 +51,6 @@ namespace livery_pane {
 	const int kWidthOrder[6]       = { width_A, width_B, width_C, width_D, width_E, width_F };
 	const char * kWidthLabels[6]   = { "A", "B", "C", "D", "E", "F" };
 
-	// Tab titles, not tab indices. The positions these panes were added at used to
-	// be hardcoded here (0 and 5), which is silently wrong the moment anyone
-	// inserts a tab ahead of them - nothing catches it, the auto-switch just lands
-	// on the wrong pane. GUI_TabPane::GetTabForPane()/GetTabForTitle() resolve them
-	// at the point of use instead. See WED_DocumentWindow.cpp's AddPane() calls.
-	const char * kSelectionTabTitle = "Selection";
-
 	int WidthEnumToIndex(int enum_val)
 	{
 		for (int i = 0; i < 6; ++i)

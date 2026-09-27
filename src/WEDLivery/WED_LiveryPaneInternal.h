@@ -128,7 +128,6 @@ namespace livery_pane {
 	extern const char * kFilterTips[5];
 	extern const int kWidthOrder[6];
 	extern const char * kWidthLabels[6];
-	extern const char * kSelectionTabTitle;
 
 	string NoIndexSentence(WedDataFileError err);
 	int CollectRamps(ISelectable * who, void * ref);

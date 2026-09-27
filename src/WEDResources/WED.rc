@@ -154,7 +154,6 @@ ClassF.png						GUI_RES		parking_spots/ClassF.png
    hyphenated name makes the RC compiler split the token ("file not found:
    livery"), and quoting it compiles but then never matches FindResourceW at
    runtime. Every other resource here is underscored for the same reason. */
-livery_selected.png				GUI_RES		livery_selected.png
 
 /* Versioning info */
 #include "..\WEDCore\WED_Version.h"

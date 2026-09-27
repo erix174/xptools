@@ -690,9 +690,8 @@ string	WED_LiveryAssetDir(void)
 // slashes - into something the OS can actually open.
 //
 // Two reasons this is a function rather than a concatenation at each call site.
-// WED_ResourceMgr::GetObjAbsolute() prepends NOTHING, so a caller handing it the
-// bare "jet/B738_UAL/..." resolves it against the process working directory and
-// fails. And the separators have to be normalised: LoadObj passes this same path
+// A loader handed the bare "jet/B738_UAL/..." resolves it against the process
+// working directory and fails. And the separators have to be normalised: LoadObj passes this same path
 // on to process_texture_path(), whose ".." unwinding scans for DIR_CHAR only, so
 // a path mixing the index's '/' with Windows' '\' walks up the wrong component
 // and the object's texture silently fails to resolve - a blank thumbnail with

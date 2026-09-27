@@ -47,16 +47,10 @@ public:
 
 			void			AddPane(GUI_Pane * who, const char * title);
 
-			// Grey out (and refuse to switch to) the tab for a pane already added via
-			// AddPane. Additive: panes default to enabled.
-			void			SetPaneEnabled(GUI_Pane * who, bool enabled);
-
-			// Index of an added pane, or of the tab with this exact title; -1 if
-			// there is no such tab. Both exist so callers can stop hardcoding the
-			// position a pane happened to be added at - a literal index is silently
-			// wrong the moment a tab is inserted ahead of it, and nothing catches it.
+			// Index of an added pane, -1 if it has none. So callers can stop
+			// hardcoding the position a pane happened to be added at - a literal
+			// index is silently wrong the moment a tab is inserted ahead of it.
 			int				GetTabForPane(GUI_Pane * who) const;
-			int				GetTabForTitle(const char * title) const;
 
 	virtual	void			ReceiveMessage(
 									GUI_Broadcaster *		inSrc,

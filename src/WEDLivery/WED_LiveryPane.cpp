@@ -315,7 +315,7 @@ void	WED_LiveryPane::RebuildSelection(void)
 		mTrayHoverIdx = -1;
 	}
 
-	// No more SetPaneEnabled() lock - the tab stays clickable even with
+	// No tab lock - the tab stays clickable even with
 	// nothing selected (the greyed-out mask + warning text in Draw() carries
 	// that state instead). Only auto-navigate the user OFF this tab the
 	// first time it goes empty while they're actually looking at it; once

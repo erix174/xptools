@@ -50,18 +50,10 @@ public:
 	virtual	void		SetValue(float inValue);
 
 			int			GetNaturalHeight(void);
-
-			// Additive, opt-in: every item defaults to enabled, so existing callers
-			// see no behavior change. A disabled item is drawn dimmed and cannot be
-			// clicked into.
-			void		SetItemEnabled(int n, bool enabled);
-			bool		IsItemEnabled(int n) const;
-
 private:
 
 		vector<string>		mItems;
 		vector<int>			mWidths;
-		vector<bool>		mEnabled;
 
 		int					mTrackBtn;
 		int					mHilite;
