@@ -70,7 +70,7 @@ icao_code` wins over the header ident; datum, else first-runway midpoint), so WE
 and the sim measure from the same points. Military/Gov records carry no hubs.
 Pseudo-operators: `XPGA` general aviation, `XPMI` military, `XPZZ_<TYPE>` a
 generic airliner of that type — never placed automatically. Today: 298 liveries,
-1,499 operator records, 42 `Obsolete` marks (12 superseded assets, which alone
+1,518 operator records, 42 `Obsolete` marks (12 superseded assets, which alone
 empty nothing; 20 retired airframes and 10 liveries of defunct operators, which
 withdraw 24 airline/class pairs on purpose).
 

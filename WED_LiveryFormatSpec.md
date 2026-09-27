@@ -54,13 +54,16 @@ Draft 9 records the fixes of 2026-09-26. The format is unchanged: still one row.
   "ahead of the art" wording and one-click fix exist only in part (marked *not
   implemented in 2.8*); §6.7f lists the moderation flags the code raises; the
   appendix records that moderation follows the Moderator Mode preference.
-- **Index data `20260926-r1`.** CYH is re-coded `CES_1` and its two liveries
-  are no longer marked; still 42 `Obsolete` marks. Counts derived from the index
+- **Index data `20260927-r1`.** CYH is re-coded `CES_1` and its two liveries
+  are no longer marked; still 42 `Obsolete` marks. Gol's 737 moves from `GOL`
+  (Cargolaar, Namibia) to Gol's own designator `GLO`; 20 OPERATOR records are
+  added for codes the airport database already used (1,518 in all), none with
+  a livery, so no livery-derived count changes. Counts derived from the index
   (§6.3, §6.5, §8.6) and every `AptIO.cpp` line reference are re-checked against
   this data and the current source.
 - **The appendix gains the index codes that differ from `library.txt` bucket
   suffixes** (EJU, CES_1, CHH, MAY/RUK/RYS, BCS, PLF, HMF), which the sim must
-  know about when it matches `1301` codes, and the pending GOL/GLO correction.
+  know about when it matches `1301` codes (GLO among them).
 
 ### What changed since draft 7
 
@@ -472,7 +475,7 @@ Everything above in one airport block. **This is the reference scenario**: if an
 implementation reproduces the resolution table below, it has all of §1-§4 right.
 
 `KXYZ` is fictional and placed at Seattle, the airlines are real, and every
-outcome in the table was computed against the shipped index (`20260926-r1`,
+outcome in the table was computed against the shipped index (`20260927-r1`,
 schema 4, X-Plane 12.4.3-r2 assets) with R25 and R26 applied and hubs placed from
 that install's Global Airports - not asserted. Draft 7 computed it without the
 range rule and before the retired-airframe marks of §6.6; seven of its nine
@@ -1160,7 +1163,7 @@ Bs" has no way to say it. `1313` says it in six numbers.
 Each case is one airport block. "today's behaviour" means the `1301` letter and
 whatever the current step-down does with it. Vectors that name ZBAA are stands in
 the sample package (`docs/livery_sample/`, stand number in brackets), computed
-against the `20260926-r1` index with hubs placed from X-Plane 12.4.3-r2's Global
+against the `20260927-r1` index with hubs placed from X-Plane 12.4.3-r2's Global
 Airports.
 
 ### 5.1 Well-formed
@@ -1269,7 +1272,7 @@ stamps, deliberately separate:
 
 ```
 # schema 4                          how many cells and what they mean
-# data 20260926-r1                  which day's content this is
+# data 20260927-r1                  which day's content this is
 # source X-Plane 12.4.3-r2-15ff1e4d WHICH INSTALL this describes
 # assets 298 liveries under apt_aircraft/
 ```
@@ -1337,7 +1340,7 @@ same file's OPERATOR records carry the ICAOs they were computed from.
 ### 6.3 What the index does NOT guarantee — read before implementing stage 3
 
 **`(type, airline, note)` is not a unique key, and cannot be made into one.**
-Verified against all 298 rows (`20260926-r1`): **25 groups covering 83 rows
+Verified against all 298 rows (`20260927-r1`): **25 groups covering 83 rows
 (28%) share that tuple.** Adding registration narrows it to 14 groups / 30 rows.
 It does not close it. **The only unique key is the object path.**
 
@@ -1368,8 +1371,8 @@ must ship it from the same build as the assets it describes.**
 
 ### 6.5 Index invariants a consumer may rely on
 
-Verified mechanically against the shipped file (`20260926-r1`: 298 livery rows,
-1,499 OPERATOR records); a generator change that breaks one of these is a
+Verified mechanically against the shipped file (`20260927-r1`: 298 livery rows,
+1,518 OPERATOR records); a generator change that breaks one of these is a
 regression.
 
 - **I1** — The file begins with the two header lines `I` and
@@ -2216,7 +2219,7 @@ this table.
 |---|---|
 | Read and write `1313` (`AptIO.cpp`), entity property, weights mode (§6.8) | **done** — written on every X-Plane 12 export, Gateway included |
 | Reader robustness: unknown rows skipped and reported (R15, §9) | **done** — listed after import; `warn_apt_dat_rows_not_imported` |
-| `livery_index.txt` schema 4 — 298 liveries, 1,499 operator records, header, hubs | **done**; generator merges, never overwrites (§6.7b) |
+| `livery_index.txt` schema 4 — 298 liveries, 1,518 operator records, header, hubs | **done**; generator merges, never overwrites (§6.7b) |
 | Index reader (`WED_LiveryIndex`), hub placement from Global Airports | **done** — drives every livery feature below |
 | Liveries tab: operator cards with real aircraft previews, size range / weights, flags, recommendations | **done** |
 | Coverage readout: P(empty), per-operator share, "only X will ever park here" (§4.5) | **done** |
@@ -2249,16 +2252,13 @@ filed it under:
 | `BCS` | `_csb`, `_dhk` | DHL (EAT Leipzig) 757 `D-ALES` |
 | `PLF` | `_paf` | Polish Air Force 737 |
 | `HMF` | `_coastguard` | Swedish Maritime Administration S-76 (now `Obsolete`) |
+| `GLO` | `_gol` | Gol Linhas Aéreas 737 (`GOL` is Cargolaar, Namibia) |
 
 A `1301` list says `eju`, not `ezy`, and `ces_1`, not `cyh`. **The sim MUST
 match `1301` codes against the index's `AIRLINE` column**, and reach the object
 through the row's `path`; a reader that derives the operator from the bucket
 suffix finds none of these liveries for the codes WED writes.
 
-Pending, not done: Gol's 737 is filed under `GOL` in the index while Gol's ICAO
-designator is `GLO` (which has an OPERATOR record of its own, with no livery).
-That is an index correction awaiting a decision, and until it is made a `1301`
-naming `glo` finds no Gol livery.
 
 The design principle the index exists to serve is unaffected, and is the same one
 as D in §8.3: availability is **recomputed on every load and never persisted**, so
