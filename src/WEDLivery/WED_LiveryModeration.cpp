@@ -40,6 +40,12 @@
 #if !IBM
 	#include <unistd.h>				// access()
 #endif
+#if LIN
+	#include <spawn.h>				// posix_spawnp
+	#include <sys/wait.h>
+	#include <thread>
+	extern char ** environ;
+#endif
 
 #include <algorithm>
 #include <chrono>
@@ -892,20 +898,29 @@ void	WED_ModerationOpenSearch(const string & url)
 		{
 			char size[64];
 			snprintf(size, sizeof(size), "--window-size=%d,%d", w, h);
-			string cmd = string("open -na \"") + apps[i] + "\" --args --app='" + url + "' " + size + " &";
+			// No trailing '&': open(1) returns as soon as the app is launched, and
+			// only then is its exit status the launch's - with '&' it was always
+			// 0 and a failed launch never reached the default browser below. The
+			// URL is percent-encoded, so it carries no quote to break the shell.
+			string cmd = string("open -na \"") + apps[i] + "\" --args --app='" + url + "' " + size;
 			if (system(cmd.c_str()) == 0) return;
 		}
 #else
+	// Spawned, not system("... &"): posix_spawnp searches PATH and fails when
+	// the browser is not there, so the default browser below is really the
+	// fallback. A detached thread reaps the child, so no zombie is left.
 	const char * bins[] = { "google-chrome", "chromium", "chromium-browser", "microsoft-edge" };
+	char size[64];
+	snprintf(size, sizeof(size), "--window-size=%d,%d", w, h);
+	const string app = "--app=" + url;
 	for (int i = 0; i < 4; ++i)
 	{
-		string probe = string("command -v ") + bins[i] + " >/dev/null 2>&1";
-		if (system(probe.c_str()) == 0)
+		char * argv[] = { (char *) bins[i], (char *) app.c_str(), size, NULL };
+		pid_t pid;
+		if (posix_spawnp(&pid, bins[i], NULL, NULL, argv, environ) == 0)
 		{
-			char size[64];
-			snprintf(size, sizeof(size), "--window-size=%d,%d", w, h);
-			string cmd = string(bins[i]) + " --app='" + url + "' " + size + " >/dev/null 2>&1 &";
-			if (system(cmd.c_str()) == 0) return;
+			std::thread([pid]() { int st; waitpid(pid, &st, 0); }).detach();
+			return;
 		}
 	}
 #endif

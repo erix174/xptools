@@ -316,7 +316,11 @@ void		WED_Map::Draw(GUI_GraphState * state)
 		GUI_FontDraw(state, font_UI_Basic, amber, b[0] + 5, b[3] - 4.0 * lh, rbuf);
 		// the second line says what the next drag does - and how to start over
 		const char * how = mHasRef
+#if APL
+			? "Drag: select    Option+drag: new reference line    Shift+right-drag: turn in 90s from it"
+#else
 			? "Drag: select    Alt+drag: new reference line    Shift+right-drag: turn in 90s from it"
+#endif
 			: "Drag along a row of stands to level the view on it    Shift+right-drag: turn freely";
 		GUI_FontDraw(state, font_UI_Basic, amber, b[0] + 5, b[3] - 5.0 * lh, how);
 	}

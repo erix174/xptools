@@ -1439,7 +1439,11 @@ void	WED_ModerationLayer::DrawOverview(GUI_GraphState * g)
 		Fill(x1 - 4, lb, x1 - 1, lt, track);
 		Fill(x1 - 4, tt - th, x1 - 1, tt, kMuted);
 	}
+#if APL
+	Txt(g, kMuted, x0 + kPad, y - asc - 2, "Shift+X / Cmd+Shift+X: next / previous stand to check");
+#else
 	Txt(g, kMuted, x0 + kPad, y - asc - 2, "Shift+X / Ctrl+Shift+X: next / previous stand to check");
+#endif
 	y -= lh + 6;
 	DrawCopyButton(g, x0 + kPad, y);
 }

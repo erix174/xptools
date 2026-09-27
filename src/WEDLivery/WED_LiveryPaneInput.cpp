@@ -153,7 +153,11 @@ void	WED_LiveryPane::PopulateThisRamp(void)
 		mPopulateFlash = buf;
 		mPopulateDetail = plan.ramps.size() == 1 ? "Added:" : "Added across them:";
 		for (auto & c : codes) mPopulateDetail += " " + c;
-		mPopulateDetail += ". Ctrl+Z reverts it.";
+	#if APL
+	mPopulateDetail += ". Cmd+Z reverts it.";
+#else
+	mPopulateDetail += ". Ctrl+Z reverts it.";
+#endif
 		mCoverageDirty = true;
 	}
 	mPopulateFlashUntil = PaneClockNow() + 3.0;

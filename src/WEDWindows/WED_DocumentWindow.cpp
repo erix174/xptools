@@ -526,7 +526,11 @@ int	WED_DocumentWindow::HandleCommand(int command)
 			}
 		}
 		else if (WED_GetCurrentAirport(mDocument) == NULL)
-			DoUserAlert("No airport is being edited. Select the airport to check and make it current (Airport menu, Ctrl+Shift+E).");
+	#if APL
+		DoUserAlert("No airport is being edited. Select the airport to check and make it current (Airport menu, Cmd+Shift+E).");
+#else
+		DoUserAlert("No airport is being edited. Select the airport to check and make it current (Airport menu, Ctrl+Shift+E).");
+#endif
 		else
 			DoUserAlert("No ramp start at this airport needs checking.");
 		return 1;
