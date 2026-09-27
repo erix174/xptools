@@ -24,7 +24,7 @@ import collections, os, sys
 
 OBSOLETE_NOTE = "Obsolete"
 
-# Row cells as read from the index, schema 3.
+# Row cells as read from the index (schema 4; same positions as schema 3).
 TYPE, CLASS, AIRLINE, NOTE = 0, 1, 2, 5
 
 
@@ -134,7 +134,7 @@ def main(argv):
     path = args[0] if args else os.path.join(here, "livery_index.txt")
     rows = load_rows(path)
     if not rows:
-        sys.exit(f"{path}: no livery rows - is this a schema 3 livery_index.txt?")
+        sys.exit(f"{path}: no livery rows - is this a schema 4 livery_index.txt?")
     print(f"index                 : {path} ({len(rows)} liveries)")
     report(rows, what_if, rank)
 

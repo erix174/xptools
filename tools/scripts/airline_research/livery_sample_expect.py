@@ -15,12 +15,18 @@ regenerate the table with it whenever the index or the rules change.
 """
 import math, os, sys
 
+# The report quotes the spec's section signs; a cp1252/cp437 console must not
+# turn that into a UnicodeEncodeError halfway through.
+sys.stdout.reconfigure(errors="replace")
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 args = [a for a in sys.argv[1:] if not a.startswith("--")]
 if not args:
     sys.exit(__doc__)
 APT = args[0]
-XP = args[1] if len(args) > 1 else r"D:\SteamLibrary\steamapps\common\X-Plane 12"
+XP = args[1] if len(args) > 1 else os.environ.get("XPLANE_ROOT")		# never guessed - see wed_paths.py
+if not XP:
+    sys.exit("usage: livery_sample_expect.py <apt.dat> <X-Plane root>   (or set XPLANE_ROOT)")
 INDEX = sys.argv[sys.argv.index("--index") + 1] if "--index" in sys.argv else os.path.join(HERE, "livery_index.txt")
 
 def cells(line):

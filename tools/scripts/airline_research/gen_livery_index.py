@@ -402,7 +402,7 @@ for dp, _dn, fn in os.walk(ROOT):
 
 # ------------------------------------------------------------------ MERGE
 # The index is the source of truth. Read what it already says and prefer it.
-existing_rows = {}      # path -> cells (schema 3: 10 cells, OP at index 8)
+existing_rows = {}      # path -> cells (schema 4: 10 cells, OP at index 8)
 existing_ops  = {}      # code -> [name, cty, op, fleet, hub icaos]
 if os.path.exists(OUT):
     for l in open(OUT, encoding="utf-8", errors="replace"):
@@ -532,7 +532,9 @@ with open(OUT, "w", encoding="utf-8", newline="\n") as o:
     # with 298.
     o.write("I\n1 WED Aviation Database\n")
     o.write("# schema 4\n")
-    o.write("# data %s-r1\n" % _dt.date.today().strftime("%Y%m%d"))
+    # r<n>: --rev N for a second release of the same day's data (default 1)
+    _rev = int(sys.argv[sys.argv.index("--rev") + 1]) if "--rev" in sys.argv else 1
+    o.write("# data %s-r%d\n" % (_dt.date.today().strftime("%Y%m%d"), _rev))
     o.write("# source X-Plane %s\n" % xplane_build(XP))
     o.write("# assets %d liveries under apt_aircraft/\n#\n" % len(rows))
     o.write("""# X-Plane Static Livery Index

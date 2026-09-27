@@ -21,8 +21,10 @@ usage: measure_empty_stands.py [APT_DAT] [--index livery_index.txt]
 import argparse, math, os, sys, time
 from collections import Counter, defaultdict
 
-DEFAULT_APT = (r"D:\SteamLibrary\steamapps\common\X-Plane 12\Global Scenery"
-               r"\Global Airports\Earth nav data\apt.dat")
+# The global apt.dat of $XPLANE_ROOT when no path is given - never a guessed
+# drive letter (see wed_paths.py).
+DEFAULT_APT = (os.path.join(os.environ["XPLANE_ROOT"], "Global Scenery", "Global Airports",
+                            "Earth nav data", "apt.dat") if os.environ.get("XPLANE_ROOT") else None)
 DEFAULT_INDEX = os.path.join(os.path.dirname(os.path.abspath(__file__)), "livery_index.txt")
 EARTH_R_KM = 6371.0
 STAND_OP_TO_CLASS = {"airline": "Pax", "cargo": "Cargo"}
@@ -183,7 +185,8 @@ def by_mark(pop, rows, op_ok, in_range, op_map, empty_all, empty_no_obs, pct):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("apt_dat", nargs="?", default=DEFAULT_APT)
+    ap.add_argument("apt_dat", nargs="?", default=DEFAULT_APT,
+                help="apt.dat to measure (default: the global one under $XPLANE_ROOT)")
     ap.add_argument("--index", default=DEFAULT_INDEX)
     ap.add_argument("--by-mark", action="store_true",
                     help="break the (Obsolete off -> on) step down by which (airline, class) mark empties each stand")

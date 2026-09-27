@@ -14,13 +14,24 @@ never re-parses or re-joins the airline list itself.
 Usage: python merge_airport_database.py
 Run from anywhere; paths below are absolute to this repo checkout.
 """
-import sys
+import os, sys
 
 from wed_paths import wed_livery_dir
 WEDLIVERY = wed_livery_dir()
-COMMERCIAL = WEDLIVERY + r"\WED_CommercialAirports.txt"
-AIRLINES = WEDLIVERY + r"\WED_AirlineDatabase.txt"
-OUT = WEDLIVERY + r"\WED_AirportDatabase.txt"
+COMMERCIAL = os.path.join(WEDLIVERY, "WED_CommercialAirports.txt")
+AIRLINES = os.path.join(WEDLIVERY, "WED_AirlineDatabase.txt")
+OUT = os.path.join(WEDLIVERY, "WED_AirportDatabase.txt")
+
+# RETIRED (2026-09-27). This was the one-shot that created WED_AirportDatabase.txt
+# in 2026-09. Both inputs have since been deleted, and the output has been
+# researched and corrected by hand ever since (1,566 airports on 2026-09-27
+# alone). Re-running it would overwrite that work. Kept for the record only.
+if "--i-really-mean-to-overwrite" not in sys.argv:
+    sys.exit("merge_airport_database.py is retired: its inputs are gone and it would overwrite the\n"
+             "hand-researched WED_AirportDatabase.txt. Edit that file directly.")
+for p in (COMMERCIAL, AIRLINES):
+    if not os.path.exists(p):
+        sys.exit("input missing: %s" % p)
 
 HEADER = """I
 1 WED Aviation Database
