@@ -50,6 +50,7 @@ being present (R17); without the row, today's behaviour is untouched.
 | # | ask | notes |
 |---|---|---|
 | 1 | **Confirm row code `1313`**, or give the one to use | It is **live**: WED 2.8 writes it on every X-Plane 12 export, Gateway included. Changing it is one constant (`AptDefs.h`). Best settled before 2.8 is released |
+| 1b | **Confirm row code `1315`** (`1315 A` / `1315 M`: auto-filled or set by hand, R30), or give the one to use | New 2026-09-27. It carries WED's auto-fill mark through apt.dat so Gateway moderators see it. The sim only has to skip it - it never changes what parks. One constant in `AptDefs.h` |
 | 2 | **Version policy** | Our recommendation: **no bump.** Tested on 12.4.4 and 12.4.3-r2: the sim ignores unknown rows *and* unknown version numbers (spec §7.2), so the row rides in a `1200` file |
 | 3 | **Implement the reader rules** | Three-stage selection (R17, R18) plus: **R25** NOTE `Obsolete` never spawns; **R26** skip a row when the stand is farther than `RANGE_KM` from the operator's nearest hub (Military/Gov exempt; unknown range or no placed hub is never filtered); **R27** `HOME` rows only in the operator's own country, fail open if unknown; **R28** GA stands draw a home-registered GA livery 70% of the time when one exists, no range, no airline list; **R29** operation type `none` = no static aircraft, read exactly as six zero weights |
 | 4 | **Ship `livery_index.txt` (schema 4) with X-Plane 12.5** | Under `Resources/default scenery/sim objects/apt_aircraft/`, from the same build as the assets (a mismatch fails silently, spec §6.4). WED 2.8 turns its livery features on when it finds it |
@@ -114,7 +115,7 @@ spawn, computed by `tools/scripts/airline_research/livery_sample_expect.py`.
 | Auto-fill of an airport's stands, never overwriting the author (spec §6.7f) | **done** |
 | Moderation (Moderator Mode only): stepping through stands, flags for operators to check (not listed at the airport, or foreign military), stands with no airport data and stands that park nothing, web search, clipboard report | **done** |
 | Validator: code shape and 100-char cap (errors), R14 "this stand parks nothing" (`warn_ramp_livery_parks_nothing`, a warning; Airline/Cargo stands against their list, GA and unlisted military stands against the whole library; all-zero weights exempt) | **done** — the distinct "ahead of the art" wording and one-click fix of spec R14 are not implemented in 2.8; the Liveries tab draws that distinction |
-| **Sim implementation** of R17, R18, R25–R29 and reading the index | **open** — asks 3 and 4 |
+| **Sim implementation** of R17, R18, R25–R30 and reading the index | **open** — asks 3 and 4 |
 | **Row code and version policy** | **open** — asks 1 and 2 |
 | **Mac / Linux build and run of WED** | **open** — never done |
 

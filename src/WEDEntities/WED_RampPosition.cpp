@@ -101,6 +101,11 @@ void	WED_RampPosition::Import(const AptGate_t& x, void (* print_func)(void *, co
 	width_min = width.value;
 
 	ENUM_ImportSet(equip_type.domain,x.equipment,equip_type.value);
+
+	// 1315 (R30) brings the auto-fill watermark back from apt.dat - the Gateway
+	// keeps only apt.dat, so this is how a moderator sees what was auto-filled.
+	// Set last: the setters above clear the watermark as a human edit would.
+	auto_filled = (x.livery_origin == 'A');
 }
 
 void	WED_RampPosition::Export(		 AptGate_t& x) const
@@ -134,6 +139,11 @@ void	WED_RampPosition::Export(		 AptGate_t& x) const
 		for (int i = 5; i >= 0; --i)
 			if (w[i] > 0) { x.width = i; break; }
 	}
+
+	// 1315 (R30): A for a stand auto-fill set and nobody has changed since; M
+	// for one an author set in 2.8 by hand (it has weights); nothing for a
+	// stand no 2.8 tool has touched, so legacy scenery gains no rows.
+	x.livery_origin = IsAutoFilled() ? 'A' : (x.class_weights.size() == 6 ? 'M' : 0);
 }
 
 // Each setter below is a human edit of something auto-fill decided or relied

@@ -44,7 +44,11 @@ Retired vector numbers: V3-V5, V7, V13-V15, V23-V25 and V27-V29.
 
 ### What changed since draft 8
 
-Draft 9 records the fixes of 2026-09-26. The format is unchanged: still one row.
+Draft 9 records the fixes of 2026-09-26, and one addition of 2026-09-27:
+
+- **Row `1315 A|M` (R30, V46-V50)** carries the auto-fill mark through
+  apt.dat so a Gateway moderator sees it. It never changes what parks. Row code
+  proposed, like `1313`.
 
 - **R24 is clarified, not changed.** A malformed `1313` is discarded as it is
   read and does not claim the stand, so a valid `1313` after it applies; new
@@ -414,6 +418,22 @@ correctly.
   Military/Gov for Military — but `earth.wed.xml` stores them under their
   original names, so a 2.7 WED still reads the document and nothing in apt.dat
   changes.
+
+- **R30** — **Row `1315 A|M` says who set the stand's static-aircraft data.**
+  `A`: WED's auto-fill, and no author has changed the stand since. `M`: an
+  author, by hand, in a tool that writes weights. Absent: nothing said - a
+  stand no 2.8 tool has touched. It binds to the most recent `1300` like
+  `1313` (R20), the first valid one wins (R24), and anything other than exactly
+  one token `A` or `M` is discarded (R4). **It changes nothing about what
+  parks** - the sim MUST ignore it for selection; readers other than editors
+  may skip it entirely.
+
+  Why it exists: the Gateway keeps only apt.dat, and a moderator needs to see
+  which stands were auto-filled (assumed right from WED's airport data) and
+  which an author chose. WED writes it for X-Plane 12 exports, after `1313`
+  when there is one: `A` for an auto-filled stand, `M` for a hand-set stand
+  that has weights, nothing otherwise, so legacy scenery gains no rows. WED
+  reads it back into the auto-fill mark on import.
 
 ---
 
@@ -1205,6 +1225,11 @@ the set is range rather than class.
 | V16 | `1313` with nothing after it | drop the row (R4) |
 | V17 | **two** `1313` rows on one stand | the **first** applies; the second is discarded whole. Not merged, not overwritten, not compared (R24) |
 | V45 | a malformed `1313` (say five values), then a valid one, on one stand | the malformed row is discarded (R5) and does not claim the stand; the valid row applies (R24) |
+| V46 | `1315 A` after a stand's `1301` / `1313` | the stand is marked auto-filled; what parks is unchanged (R30) |
+| V47 | `1315 M` | the stand is marked as set by hand (R30) |
+| V48 | `1315 X`, `1315`, `1315 A M` | discarded (R30, R4); the stand is neither A nor M |
+| V49 | `1315 A` then `1315 M` on one stand | the first applies, the second is discarded (R24) |
+| V50 | `1315 A` before any `1300` | discarded - nothing to attach to (R20) |
 | V18 | a `1314` row | ignored (R15). WED 2.8 lists it after import and in Validate |
 | V19 | an embedded tab inside an airline list | writer defect (R9); reader treats it as a field separator, which may yield an unparseable token — drop that token, keep the row |
 | V20 | file at version `1200` containing a `1313` row | loads; the row applies (§7.2 — no version gate) |
@@ -2231,7 +2256,7 @@ this table.
 | Hidden-items prompt before export or Gateway submission (`WED_ModerationConfirmHidden`): show all and export, export as is, or cancel | **done** — Moderator Mode only |
 | Validator: R10 code shape, Gateway 100-character cap, R14 `warn_ramp_livery_parks_nothing` | **done**; R14's distinct "ahead of the art" wording and one-click fix are not implemented in 2.8 (the Liveries tab draws the distinction) |
 | Sample package `docs/livery_sample/` — ZBAA, 25 stands incl. the range cases and an R24 stand | **done**; README regenerated from `livery_sample_expect.py` (2026-09-26) |
-| **X-Plane: R17/R18 three-stage selection, R25–R29, reading the index** | **open** — the sim side of this spec |
+| **X-Plane: R17/R18 three-stage selection, R25–R30, reading the index** | **open** — the sim side of this spec |
 | **Index shipped with X-Plane 12.5 under `apt_aircraft/`** | **open** — Laminar release |
 | **Mac and Linux build and run** | **open** — never done |
 

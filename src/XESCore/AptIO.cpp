@@ -883,6 +883,33 @@ string	ReadAptFileMem(const char * inBegin, const char * inEnd, AptVector& outAp
 					NoteDiscardedRow(outApts, s, ln, "1313 weights must be whole numbers 0 to 1000");
 			}
 			break;
+		case apt_startup_loc_origin:
+			// 1315 A|M - who set the stand's static-aircraft data (R30). Same
+			// discipline as 1313: binds to the latest 1300 (R20), first valid row
+			// wins (R24), anything malformed is dropped and reported (R4), never
+			// fatal, no version gate.
+			{
+				if(outApts.empty() || outApts.back().gates.empty())
+				{
+					NoteDiscardedRow(outApts, s, ln, "1315 with no ramp start before it");
+					break;
+				}
+				AptGate_t & tmp_gate = outApts.back().gates.back();
+				string tok[3];
+				int got = TextScanner_FormatScan(s, "TTT", &tok[0], &tok[1], &tok[2]);
+				if(got != 2 || tok[1].size() != 1 || (tok[1][0] != 'A' && tok[1][0] != 'M'))
+				{
+					NoteDiscardedRow(outApts, s, ln, "1315 needs exactly one of A or M");
+					break;
+				}
+				if(tmp_gate.livery_origin != 0)
+				{
+					NoteDiscardedRow(outApts, s, ln, "second 1315 on one ramp start - the first is kept");
+					break;
+				}
+				tmp_gate.livery_origin = tok[1][0];
+			}
+			break;
 		case apt_meta_data:
 			{
 				int tokens = TextScanner_FormatScan(s,"i|",
@@ -1614,6 +1641,9 @@ bool	WriteAptFileProcs(int (* fprintf)(void * fi, const char * fmt, ...), void *
 							fprintf(fi, " %d", gate->class_weights[i]);
 						fputs(CRLF, (FILE *) fi);
 					}
+					//--1315 origin of the static-aircraft data (R30)--------
+					if(has_class_weights && (gate->livery_origin == 'A' || gate->livery_origin == 'M'))
+						fprintf(fi, "%d %c" CRLF, apt_startup_loc_origin, gate->livery_origin);
 					//---------------------------------------------------------
 				}
 			}

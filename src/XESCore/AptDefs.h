@@ -102,6 +102,11 @@ enum {
 	// this one line is the whole of adopting whatever he picks. See section 9 of
 	// WED_LiveryFormatSpec.md.
 	apt_startup_loc_weights = 1313,
+	// 1315 A|M - who set this stand's static-aircraft data: A = WED's auto-fill,
+	// M = an author by hand. Absent = neither said (a pre-2.8 stand). Carries the
+	// auto-fill watermark through apt.dat, so a moderator importing from the
+	// Gateway sees it. PROPOSED, like 1313 - see WED_LiveryFormatSpec.md R30.
+	apt_startup_loc_origin = 1315,
 	apt_meta_data = 1302,				// 1302 <key> <value>
 
 	apt_truck_parking	= 1400,			// 1400 lat lon heading type cars name
@@ -493,6 +498,8 @@ struct	AptGate_t {
 	// today's step-down behaviour (R17), all-zero means the author said nothing
 	// parks here (spec §4.2).
 	vector<int>	class_weights;
+	// Row 1315: 'A' auto-filled, 'M' set by hand, 0 = no such row.
+	char		livery_origin = 0;
 };
 typedef vector<AptGate_t>		AptGateVector;
 
