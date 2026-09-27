@@ -343,8 +343,6 @@ void WED_LibraryListAdapter::FilterCache()
 	{
 		newCache.clear();
 		int last = -1;
-//      a half-ass attempt as allowing to support undisclose when filtering is active. Works only for a single level
-		bool show = 1;
 
 		for(int i = 0; i < mCache.size(); ++i)
 		{
@@ -355,18 +353,29 @@ void WED_LibraryListAdapter::FilterCache()
 				{
 					if(mCache[p].vpath.size() < mCache[i].vpath.size() &&
 						strncasecmp(mCache[p].vpath.c_str(), mCache[i].vpath.c_str(), mCache[p].vpath.size()) == 0)
-					{
 						newCache.push_back(mCache[p]);
-						show = mCache[p].isOpen;
-					}
 				}
 				// add the vpath itself to the keepers
-				if(show)
-					newCache.push_back(mCache[i]);
+				newCache.push_back(mCache[i]);
 				last = i;
 			}
 		}
-		swap(newCache, mCache);
+		// A folder closed while filtering hides everything below it, at every
+		// level - not only the files directly in it, which left its subfolders
+		// listed and the triangle turning without the folder closing. Changing
+		// the filter still opens every folder (RebuildCacheRecursive).
+		mCache.clear();
+		vector<const cache_t *> open_dirs;		// the folders enclosing the current row
+		for (const auto & c : newCache)
+		{
+			while (!open_dirs.empty() && !(open_dirs.back()->vpath.size() < c.vpath.size() &&
+				   strncasecmp(open_dirs.back()->vpath.c_str(), c.vpath.c_str(), open_dirs.back()->vpath.size()) == 0))
+				open_dirs.pop_back();
+			bool shown = true;
+			for (auto d : open_dirs) if (!d->isOpen) { shown = false; break; }
+			if (shown) mCache.push_back(c);
+			if (c.isDir) open_dirs.push_back(&c);
+		}
 	}
 	reverse(mCache.begin(),mCache.end());
 
@@ -405,12 +414,18 @@ void	WED_LibraryListAdapter::RebuildCacheRecursive(const string& vpath, int pack
 	{
 		newCache.back().isDir = 1;
 		// persist open status from last status
+		bool known = false;
 		for (auto& c : mCache)
 			if (c.vpath == newCache.back().vpath)
 			{
 				if (c.isOpen) newCache.back().isOpen = 1;
+				known = true;
 				break;
 			}
+		// While filtering, a folder missing from the last list was hidden under a
+		// closed one (FilterCache): it comes back open, as the filter left it.
+		if (!known && !mFilter.empty())
+			newCache.back().isOpen = 1;
 
 		// force re-open anytime the filter was changed
 		if (newCache.back().isDir && mFilterChanged)

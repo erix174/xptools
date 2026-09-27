@@ -702,7 +702,7 @@ static void ValidateDSFRecursive(WED_Thing * who, WED_LibraryMgr* lib_mgr, valid
 				msgs.push_back(validation_error_t(string("The library path '") + res + "' is not part of X-Plane's default installation and cannot be submitted to the global airport database.",
 				err_gateway_resource_not_in_default_library, who, parent_apt));
 			if(lib_mgr->IsResourceDeprecatedOrPrivate(res))
-				msgs.push_back(validation_error_t(string("The library path '") + res + "' is a deprecated or private X-Plane resource and cannot be used in global airports.",
+				msgs.push_back(validation_error_t(string("The library path '") + res + "' is a deprecated or private X-Plane resource and cannot be used in global airports. Replace it with a current item from the Library pane (deprecated items are not listed there); for trees, Edit > Convert To > Forest Points.",
 				err_gateway_resource_private_or_depricated,	who, parent_apt));
 		}
 		else
@@ -1450,7 +1450,7 @@ static void ValidateOneRunwayOrSealane(WED_Thing* who, validation_error_vector& 
 						msgs.push_back(validation_error_t("LIRL will be increased to HIRL by X-Plane 12 due to centerline light presence", warn_rwy_edge_light_not_matching_center_lights, who, apt));
 
 				if (r.has_tdzl[0] || r.has_tdzl[1])
-					msgs.push_back(validation_error_t("Edge Light intensity will be increased to HIRL by X-Plane 12 due to touchdown light presence", warn_rwy_edge_light_not_matching_center_lights, who, apt));
+					msgs.push_back(validation_error_t("Edge light intensity will be increased to HIRL by X-Plane 12 because the runway has touchdown zone lights (TDZ Lights 1 / 2). Set Edge Lights to HIRL, or turn the TDZ lights off.", warn_rwy_edge_light_not_matching_center_lights, who, apt));
 
 				if (r.app_light_code[0] || r.app_light_code[1])
 					if (r.edge_light_code == apt_edge_MIRL)
