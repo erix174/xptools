@@ -13,37 +13,6 @@ menu to view it online.
 
 CHANGE HISTORY:
 
-WED 2.8.0-a1 (for X-Plane 12.5):
-  Features:
-   - Static Liveries tab: pick the operators, size range or per-class spawn
-     weights, and operation type (now including "None") for each ramp start,
-     with aircraft previews, airport-based recommendations and a readout of
-     what will actually park
-   - Airport > Auto-Populate Static Aircraft, and Populate This Ramp
-   - New apt.dat row 1313 (per-class spawn weights), written on X-Plane 12
-     exports; operation type "none"
-   - Unknown apt.dat rows are skipped and reported instead of failing the file
-   - Validation warns when nothing can park at a stand, and lists apt.dat rows
-     that were not imported
-   - Moderator Mode tools: Moderation View with airport overview and a report
-     to copy, callouts and similarity colours, stepping through stands to
-     check, rotate view, hierarchy shortcuts for checking an airport, and a
-     warning before exporting hidden items. Moderator Mode is now remembered
-   - Airport > Next / Previous Ramp Start
-  Changes:
-   - Ramp start size is set on the Static Liveries tab as a range of classes
-   - Airline codes may be 3-4 letters or digits with an optional _suffix
-   - set_AGL is no longer discouraged for Gateway submissions
-   - Livery features need X-Plane 12.5's livery index
-  Bugfixes:
-   - A lost mouse-up no longer terminates WED on the next click
-   - Centring the map on the 3D preview camera no longer zooms out
-   - A failed save no longer reads as saved; package list double-click fixed
-   - Crash on non-ASCII text in the hierarchy search; a bare "USA" country
-     no longer aborts validation
-   - Crash on a failed Gateway import
-   - Class D and E parking icons fill their frame
-
 WED 2.7.3-r1:
   Bugfixes:
    - Fixed author-defined airline codes being erased on half of the wide-body
