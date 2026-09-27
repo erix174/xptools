@@ -105,7 +105,7 @@ private:
 	struct Flag { unsigned int tex; int w, h; };
 
 	struct Hit {
-		enum Kind { hit_Card, hit_Pin, hit_Tray, hit_Search, hit_Chip, hit_Legend, hit_Focus, hit_Panel, hit_Filter, hit_Sort, hit_Copy };
+		enum Kind { hit_Card, hit_Pin, hit_Tray, hit_Search, hit_Chip, hit_Legend, hit_Focus, hit_Panel, hit_Filter, hit_Sort, hit_Copy, hit_GoTo };
 		int				kind;
 		float			x0, y0, x1, y1;
 		int				ramp_id;		// or the legend row
@@ -147,6 +147,10 @@ private:
 	int								mPinnedID;		// WED_Persistent id, -1 = none
 	int								mTrayID;		// the card whose tray is open, -1 = none
 	int								mHoverPin;		// the card whose pin is under the mouse, -1 = none
+	// The pinned base, docked bottom left whenever its own card is not on the
+	// map (stand off screen, or the legend tier): a base you cannot find is no
+	// base. Its header takes the map back to the stand.
+	void							DrawDockedBase(GUI_GraphState * g, const Callout & base);
 	float							mPinTip[2];		// where its tooltip goes (screen frame)
 	int								mOpenID;		// chips: the chip whose card is open
 	int								mLegendRow;		// legend: the row under the mouse

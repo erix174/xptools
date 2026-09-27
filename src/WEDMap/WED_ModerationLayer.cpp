@@ -1171,6 +1171,44 @@ void	WED_ModerationLayer::DrawCopyButton(GUI_GraphState * g, float x, float y_to
 }
 
 // Select one stand and bring it to the middle of the map, at this zoom.
+void	WED_ModerationLayer::DrawDockedBase(GUI_GraphState * g, const Callout & base)
+{
+	double b[4];
+	GetZoomer()->GetPixelBounds(b[0], b[1], b[2], b[3]);
+	Callout c = base;
+	c.others.clear();
+	c.x0 = (float) b[0] + 14;
+	c.y1 = (float) b[1] + 400;				// sized first, then set down on the bottom margin
+	SizeCard(c);
+	const float h = c.y1 - c.y0;
+	c.y0 = (float) b[1] + 4.5f * LineH();		// clear of the scale bar and the coordinates
+	c.y1 = c.y0 + h;
+	DrawCard(g, c, true, false, 0);
+
+	// where the stand is: an arrow from the card's header toward it, and the
+	// header is a button that takes the map there
+	const char * cap = "BASE - click to go to it";
+	const float hx = c.x0 + 1 + TextW(cap) + 14, hy = c.y1 + 4 + LineH() * 0.4f;
+	const float dx = base.ax - hx, dy = base.ay - hy;
+	const float len = sqrt(dx * dx + dy * dy);
+	float stroke[4];
+	WED_ModerationColour(c.e.signature, stroke);
+	if (len > 1)
+	{
+		const float ux = dx / len, uy = dy / len;
+		g->SetState(0, 0, 0, 0, 1, 0, 0);
+		glColor4fv(stroke);
+		glBegin(GL_TRIANGLES);
+			glVertex2f(hx + ux * 8, hy + uy * 8);
+			glVertex2f(hx - ux * 4 - uy * 5, hy - uy * 4 + ux * 5);
+			glVertex2f(hx - ux * 4 + uy * 5, hy - uy * 4 - ux * 5);
+		glEnd();
+	}
+	Txt(g, kMuted, c.x0 + 1, c.y1 + 4, cap);
+	Hit go = { Hit::hit_GoTo, c.x0, c.y1 - HeadH(), Max(c.x1 - 18, hx + 10), c.y1 + LineH() + 4, c.id, "" };
+	mHits.push_back(go);
+}
+
 void	WED_ModerationLayer::Focus(int ramp_id)
 {
 	WED_Thing * wrl = WED_GetWorld(GetResolver());
@@ -1497,6 +1535,19 @@ void	WED_ModerationLayer::DrawOverlays(GUI_GraphState * g)
 	else if (shared.size() <= kMaxChips)	DrawChips(g, shared);
 	else									DrawLegend(g, cs);
 
+	// The base is always on screen: docked when its own card or chip is not.
+	if (mPinnedID >= 0)
+		for (size_t i = 0; i < cs.size(); ++i)
+			if (cs[i].id == mPinnedID)
+			{
+				bool shown = false;
+				if (shared.size() <= kMaxChips)
+					for (size_t k = 0; k < shared.size(); ++k)
+						if (shared[k].on_screen && shared[k].id == mPinnedID) shown = true;
+				if (!shown) DrawDockedBase(g, cs[i]);
+				break;
+			}
+
 	// the pin's tooltip, over everything
 	if (mHoverPin >= 0)
 	{
@@ -1586,6 +1637,18 @@ int		WED_ModerationLayer::HandleClickDown(int inX, int inY, int inButton, GUI_Ke
 				mListSort = 1 - mListSort;
 				mListScroll = 0;
 				GetHost()->Refresh();
+				return 1;
+			}
+			if (pass == 1 && h.kind == Hit::hit_GoTo)
+			{
+				WED_Thing * wrl = WED_GetWorld(GetResolver());
+				if (WED_RampPosition * r = wrl ? dynamic_cast<WED_RampPosition *>(wrl->FetchPeer(h.ramp_id)) : NULL)
+				{
+					Point2 ll;
+					r->GetLocation(gis_Geo, ll);
+					GetZoomer()->CenterOn(ll);		// zoom and selection unchanged
+					GetHost()->Refresh();
+				}
 				return 1;
 			}
 			if (pass == 1 && h.kind == Hit::hit_Focus)

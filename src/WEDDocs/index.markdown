@@ -1201,7 +1201,7 @@ In Moderator Mode every ramp start's aircraft icon is drawn in a color that stan
 * **6 to 40**: a one-line chip for each, in a column at the right edge of the map. Hover a chip to open its card.
 * **More than 40**: a legend with one row per setup, its count and its issues. Hover a row to ring its stands on the map, click it to select them.
 
-Click the pin on a card (or Shift+click a chip) to make that stand the base for a comparison. Every other card then lists what it adds (+), lacks (-) and changes (~) compared with the base, and the chips show the counts.
+Click the pin on a card (or Shift+click a chip) to make that stand the base for a comparison. Every other card then lists what it adds (+), lacks (-) and changes (~) compared with the base, and the chips show the counts. The base stays in view: when its stand is off screen, or too many stands are selected for cards, it is docked at the bottom left of the map with an arrow toward the stand; click its header to go there (the zoom and the selection stay as they are).
 
 **What needs checking.** A stand needs a look when it lists an operator that WED's airport data does not list for this airport (listing fewer airlines than the data is fine), when it lists an operator that is not in the livery index, when a military stand lists an operator from another country, when it is a Passenger or Cargo stand at an airport WED has no data for, or when validation says it parks nothing. Stands filled by auto-populate are assumed correct as long as nobody has edited them.
 
