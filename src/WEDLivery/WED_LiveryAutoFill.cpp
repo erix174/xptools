@@ -122,7 +122,8 @@ WED_AutoFillPlan	WED_PlanLiveryAutoFill(WED_Airport * apt, const vector<WED_Ramp
 		d.airports.GetCountry(Upper(ident), plan.country);
 	for (size_t i = 0; i < plan.recommended.size(); ++i) plan.recommended[i] = Upper(plan.recommended[i]);
 
-	// The airport country's own military and government operators, fleet order.
+	// The airport country's own military and government operators, in the order
+	// their OPERATOR records appear in livery_index.txt.
 	vector<string> home_forces;
 	if (!plan.country.empty())
 	{

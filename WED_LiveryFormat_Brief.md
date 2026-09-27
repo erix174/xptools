@@ -1,8 +1,8 @@
 # Static aircraft at ramp stands — the short version
 
-For Jim K. and reviewers. 2026-09-25. WED 2.8.0, for X-Plane 12.5.
+For Jim K. and reviewers. 2026-09-26. WED 2.8.0, for X-Plane 12.5.
 
-The full specification is `WED_LiveryFormatSpec.md` (draft 8). It is long on
+The full specification is `WED_LiveryFormatSpec.md` (draft 9). It is long on
 purpose, written to be handed to an assistant with the apt.dat reader; section
 and rule numbers below point into it. You should not need it to answer the asks.
 
@@ -74,8 +74,13 @@ generic airliner of that type — never placed automatically. Today: 298 liverie
 empty nothing; 20 retired airframes and 10 liveries of defunct operators, which
 withdraw 24 airline/class pairs on purpose).
 
+Match `1301` codes against the index's `AIRLINE` column, not the `library.txt`
+bucket suffix: some differ on purpose (`EJU` is filed under `_ezy`, `CES_1`
+under `_cyh`, `CHH` under `_hna`, `MAY`/`RUK`/`RYS` under `_ryr`; the full list
+is in the spec's appendix).
+
 **One Gateway constraint to know about.** Gateway caps the `1301` airline string
-below 100 characters, about 24 codes. Airline codes are now
+below 100 characters: 25 three-letter codes at most. Airline codes are now
 `[a-z0-9]{3,4}(_[a-z0-9]{1,6})?`, lower case (`dal`, `afr_f`, `xpzz_b752`), and
 WED's validator rejects anything else (R10). The Gateway team should say
 whether the cap can be raised, and confirm the server accepts suffixed codes.
@@ -85,7 +90,7 @@ whether the cap can be raised, and confirm the server accepts suffixed codes.
 ## Try it
 
 `docs/livery_sample/ZZZ_livery_format_sample/` — copy into `Custom Scenery/`.
-Airport data only. It sits over **ZBAA** (Beijing Capital), 24 stands in a row,
+Airport data only. It sits over **ZBAA** (Beijing Capital), 25 stands in a row,
 named so you can read them off the ground: controls and malformed rows
 (`01-CONTROL`, `04-ALL-ZERO`, `11-BAD-5-WEIGHTS` …), then the range bench
 (`20-CN-CONTROL` parks Chinese narrowbodies; `22-FOREIGN-NARROW` lists
@@ -107,8 +112,8 @@ spawn, computed by `tools/scripts/airline_research/livery_sample_expect.py`.
 | Liveries tab: operator cards with real aircraft previews, weights, flags, recommendations | **done** |
 | Coverage readout — "This ramp will spawn … 70% of the time", empty and single-operator warnings (spec §4.5) | **done** |
 | Auto-fill of an airport's stands, never overwriting the author (spec §6.7f) | **done** |
-| Moderation: stepping through stands, flags for auto-filled / unknown / not-served operators, web search | **done** |
-| Validator: code shape and 100-char cap (errors), R14 "this stand parks nothing" (`warn_ramp_livery_parks_nothing`, a warning, Airline/Cargo stands only, all-zero weights exempt) | **done** |
+| Moderation (Moderator Mode only): stepping through stands, flags for operators to check (not listed at the airport, or foreign military), stands with no airport data and stands that park nothing, web search, clipboard report | **done** |
+| Validator: code shape and 100-char cap (errors), R14 "this stand parks nothing" (`warn_ramp_livery_parks_nothing`, a warning; Airline/Cargo stands against their list, GA and unlisted military stands against the whole library; all-zero weights exempt) | **done** — the distinct "ahead of the art" wording and one-click fix of spec R14 are not implemented in 2.8; the Liveries tab draws that distinction |
 | **Sim implementation** of R17, R18, R25–R29 and reading the index | **open** — asks 3 and 4 |
 | **Row code and version policy** | **open** — asks 1 and 2 |
 | **Mac / Linux build and run of WED** | **open** — never done |

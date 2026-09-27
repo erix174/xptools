@@ -1,6 +1,6 @@
 # apt.dat row 1313: per-stand fleet weighting
 
-**Specification and implementation manual.** Draft 8, 2026-09-25. WED 2.8.0,
+**Specification and implementation manual.** Draft 9, 2026-09-26. WED 2.8.0,
 for X-Plane 12.5. For the X-Plane side of WED's ramp livery picker.
 
 ---
@@ -35,6 +35,33 @@ list rather than against prose. Line references of the form `AptIO.cpp:359` are
 into the WED/xptools tree at branch `feature/ramp-livery-picker` as of this
 draft; earlier drafts' line numbers were not carried forward.
 
+Rule and vector numbers are **stable, not sequential**: a number is never
+reused, and rules sit in §1 where they belong rather than in number order.
+Retired rule numbers: R6-R8, R12, R13 and R16 (dropped by earlier drafts;
+§8.2 counts six rules that existed only for the named-policy machinery of
+drafts 1-5) and R21, R22 (`1312`, deleted in draft 7).
+Retired vector numbers: V3-V5, V7, V13-V15, V23-V25 and V27-V29.
+
+### What changed since draft 8
+
+Draft 9 records the fixes of 2026-09-26. The format is unchanged: still one row.
+
+- **R24 is clarified, not changed.** A malformed `1313` is discarded as it is
+  read and does not claim the stand, so a valid `1313` after it applies; new
+  vector V45. WED's reader already behaved this way.
+- **The document now describes what WED does**, where draft 8 described what was
+  meant: R14 covers GA stands and military stands with no list as well, and the
+  "ahead of the art" wording and one-click fix exist only in part (marked *not
+  implemented in 2.8*); §6.7f lists the moderation flags the code raises; the
+  appendix records that moderation follows the Moderator Mode preference.
+- **Index data `20260926-r1`.** CYH is re-coded `CES_1` and its two liveries
+  are no longer marked; still 42 `Obsolete` marks. Counts derived from the index
+  (§6.3, §6.5, §8.6) and every `AptIO.cpp` line reference are re-checked against
+  this data and the current source.
+- **The appendix gains the index codes that differ from `library.txt` bucket
+  suffixes** (EJU, CES_1, CHH, MAY/RUK/RYS, BCS, PLF, HMF), which the sim must
+  know about when it matches `1301` codes, and the pending GOL/GLO correction.
+
 ### What changed since draft 7
 
 Draft 8 records the decisions of 2026-09-25 and reorganises the document. The
@@ -49,7 +76,7 @@ format itself is still one row.
 - **The airline code grammar is exact and checked (R10).**
   `[a-z0-9]{3,4}(_[a-z0-9]{1,6})?`, lower case in `1301`; anything else is a
   validator error. Gateway caps the
-  `1301` airline string below 100 characters, about 24 codes - recorded as a
+  `1301` airline string below 100 characters, 25 three-letter codes - recorded as a
   known constraint.
 - **Operation type `none` means no static aircraft (R29).** The sim reads it
   exactly as six zero weights. `earth.wed.xml` keeps operation types under their
@@ -203,7 +230,7 @@ stand at a time, worldwide.
   in the block has no stand to attach to: discard it per R4.
 
   Writers emit `1300`, then `1301`, then `1313`, which is what every example here
-  does. `1301` already had this constraint: `AptIO.cpp:754-756` rejects it
+  does. `1301` already had this constraint: `AptIO.cpp:755-756` rejects it
   outright if there is no gate yet, or if the gate already has airlines.
 
 - **R24** — **Ambiguous input is never adjudicated.** Where a stand carries more
@@ -246,8 +273,8 @@ correctly.
   without regard to case.
 
   **Known constraint: Gateway caps the `1301` airline string below 100
-  characters** (`err_ramp_airlines_too_long`, Gateway target only) — about 24
-  three-letter codes. WED's auto-fill stops short of it, so a busy hub cannot list
+  characters** (`err_ramp_airlines_too_long`, Gateway target only, raised at
+  `size() >= 100`) — so 99 characters, 25 three-letter codes. WED's auto-fill stops short of it, so a busy hub cannot list
   every airline that serves it. Whether the cap can be raised is a question for
   the Gateway team, not for this format.
 - **R11** — Weights are non-negative integers in `0..1000`.
@@ -258,28 +285,44 @@ correctly.
   still drives ATC and AI parking, so a stand with no static livery is not
   wrong, only empty of static aircraft (§4.5).
 
-  The check applies only where the airline list chooses the static aircraft:
-  **Airline and Cargo stands**. None parks nothing by definition (R29); GA and
-  military are drawn from the library by size. **All-zero weights are exempt** —
-  they are the author saying nothing parks here (V2). "Can fill" is the same
-  `eligible()` the sim uses (§4.1), range (R26) included, and WED adds the stand's
-  equipment type, so the warning and the Liveries tab never disagree. Without an
-  index (an X-Plane before 12.5) there is nothing to check against and the
-  warning stays quiet.
+  The check (`WED_LiveryParksNothing`, `WED_LiveryModeration.cpp`) covers every
+  stand whose static aircraft the index decides. **Airline and Cargo stands** are
+  checked against their listed operators; one with no list asks for nothing and
+  is not checked. **GA stands, and Military stands with no list,** draw from the
+  library by size (R28, §4.1), so they are checked against every operator of
+  that operation class, and the warning says the size rules out everything
+  X-Plane has. None parks nothing by definition (R29) and is never checked.
+  **All-zero weights are exempt** — they are the author saying nothing parks here
+  (V2). A stand without weights is checked against its size range. "Can fill" is
+  the same `eligible()` the sim uses (§4.1), range (R26) and `HOME` (R27)
+  included, and WED adds the stand's equipment type. The Liveries tab's
+  multi-stand count, the Moderation View and its report call the same function,
+  so none of them disagrees with Validate. Without an index (an X-Plane before
+  12.5) there is nothing to check against and the warning stays quiet.
 
   **Two situations look identical here and must not be treated alike**, which the
   "Emirates A380 gate" case makes concrete: the library ships **no class-F livery
   at all** today, so an author building that gate writes a weight nothing can
   currently satisfy.
 
-  | the class is unfillable because… | what the author is told |
-  |---|---|
-  | the listed airlines have liveries at other classes, or out of range, but none usable here | **the weights are wrong** for these operators, and one click fixes them |
-  | **no asset exists at that class anywhere in the library** | **the author is ahead of the art**, and late binding is the whole design |
+  | the class is unfillable because… | what the author should be told | the Liveries tab's readout in 2.8 |
+  |---|---|---|
+  | the listed airlines have liveries at other classes, but none at this one | **the weights are wrong** for these operators, and one click fixes them | red: "This stand parks nothing - and that looks unintended", advising a wider size range or an operator that flies it |
+  | they fly this class, but nothing reaches from a hub (R26) | the same, naming what was out of range | red: "This stand parks nothing - nothing listed can reach it", with the rows removed |
+  | **no asset exists at that class anywhere in the library** | **the author is ahead of the art**, and late binding is the whole design | grey: "Nothing can park here yet - no aircraft exists at size F" |
 
-  Both are warnings; the wording differs. Treating the second as a mistake would
-  make it impossible to author for an aircraft that is coming, which is exactly
-  the capability §8.3 argues the format exists to preserve.
+  All are warnings. Treating the last as a mistake would make it impossible to
+  author for an aircraft that is coming, which is exactly the capability §8.3
+  argues the format exists to preserve.
+
+  **What 2.8 implements of this.** The single-stand readout in the Liveries tab
+  draws the distinction (`WED_LiveryPane.cpp`, `empty_NoArtYet` /
+  `empty_OutOfRange` / `empty_Unfillable`). The validator does not: its one
+  message names the operators and the size, and says whether they have a livery
+  at that size at all or only none that reaches and fits the equipment, but not
+  whether *any* asset exists at that size - so the F1 gate gets the same
+  warning as the R1 gate. The different validator wording and the one-click fix
+  are **not implemented in 2.8**.
 - **R19** - **apt.dat has no comment syntax. A writer MUST NOT emit comment lines.**
   There is no `#` form, no `//` form, and nothing else. Confirmed against the
   shipped data: **zero** lines begin with `#` in the 12,351,496-line Global
@@ -295,7 +338,7 @@ correctly.
   What happens next depends on the WED. **WED 2.7.x and earlier** fall through
   to `ok = "Illegal unknown record"`, which fails the entire file. **WED 2.8**
   treats record code 0 like any unknown row (R15): the line is skipped, recorded
-  on its airport and shown to the author (`AptIO.cpp:1322`). Either way the
+  on its airport and shown to the author (`AptIO.cpp:1323`). Either way the
   comment is gone, so the rule stands.
 
   **Blank lines are safe**, by the same code read the other way: a blank line
@@ -429,7 +472,7 @@ Everything above in one airport block. **This is the reference scenario**: if an
 implementation reproduces the resolution table below, it has all of §1-§4 right.
 
 `KXYZ` is fictional and placed at Seattle, the airlines are real, and every
-outcome in the table was computed against the shipped index (`20260925-r1`,
+outcome in the table was computed against the shipped index (`20260926-r1`,
 schema 4, X-Plane 12.4.3-r2 assets) with R25 and R26 applied and hubs placed from
 that install's Global Airports - not asserted. Draft 7 computed it without the
 range rule and before the retired-airframe marks of §6.6; seven of its nine
@@ -473,7 +516,7 @@ stands changed.
 1313 0 0 0 0 0 10
 
 1300 47.43750000 -122.30120000 090.0 gate jets T1
-1301 C airline cca ana jal sia qfa
+1301 D airline cca ana jal sia qfa
 1313 0 0 9 1 0 0
 99
 ```
@@ -490,7 +533,7 @@ stands changed.
 | `CGO1` | weights plus a cargo op type |
 | `GA1` | **no new row at all** — today's behaviour, untouched (R17) |
 | `F1` | a class the shipped library cannot fill — the R14 "ahead of the art" case |
-| `T1` | weights spanning two classes, and **range emptying a whole class**: every operator is listed, none of their class-C aircraft can reach |
+| `T1` | weights spanning two classes, and **range emptying a whole class**: every operator is listed, none of their class-C aircraft can reach. The `1301` letter is `D`, the largest weighted class (R23), though 90% of the weight is on C |
 
 #### What actually spawns
 
@@ -513,9 +556,10 @@ Computed, not asserted:
 `F1` is the one intentional empty, and it is the difference between the two kinds
 of emptiness §4.5 cares about: the author asked for something real that does not
 exist yet, and late binding will fill it in. `R1` is the other kind — a weight
-pointing at a class **none of the listed airlines can fill** — and R14 warns
-about it, with "the weights are wrong" rather than "ahead of the art". `B2` is
-the same defect diluted: 20% of the time.
+pointing at a class **none of the listed airlines can fill** — and the Liveries
+tab calls it unintended rather than "ahead of the art". Validate raises the R14
+warning for both `R1` and `F1`; in 2.8 only the tab tells them apart (R14).
+`B2` is the same defect diluted: 20% of the time.
 
 `T1` is the range rule at its bluntest: a stand that parks nothing 90% of the
 time, on a list that looks entirely reasonable. It is correct - no 737 in the
@@ -832,8 +876,8 @@ restructuring anything here.
 ### 4.4 Stage 3 and duplicate assets
 
 Stage 3 draws uniformly (or by `EXPORT_RATIO`) over index rows matching
-(airline, class). **The index contains duplicate assets** — 38 cases where an old
-and a new object for the same real aircraft are both exported (§6.3, §8.4). Under
+(airline, class). **The index contains duplicate assets** — twelve pairs where an
+old and a new object for the same real aircraft are both exported (§6.3, §8.4). Under
 a uniform draw, each of those aircraft gets **double the probability** of its
 neighbours.
 
@@ -860,17 +904,25 @@ The twelve pairs are identified and marked — `AT45_FDX_static.obj` superseded 
 replacement sitting beside it. **These twelve marks alone empty zero (airline,
 class) pairs**, so the skew disappears and nothing becomes unfillable. (The
 index now carries 42 marks in all; the other thirty are retired airframes and
-defunct operators, which empty pairs on purpose — §6.6.)
+defunct operators, which empty pairs on purpose — §6.6. In eleven of the twelve
+pairs the replacement has since been marked for one of those reasons too; only
+FedEx's ATR 42 still has a live replacement.)
 
-The thirteenth pair is not one: `F15EX_cft` / `F15EX` are genuinely different
-airframes (conformal tanks) that the index cannot currently tell apart. That is
-an index fix by hand on the NOTE column, not an obsolescence mark — see §6.3.
+Two more pairs have the same shape and are **not** marked: the Piaggio P180s
+`P180_static.obj` / `P180_avanti_white.obj` (both `ISERG`) and
+`P180_ferrari_static.obj` / `P180_avanti_ferrari.obj` (both `IFXRB`). Whether
+they are superseded pairs is not yet decided.
+
+One more pair looks like one and is not: `F15EX_cft` / `F15EX` are genuinely
+different airframes (conformal tanks) that the index cannot currently tell
+apart. That is an index fix by hand on the NOTE column, not an obsolescence
+mark — see §6.3.
 
 **The danger of this mechanism is its reach.** A mark is global and has no
 per-stand undo: the livery stops existing at every airport at once, and an
 (airline, class) pair left with no asset is a stand that silently parks nothing —
 the §4.5 defect, created by a data edit. Marking `B752` would empty
-**twenty-two** pairs, and the 757 is in daily service. The blast radius of every mark is
+**twenty-one** pairs, and the 757 is in daily service. The blast radius of every mark is
 therefore printed on every generator run, and `--what-if` answers it without the
 mark being made first (§6.6). Read that number before committing a row.
 
@@ -999,7 +1051,7 @@ Three constraints these sentences are written to satisfy:
    rather than implying an even split over all three, because an author who reads
    the simpler sentence will plan around a number that is not true.
 2. **"Nothing parks here" has three causes that look identical from outside**
-   (§4.5 point 2 above): all-zero weights, no operator with an asset at a weighted
+   (point 2 below): all-zero weights, no operator with an asset at a weighted
    class, and an operation type of `none`. The sentence must say which — the
    readout is the only place in the whole design where they can be told apart.
 3. **The country data behind the military and GA sentences is thin, and the
@@ -1108,7 +1160,7 @@ Bs" has no way to say it. `1313` says it in six numbers.
 Each case is one airport block. "today's behaviour" means the `1301` letter and
 whatever the current step-down does with it. Vectors that name ZBAA are stands in
 the sample package (`docs/livery_sample/`, stand number in brackets), computed
-against the `20260925-r1` index with hubs placed from X-Plane 12.4.3-r2's Global
+against the `20260926-r1` index with hubs placed from X-Plane 12.4.3-r2's Global
 Airports.
 
 ### 5.1 Well-formed
@@ -1121,7 +1173,7 @@ Airports.
 | V26 | `1313 0 0 0 0 0 10` where the only listed operator has nothing at F | operator is **not** a stage-2 candidate; the stand parks nothing. Correct behaviour, and the R14 warning case for a writer |
 | V30 | `1301 A airline dal` with `1313 0 0 0 0 9 1` | reader: selection uses the weights, the letter is not consulted. Writer/WED: correct the letter to `F` (R23) |
 | V31 | an index row for the drawn (airline, class) whose NOTE is `Obsolete` | that row is not a stage-3 candidate, and does not make its operator a stage-2 candidate either (R25) |
-| V33 | ZBAA, `1301 C airline ual dal aal baw`, `1313 0 0 10 0 0 0` [22] | **nothing parks**: every listed operator's class-C aircraft (`A320` 6,100 km, `B738` 5,700 km) is beyond range of its nearest hub — UAL's is 9,495 km away. No operator is a stage-2 candidate (R26, R18) |
+| V33 | ZBAA, `1301 C airline ual dal aal baw`, `1313 0 0 10 0 0 0` [22] | **nothing parks**: every listed operator's class-C aircraft (`A320` 6,100 km, `B738` 5,700 km) is beyond range of its nearest hub — UAL's (San Francisco) is 9,494 km away. No operator is a stage-2 candidate (R26, R18) |
 | V34 | as V33 with `1301 E`, `1313 0 0 0 0 10 0` [23] | AAL and BAW park: their `B772` (14,000 km) reaches (R26). UAL and DAL are not candidates — their only class-E liveries are marked `Obsolete` (R25) |
 | V35 | ZBAA, `1301 D airline ual ups`, `1313 0 0 0 10 0 0` [24] | UAL is a candidate through `B763` only (its `B752`, 7,200 km, is filtered row by row); UPS is not a candidate. Range is per (operator, type), not per operator |
 | V36 | a candidate row with `RANGE_KM` empty or `0`, far from every hub | **eligible.** Unknown range is never filtered (R26) |
@@ -1217,7 +1269,7 @@ stamps, deliberately separate:
 
 ```
 # schema 4                          how many cells and what they mean
-# data 20260925-r1                  which day's content this is
+# data 20260926-r1                  which day's content this is
 # source X-Plane 12.4.3-r2-15ff1e4d WHICH INSTALL this describes
 # assets 298 liveries under apt_aircraft/
 ```
@@ -1241,9 +1293,12 @@ OPERATOR *** XPMI *** Generic - military      ***     *** Military *** 0    ***
   Empty only for the three pseudo-operator kinds (§6.7c).
 - The fifth cell is the **operation class**, one of five words, and is what the
   stand's operation type is matched against (§4.1).
-- `FLEET` is an approximate fleet size, used by WED to rank operators; `0`
-  means not researched (and is always `0` on military, government and generic
-  records). A reader may ignore it.
+- `FLEET` is an approximate fleet size; `0` means not researched. WED reads it
+  for one thing, the order of the Liveries tab's "Popular Airlines" tier (the
+  30 largest fleets); the sim need not read it at all. It is `0` on generic
+  records and usually `0` on Military and Gov ones - five Gov records carry a
+  figure (CPK, DUB, HMF, SRA, SWE) - and there it is informational only: nothing
+  in WED or the sim reads FLEET for Military/Gov. A reader may ignore it.
 - `HUB ICAOs` are space-separated airport ICAO codes, the operator's hubs,
   in no particular order. **Military and Gov records carry none.** Each reader
   places them itself (§6.7b).
@@ -1282,16 +1337,16 @@ same file's OPERATOR records carry the ICAOs they were computed from.
 ### 6.3 What the index does NOT guarantee — read before implementing stage 3
 
 **`(type, airline, note)` is not a unique key, and cannot be made into one.**
-Verified against all 298 rows: **26 groups covering 83 rows (28%) share that
-tuple.** Adding registration narrows it to 14 groups / 30 rows. It does not close
-it. **The only unique key is the object path.**
+Verified against all 298 rows (`20260926-r1`): **25 groups covering 83 rows
+(28%) share that tuple.** Adding registration narrows it to 14 groups / 30 rows.
+It does not close it. **The only unique key is the object path.**
 
-The 26 groups have three distinct causes, and they need different responses:
+The 25 groups have three distinct causes, and they need different responses:
 
 | cause | groups | rows | what to do |
 |---|---|---|---|
-| **Old and new asset both exported** for one real aircraft — `AT45_FDX_static.obj` *and* `ATR42-500_FedEx.obj` | 13 | 26 | **Mark the old one `Obsolete`** (§6.6). Twelve are marked as superseded (the index's other twenty marks are retired airframes); the thirteenth is the `F15EX` pair below, which is not a duplicate at all. Each unmarked pair doubles that aircraft's spawn probability (§4.4) |
-| **Genuinely different airframes, distinguished only by registration** — Air China's five Peony tails, eight PC-12s, Delta's two 757s | 11 | 50 | **Nothing. Correct as-is.** The index carries the distinction in `REG`; the note legitimately repeats |
+| **Old and new asset both exported** for one real aircraft — `MD80_DAL_static.obj` *and* `MD80_Delta.obj`, same airframe `N910DL` | 12 | 24 | **Mark the old one `Obsolete`** (§6.6). Twelve old objects are marked as superseded (the index's other thirty marks are twenty retired airframes and ten liveries of defunct operators). Eleven of these groups are marked pairs whose replacement was later marked too, so both rows now carry NOTE `Obsolete`; the twelfth marked pair, FedEx's `AT45`, no longer shares the tuple because its replacement is live. The twelfth group here is the Ferrari P180 (`P180_ferrari_static.obj` / `P180_avanti_ferrari.obj`, both `IFXRB`), which has the same shape and is not marked (§4.4). Each unmarked pair doubles that aircraft's spawn probability (§4.4) |
+| **Genuinely different airframes, distinguished only by registration** — Air China's five Peony tails, eight PC-12s, Delta's two 757s | 11 | 52 | **Nothing. Correct as-is.** The index carries the distinction in `REG`; the note legitimately repeats |
 | **Genuinely different airframes the index cannot currently name** — `757PW` / `757PW_winglet` / `757RR` / `757RR_winglet` (engine and winglet variants), `F15EX` / `F15EX_cft` (conformal tanks) | 2 | 7 | **Index fix, by hand** — 6 of those 7 rows. The variant is in the *filename* but the folder is a bare `<TYPE>/` with no airline token, so the folder-driven variant rule finds nothing. Deriving it from the filename would have to tell a variant from an airline name and a registration (`757_Delta_N654DL.obj`), a heuristic that would misfire across the other 292 rows to fix 6 |
 
 The consequence for a reader: **do not de-duplicate**, and do not assume a lookup
@@ -1313,7 +1368,7 @@ must ship it from the same build as the assets it describes.**
 
 ### 6.5 Index invariants a consumer may rely on
 
-Verified mechanically against the shipped file (`20260925-r1`: 298 livery rows,
+Verified mechanically against the shipped file (`20260926-r1`: 298 livery rows,
 1,499 OPERATOR records); a generator change that breaks one of these is a
 regression.
 
@@ -1330,7 +1385,7 @@ regression.
   blank, and every `AIRLINE` has an OPERATOR record.
 - **I7** — A row's `OP` equals its operator record's operation class.
 - **I8** — `SCOPE` is `HOME` or empty. In the shipped file `HOME` appears only on
-  Military and Gov rows (11 of them).
+  Military and Gov rows (15 of them: 13 Military, 2 Gov).
 - **I9** — Military and Gov OPERATOR records carry no hubs. The only records
   with no country are the pseudo-operators `XPGA`, `XPMI` and `XPZZ_<TYPE>`.
 - **I10** — `REG`, `REG COUNTRY` and `NOTE` MAY be blank or `???`. A consumer must
@@ -1406,8 +1461,9 @@ livery_obsolete_radius.py [index] --what-if B752 MD82 UAL:B744
 obsolete marks        : 42 rows
   would empty         : 24 (airline,class) pair(s)  <-- each one is a stand that parks nothing
       AFR class B
-      ...                                           (25 lines)
-      WLC class B
+      ...                                           (20 listed)
+      SWQ class C
+      ... +4 more
 what-if B752          :  36 rows (2 already marked), would empty  21 pair(s)  AHY/D AIO/D ATN/D AZV/D ... +17
 what-if MD82          :   6 rows (6 already marked), would empty   0 pair(s)
 what-if UAL:B744      :   1 rows (1 already marked), would empty   0 pair(s)
@@ -1417,7 +1473,7 @@ A selector is a type, `AIRLINE:TYPE` (the retired-airframe case: one operator's
 rows, not the type everywhere) or a path. Each is answered on top of the marks
 already in the file. `--rank` lists every type by the pairs it would empty.
 
-The 757 is in daily service; twenty-two emptied pairs is what one careless line
+The 757 is in daily service; twenty-one emptied pairs is what one careless line
 costs. Emptying pairs is not always wrong — a genuinely retired type *should*
 empty them — but it must be a decision someone made with the number in front of
 them.
@@ -1484,8 +1540,8 @@ range, the same hubs placed from the same Global Airports, and the same stand
 position (`GetLocation`, i.e. the number the `1300` row is written from), and
 removes the same rows from the preview cards, the coverage count and the R14
 warning. The two sides cannot disagree because there is no second copy of
-anything. The readout names what was removed — "Beyond range from their hubs,
-so not offered here: UAL B738/A320" — so the author is not left inferring why a
+anything. The readout names what was removed — "Out of range from their hubs,
+not offered: UAL A320/B738." (`WED_LiveryPaneDraw.cpp`) — so the author is not left inferring why a
 card shrank.
 
 **What the rule is not.** It is a floor. It removes what cannot physically reach
@@ -1656,12 +1712,24 @@ name):
 
 A stand it changes carries a watermark in `earth.wed.xml` (`auto_filled="1"`
 on `<ramp_start>`), never in apt.dat. Any human edit of the stand other than
-its weights clears it: someone has looked. WED's moderation tooling reads it:
-a moderator steps through an airport's stands one at a time, and a stand is
-flagged if it is still auto-filled, has operation type None, or lists an
-operator that is unknown to the index or not listed for this airport - the last
-two with a web search offered to settle them. None of it puts anything in the
-file.
+its weights clears it: someone has looked. WED's moderation tooling, shown
+only in Moderator Mode, reads it: a moderator steps through an airport's stands
+one at a time, and a stand is flagged (`WED_ModerationHasIssue`,
+`WED_LiveryModeration.cpp`) when it has
+
+- **an operator to check** - on a hand-edited Airline or Cargo stand, a code the
+  airport database does not list for this airport (a code unknown to the index
+  included); on a Military stand, an operator of another country - with a web
+  search offered to settle it;
+- **no airport data** - a hand-edited Airline or Cargo stand at an airport the
+  database does not know, so there is nothing to check its list against; or
+- **the R14 finding** - the validator's own `WED_LiveryParksNothing` says it
+  parks nothing, in the validator's words.
+
+An auto-filled stand's list came from the airport database and is assumed
+right, so the watermark alone is not a flag; operation type None is shown as a
+note, not a flag. The same findings go into a plain-text report for the
+clipboard. None of it puts anything in the file.
 
 ### 6.8 Authoring note — the weights mode is a property of the stand
 
@@ -1772,10 +1840,12 @@ loaded by a **different build in the release lane: X-Plane 12.4.3-r2 (build
 > contained. Re-running it would weaken the test, not strengthen it.
 >
 > *Draft 8:* it has since been regenerated again. The package in the repo is now
-> airport **ZBAA** (placed over Beijing Capital), 24 stands: the control and
-> malformed stands of before, plus the range test bench (stands 20-27, V33-V35).
-> It carries `1313` only. The ZZLI run below remains the evidence for unknown
-> row codes.
+> airport **ZBAA** (placed over Beijing Capital), 25 stands: the control and
+> malformed stands of before, plus the range test bench (stands 20-27, V33-V35)
+> and a duplicate-`1313` stand (28, R24). Its only defined row is `1313`; it
+> also keeps six `1312` rows (deleted in draft 7) and one `1314`, which a reader
+> must skip as unknown rows (R15). The ZZLI run below remains the evidence for
+> unknown row codes.
 
 ```
 I/FLT: Init dat_p0 type:'runway_start' apt:ZZLI rwy:09 ...
@@ -1832,9 +1902,11 @@ for the inline-only shape of §8.2, so its line numbers have moved; the observat
 stands as recorded.) WED imports **nothing** — not a degraded
 airport, no airport.
 
-The path is `AptIO.cpp:1188-1209` falling through to
-`ok = "Illegal unknown record"`, which `WED_AptIE.cpp:1162-1167` turns into the
-message above.
+The path, in the reader as it was then (and still is in 2.7.x), was the
+unknown-record branch of `AptIO.cpp` (lines 1188-1209 of that file) falling
+through to `ok = "Illegal unknown record"`, which `WED_ImportOneAptFile` turns
+into the message above (`WED_AptIE.cpp:1187-1192` today). In 2.8 that branch is
+`AptIO.cpp:1303-1324` and skips the row instead (R15).
 
 Note *which* WED that was: the one carrying all of this feature's work. Refusing
 the file is not a property of old builds — it is every WED that has not yet
@@ -1850,7 +1922,7 @@ below is about distribution rather than about waiting for a release.
 > **Draft 8 — resolved for WED 2.8, not for 2.7.x.** The observation above is
 > kept as recorded, and it remains true of every WED up to 2.7.x. WED 2.8's
 > reader no longer fails on an unknown row code: it skips the row, records it on
-> its airport (`AptInfo_t::discarded_rows`, `AptIO.cpp:1322`), lists what it
+> its airport (`AptInfo_t::discarded_rows`, `AptIO.cpp:1323`), lists what it
 > skipped after File > Import, and raises `warn_apt_dat_rows_not_imported` in
 > Validate. So from 2.8 on, no row code added later can make WED refuse a file
 > again. What follows is still the question for 2.7.x users.
@@ -1969,10 +2041,12 @@ what they meant.
 
 By-product of building the index, offered as data rather than complaint:
 
-- **38** cases where an old and a new asset for the same aircraft are both
-  `EXPORT_EXTEND`ed (`AT45_FDX_static.obj` and `ATR42-500_FedEx.obj`). These are
-  the §6.3 duplicate-key groups and they double those aircraft's spawn
-  probability under §4.1 stage 3.
+- **12** pairs where an old and a new asset for the same aircraft are both
+  `EXPORT_EXTEND`ed (`AT45_FDX_static.obj` and `ATR42-500_FedEx.obj`), each
+  doubling that aircraft's spawn probability under §4.1 stage 3 until the old
+  one is marked (all twelve now are, §4.4). Two Piaggio P180 pairs have the same
+  shape and are unmarked. Eleven of the twelve are among the §6.3 duplicate-key
+  groups, with the Ferrari P180; FedEx's pair no longer shares the key.
 - **6** objects on disk that `library.txt` never exports.
 - `heavy/B772_AAL/` and `heavy/B772_AAl/` — byte-identical folders, ~13 MB wasted,
   whose two `library.txt` lines point at **different** paths. Fine on Windows and
@@ -1981,7 +2055,7 @@ By-product of building the index, offered as data rather than complaint:
 ### 8.5 Why we believe the abuse question is closed
 
 A Gateway submission is validated and then **re-emitted from WED's object model**
-(`WED_GatewayExport.cpp:498`, then `:543`), not forwarded as the author's bytes.
+(`WED_GatewayExport.cpp:501`, then `:546`), not forwarded as the author's bytes.
 Whatever someone puts in a file either fails to parse — in which case WED refuses
 the import, or from 2.8 skips an unknown row and says so — or becomes a typed
 value that WED re-serialises in its own format.
@@ -2002,17 +2076,18 @@ Drafts 1–6 carried a second row, `1312`, letting an author write `-ual:B744` o
 `+uae:A388`: this airline, but only (or never) that aircraft. Draft 7 deletes it
 outright, along with R21, R22 and eight conformance vectors.
 
-**It was not paying for itself.** Measured against the shipped index - the 254
-rows of 298 that are not `Obsolete`, schema 4, data `20260925` - counting real
+**It was not paying for itself.** Measured against the shipped index - the 256
+rows of 298 that are not `Obsolete`, schema 4, data `20260926` - counting real
 operators and ignoring the `XP*` pseudo-codes (draft 7's count, over all 298 rows
-before the marks, was 168 / 15 / 148 / 134):
+before the marks, was 168 / 15 / 148 / 134; draft 8's, over 254 unmarked rows
+at `20260925`, 144 / 12 / 132 / 122):
 
 | | |
 |---|---|
-| (operator, class) pairs in the index | 144 |
+| (operator, class) pairs in the index | 145 |
 | …carrying **more than one** aircraft type | **12 — 8.3%** |
-| real operators in the index | 132 |
-| …whose assets sit at **exactly one** class | **122 — 92.4%** |
+| real operators in the index | 133 |
+| …whose assets sit at **exactly one** class | **123 — 92.5%** |
 
 An aircraft type only ever appears in its own wingspan class, so naming a type
 already names a class — which means the size slider that every stand has anyway
@@ -2096,14 +2171,15 @@ existing apt.dat is covered the day the index is.
    the confirmation matters before 2.8 is released.
 2. **Version policy.** §7.2 removes the compatibility argument for a bump, so this
    is now a question about signalling intent. Our recommendation: **no bump.**
-   The rows ride in a `1200` file today (`AptIO.cpp:1424`).
+   The rows ride in a `1200` file today (`AptIO.cpp:1428`).
 3. **A process decision that is not one person's**: §7.3. WED 2.8 opens any
    file that carries rows it does not know, but WED 2.7.x and earlier still
    refuse one. If a bump happens as well, new WED writes a version old X-Plane
    refuses, while Gateway serves both. Who generates which version for whom?
    This needs Jim and the release manager.
 4. **Gateway's airline-string cap.** The `1301` airline string must be under 100
-   characters for a Gateway submission — about 24 three-letter codes (R10). A
+   characters for a Gateway submission — at most 99, which is 25 three-letter
+   codes (R10). A
    busy hub is served by more airlines than that, and auto-fill stops short. The
    Gateway team should say whether it can be raised, and to what, and confirm the
    server's own validation accepts R10's suffixed codes (`ryr_1`, `afr_f`,
@@ -2131,7 +2207,7 @@ row never reaches anyone else.
 
 ## Appendix — current status
 
-As of 2026-09-25, on branch `feature/ramp-livery-picker`, Windows build. Draft
+As of 2026-09-26, on branch `feature/ramp-livery-picker`, Windows build. Draft
 7's appendix said `WED_LiveryIndex` had no consumer and the preview strip showed
 placeholder objects; both are long out of date and the section is replaced by
 this table.
@@ -2145,13 +2221,44 @@ this table.
 | Liveries tab: operator cards with real aircraft previews, size range / weights, flags, recommendations | **done** |
 | Coverage readout: P(empty), per-operator share, "only X will ever park here" (§4.5) | **done** |
 | R25 `Obsolete`, R26 range, R27 `HOME` in WED's `eligible()` | **done** — same predicate for cards, coverage and validator |
+| One source and one rule for the Liveries tab, the validator and the moderation summary: R14 is `WED_LiveryParksNothing`, called by all three | **done** |
 | Auto-fill (§6.7f) | **done** |
-| Moderation: stepping through stands, notes, web search (§6.7f) | **done**; the moderator preference switch is not yet wired |
-| Validator: R10 code shape, Gateway 100-character cap, R14 `warn_ramp_livery_parks_nothing` | **done** |
-| Sample package `docs/livery_sample/` — ZBAA, 24 stands incl. the range cases | **done**; README regenerated from `livery_sample_expect.py` (2026-09-25) |
+| Moderation (§6.7f): stepping through stands (all, or only those to check), map callouts, notes, web search, a plain-text report to the clipboard | **done** — shown only in Moderator Mode: `WED_ModerationEnabled()` reads `gModeratorMode`, which the preferences save as `ModeratorMode` (`WED_Document.cpp`) |
+| Rotate view for moderation (a measuring arrow levels the map; 90-degree detents) | **done** — Moderator Mode only |
+| Hidden-items prompt before export or Gateway submission (`WED_ModerationConfirmHidden`): show all and export, export as is, or cancel | **done** — Moderator Mode only |
+| Validator: R10 code shape, Gateway 100-character cap, R14 `warn_ramp_livery_parks_nothing` | **done**; R14's distinct "ahead of the art" wording and one-click fix are not implemented in 2.8 (the Liveries tab draws the distinction) |
+| Sample package `docs/livery_sample/` — ZBAA, 25 stands incl. the range cases and an R24 stand | **done**; README regenerated from `livery_sample_expect.py` (2026-09-26) |
 | **X-Plane: R17/R18 three-stage selection, R25–R29, reading the index** | **open** — the sim side of this spec |
 | **Index shipped with X-Plane 12.5 under `apt_aircraft/`** | **open** — Laminar release |
 | **Mac and Linux build and run** | **open** — never done |
+
+### For the sim: match `1301` codes against the index, not the library buckets
+
+The sim's own reader of this spec has one trap the table above does not show.
+Some index codes **deliberately differ** from the airline suffix of the
+`library.txt` bucket the same object is exported under, because the index names
+the operator that flies the airframe and the bucket names whoever the library
+filed it under:
+
+| index `AIRLINE` | `library.txt` bucket suffix | the livery |
+|---|---|---|
+| `EJU` | `_ezy` | easyJet Europe A320 (`OE-IZU`) |
+| `CES_1` | `_cyh` | China Eastern Yunnan 737s (the old China Yunnan code) |
+| `CHH` | `_hna` | Hainan Airlines 737s |
+| `MAY`, `RUK`, `RYS` | `_ryr` | Malta Air, Ryanair UK and Buzz 737s |
+| `BCS` | `_csb`, `_dhk` | DHL (EAT Leipzig) 757 `D-ALES` |
+| `PLF` | `_paf` | Polish Air Force 737 |
+| `HMF` | `_coastguard` | Swedish Maritime Administration S-76 (now `Obsolete`) |
+
+A `1301` list says `eju`, not `ezy`, and `ces_1`, not `cyh`. **The sim MUST
+match `1301` codes against the index's `AIRLINE` column**, and reach the object
+through the row's `path`; a reader that derives the operator from the bucket
+suffix finds none of these liveries for the codes WED writes.
+
+Pending, not done: Gol's 737 is filed under `GOL` in the index while Gol's ICAO
+designator is `GLO` (which has an OPERATOR record of its own, with no livery).
+That is an index correction awaiting a decision, and until it is made a `1301`
+naming `glo` finds no Gol livery.
 
 The design principle the index exists to serve is unaffected, and is the same one
 as D in §8.3: availability is **recomputed on every load and never persisted**, so

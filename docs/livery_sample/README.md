@@ -1,7 +1,7 @@
 # Sample apt.dat — row 1313 to play with
 
 Two droppable scenery packages for the format in `WED_LiveryFormatSpec.md`
-(draft 8). 25 stands in a row, each demonstrating one thing, named so you can
+(draft 9). 25 stands in a row, each demonstrating one thing, named so you can
 tell them apart from the ground.
 
 ```
@@ -80,8 +80,8 @@ what WED's readout lists under its headline.
 | `09-MIXED-SIGILS` | same, two `1312` tokens | AAL or BA `B772` | as 08 |
 | `10-PLUS-WINS` | E, `dal ual` + `1312` | nothing | `1312` skipped; neither has a current E type |
 | `11-BAD-5-WEIGHTS` | five weights | today's behaviour | 1313 dropped **whole** (R5), so it behaves like 01. Must not read as `0 0 10 0 0 0` |
-| `12-BAD-DECIMAL` | `1.5` | today's behaviour | dropped whole (R5, V10) |
-| `13-BAD-NEGATIVE` | `-5` | today's behaviour | dropped whole (R5, V12) |
+| `12-BAD-DECIMAL` | `1.5` | today's behaviour | dropped whole (R5, V12) |
+| `13-BAD-NEGATIVE` | `-5` | today's behaviour | dropped whole (R5, V10) |
 | `14-BAD-REFINE` | C + bad `1312` | nothing | `1312` skipped as a whole row; the 1313 is valid, and C is out of range |
 | `15-UNKNOWN-ROW` | C + `1314` | nothing | `1314` skipped, not fatal (R15); C out of range |
 | `16-EXCL-NO-WEIGHTS` | `1312`, no 1313 | today's behaviour | a skipped row does not switch on three-stage selection (R17) |
@@ -113,7 +113,7 @@ row, and the sim must not fail the file.
 | kind | stands | what WED's readout says |
 |---|---|---|
 | the author chose it | 04 | "will not spawn any static aircraft" - grey, no warning |
-| nothing exists yet | 05 | "no aircraft exists at size F" - grey; starts working the day one ships |
+| nothing exists yet | 05 | "no aircraft exists at size F" - grey; starts working the day one ships. The validator warning still fires: in 2.8 only the readout tells this apart from 06 (spec R14) |
 | the listed operators cannot fill the size | 06 | red, plus the validator warning |
 | they fly it, but cannot reach | 02, 21, 22 | red, naming what was out of range |
 | part of the distribution is unfillable | 03, 25 | the occupancy percentage |
@@ -142,12 +142,12 @@ no adjustment of the stand's weights, keeps one and drops the other (§6.7).
 same stand.
 
 **26 shows why hubs beat country centroids.** Measured from the US centroid,
-FedEx's 757 fails; from its nearest hub, Hong Kong (1,980 km), it passes - and
+FedEx's 757 fails; from its nearest hub, Hong Kong (1,992 km), it passes - and
 FedEx does fly into Beijing from there.
 
 Distances are great-circle (haversine) from the operator's nearest hub, the hubs
 being the HUB ICAOs on its OPERATOR record, placed by Global Airports: United
-from KSFO 9,510 km, British Airways from EGLL 8,150 km, FedEx from VHHH 1,980 km,
+from KSFO 9,494 km, British Airways from EGLL 8,153 km, FedEx from VHHH 1,992 km,
 Air China from ZBAA ~0. No domestic exemption is needed - a domestic operator's
 nearest hub is close by definition.
 
