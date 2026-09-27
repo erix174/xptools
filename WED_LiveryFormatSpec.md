@@ -207,8 +207,14 @@ stand at a time, worldwide.
   outright if there is no gate yet, or if the gate already has airlines.
 
 - **R24** — **Ambiguous input is never adjudicated.** Where a stand carries more
-  than one `1313`, the **first in file order** wins; the rest are discarded
-  whole, not merged, not overwritten, and not compared for plausibility.
+  than one *valid* `1313`, the **first in file order** wins; the rest are
+  discarded whole, not merged, not overwritten, and not compared for
+  plausibility. A malformed `1313` (R4, R5, R11) is discarded as it is read and
+  counts as if it were not there: it does not claim the stand, so a valid row
+  after it applies (V45).
+
+  No writer produces a second `1313` - WED writes at most one per stand. This
+  rule exists only for files edited by hand, merged, or written by other tools.
 
   This is not a tolerance policy, it is a division of labour. Two conflicting
   answers in one file means only the person who wrote it knows which was meant,
@@ -396,8 +402,9 @@ Parser notes:
   §8.2 for the measurement that settled this).
 - It takes **exactly six** weights. Five or seven is malformed; discard whole
   per R5. Do not pad and do not truncate.
-- A second `1313` on the same stand is not a merge and not an override: the first
-  wins and the rest are discarded (R24).
+- A second valid `1313` on the same stand is not a merge and not an override: the
+  first valid one wins and the rest are discarded (R24). A malformed row does not
+  count (V45).
 - The code number is provisional (§9). In WED it is one constant,
   `apt_startup_loc_weights` in `AptDefs.h`.
 
@@ -652,13 +659,14 @@ One pass. There is nothing to resolve, because nothing refers to anything.
 for each row in the airport block:
     1300 …          -> begin a new stand; it becomes "current"
     1301 …          -> size letter, op type, airline list  (existing behaviour)
-    1313 w×6        -> if current stand already has weights: DISCARD this row (R24)
-                       else if no current stand:             DISCARD this row (R20)
+    1313 w×6        -> if no current stand:                  DISCARD this row (R20)
+                       else if not exactly six values, or any
+                            value not a whole number 0..1000:   DISCARD this row (R4, R5, R11)
+                       else if current stand already has weights: DISCARD this row (R24)
                        else current_stand.weights = [w×6]
 
-then, per stand:
-    if weights present and length != 6:      drop weights entirely   (R5)
-    if any weight outside 0..1000:           drop weights entirely   (R5)
+A row is validated before R24 looks at it: a malformed row never claims the
+stand, so the first *valid* `1313` wins (V45).
 ```
 
 **A bad `1313` is dropped whole, never partially** (R5). The row means "here is
@@ -1141,6 +1149,7 @@ the set is range rather than class.
 | V12 | `1313 0 0 1.5 0 0 0` | drop weights whole — no decimal point is legal (§4.2) |
 | V16 | `1313` with nothing after it | drop the row (R4) |
 | V17 | **two** `1313` rows on one stand | the **first** applies; the second is discarded whole. Not merged, not overwritten, not compared (R24) |
+| V45 | a malformed `1313` (say five values), then a valid one, on one stand | the malformed row is discarded (R5) and does not claim the stand; the valid row applies (R24) |
 | V18 | a `1314` row | ignored (R15). WED 2.8 lists it after import and in Validate |
 | V19 | an embedded tab inside an airline list | writer defect (R9); reader treats it as a field separator, which may yield an unparseable token — drop that token, keep the row |
 | V20 | file at version `1200` containing a `1313` row | loads; the row applies (§7.2 — no version gate) |
