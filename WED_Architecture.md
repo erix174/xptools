@@ -479,7 +479,7 @@ in open documents, no restart. (Older moderator code in `WED_PropertyTable` and
 | `WED_ModerationRamps` / `WED_ModerationStep(res, dir, issues_only)` | All ramp starts of the current airport in hierarchy order; select the next/previous one (wrapping), optionally only those with an issue. |
 | `WED_ModerationNotes` / `WED_ModerationPrompt` | The older per-stand notes list and the "operators to check - search the web?" dialog (capped at five searches), shown on Ctrl+Shift+. / , in moderator mode. |
 | `WED_ModerationReport(apt, reviewed)` | Plain-text summary for the clipboard: counts, WED + index version, validator warnings verbatim, then stands to check grouped by setup. |
-| `WED_ModerationSearchURL` / `WED_ModerationOpenSearch` | "Does <operator> fly to <ICAO> <city>" as a Google URL; opened in a small chromeless Edge/Chrome `--app` window beside the cursor (Windows: placed afterwards with `SetWindowPos` from a worker thread), else the default browser. Call only after the click is over. |
+| `WED_ModerationSearchURL` / `WED_ModerationOpenSearch` | "Does <operator> fly to <ICAO> Now" as a Google URL; opened in a small chromeless Edge/Chrome `--app` window beside the cursor (Windows: placed afterwards with `SetWindowPos` from a worker thread), else the default browser. Call only after the click is over. |
 
 **Commands** (`WED_Menus`, handled in `WED_DocumentWindow::HandleCommand`):
 `wed_NextRampStart`/`wed_PrevRampStart` (Ctrl+Shift+. / ,, any mode) and

@@ -1197,7 +1197,7 @@ In Moderator Mode every ramp start's aircraft icon is drawn in a color that stan
 
 **Callouts.** Select ramp starts (or an airport or folder, which counts as all the ramp starts in it) and WED draws a callout for them on the map. Stands on screen with the same setup share one callout, with a leader line to each. How much is shown depends on how many different callouts there are:
 
-* **Up to 5**: a card beside each stand, with its airlines, whether it is "Legacy" (a size letter only) or "Updated" (spawn weights), marked (A) if auto-filled or (M) if set by hand, the operation type, equipment and ramp type, and a line on its operators, such as "Operators: 1 to check". Hover that line to see the operators with their flags and a verdict each. A "?" next to an operator means it is not listed as serving this airport, or is not in the livery index at all; click it to open a web search ("Does ... fly to ...") in a small browser window.
+* **Up to 5**: a card beside each stand, with its airlines, whether it is "Legacy" (a size letter only) or "Updated" (spawn weights), marked (A) if auto-filled or (M) if set by hand, the operation type, equipment and ramp type, and a line on its operators, such as "Operators: 1 to check". Hover that line to see the operators with their flags and a verdict each. A "?" next to an operator means it is not listed as serving this airport, or is not in the livery index at all; click it to open a web search ("Does ... fly to ... Now") in a small browser window.
 * **6 to 40**: a one-line chip for each, in a column at the right edge of the map. Hover a chip to open its card.
 * **More than 40**: a legend with one row per setup, its count and its issues. Hover a row to ring its stands on the map, click it to select them.
 
