@@ -1779,7 +1779,7 @@ KHDN *** US *** UAL, SWA, AAL, DAL, JBU, ASA
 KHEF *** US *** <NA>
 KHFY *** US *** <NA>
 KHGR *** US *** AAY
-KHHR *** US ***
+KHHR *** US *** URF, WSN
 KHIB *** US *** DAL
 KHII *** US ***
 KHIO *** US *** <NA>
@@ -2074,7 +2074,7 @@ KSNA *** US *** ACA, ASA, AAY, AAL, MXY, DAL, FFT, RSY, SWA, UAL, WJA, ENY, JIA,
 KSOW *** US *** VTE, AMF
 KSPI *** US *** AAL, AAY, MXA
 KSPS *** US *** AAL
-KSQL *** US ***
+KSQL *** US *** URF
 KSRQ *** US *** ACA, AAY, AAL, VXP, MXY, DAL, JBU, SWA, SCX, UAL, ENY, JIA, PDT, RPA, SKW, EDV, AWI, ASH, UCA, GJS, MXA
 KSTC *** US *** AAY
 KSTJ *** US *** <NA>
