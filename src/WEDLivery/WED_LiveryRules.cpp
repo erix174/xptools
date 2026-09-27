@@ -34,7 +34,7 @@ WED_LiveryIndex &	WED_SharedLiveryIndex(void)
 	return idx;
 }
 
-WED_LiveryData *	WED_GetLiveryData(bool need_hubs)
+WED_LiveryData &	WED_SharedLiveryData(void)
 {
 	// Rebuilt whole when the X-Plane folder changes: the operator directory loads
 	// once per instance and would otherwise keep the old install's operators.
@@ -42,12 +42,19 @@ WED_LiveryData *	WED_GetLiveryData(bool need_hubs)
 	static std::string d_path;
 	const std::string index_path = WED_LiveryIndexDefaultPath();
 	if (!d || d_path != index_path) { d.reset(new WED_LiveryData); d_path = index_path; }
+	return *d;
+}
+
+WED_LiveryData *	WED_GetLiveryData(bool need_hubs)
+{
+	WED_LiveryData * d = &WED_SharedLiveryData();
+	const std::string index_path = WED_LiveryIndexDefaultPath();
 	if (index_path.empty() || !d->index.EnsureLoaded(index_path)) return NULL;
 	if (need_hubs) d->index.WaitForHubs();
 	if (!d->directory.IsLoaded() && !d->directory.LoadFailed()) d->directory.EnsureLoaded(index_path);
 	if (!d->airports.IsLoaded() && !d->airports.LoadFailed())
 		d->airports.EnsureLoaded(WedDataFileDir() + "WED_AirportDatabase.txt");
-	return d.get();
+	return d;
 }
 
 using std::string;
@@ -87,6 +94,35 @@ WED_LiveryAllow	WED_LiveryAllowedAt(const WED_LiveryIndexEntry & e,
 	}
 
 	return WED_LiveryInRange(e, stand_lat, stand_lon) ? livery_allow_Yes : livery_allow_OutOfRange;
+}
+
+WED_LiveryAllow	WED_LiveryFitsStand(const WED_LiveryIndexEntry & e,
+									const WED_AirlineDirectory & directory,
+									const string & airport_country,
+									double stand_lat, double stand_lon,
+									const std::set<int> & equipment)
+{
+	int eq = WED_LiveryEquipment(e);
+	if (eq != -1 && !equipment.empty() && !equipment.count(eq)) return livery_allow_Equipment;
+	return WED_LiveryAllowedAt(e, directory, airport_country, stand_lat, stand_lon);
+}
+
+bool	WED_LiveryOperatorFitsRampOp(const string & code_uc, int ramp_op, const WED_AirlineDirectory & directory)
+{
+	if (ramp_op == ramp_operation_None) return false;
+	if (code_uc == "XPGA") return ramp_op == ramp_operation_GeneralAviation;
+	if (code_uc == "XPMI") return ramp_op == ramp_operation_Military;
+	if (WED_IsGenericAirlinerCode(code_uc)) return ramp_op == ramp_operation_Airline || ramp_op == ramp_operation_Cargo;
+	WED_AirlineDirectoryEntry e;
+	if (!directory.Lookup(code_uc, e)) return ramp_op == ramp_operation_Airline;
+	switch (e.op_class) {
+	case WED_AirlineDirectoryEntry::op_Pax:		return ramp_op == ramp_operation_Airline;
+	case WED_AirlineDirectoryEntry::op_Cargo:	return ramp_op == ramp_operation_Cargo;
+	case WED_AirlineDirectoryEntry::op_GA:		return ramp_op == ramp_operation_GeneralAviation;
+	case WED_AirlineDirectoryEntry::op_Military:
+	case WED_AirlineDirectoryEntry::op_Gov:		return ramp_op == ramp_operation_Military;
+	}
+	return true;
 }
 
 int		WED_LiveryEquipment(const WED_LiveryIndexEntry & e)

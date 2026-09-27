@@ -22,6 +22,7 @@
  */
 
 #include "WED_LiveryPaneInternal.h"
+#include "WED_LiveryModeration.h"		// WED_LiveryParksNothing - the validator's check
 
 // State, selection, the cards and the coverage readout.
 
@@ -387,9 +388,25 @@ void	WED_LiveryPane::EnsureRows(void)
 	mRowIcaos.clear();
 	if (mSelectedRamps.empty()) return;
 
+	// Cards preview one stand's aircraft (RebuildAirlineCards), so with several
+	// selected there are none - and an empty list read as "these operators have
+	// nothing to show here", which is false. Say what is going on instead.
+	if (mSelectedRamps.size() > 1)
+	{
+		WED_LiveryDisplayRow n;
+		n.kind = wed_Row_Note;
+		n.header_text = "Operators are picked one ramp start at a time.";
+		mRows.push_back(n);
+		n.header_text = "For several at once: Populate, or Airlines on the Selection tab.";
+		mRows.push_back(n);
+		CardFlags(mRows, mRowIsCard);
+		RowIcaos(mRows, mRowIcaos);
+		return;
+	}
+
 	mRows = BuildCurrentDisplayRows(mSelectedRamps[0], mSortDescending,
-				gShowLiveryRecommendation != 0, mAirportDb, mCurrentAirportIcao,
-				mSearchQuery, mAirlineDirectory, mPopularAirlinesShuffleCache, AllOperators());
+				gShowLiveryRecommendation != 0, AirportDb(), mCurrentAirportIcao,
+				mSearchQuery, Directory(), mPopularAirlinesShuffleCache, AllOperators());
 	set<string> have_cards;
 	CardKeys(have_cards);
 	DropCardless(mRows, have_cards);
@@ -418,12 +435,15 @@ void	WED_LiveryPane::EnsureRows(void)
 //
 // The reason a livery was refused comes back so the readout can name it: only
 // range refusals go into mRangeHidden, because that is the line's subject.
-WED_LiveryPane::Allow	WED_LiveryPane::LiveryAllowedHere(const WED_LiveryIndexEntry & e, const Point2 & here) const
+WED_LiveryPane::Allow	WED_LiveryPane::LiveryAllowedHere(const WED_LiveryIndexEntry & e, const Point2 & here,
+														const set<int> & equipment) const
 {
-	// The rule lives in WED_LiveryRules so auto-fill applies exactly the same one.
-	switch (WED_LiveryAllowedAt(e, mAirlineDirectory, mAirportCountry, here.y(), here.x())) {
+	// The rule lives in WED_LiveryRules: auto-fill, the validator and moderation
+	// apply exactly the same one, equipment type included.
+	switch (WED_LiveryFitsStand(e, Directory(), mAirportCountry, here.y(), here.x(), equipment)) {
 	case livery_allow_OutOfRange:		return allow_OutOfRange;
 	case livery_allow_ForeignMilitary:	return allow_ForeignMilitary;
+	case livery_allow_Equipment:		return allow_Equipment;
 	default:							return allow_Yes;
 	}
 }
@@ -431,7 +451,7 @@ WED_LiveryPane::Allow	WED_LiveryPane::LiveryAllowedHere(const WED_LiveryIndexEnt
 string	WED_LiveryPane::OperatorCountry(const string & code_uc) const
 {
 	WED_AirlineDirectoryEntry e;
-	if (mAirlineDirectory.Lookup(code_uc, e) && !e.country.empty()) return e.country;
+	if (Directory().Lookup(code_uc, e) && !e.country.empty()) return e.country;
 	return code_uc;
 }
 
@@ -444,24 +464,7 @@ string	WED_LiveryPane::OperatorCountry(const string & code_uc) const
 bool	WED_LiveryPane::OperatorMatchesRampOp(const string & code_uc, int ramp_op) const
 {
 	if (ramp_op == ramp_operation_None) return true;			// not stated - offer everything
-
-	if (code_uc == "XPGA")                      return ramp_op == ramp_operation_GeneralAviation;
-	if (code_uc == "XPMI")                      return ramp_op == ramp_operation_Military;
-	if (WED_IsGenericAirlinerCode(code_uc))     return ramp_op == ramp_operation_Airline || ramp_op == ramp_operation_Cargo;
-
-	WED_AirlineDirectoryEntry e;
-	if (!mAirlineDirectory.Lookup(code_uc, e))
-		return ramp_op == ramp_operation_Airline;			// unknown to the directory: assume airline, fail open
-
-	switch (e.op_class)
-	{
-	case WED_AirlineDirectoryEntry::op_Pax:      return ramp_op == ramp_operation_Airline;
-	case WED_AirlineDirectoryEntry::op_Cargo:    return ramp_op == ramp_operation_Cargo;
-	case WED_AirlineDirectoryEntry::op_GA:       return ramp_op == ramp_operation_GeneralAviation;
-	case WED_AirlineDirectoryEntry::op_Military:
-	case WED_AirlineDirectoryEntry::op_Gov:      return ramp_op == ramp_operation_Military;
-	}
-	return true;
+	return WED_LiveryOperatorFitsRampOp(code_uc, ramp_op, Directory());
 }
 
 void	WED_LiveryPane::RebuildAirlineCards(void)
@@ -501,6 +504,8 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 	// off the 1300 row, so the two evaluate the identical predicate.
 	Point2 here;
 	ramp->GetLocation(gis_Geo, here);
+	set<int> equipment;
+	ramp->GetEquipment(equipment);
 	mRangeHidden.clear();
 
 	// THE RAMP'S OPERATION TYPE IS A FILTER, not a label. A cargo stand offers
@@ -568,7 +573,7 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 				// absent, exactly as it will be absent on the apron. What was
 				// removed is remembered so the readout can say so; otherwise the
 				// author sees United's card shrink to a 777 with no explanation.
-				Allow a = LiveryAllowedHere(*e, here);
+				Allow a = LiveryAllowedHere(*e, here, equipment);
 				if (a != allow_Yes)
 				{
 					if (a == allow_OutOfRange) mRangeHidden[code_uc].push_back(e->type);
@@ -624,7 +629,7 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 		// The friendly name if the directory knows the code, the code itself if it
 		// does not - a livery the index has is worth showing even when the operator
 		// is missing from the name table.
-		card.name = mAirlineDirectory.GetName(code_uc);
+		card.name = Directory().GetName(code_uc);
 		if (card.name.empty()) card.name = code_uc;
 
 		// No registration read off any of its liveries (United's 767) left the card
@@ -633,7 +638,7 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 		if (card.ioc_country.empty())
 		{
 			WED_AirlineDirectoryEntry d;
-			if (mAirlineDirectory.Lookup(code_uc, d)) card.ioc_country = d.country;
+			if (Directory().Lookup(code_uc, d)) card.ioc_country = d.country;
 		}
 
 		string key = code_uc;
@@ -782,6 +787,13 @@ void	WED_LiveryPane::RecomputeCoverage(void)
 		}
 
 		set<string> codes = ParseCodes(ramp->GetAirlines());
+		// Only operators that may be listed on this kind of stand count, as in the
+		// validator: a cargo operator does not fill a passenger stand.
+		const int ramp_op_here = ramp->GetRampOperationType();
+		for (set<string>::iterator it = codes.begin(); it != codes.end(); )
+			if (!OperatorMatchesRampOp(*it, ramp_op_here)) codes.erase(it++); else ++it;
+		set<int> equipment;
+		ramp->GetEquipment(equipment);
 
 		// The readout must count what the sim will actually draw from, so the
 		// range rule applies here exactly as it does to the cards: an operator
@@ -803,7 +815,7 @@ void	WED_LiveryPane::RecomputeCoverage(void)
 				mLiveryIndex.GetForAirlineAndClass(*it, size_class, hits);
 				bool reachable = false;
 				for (size_t h = 0; h < hits.size() && !reachable; ++h)
-					reachable = LiveryAllowedHere(*hits[h], here) == allow_Yes;
+					reachable = LiveryAllowedHere(*hits[h], here, equipment) == allow_Yes;
 				if (reachable)
 				{
 					any_here = true;
@@ -813,7 +825,16 @@ void	WED_LiveryPane::RecomputeCoverage(void)
 			if (any_here) ++filled_classes;
 		}
 
-		if (filled_classes == 0) ++c.stands_empty;
+		// Several stands: the count is the validator's own verdict, stand by stand
+		// (WED_LiveryParksNothing) - GA pools, unlisted military, all-zero weights
+		// and None included - so "N stands park nothing" is exactly the number of
+		// warnings Validate will list.
+		if (mSelectedRamps.size() > 1)
+		{
+			string msg;
+			if (WED_LiveryParksNothing(ramp, WED_GetParentAirport(ramp), msg)) ++c.stands_empty;
+		}
+		else if (filled_classes == 0) ++c.stands_empty;
 
 		// With a 1313 row the flat range stops being the question. The author
 		// has said how often each class is drawn, so the quantity that matters
@@ -851,7 +872,7 @@ void	WED_LiveryPane::RecomputeCoverage(void)
 						// honestly, from different definitions of eligible.
 						bool reach = false;
 						for (size_t h = 0; h < hits.size() && !reach; ++h)
-							reach = LiveryAllowedHere(*hits[h], here) == allow_Yes;
+							reach = LiveryAllowedHere(*hits[h], here, equipment) == allow_Yes;
 						if (reach) { fillable += wts[k]; break; }
 					}
 				}
@@ -946,7 +967,7 @@ void	WED_LiveryPane::RecomputeCoverage(void)
 						mLiveryIndex.GetForAirlineAndClass(uc, (char) ('A' + k), hits);
 						for (size_t h = 0; h < hits.size(); ++h)
 						{
-							if (LiveryAllowedHere(*hits[h], here) != allow_Yes) continue;
+							if (LiveryAllowedHere(*hits[h], here, equipment) != allow_Yes) continue;
 							class_has = true;
 							if (!c.pool_mode) { c.countries.insert(OperatorCountry(uc)); continue; }
 							++c.pool_models;

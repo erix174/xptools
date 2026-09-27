@@ -77,9 +77,7 @@ static bool HasFittingLivery(AutoFillData & d, const string & code, const bool c
 	{
 		const WED_LiveryIndexEntry & e = *(*all)[i];
 		if (e.size_class < 'A' || e.size_class > 'F' || !classes[e.size_class - 'A']) continue;
-		int eq = WED_LiveryEquipment(e);
-		if (eq != -1 && !equipment.empty() && !equipment.count(eq)) continue;
-		if (WED_LiveryAllowedAt(e, d.directory, country, lat, lon) != livery_allow_Yes) continue;
+		if (WED_LiveryFitsStand(e, d.directory, country, lat, lon, equipment) != livery_allow_Yes) continue;
 		return true;
 	}
 	return false;

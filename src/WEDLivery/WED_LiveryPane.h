@@ -56,6 +56,7 @@
 #include "WED_AirportDatabase.h"
 #include "WED_AirlineDirectory.h"
 #include "WED_LiveryIndex.h"
+#include "WED_LiveryRules.h"		// WED_SharedLiveryData
 #include "WED_LiveryThumbnailCache.h"
 #include <vector>
 #include <string>
@@ -291,8 +292,9 @@ private:
 	// Whether an operator may appear on a stand of this operation type.
 	bool								OperatorMatchesRampOp(const std::string & code_uc, int ramp_op) const;
 	// Whether one livery may appear at this stand, and if not, why - see the .cpp.
-	enum Allow { allow_Yes, allow_OutOfRange, allow_ForeignMilitary };
-	Allow								LiveryAllowedHere(const WED_LiveryIndexEntry & e, const Point2 & here) const;
+	enum Allow { allow_Yes, allow_OutOfRange, allow_ForeignMilitary, allow_Equipment };
+	Allow								LiveryAllowedHere(const WED_LiveryIndexEntry & e, const Point2 & here,
+														  const std::set<int> & equipment) const;
 	// An operator's home country (IOC) from the directory; the code itself when
 	// the directory does not know it, so the readout never names a blank.
 	std::string							OperatorCountry(const std::string & code_uc) const;
@@ -508,20 +510,14 @@ private:
 	std::string					mPopulateFlash, mPopulateDetail;
 	double						mPopulateFlashUntil;
 
-	// Single reference table for everything the picker needs to know about
-	// an airport before looking at any one ramp: country (flag banner +
-	// "same country" recommendation tier) and researched airlines (the
-	// recommendation list itself), both keyed by ICAO. Loaded once, on
-	// first need, from WED_AirportDatabase.txt shipped next to WED.exe -
-	// no local X-Plane install/apt.dat involved. See WED_AirportDatabase.h.
-	WED_AirportDatabase			mAirportDb;
-
-	// Global airline reference data - the OPERATOR records at the top of the
-	// install's livery_index.txt, the same file mLiveryIndex reads; nothing
-	// ships beside WED.exe for this. Name/country/op class/fleet size for
-	// every airline WED knows about, independent of any one airport. See
-	// WED_AirlineDirectory.h.
-	WED_AirlineDirectory		mAirlineDirectory;
+	// The airport database (WED_AirportDatabase.txt beside WED: country and
+	// who serves each airport) and the operator directory (the OPERATOR records
+	// of the install's livery_index.txt) are NOT the tab's own: it reads the
+	// one shared instance the validator, auto-fill and moderation read
+	// (WED_SharedLiveryData), so the tab can never judge a stand from different
+	// data than the warning does. Fetched per use - a folder change replaces it.
+	WED_AirportDatabase &		AirportDb(void) const		{ return WED_SharedLiveryData().airports; }
+	WED_AirlineDirectory &		Directory(void) const		{ return WED_SharedLiveryData().directory; }
 
 	// The shipped static-aircraft index (livery_index.txt, inside the selected
 	// X-Plane folder - NOT next to WED.exe like the two above). This is the first

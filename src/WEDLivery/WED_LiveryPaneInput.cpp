@@ -326,7 +326,7 @@ int		WED_LiveryPane::MouseMove(int x, int y)
 		over_sort = (x >= r[0] && x <= r[2] && y >= r[1] && y <= r[3]);
 		RecommendButtonRect(b, r);
 		over_recommend = (x >= r[0] && x <= r[2] && y >= r[1] && y <= r[3])
-			&& AirportIsCommercial(mAirportDb, mCurrentAirportIcao);	// hovering a disabled button doesn't count
+			&& AirportIsCommercial(AirportDb(), mCurrentAirportIcao);	// hovering a disabled button doesn't count
 	}
 	if (over_sort != mHoverSortButton)			{ mHoverSortButton = over_sort;			changed = true; }
 	if (over_recommend != mHoverRecommendButton)	{ mHoverRecommendButton = over_recommend;	changed = true; }
@@ -544,7 +544,7 @@ int		WED_LiveryPane::MouseDown(int x, int y, int button)
 	float rec_r[4];
 	RecommendButtonRect(b, rec_r);
 	if (x >= rec_r[0] && x <= rec_r[2] && y >= rec_r[1] && y <= rec_r[3]
-		&& AirportIsCommercial(mAirportDb, mCurrentAirportIcao))
+		&& AirportIsCommercial(AirportDb(), mCurrentAirportIcao))
 	{
 		mTrackRecommendButton = true;
 		return 1;
@@ -770,7 +770,7 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 		float r[4];
 		RecommendButtonRect(b, r);
 		if (x >= r[0] && x <= r[2] && y >= r[1] && y <= r[3]
-			&& AirportIsCommercial(mAirportDb, mCurrentAirportIcao))
+			&& AirportIsCommercial(AirportDb(), mCurrentAirportIcao))
 		{
 			gShowLiveryRecommendation = !gShowLiveryRecommendation;
 			SetRowsDirty();

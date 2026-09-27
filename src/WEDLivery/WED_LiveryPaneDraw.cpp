@@ -895,7 +895,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 					icao_meta = apt->GetMetaDataValue("icao_code");
 
 				string icao = !icao_meta.empty() ? icao_meta : icao_primary;
-				WED_IcaoLookupResult r = LookupIcaoCountry(mAirportDb, icao, country);
+				WED_IcaoLookupResult r = LookupIcaoCountry(AirportDb(), icao, country);
 
 				// A metadata ICAO can be real (recognized by ICAO/IATA) without
 				// ever appearing as a primary identifier in X-Plane's own
@@ -916,7 +916,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 					!icao_meta.empty() && icao_meta != icao_primary)
 				{
 					string country2;
-					WED_IcaoLookupResult r2 = LookupIcaoCountry(mAirportDb, icao_primary, country2);
+					WED_IcaoLookupResult r2 = LookupIcaoCountry(AirportDb(), icao_primary, country2);
 					if (r2 == wed_Icao_Ok)
 					{
 						icao = icao_primary;
@@ -938,9 +938,9 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 					// back to the bulk OurAirports flag, which can say "yes" for an airport
 					// this project just hasn't researched yet - a misleading "available"
 					// promise when the checklist won't actually show anything for it).
-					if (!mAirportDb.IsLoaded() && !mAirportDb.LoadFailed())
-						mAirportDb.EnsureLoaded(WedDataFileDir() + "WED_AirportDatabase.txt");
-					vector<string> direct_hit = GetRecommendedAirlineCodes(mAirportDb, icao);
+					if (!AirportDb().IsLoaded() && !AirportDb().LoadFailed())
+						AirportDb().EnsureLoaded(WedDataFileDir() + "WED_AirportDatabase.txt");
+					vector<string> direct_hit = GetRecommendedAirlineCodes(AirportDb(), icao);
 
 					if (!direct_hit.empty())
 					{
@@ -971,7 +971,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 					// header was edited used to report as "not found", sending
 					// people to look for a file sitting in front of them.
 					info_text = string("WED_AirportDatabase.txt: ") +
-								WedDataFileErrorText(mAirportDb.LoadError()) +
+								WedDataFileErrorText(AirportDb().LoadError()) +
 								" - can't look up country.";
 					warn = true;
 				}
@@ -1546,7 +1546,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			// its only symptom is things quietly not appearing. A readout that
 			// printed a confident zero here would be worse than none at all.
 			snprintf(head,   sizeof(head),   "Coverage unavailable - no livery index");
-			snprintf(detail, sizeof(detail), "%s", NoIndexSentence(mAirlineDirectory.LoadError()).c_str());
+			snprintf(detail, sizeof(detail), "%s", NoIndexSentence(Directory().LoadError()).c_str());
 		}
 		else if (mCoverage.stands == 1)
 		{
@@ -1874,7 +1874,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			glVertex2f((float) b[2] - 1, tb_bot);
 		glEnd();
 
-		bool recommend_available = AirportIsCommercial(mAirportDb, mCurrentAirportIcao);
+		bool recommend_available = AirportIsCommercial(AirportDb(), mCurrentAirportIcao);
 
 		// "Show Recommendation" toggle - left of the sort button. Greyed out
 		// (75% black mask, unclickable - see hit-testing in MouseDown/Up)
@@ -2513,8 +2513,8 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 				// just emptied by typing in the search box - which reads as a bug in
 				// the tool rather than as an answer.
 				string why;
-				if (!mAirlineDirectory.IsLoaded())
-					why = NoIndexSentence(mAirlineDirectory.LoadError());
+				if (!Directory().IsLoaded())
+					why = NoIndexSentence(Directory().LoadError());
 				else if (!mSearchQuery.empty())
 					why = "No operator matches \"" + mSearchQuery + "\".";
 				else if (cur_op_enum == ramp_operation_None)

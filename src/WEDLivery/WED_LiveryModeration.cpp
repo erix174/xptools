@@ -235,25 +235,6 @@ void	WED_ModerationPrompt(WED_RampPosition * ramp, WED_Airport * apt)
 			WED_ModerationOpenSearch(to_check[i]->search_url);
 }
 
-// Which stands an operator may appear on: the operation class on its OPERATOR
-// record against the stand's operation type, the pseudo-codes by name. The same
-// rule as the Liveries tab's cards (WED_LiveryPane::OperatorMatchesRampOp) and
-// spec R18's op_class_matches. Unknown to the directory: an airline, fail open.
-static bool LiveryOperatorFits(const string & code_uc, int op, const WED_AirlineDirectory & dir)
-{
-	if (code_uc == "XPGA") return op == ramp_operation_GeneralAviation;
-	if (code_uc == "XPMI") return op == ramp_operation_Military;
-	if (WED_IsGenericAirlinerCode(code_uc)) return op == ramp_operation_Airline || op == ramp_operation_Cargo;
-	WED_AirlineDirectoryEntry e;
-	if (!dir.Lookup(code_uc, e)) return op == ramp_operation_Airline;
-	switch (e.op_class) {
-	case WED_AirlineDirectoryEntry::op_Pax:		return op == ramp_operation_Airline;
-	case WED_AirlineDirectoryEntry::op_Cargo:	return op == ramp_operation_Cargo;
-	case WED_AirlineDirectoryEntry::op_GA:		return op == ramp_operation_GeneralAviation;
-	default:									return op == ramp_operation_Military;	// Military, Gov
-	}
-}
-
 // R14, as a warning: can anything park here at all? Only the static aircraft are
 // at stake - the airline list still drives ATC and AI parking whatever the index
 // says - so this never blocks an export. Needs livery_index.txt; without one
@@ -326,7 +307,7 @@ bool	WED_LiveryParksNothing(WED_RampPosition * ramp, WED_Airport * apt, string &
 	for (size_t n = 0; n < candidates.size(); ++n)
 	{
 		const string & code = candidates[n];
-		if (!LiveryOperatorFits(code, op, d->directory)) continue;
+		if (!WED_LiveryOperatorFitsRampOp(code, op, d->directory)) continue;
 		const vector<const WED_LiveryIndexEntry *> * all = d->index.GetForAirline(code);
 		if (!all) continue;
 		for (size_t i = 0; i < all->size(); ++i)
@@ -334,9 +315,7 @@ bool	WED_LiveryParksNothing(WED_RampPosition * ramp, WED_Airport * apt, string &
 			const WED_LiveryIndexEntry & e = *(*all)[i];
 			if (e.size_class < 'A' || e.size_class > 'F' || !allowed[e.size_class - 'A']) continue;
 			any_livery = true;
-			int eq = WED_LiveryEquipment(e);
-			if (eq != -1 && !equipment.empty() && !equipment.count(eq)) continue;
-			if (WED_LiveryAllowedAt(e, d->directory, country, here.y(), here.x()) != livery_allow_Yes) continue;
+			if (WED_LiveryFitsStand(e, d->directory, country, here.y(), here.x(), equipment) != livery_allow_Yes) continue;
 			return false;			// something can park
 		}
 	}
