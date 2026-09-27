@@ -3,7 +3,7 @@ Captured 2026-09-16 from a WED built at this branch (2.7.3-r1, MSC 1944).
 This is spec section 7.3, measured rather than inferred from the source.
 
 Unable to read apt.dat file
-'D:\SteamLibrary\steamapps\common\X-Plane 12\Custom Scenery\ZZZ_livery_format_sample\Earth nav data\apt.dat':
+'<X-Plane 12>\Custom Scenery\ZZZ_livery_format_sample\Earth nav data\apt.dat':
 Illegal unknown record (Line 13)
 
 Line 13 of that file is:
