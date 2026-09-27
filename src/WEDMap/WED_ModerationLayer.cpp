@@ -395,6 +395,10 @@ WED_ModerationLayer::WED_ModerationLayer(GUI_Pane * host, WED_MapZoomerNew * zoo
 
 WED_ModerationLayer::~WED_ModerationLayer()
 {
+	// the flag textures FlagFor() made - the Liveries tab frees its own the same way
+	for (std::map<string, Flag>::iterator i = mFlags.begin(); i != mFlags.end(); ++i)
+		if (i->second.tex) glDeleteTextures(1, &i->second.tex);
+	mFlags.clear();
 }
 
 void	WED_ModerationLayer::GetCaps(bool& draw_ent_v, bool& draw_ent_s, bool& cares_about_sel, bool& wants_clicks)
