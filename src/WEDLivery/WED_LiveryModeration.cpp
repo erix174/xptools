@@ -81,14 +81,14 @@ static string UrlEncode(const string & s)
 	return out;
 }
 
-// The question as a person would type it: the operator's name and the airport's
-// ICAO code, plus its city when the airport carries one. NOT the airport's name -
-// that is whatever the author typed ("Livery Range Test (shadows Beijing Capital -
-// see README)"), and every word of it is noise to a search engine.
+// The question as a person would type it (Eric, 2026-09-27): "Does <operator>
+// fly to <ICAO> Now" - "Now" steers the results to current schedules rather
+// than history. NOT the airport's name, which is whatever the author typed and
+// is noise to a search engine; the city is not needed with the ICAO code.
 string	WED_ModerationSearchURL(const string & operator_name, const string & city, const string & icao)
 {
-	string q = "Does " + operator_name + " fly to " + icao;
-	if (!city.empty()) q += " " + city;
+	(void) city;
+	string q = "Does " + operator_name + " fly to " + icao + " Now";
 	return "https://www.google.com/search?q=" + UrlEncode(q);
 }
 

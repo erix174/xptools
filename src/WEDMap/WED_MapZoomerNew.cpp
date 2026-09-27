@@ -472,12 +472,15 @@ void	WED_MapZoomerNew::ZoomShowArea(
 
 void	WED_MapZoomerNew::CenterOn(const Point2& ll)
 {
-	// ZoomShowArea takes the larger of its two scales. Give it the view's own
-	// height in degrees, measured with the linear helpers (the exact inverse of
-	// the current scale), and a sliver of width, so the height decides and the
-	// scale comes back unchanged.
-	const double h = fabs(YPixelToLat(mPixels[3]) - YPixelToLat(mPixels[1]));
-	ZoomShowArea(ll.x() - 1e-9, ll.y() - h * 0.5, ll.x() + 1e-9, ll.y() + h * 0.5);
+	// Move the centre and nothing else: pixels per metre stay exactly as they
+	// are. Refitting an area (ZoomShowArea) recomputes the scale for the new
+	// centre latitude, so a jump north or south zoomed a little each time.
+	++mCacheKey;
+	mLonCenter = ll.x();
+	mLatCenter = ll.y();
+	mScale.set(mScale.ppm(), mLatCenter);
+	RecalcAspectRatio();
+	BroadcastMessage(GUI_SCROLL_CONTENT_SIZE_CHANGED,0);
 }
 
 void	WED_MapZoomerNew::PanPixels(

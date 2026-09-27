@@ -387,7 +387,7 @@ static string	VerifyText(const WED_ModerationEntry & e, const float ** col)
 // ---- the layer ----
 
 WED_ModerationLayer::WED_ModerationLayer(GUI_Pane * host, WED_MapZoomerNew * zoomer, IResolver * resolver) :
-	WED_MapLayer(host, zoomer, resolver), mPinnedID(-1), mTrayID(-1), mOpenID(-1), mLegendRow(-1), mListScroll(0),
+	WED_MapLayer(host, zoomer, resolver), mPinnedID(-1), mTrayID(-1), mHoverPin(-1), mOpenID(-1), mLegendRow(-1), mListScroll(0),
 	mListFilter(0), mListSort(0), mOverviewBottom(-1), mCopiedUntil(0)
 {
 	mListBox[0] = mListBox[1] = mListBox[2] = mListBox[3] = 0;
@@ -675,14 +675,27 @@ void	WED_ModerationLayer::DrawCard(GUI_GraphState * g, Callout & c, bool pinned,
 	}
 	Txt(g, kWhite, hx, base_y, Elide(c.label, name_end - hx).c_str());
 
-	// pin: filled when this is the base
+	// pin: a pushpin - round head, needle - in white so it reads as a control,
+	// filled in the card's colour once this card is the base; hovered, it gets
+	// an amber ring and a tooltip (DrawOverlays)
 	g->SetState(0, 0, 0, 0, 1, 0, 0);
-	glColor4fv(pinned ? stroke : kMuted);
-	Circle(pin_x, head_mid + 2, 4.5f, pinned);
+	const bool pin_hover = mHoverPin == c.id;
+	if (pin_hover)
+	{
+		const float amber[4] = { 1.0f, 0.75f, 0.3f, 1.0f };
+		glColor4fv(amber);
+		glLineWidth(1.5f);
+		Circle(pin_x, head_mid + 2, 8.5f, false);
+		glLineWidth(1.0f);
+	}
+	glColor4fv(pinned ? stroke : kWhite);
+	Circle(pin_x, head_mid + 2, 5.5f, pinned);
+	glLineWidth(2.0f);
 	glBegin(GL_LINES);
-		glVertex2f(pin_x, head_mid - 2.5f); glVertex2f(pin_x, head_mid - 7.5f);
+		glVertex2f(pin_x, head_mid - 3.5f); glVertex2f(pin_x, head_mid - 9.5f);
 	glEnd();
-	Hit ph = { Hit::hit_Pin, pin_x - 9, head_mid - 9, pin_x + 9, head_mid + 9, c.id, "" };
+	glLineWidth(1.0f);
+	Hit ph = { Hit::hit_Pin, pin_x - 10, head_mid - 10, pin_x + 10, head_mid + 10, c.id, "" };
 	mHits.push_back(ph);
 
 	// rows
@@ -1427,10 +1440,12 @@ void	WED_ModerationLayer::DrawOverlays(GUI_GraphState * g)
 	MouseOnScreen(GetZoomer(), GetHost(), mx, my);
 	const float fx = (float) mx, fy = (float) my;
 	int tray = -1, chip = -1, card = -1, row = -1;
+	mHoverPin = -1;
 	for (size_t i = 0; i < mHits.size(); ++i)
 	{
 		const Hit & h = mHits[i];
 		if (!Inside(fx, fy, h.x0, h.y0, h.x1, h.y1)) continue;
+		if (h.kind == Hit::hit_Pin) { mHoverPin = h.ramp_id; mPinTip[0] = h.x1; mPinTip[1] = h.y1; }
 		if (h.kind == Hit::hit_Tray)   tray = h.ramp_id;
 		if (h.kind == Hit::hit_Chip)   chip = h.ramp_id;
 		if (h.kind == Hit::hit_Card)   card = h.ramp_id;
@@ -1481,6 +1496,23 @@ void	WED_ModerationLayer::DrawOverlays(GUI_GraphState * g)
 	if (shared.size() <= kMaxCards)			DrawCards(g, shared);
 	else if (shared.size() <= kMaxChips)	DrawChips(g, shared);
 	else									DrawLegend(g, cs);
+
+	// the pin's tooltip, over everything
+	if (mHoverPin >= 0)
+	{
+		const char * tip = mHoverPin == mPinnedID ? "Unpin - stop comparing against this stand"
+												  : "Pin as the baseline - the other cards show how they differ from it";
+		double b[4];
+		GetZoomer()->GetPixelBounds(b[0], b[1], b[2], b[3]);
+		const float tw = TextW(tip), lh = LineH();
+		float tx = mPinTip[0] - tw, ty = mPinTip[1] + 6;
+		if (tx < (float) b[0] + 4) tx = (float) b[0] + 4;
+		if (ty + lh + 6 > (float) b[3] - 2) ty = (float) b[3] - 2 - lh - 6;
+		const float bg[4] = { 0.0f, 0.0f, 0.0f, 0.85f };
+		g->SetState(0, 0, 0, 0, 1, 0, 0);
+		Fill(tx - 5, ty, tx + tw + 5, ty + lh + 6, bg);
+		Txt(g, kWhite, tx, ty + 3 + (lh - Asc()) * 0.5f, tip);
+	}
 
 	glEnable(GL_CULL_FACE);
 	g->SetState(0, 0, 0, 0, 0, 0, 0);

@@ -146,6 +146,8 @@ private:
 	std::vector<Hit>				mHits;			// from the last frame, for clicks and hover
 	int								mPinnedID;		// WED_Persistent id, -1 = none
 	int								mTrayID;		// the card whose tray is open, -1 = none
+	int								mHoverPin;		// the card whose pin is under the mouse, -1 = none
+	float							mPinTip[2];		// where its tooltip goes (screen frame)
 	int								mOpenID;		// chips: the chip whose card is open
 	int								mLegendRow;		// legend: the row under the mouse
 	std::vector<std::vector<int> >	mLegendIDs;		// legend: each row's ramp ids, for the click
