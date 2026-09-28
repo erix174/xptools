@@ -77,21 +77,23 @@ jobs:
         with:
           p12-file-base64: ${{ secrets.APPLE_DEV_CERTIFICATE }}
           p12-password: ${{ secrets.APPLE_DEV_CERTIFICATE_PASSWORD }}
-      - name: Build WorldEditor
+      - name: Build WorldEditor (universal: x86_64 + arm64)
+        # Intel Macs are still supported (Eric, 2026-09-27): one build per
+        # architecture, joined with lipo - see scripts/build_mac_universal.sh.
         run: |
-          GENERATOR=Ninja ./cmake.sh
-          cmake --build build_Release --config Release
+          pip install ninja
+          bash scripts/build_mac_universal.sh
       - name: Sign App
         run: |
           codesign --deep --force --verify --verbose \
             --sign "Developer ID Application: Laminar Research (LPH4NFE92D)" \
             --options runtime \
-            build_Release/WED.app
+            build_Universal/WED.app
       - name: Notarize App
         run: |
-          ./scripts/notarization.sh WED.zip build_Release/WED.app staple
+          ./scripts/notarization.sh WED.zip build_Universal/WED.app staple
       - name: Archive build result
-        run: zip -r artifact-mac.zip build_Release/WED.app
+        run: zip -r artifact-mac.zip build_Universal/WED.app
       - name: Upload artifact
         uses: actions/upload-artifact@main
         with:
