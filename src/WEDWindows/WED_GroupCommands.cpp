@@ -86,6 +86,8 @@
 #include "WED_Sign_Editor.h"
 #include "WED_ToolUtils.h"
 #include "WED_UIDefs.h"
+#include "WED_LiveryAutoFill.h"
+#include "WED_LiveryModeration.h"
 
 #include <sstream>
 
@@ -4661,7 +4663,7 @@ static bool parks_static_aircraft(WED_RampPosition * r)
 	return true;
 }
 
-int wed_upgrade_ramps(WED_Thing* who, int * out_removed_statics)
+int wed_upgrade_ramps(WED_Thing* who, int * out_removed_statics, int * out_filled_stands)
 {
 	auto rmgr = WED_GetResourceMgr(who->GetArchive()->GetResolver());
 	auto sel  = WED_GetSelect(who->GetArchive()->GetResolver());
@@ -4671,7 +4673,9 @@ int wed_upgrade_ramps(WED_Thing* who, int * out_removed_statics)
 	vector<obj_conflict_info> objs;
 	collect_ramps_recursive(who, ramps, objs, rmgr);
 
-	if (!dynamic_cast<WED_Airport*>(who)) return 0;
+	WED_Airport * apt = dynamic_cast<WED_Airport*>(who);
+	if (!apt) return 0;
+	vector<WED_RampPosition *> to_fill;		// legacy airline stands that would park at random
 
 	for (auto r : ramps)
 	{
@@ -4704,15 +4708,33 @@ int wed_upgrade_ramps(WED_Thing* who, int * out_removed_statics)
 				}
 			}
 		}
-		// No airline codes are added any more (WED 2.8, Eric 2026-09-28). This
-		// used to append a hard-coded list of "regional" airlines, by longitude
-		// and latitude, to airline stands (every one below class D, half the rest)
-		// on every Gateway export -
-		// silently, into the exported apt.dat only. With the livery index those
-		// lists often named airlines that do not serve the airport or cannot reach
-		// it (R26). Authors fill stands with Auto-Populate instead: from the
-		// airport database, range and equipment checked, extend-only, undoable,
-		// and marked auto-filled (1315 A) for moderators.
+		// Airline codes for a legacy airline stand that would otherwise park at
+		// random (WED 2.8, replacing get_regional_codes). A legacy stand (no 1313)
+		// parks by today's library buckets: with no listed airline that has a
+		// livery there, X-Plane picks any airline in the world. 2.7 appended a
+		// hard-coded "regional" list by longitude and latitude; now the airport's
+		// recommended operators are added, the same as Auto-Populate - airport
+		// database, range and equipment checked, extend-only, within the length
+		// cap - and the stand is marked auto-filled (1315 A), so moderators see
+		// it and later exports leave it alone. A list that already parks is kept.
+		if (r->GetRampOperationType() == ramp_operation_Airline)
+		{
+			string why;
+			if (r->GetAirlines().empty() || WED_LiveryParksNothing(r, apt, why))
+				to_fill.push_back(r);
+		}
+	}
+	if (!to_fill.empty())
+	{
+		// needs the livery index; without one (an X-Plane before 12.5) the plan is
+		// empty and the Gateway's own export fills these stands later
+		WED_AutoFillPlan plan = WED_PlanLiveryAutoFill(apt, &to_fill, false);
+		if (plan.error.empty())
+		{
+			const int n = WED_ApplyLiveryAutoFill(plan, false);
+			if (n > 0) did_work = 1;
+			if (out_filled_stands) *out_filled_stands += n;
+		}
 	}
 	// nuke static aircraft objects near ramps
 	for(auto& o : objs)

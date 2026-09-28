@@ -258,10 +258,11 @@ namespace
 void dummyPrintf(void * ref, const char * fmt, ...) { return; }
 
 // Returns how many static aircraft objects were removed for overlapping a
-// ramp start where X-Plane parks its own.
-static int	DoHueristicAnalysisAndAutoUpgrade(IResolver* resolver)
+// ramp start where X-Plane parks its own; out_filled, how many legacy airline
+// stands were given the airport's recommended operators.
+static int	DoHueristicAnalysisAndAutoUpgrade(IResolver* resolver, int * out_filled = NULL)
 {
-	int removed_statics = 0;
+	int removed_statics = 0, filled_stands = 0;
 	LOG_MSG("I/exp Starting upgrade heuristics\n");
 	WED_Thing * wrl = WED_GetWorld(resolver);
 	vector<WED_Airport*> apts;
@@ -360,7 +361,7 @@ static int	DoHueristicAnalysisAndAutoUpgrade(IResolver* resolver)
 		added_country_codes += add_iso3166_country_metadata(**apt_itr);
 
 		//-- upgrade Ramp Positions with XP10.45 data to get parked A/C -------------
-		wed_upgrade_ramps(*apt_itr, &removed_statics);
+		wed_upgrade_ramps(*apt_itr, &removed_statics, &filled_stands);
 
 #if 0  // this was good in 10.45, but not needed any for gateway airports as of 2022
 		//-- Agp and obj upgrades to create more ground traffic --------------------------------
@@ -688,7 +689,9 @@ static int	DoHueristicAnalysisAndAutoUpgrade(IResolver* resolver)
 	std::chrono::duration<double> elapsed = t1 - t0;
 	LOG_MSG("I/exp Done with upgrade heuristics on %d apts, took %lf sec\n", (int) apts.size(), elapsed.count());
 	LOG_MSG("I/exp Removed %d static aircraft objects on ramp starts that park aircraft\n", removed_statics);
+	LOG_MSG("I/exp Filled %d legacy airline stands with the airport's recommended operators\n", filled_stands);
 	LOG_FLUSH();
+	if (out_filled) *out_filled = filled_stands;
 	return removed_statics;
 }
 
@@ -716,11 +719,11 @@ void	WED_DoExportPack(WED_Document * resolver, WED_MapPane * pane)
 		return;
 
 	auto uMgr = resolver->GetUndoMgr();
-	int removed_statics = 0;
+	int removed_statics = 0, filled_stands = 0;
 	if (gExportTarget == wet_gateway)
 	{
 		uMgr->MarkUndo();
-		removed_statics = DoHueristicAnalysisAndAutoUpgrade(resolver);
+		removed_statics = DoHueristicAnalysisAndAutoUpgrade(resolver, &filled_stands);
 	}
 #endif
 	ILibrarian * l = WED_GetLibrarian(resolver);
@@ -739,15 +742,28 @@ void	WED_DoExportPack(WED_Document * resolver, WED_MapPane * pane)
 	{
 		if (uMgr->UndoToMark())
 			DoUserAlert("Some of the upgrade heuristics applied during export could not be undone. Scenery was permanently altered by export.");
-		else if (removed_statics > 0)
+		else if (removed_statics > 0 || filled_stands > 0)
 		{
 			// Silent until 2.8 - a forum thread spent weeks on "5 of my 13 static
-			// aircraft are missing". They are still in the project.
-			char msg[400];
-			snprintf(msg, sizeof(msg), "The exported scenery leaves out %d static aircraft object%s placed on ramp starts where X-Plane parks its own aircraft - "
-					 "they would stand inside each other. They are still in your project. To keep one, move it off the ramp start, or set that ramp start to None.",
-					 removed_statics, removed_statics == 1 ? "" : "s");
-			DoUserAlert(msg);
+			// aircraft are missing". Both changes are in the exported files only;
+			// the project is as it was.
+			string msg = "The exported scenery differs from your project:";
+			char buf[400];
+			if (filled_stands > 0)
+			{
+				snprintf(buf, sizeof(buf), "\n\n- %d airline ramp start%s listed no airline that has a static aircraft there, so X-Plane would have parked any airline at all. "
+						 "The export lists the airport's recommended operators on %s and marks %s auto-filled. Use Auto-Populate to see and keep this in your project.",
+						 filled_stands, filled_stands == 1 ? "" : "s", filled_stands == 1 ? "it" : "them", filled_stands == 1 ? "it" : "them");
+				msg += buf;
+			}
+			if (removed_statics > 0)
+			{
+				snprintf(buf, sizeof(buf), "\n\n- %d static aircraft object%s placed on ramp starts where X-Plane parks its own aircraft %s left out - "
+						 "they would stand inside each other. To keep one, move it off the ramp start, or set that ramp start to None.",
+						 removed_statics, removed_statics == 1 ? "" : "s", removed_statics == 1 ? "is" : "are");
+				msg += buf;
+			}
+			DoUserAlert(msg.c_str());
 		}
 	}
 #endif
