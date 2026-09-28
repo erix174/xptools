@@ -103,6 +103,34 @@ void	WED_LiveryPane::SwitchToSimpleMode(void)
 // Fill this one stand from the database against the sizes it allows NOW - its
 // weights, or its size range if it has none - without touching either. Same
 // engine and the same extend-only rule as Airport > Auto-Populate.
+// Empties the airline list of every selected stand, as one undo step. A stand
+// that listed nothing is left alone, so undo only covers what really changed.
+void	WED_LiveryPane::ClearAirlines(void)
+{
+	int n = 0;
+	for (size_t i = 0; i < mSelectedRamps.size(); ++i)
+		if (!mSelectedRamps[i]->GetAirlines().empty()) ++n;
+	if (n == 0)
+	{
+		mClearFlash = "Nothing to clear";
+	}
+	else
+	{
+		mArchive->StartCommand(n == 1 ? "Clear Airlines" : "Clear Airlines of Ramp Starts");
+		for (size_t i = 0; i < mSelectedRamps.size(); ++i)
+			if (!mSelectedRamps[i]->GetAirlines().empty())
+			{
+				mSelectedRamps[i]->SetAirlines("");
+				mSelectedRamps[i]->MarkLiverySet();
+			}
+		mArchive->CommitCommand();
+		mClearFlash = "Cleared";
+	}
+	mClearFlashUntil = PaneClockNow() + 2.0;
+	mCoverageDirty = true;
+	Refresh();
+}
+
 void	WED_LiveryPane::PopulateThisRamp(void)
 {
 	if (mSelectedRamps.empty()) return;
@@ -389,6 +417,15 @@ int		WED_LiveryPane::MouseMove(int x, int y)
 	}
 	if (over_pop != mHoverPopulate)		{ mHoverPopulate = over_pop;		changed = true; }
 
+	bool over_clr = false;
+	if (!mSelectedRamps.empty())
+	{
+		float cb[4];
+		ClearButtonRect(b, cb);
+		over_clr = (x >= cb[0] && x <= cb[2] && y >= cb[1] && y <= cb[3]);
+	}
+	if (over_clr != mHoverClearAirlines)	{ mHoverClearAirlines = over_clr;	changed = true; }
+
 	int row = -1;
 	if (!mSelectedRamps.empty() && !over_sort && !over_recommend && !over_clear)
 	{
@@ -494,6 +531,14 @@ int		WED_LiveryPane::MouseDown(int x, int y, int button)
 		if (x >= pb[0] && x <= pb[2] && y >= pb[1] && y <= pb[3])
 		{
 			mTrackPopulate = true;
+			Refresh();
+			return 1;
+		}
+		float cb[4];
+		ClearButtonRect(b, cb);
+		if (x >= cb[0] && x <= cb[2] && y >= cb[1] && y <= cb[3])
+		{
+			mTrackClearAirlines = true;
 			Refresh();
 			return 1;
 		}
@@ -694,6 +739,17 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 {
 	int b[4];
 	GetBounds(b);
+
+	if (mTrackClearAirlines)
+	{
+		mTrackClearAirlines = false;
+		float cb[4];
+		ClearButtonRect(b, cb);
+		if (x >= cb[0] && x <= cb[2] && y >= cb[1] && y <= cb[3])
+			ClearAirlines();
+		Refresh();
+		return;
+	}
 
 	if (mTrackPopulate)
 	{

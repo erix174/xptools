@@ -188,6 +188,9 @@ private:
 	// "Populate This Ramp", right-aligned on the ramp name's row, single selection only.
 	void				PopulateButtonRect(int bounds[4], float b_out[4]) const;
 	void				PopulateThisRamp(void);
+	// "Clear", left of Populate: removes every airline from the selected stands.
+	void				ClearButtonRect(int bounds[4], float b_out[4]) const;
+	void				ClearAirlines(void);
 	std::map<int, std::string>	mWeightCache;
 	void				ListToolbarYRange(int bounds[4], float & top, float & bot) const;
 	float				ContentTop(int bounds[4]) const;		// top Y of the airline checklist
@@ -505,6 +508,9 @@ private:
 	int							mHoverWeightBar;	// -1 when the cursor is off the bars
 	bool						mHoverWeightButton, mTrackWeightButton;
 	bool						mHoverPopulate, mTrackPopulate;
+	bool						mHoverClearAirlines, mTrackClearAirlines;
+	std::string					mClearFlash;			// the Clear button's caption for a moment after a click
+	double						mClearFlashUntil;
 	// What the last Populate did, shown on the button for a few seconds instead of
 	// a dialog (a modal inside a mouse handler is what once left the click count stuck).
 	std::string					mPopulateFlash, mPopulateDetail;

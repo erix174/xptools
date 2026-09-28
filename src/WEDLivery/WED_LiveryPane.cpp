@@ -83,6 +83,9 @@ WED_LiveryPane::WED_LiveryPane(
 	mTrackWeightButton(false),
 	mHoverPopulate(false),
 	mTrackPopulate(false),
+	mHoverClearAirlines(false),
+	mTrackClearAirlines(false),
+	mClearFlashUntil(0.0),
 	mPopulateFlashUntil(0.0),
 	mCoverageDirty(true)
 {
@@ -225,6 +228,7 @@ void	WED_LiveryPane::Hide(void)
 	mTrackClearButton     = false;
 	mTrackWeightButton    = false;
 	mTrackPopulate        = false;
+	mTrackClearAirlines   = false;
 
 	// Hover highlights too, or the pane repaints with a lit-up control under a
 	// cursor that is somewhere else entirely.
@@ -234,6 +238,7 @@ void	WED_LiveryPane::Hide(void)
 	mHoverWeightBar       = -1;
 	mHoverWeightButton    = false;
 	mHoverPopulate        = false;
+	mHoverClearAirlines   = false;
 	mHoverSortButton      = false;
 	mHoverRecommendButton = false;
 	mHoverClearButton     = false;

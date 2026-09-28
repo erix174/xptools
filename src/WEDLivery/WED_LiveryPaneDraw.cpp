@@ -1082,7 +1082,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		string name;
 		mSelectedRamps[0]->GetName(name);
 		float pb[4];
-		PopulateButtonRect(b, pb);			// drawn below, for any selection
+		ClearButtonRect(b, pb);				// Clear and Populate are drawn below, for any selection
 		string header = ElideToWidth(font_UI_Basic, string("Ramp Start: ") + name, pb[0] - 8 - tx);
 		GUI_FontDraw(state, font_UI_Basic, header_col, tx, ty, header.c_str());
 
@@ -1123,6 +1123,28 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		float cw = GUI_MeasureRange(font_UI_Basic, cap.c_str(), cap.c_str() + cap.size());
 		GUI_FontDraw(state, font_UI_Basic, WED_Color_RGBA(wed_Table_Text),
 					 (pb[0] + pb[2]) * 0.5f - cw * 0.5f, pb[1] + 4, cap.c_str());
+
+		// Clear: the same button, to the left
+		float cb[4];
+		ClearButtonRect(b, cb);
+		const bool cflash = PaneClockNow() < mClearFlashUntil;
+		if (cflash) Refresh();
+		state->SetState(0,0,0,0,0,0,0);
+		float ck = mTrackClearAirlines ? 0.82f : (mHoverClearAirlines ? 1.15f : 1.0f);
+		glColor4f(0.26f * ck, 0.30f * ck, 0.36f * ck, 1.0f);
+		glBegin(GL_QUADS);
+			glVertex2f(cb[0], cb[1]); glVertex2f(cb[0], cb[3]);
+			glVertex2f(cb[2], cb[3]); glVertex2f(cb[2], cb[1]);
+		glEnd();
+		glColor4f(0.55f, 0.55f, 0.58f, 1.0f);
+		glBegin(GL_LINE_LOOP);
+			glVertex2f(cb[0], cb[1]); glVertex2f(cb[0], cb[3]);
+			glVertex2f(cb[2], cb[3]); glVertex2f(cb[2], cb[1]);
+		glEnd();
+		const string ccap = cflash ? mClearFlash : string("Clear");
+		float ccw = GUI_MeasureRange(font_UI_Basic, ccap.c_str(), ccap.c_str() + ccap.size());
+		GUI_FontDraw(state, font_UI_Basic, WED_Color_RGBA(wed_Table_Text),
+					 (cb[0] + cb[2]) * 0.5f - ccw * 0.5f, cb[1] + 4, ccap.c_str());
 	}
 
 	int cur_op_enum = mSelectedRamps.empty() ? ramp_operation_None : mSelectedRamps[0]->GetRampOperationType();
@@ -2178,6 +2200,9 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			}
 			if (mHoverCoverageToggle)
 				mHoverTipText = sCoverageExpanded ? "Hide the details" : "Show the details: what fills this stand, and what was left out and why";
+			if (mHoverClearAirlines)
+				mHoverTipText = mSelectedRamps.size() == 1 ? "Remove all airlines from this ramp start. Undo brings them back."
+														   : "Remove all airlines from the selected ramp starts. Undo brings them back.";
 			if (mHoverPopulate)
 				mHoverTipText = (PaneClockNow() < mPopulateFlashUntil && !mPopulateDetail.empty())
 					? mPopulateDetail

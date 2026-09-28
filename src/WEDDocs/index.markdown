@@ -652,7 +652,7 @@ Select one or more ramp starts, then click the tab. To have WED switch to the ta
 From top to bottom, the tab shows:
 
 * **The airport**: its name, ICAO code and country, and whether WED has airline data for it ("Livery recommendation is available at this airport").
-* **The ramp start's name** (or how many are selected) and the **Populate This Ramp** button (**Populate N Ramps** for several), described under Auto-Populate below.
+* **The ramp start's name** (or how many are selected), the **Populate This Ramp** button (**Populate N Ramps** for several), described under Auto-Populate below, and **Clear** to its left, which removes every airline from the selected ramp starts in one undo step.
 * **The operation type**, a row of buttons:
 
 | Button         | Written to apt.dat as | What parks there |

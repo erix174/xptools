@@ -125,6 +125,19 @@ void	WED_LiveryPane::PopulateButtonRect(int bounds[4], float b_out[4]) const
 	b_out[3] = mid + h * 0.5f;
 }
 
+void	WED_LiveryPane::ClearButtonRect(int bounds[4], float b_out[4]) const
+{
+	// same row and height as Populate, just to its left
+	float pb[4];
+	PopulateButtonRect(bounds, pb);
+	const char * cap = "Clear";
+	const float w = GUI_MeasureRange(font_UI_Basic, cap, cap + strlen(cap)) + 16;
+	b_out[2] = pb[0] - 6;
+	b_out[0] = b_out[2] - w;
+	b_out[1] = pb[1];
+	b_out[3] = pb[3];
+}
+
 void	WED_LiveryPane::WeightButtonRect(int bounds[4], float b_out[4]) const
 {
 	// Lives on the size slider's row, right-aligned, because that is where the
