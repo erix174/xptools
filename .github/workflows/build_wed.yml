@@ -77,7 +77,7 @@ jobs:
         with:
           p12-file-base64: ${{ secrets.APPLE_DEV_CERTIFICATE }}
           p12-password: ${{ secrets.APPLE_DEV_CERTIFICATE_PASSWORD }}
-      - name: Build WorldEditor (universal: x86_64 + arm64)
+      - name: "Build WorldEditor (universal - x86_64 + arm64)"
         # Intel Macs are still supported (Eric, 2026-09-27): one build per
         # architecture, joined with lipo - see scripts/build_mac_universal.sh.
         run: |
