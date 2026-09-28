@@ -73,25 +73,28 @@ WED_LiveryAllow	WED_LiveryAllowedAt(const WED_LiveryIndexEntry & e,
 	bool is_mil = code == "XPMI" || (known && (d.op_class == WED_AirlineDirectoryEntry::op_Military ||
 											   d.op_class == WED_AirlineDirectoryEntry::op_Gov));
 
+	// R27: a HOME row is equipment that names one operator so specifically it
+	// has no business abroad (a head-of-state 757, an air force's own-marked
+	// airliner): its country must be the airport's, whatever the operator's
+	// class. Today every HOME row is military or government, but the rule is
+	// the row's, so it is applied first, for all. Fail open when either country
+	// is unknown - then nothing about the stand is known, and the readout says so.
+	if (e.home_only)
+	{
+		string home = (known && !d.country.empty()) ? d.country : e.reg_country;
+		if (!home.empty() && !airport_country.empty() && home != airport_country)
+			return livery_allow_ForeignMilitary;
+	}
+
 	// General aviation parks anywhere: a private turboprop's "hub" is wherever
 	// its owner lives, and measuring it would filter out exactly the aircraft
 	// that turn up at every small field on earth.
 	if (is_ga) return livery_allow_Yes;
 
-	// Military and government: anywhere by default - an F-15 or a Seahawk at a
-	// foreign base is unremarkable - and never range-checked (no country is wide
-	// enough for range to matter at home). A HOME row is equipment that names
-	// one operator so specifically it has no business abroad (a head-of-state
-	// 757, an air force's own-marked airliner): its country must be the
-	// airport's. Fail open when either country is unknown - then nothing about
-	// the stand is known, and the readout already says so.
-	if (is_mil)
-	{
-		if (!e.home_only) return livery_allow_Yes;
-		string home = (known && !d.country.empty()) ? d.country : e.reg_country;
-		if (home.empty() || airport_country.empty()) return livery_allow_Yes;
-		return home == airport_country ? livery_allow_Yes : livery_allow_ForeignMilitary;
-	}
+	// Military and government: anywhere else by default - an F-15 or a Seahawk
+	// at a foreign base is unremarkable - and never range-checked (no country
+	// is wide enough for range to matter at home).
+	if (is_mil) return livery_allow_Yes;
 
 	return WED_LiveryInRange(e, stand_lat, stand_lon) ? livery_allow_Yes : livery_allow_OutOfRange;
 }

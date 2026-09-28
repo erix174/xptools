@@ -469,15 +469,39 @@ void WED_HandleToolBase::SelectInQuad(const Point2 quad_ll[4], GUI_KeyFlags mods
 	set<IGISEntity *> cand;
 	ProcessSelection(ent_base, bounds, cand);
 
-	// ...and each keeps its place only if it lies inside the quad itself
+	// ...and each keeps its place only if it lies inside the quad itself: its
+	// own vertices, as the level marquee's WithinBox judges the shape. Its
+	// bounding box's corners were stricter than that - a diagonal taxiway or
+	// line wholly inside the turned box has corners outside it.
 	vector<IGISEntity *> keep;
 	for (set<IGISEntity *>::iterator e = cand.begin(); e != cand.end(); ++e)
 	{
-		Bbox2 eb;
-		(*e)->GetBounds(gis_Geo, eb);
-		const Point2 c[4] = { eb.p1, Point2(eb.p2.x(), eb.p1.y()), eb.p2, Point2(eb.p1.x(), eb.p2.y()) };
+		vector<Point2> pts;
+		Point2 p;
+		if (IGISPoint * gp = dynamic_cast<IGISPoint *>(*e))
+		{
+			gp->GetLocation(gis_Geo, p); pts.push_back(p);
+		}
+		else
+		{
+			IGISPointSequence * seq = dynamic_cast<IGISPointSequence *>(*e);
+			if (!seq)
+				if (IGISPolygon * poly = dynamic_cast<IGISPolygon *>(*e)) seq = poly->GetOuterRing();
+			if (seq)
+				for (int i = 0; i < seq->GetNumPoints(); ++i)
+				{
+					seq->GetNthPoint(i)->GetLocation(gis_Geo, p); pts.push_back(p);
+				}
+		}
+		if (pts.empty())		// anything else: its bounding box, as before
+		{
+			Bbox2 eb;
+			(*e)->GetBounds(gis_Geo, eb);
+			pts.push_back(eb.p1); pts.push_back(Point2(eb.p2.x(), eb.p1.y()));
+			pts.push_back(eb.p2); pts.push_back(Point2(eb.p1.x(), eb.p2.y()));
+		}
 		bool in = true;
-		for (int i = 0; i < 4 && in; ++i) in = InConvexQuad(quad_ll, c[i]);
+		for (size_t i = 0; i < pts.size() && in; ++i) in = InConvexQuad(quad_ll, pts[i]);
 		if (in) keep.push_back(*e);
 	}
 

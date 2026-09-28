@@ -821,12 +821,10 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 	//    only, no debug UI for quality/curves/opacity/threshold/UV grid). None of these were
 	//    oversights - re-litigating them from scratch will just rediscover the same constraints.
 	//
-	// 6) ASSET PATHS ARE STILL A TEMPORARY HARDCODED DEV-MACHINE CONSTANT (see the top of
-	//    WED_FlagAssets.cpp and WED_FlagIndex.cpp). Wiring the ~210 flag/pole/mask/ink/CSV files into
-	//    WED's real resource pipeline (WED.rc's GUI_RES entries + cmake's WED_RESOURCE_FILES list,
-	//    see src/GUI/GUI_Resources.cpp) is real, necessary follow-up work before this ships to
-	//    anyone but this dev machine - it was deliberately deferred so this feature was buildable
-	//    and testable without blocking on it. Do not mistake the hardcoded path for a design choice.
+	// 6) FLAG ASSETS SHIP BESIDE WED, not inside it: the flags/ folder is found through
+	//    WedDataFileDir() (next to the executable on Windows and Linux, the bundle's Resources on
+	//    the Mac), copied there by WED.cmake and packed into the release zips by build_wed.yml.
+	//    They are not GUI_RES resources on purpose - ~210 files would bloat WED.rc for no gain.
 	//
 	// 7) COUNTRY CODE CHOICES ARE POLICY, NOT BUGS WAITING TO BE "FIXED" - see the header comment in
 	//    WED_IocCountryCodes.h before changing ANY mapping in that file. The short version: every
@@ -2334,8 +2332,8 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 						if (mHoverX >= lr[0] - grow && mHoverX <= lr[2] + grow &&
 							mHoverY >= lr[1] - grow && mHoverY <= lr[3] + grow)
 						{
-							mHoverTipText = locked ? "Spawn every listed operator again"
-												   : "Spawn this operator only";
+							mHoverTipText = locked ? "Show every operator again"
+												   : "Focus on this operator - the others are dimmed; what parks is unchanged";
 						}
 						else if (mHoverX >= tr[0] && mHoverX <= tr[2] &&
 								 mHoverY >= tr[1] && mHoverY <= tr[3] &&
