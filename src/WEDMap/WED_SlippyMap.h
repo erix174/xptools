@@ -54,6 +54,14 @@ private:
 
 			void	finish_loading_tile();
 			int 	get_zl_for_map(double in_ppm, double lattitude);
+			void	self_test_step();
+
+	// WED_SLIPPY_SELFTEST: -1 = off, else the index of the test that is running
+			int		mSelfTest;
+			bool	mSelfTestStarted;
+			double	mSelfTestStart;
+	// tile counts of the last DrawVisualization()
+			int		mWant, mGot, mBad, mZoom;
 
 	WED_file_cache_request* m_cache_request;
 

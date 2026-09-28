@@ -537,7 +537,8 @@ void CopyMenusRecursive(HMENU src, HMENU dst)
 	{
 		MENUITEMINFOA mif = { 0 };
 		mif.cbSize = sizeof(mif);
-		mif.fMask = MIIM_TYPE | MIIM_SUBMENU | MIIM_STATE | MIIM_ID;
+		// Not MIIM_TYPE: for an item with an icon that reports a bitmap-only item and the copy loses its text
+		mif.fMask = MIIM_FTYPE | MIIM_STRING | MIIM_BITMAP | MIIM_SUBMENU | MIIM_STATE | MIIM_ID;
 		mif.cch = sizeof(buf);
 		mif.dwTypeData = buf;
 		GetMenuItemInfoA(src, i, true, &mif);
@@ -547,12 +548,6 @@ void CopyMenusRecursive(HMENU src, HMENU dst)
 		InsertMenuItemA(dst,-1,true,&mif);
 		if (mif.hSubMenu)
 			CopyMenusRecursive(orig_submenu, mif.hSubMenu);
-
-		MENUITEMINFOA bmp = { 0 };                  // MIIM_TYPE can not be combined with MIIM_BITMAP
-		bmp.cbSize = sizeof(bmp);
-		bmp.fMask = MIIM_BITMAP;
-		if (GetMenuItemInfoA(src, i, true, &bmp) && bmp.hbmpItem)
-			SetMenuItemInfoA(dst, i, true, &bmp);
 	}
 }
 #endif

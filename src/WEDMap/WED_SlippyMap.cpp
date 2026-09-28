@@ -41,6 +41,8 @@
 #include "WED_FileCache.h"
 #define _USE_MATH_DEFINES
 #include <math.h>
+#include <stdlib.h>
+#include <chrono>
 
 #if APL
 	#include <OpenGL/gl.h>
@@ -116,6 +118,58 @@ static int predefined_idx(int mode)
 	if(mode > MODE_CUSTOM && mode - 2 < PREDEFINED_MAPS)    return mode - 2;
 	return -1;
 }
+
+// Debug aids, both off unless the environment variable is set:
+// WED_SLIPPY_DEBUG     logs every mode change, tile request and result
+// WED_SLIPPY_SELFTEST  after startup, shows each map at an airport inside and one outside its coverage
+//                      and logs how many tiles loaded. Open a package first, e.g. with --package.
+static bool slippy_self_test(void)
+{
+	static bool on = getenv("WED_SLIPPY_SELFTEST") != NULL;
+	return on;
+}
+
+static bool slippy_debug(void)
+{
+	static bool on = getenv("WED_SLIPPY_DEBUG") != NULL || slippy_self_test();
+	return on;
+}
+
+static double seconds_now(void)
+{
+	return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
+struct slippy_test_t {
+	int          mode;
+	const char * icao;
+	double       lat, lon;
+	bool         inside;       // inside the map's coverage
+};
+
+static const slippy_test_t slippy_tests[] = {
+	{  1, "LOWW",  48.1103,   16.5697, true  },
+	{  2, "LOWW",  48.1103,   16.5697, true  },
+	{  4, "LOWW",  48.1103,   16.5697, true  },    // Austria
+	{  4, "LZIB",  48.1702,   17.2127, false },
+	{  5, "EETN",  59.4133,   24.8328, true  },    // Estonia
+	{  5, "EVRA",  56.9236,   23.9711, false },
+	{  6, "LFPG",  49.0097,    2.5479, true  },    // France, Monaco
+	{  6, "FMEE", -20.8871,   55.5103, true  },
+	{  6, "NTAA", -17.5537, -149.6070, false },
+	{  7, "RJTT",  35.5494,  139.7798, true  },    // Japan
+	{  7, "RKPK",  35.1795,  128.9382, false },
+	{  8, "EHAM",  52.3086,    4.7639, true  },    // Netherlands
+	{  8, "TNCB",  12.1310,  -68.2685, false },
+	{  9, "LEMD",  40.4719,   -3.5626, true  },    // Spain, Gibraltar
+	{  9, "LXGB",  36.1512,   -5.3497, true  },
+	{  9, "LPPT",  38.7813,   -9.1359, false },
+	{ 10, "LSZH",  47.4647,    8.5492, true  },    // Switzerland, Liechtenstein
+	{ 10, "LSXB",  47.0664,    9.5372, true  },
+};
+#define SELF_TESTS ((int) (sizeof(slippy_tests) / sizeof(slippy_tests[0])))
+#define SELF_TEST_TIMEOUT 20.0
+#define SELF_TEST_ENOUGH  6     // tiles resolved one way or the other before moving on
 
 int WED_SlippyMap::CountRegionalMaps(void)
 {
@@ -237,8 +291,17 @@ static void get_tile_range_for_box(const double bounds[4], int z, int tiles[4])
 WED_SlippyMap::WED_SlippyMap(GUI_Pane * h, WED_MapZoomerNew * zoomer, IResolver * resolver)
 	: WED_MapLayer(h, zoomer, resolver),
 	m_cache_request(NULL),
-	mMapMode(0)
+	mMapMode(0),
+	mSelfTest(slippy_self_test() ? 0 : -1),
+	mSelfTestStarted(false),
+	mSelfTestStart(0),
+	mWant(0), mGot(0), mBad(0), mZoom(0)
 {
+	if(mSelfTest >= 0)
+	{
+		LOG_MSG("I/Sli SELFTEST starting, %d tests\n", SELF_TESTS);
+		Start(0.25);
+	}
 }
 
 WED_SlippyMap::~WED_SlippyMap()
@@ -355,13 +418,21 @@ void	WED_SlippyMap::DrawVisualization(bool inCurrent, GUI_GraphState * g)
 			else if(m_cache_request == NULL)
 			{
 				m_cache_request = new WED_file_cache_request(cache_domain_osm_tile, folder_prefix, url);
+				if(slippy_debug())
+					LOG_MSG("I/Sli get %s\n         -> %s\n", url, potential_path.c_str());
 			}
 		}
 	}
 
+	mWant = want; mGot = got; mBad = bad; mZoom = z_max;
+
 	if (m_cache_request)
 	{
 		this->Start(0.05);
+	}
+	else if (mSelfTest >= 0)
+	{
+		this->Start(0.25);
 	}
 	else
 	{
@@ -449,6 +520,21 @@ static bool is_ESRI_blank(const string& path, const ImageInfo& info)
 	return same_grey;
 }
 
+// Several regional servers answer outside their coverage with a single colored tile instead of a 404.
+// Drawing those would cover the map with white or black squares, so treat them as missing.
+static bool is_uniform(const ImageInfo& info)
+{
+	int line_stride = info.channels * (info.width + info.pad);
+	for (int y = 0; y < info.height; ++y)
+	{
+		const unsigned char * row = info.data + y * line_stride;
+		for (int x = 0; x < info.width * info.channels; ++x)
+			if (row[x] != info.data[x % info.channels])
+				return false;
+	}
+	return true;
+}
+
 void	WED_SlippyMap::finish_loading_tile()
 {
 	if (m_cache_request != NULL)
@@ -473,8 +559,10 @@ void	WED_SlippyMap::finish_loading_tile()
 						for (int c = 0; c < info.channels; ++c)
 							info.data[x + c] = intlim((1.0 - SATURATION) * val + SATURATION * info.data[x + c] + BRIGHTNESS, 0, 255);
 					}
-				if (is_ESRI_blank(res.out_path, info))
+				if (is_ESRI_blank(res.out_path, info) || is_uniform(info))
 				{
+					if(slippy_debug())
+						LOG_MSG("I/Sli blank tile %s\n", res.out_path.c_str());
 					m_cache[res.out_path] = 0;
 				}
 				else
@@ -484,6 +572,8 @@ void	WED_SlippyMap::finish_loading_tile()
 					if (LoadTextureFromImage(info, tex_id, tex_Linear, NULL, NULL, NULL, NULL))
 					{
 						m_cache[res.out_path] = tex_id;
+						if(slippy_debug())
+							LOG_MSG("I/Sli ok %dx%d %s\n", info.width, info.height, res.out_path.c_str());
 					}
 					else
 					{
@@ -503,11 +593,12 @@ void	WED_SlippyMap::finish_loading_tile()
 		}
 		else if (res.out_status == cache_status_error)
 		{
-			int code = res.out_error_type;
+			// res.out_path is empty on errors. Marking that instead of the tile left the tile unmarked, so it was requested
+			// again on the next draw - and with one request at a time, one missing tile stopped all others from loading.
+			string tile_path = gFileCache.url_to_cache_path(*m_cache_request);
+			LOG_MSG("E/Sli %s: %s\n", m_cache_request->in_url.c_str(), res.out_error_human.c_str());
 
-			LOG_MSG("E/Sli cache error %s: %d\n%s\n", res.out_path.c_str(), code, res.out_error_human.c_str());
-
-			m_cache[res.out_path] = 0;
+			m_cache[tile_path] = 0;
 
 			delete m_cache_request;
 			m_cache_request = NULL;
@@ -515,8 +606,42 @@ void	WED_SlippyMap::finish_loading_tile()
 	}
 }
 
+void	WED_SlippyMap::self_test_step()
+{
+	const slippy_test_t& t = slippy_tests[mSelfTest];
+	if(!mSelfTestStarted)
+	{
+		SetMode(t.mode);
+		double dlon = 0.004, dlat = 0.004 * cos(t.lat * M_PI / 180.0);    // about ZL17 in a full screen map
+		GetZoomer()->ZoomShowArea(t.lon - dlon, t.lat - dlat, t.lon + dlon, t.lat + dlat);
+		mWant = mGot = mBad = mZoom = 0;
+		mSelfTestStart = seconds_now();
+		mSelfTestStarted = true;
+		return;
+	}
+
+	int textures = mGot - mBad;
+	double elapsed = seconds_now() - mSelfTestStart;
+	bool done = (mWant > 0 && mGot >= mWant) || textures >= SELF_TEST_ENOUGH || mBad >= SELF_TEST_ENOUGH || elapsed > SELF_TEST_TIMEOUT;
+	if(!done) return;
+
+	const char * verdict = t.inside ? (textures > 0 ? "PASS" : "FAIL") : (textures == 0 ? "PASS" : "CHECK - outside coverage, but tiles came back");
+	int idx = predefined_idx(t.mode);
+	LOG_MSG("I/Sli SELFTEST %-4s mode %2d %-40s %s z%d want %d got %d textures %d errors %d in %.1fs\n", verdict, t.mode,
+		idx >= 2 ? slippy_sources[idx].name : (t.mode == 1 ? "OpenStreetMap" : "ESRI"), t.icao, mZoom, mWant, mGot, textures, mBad, elapsed);
+
+	mSelfTestStarted = false;
+	if(++mSelfTest >= SELF_TESTS)
+	{
+		LOG_MSG("I/Sli SELFTEST done\n");
+		mSelfTest = -1;
+	}
+}
+
 void	WED_SlippyMap::TimerFired()
 {
+	if(mSelfTest >= 0)
+		self_test_step();
 	GetHost()->Refresh();
 }
 
@@ -565,9 +690,14 @@ void	WED_SlippyMap::SetMode(int mode)
 			dir_printf_fmt = url_printf_fmt.substr(0, query_pos) + "/%3$d/%1$d/%2$d";
 		dir_printf_fmt = dir_printf_fmt.substr(dir_printf_fmt.find("//")+2);
 		replace(dir_printf_fmt.begin(), dir_printf_fmt.end(), '/', DIR_CHAR);
+		for(auto& c : dir_printf_fmt)                        // e.g. PDOK's ".../EPSG:3857/..." - ':' is illegal in Windows folder names
+			if(strchr(":*?\"<>|", c))
+				c = '_';
 
 		mMapMode = mode;
 		SetVisible(1);
+		if(slippy_debug())
+			LOG_MSG("I/Sli mode %d url %s\n                dir %s\n", mode, url_printf_fmt.c_str(), dir_printf_fmt.c_str());
 	}
 	else
 	{
