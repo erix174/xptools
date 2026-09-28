@@ -364,7 +364,10 @@ static string	VerifyText(const WED_ModerationEntry & e, const float ** col)
 	char buf[96];
 	switch (e.verify) {
 	case WED_ModerationEntry::verify_Assumed:
-		return "Operators: auto-filled, assumed correct";
+		if (e.n_to_check == 0) return "Operators: auto-filled, assumed correct";
+		*col = kAmber;			// codes on it that auto-fill would not have added
+		snprintf(buf, sizeof(buf), "Operators: auto-filled, but %d not from auto-fill - check", e.n_to_check);
+		return buf;
 	case WED_ModerationEntry::verify_Database:
 		if (e.n_to_check == 0) { *col = kGreen; return "Operators: all listed as serving " + e.icao; }
 		*col = kAmber;

@@ -775,10 +775,15 @@ void	WED_ModerationDescribe(WED_RampPosition * ramp, WED_Airport * apt, WED_Mode
 	for (size_t i = 0; i < served.size(); ++i) served_set.insert(Upper(served[i]));
 
 	const bool pax_cargo = out.op_type == ramp_operation_Airline || out.op_type == ramp_operation_Cargo;
+	// An auto-filled stand is taken on trust only as far as auto-fill could have
+	// written it: auto-fill only ever adds operators the airport database lists
+	// as serving the airport. Anything else on it - kept from before the fill,
+	// typed since, or a hand-written 1315 A - is checked like any other stand.
+	// With no database entry auto-fill added nothing, so there is nothing to trust.
 	if (pax_cargo)
-		out.verify = out.auto_filled   ? WED_ModerationEntry::verify_Assumed
-				   : !served.empty()   ? WED_ModerationEntry::verify_Database
-									   : WED_ModerationEntry::verify_NoData;
+		out.verify = served.empty()    ? WED_ModerationEntry::verify_NoData
+				   : out.auto_filled   ? WED_ModerationEntry::verify_Assumed
+									   : WED_ModerationEntry::verify_Database;
 	else if (out.op_type == ramp_operation_Military)
 		out.verify = WED_ModerationEntry::verify_Country;
 
@@ -798,7 +803,13 @@ void	WED_ModerationDescribe(WED_RampPosition * ramp, WED_Airport * apt, WED_Mode
 
 		switch (out.verify) {
 		case WED_ModerationEntry::verify_Assumed:
-			c.verdict = WED_ModerationCode::v_Assumed;
+			if (pseudo)							c.verdict = WED_ModerationCode::v_Plain;
+			else if (known && served_set.count(c.code))	c.verdict = WED_ModerationCode::v_Assumed;
+			else
+			{
+				c.verdict    = WED_ModerationCode::v_Check;		// not auto-fill's: check it
+				c.search_url = WED_ModerationSearchURL(name, apt_city, out.icao);
+			}
 			break;
 		case WED_ModerationEntry::verify_Database:
 			if (pseudo)							c.verdict = WED_ModerationCode::v_Plain;
