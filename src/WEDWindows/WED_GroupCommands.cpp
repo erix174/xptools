@@ -4757,13 +4757,13 @@ static string get_xplane_codes(int width_enum, const set<int>& eq, int ops_type,
 	return out;
 }
 
-// Will X-Plane park its own static aircraft here? A None ramp parks nothing
-// (2.7.2 too), nor does a 2.8 stand with all-zero weights, so a static the
-// author placed on it is no double and stays.
+// Will X-Plane park its own static aircraft here? A 2.8 stand set to None, or
+// with all-zero weights, parks nothing, so a static the author placed on it is
+// no double and stays. Legacy stands are judged as before: all of them.
 static bool parks_static_aircraft(WED_RampPosition * r)
 {
-	if (r->GetRampOperationType() == ramp_operation_None) return false;
 	if (!r->HasLiveryFingerprint()) return true;
+	if (r->GetRampOperationType() == ramp_operation_None) return false;
 	int w[6];
 	if (r->GetClassWeights(w))
 		return w[0] + w[1] + w[2] + w[3] + w[4] + w[5] > 0;
@@ -4795,17 +4795,35 @@ int wed_upgrade_ramps(WED_Thing* who, int * out_removed_statics)
 	for (auto r : ramps)
 	{
 		// A 2.8 stand (1313 or 1315, see HasLiveryFingerprint) is the author's:
-		// its airline list, picked against the livery index, is not upgraded.
-		// This also runs on the Gateway's own bulk export (GATEWAY_IMPORT_MODE).
+		// its operation type - None is a choice now, "no static aircraft" - and
+		// its airline list, picked against the livery index, are not upgraded.
+		// This is the only thing between a 2.8 airport and this 10.45-era code,
+		// which also runs on the Gateway's own bulk export (GATEWAY_IMPORT_MODE).
 		if (r->HasLiveryFingerprint()) continue;
 
-		// Operation type None is left alone. This used to turn every None gate
-		// into Airline and every None tie-down into GA or Airline, which undid
-		// the stands artists set to None on purpose to keep parked aircraft away
-		// (float plane docks, lone helipads). Validation now warns about None
-		// gates and tie-downs on Gateway exports instead, so a stand that was
-		// simply never set still gets noticed before it is submitted.
+		if (r->GetRampOperationType() == ramp_operation_None)
+		{
+			// fill in ops types
+			switch(r->GetType())
+			{
+				case atc_Ramp_Gate:
+					r->SetRampOperationType(ramp_operation_Airline);
+					did_work = 1;
+					break;			
+				case atc_Ramp_TieDown:
+				{
+					set<int> eq;
+					r->GetEquipment(eq);
 
+					if(eq.count(atc_Heavies))
+						r->SetRampOperationType(ramp_operation_Airline);
+					else
+						r->SetRampOperationType(ramp_operation_GeneralAviation);
+					did_work = 1;
+					break;
+				}
+			}
+		}
 		// determine "clusters"
 /*		auto ramps_by_dist(ramps);
 		ramps_by_dist.erase(std::find(ramps_by_dist.begin(), ramps_by_dist.end(), r));
@@ -4853,8 +4871,7 @@ int wed_upgrade_ramps(WED_Thing* who, int * out_removed_statics)
 			}
 		}
 	}
-	// nuke static aircraft objects near ramps - but not near a None ramp: X-Plane
-	// parks nothing there, so a static placed on it is no double
+	// nuke static aircraft objects near ramps
 	for(auto& o : objs)
 	{
 		for(auto r : ramps)
