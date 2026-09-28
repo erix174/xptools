@@ -576,8 +576,10 @@ correctly.
   In apt.dat, `none` alone cannot tell "no static aircraft" (R29) from 2.7's
   "not set", which 2.7 wrote too. WED's legacy ramp upgrade - run on every
   Gateway-target export and on the Gateway's own bulk export
-  (`GATEWAY_IMPORT_MODE`) - turns `none` into airline or GA, rewrites airline
-  lists and removes static aircraft objects on ramp starts. It skips 2.8 stands
+  (`GATEWAY_IMPORT_MODE`) - turns `none` into airline or GA and removes static
+  aircraft objects on ramp starts. (Until WED 2.8 it also appended hard-coded
+  "regional" airline codes to airline stands; 2.8 no longer adds any code on
+  export - authors use Auto-Populate, which is visible and marked.) It skips 2.8 stands
   entirely, and near a 2.8 stand that parks nothing (None, or all-zero weights)
   it removes no object. A new stand placed with the tool and never set keeps no
   mark and is upgraded as before. **The Gateway's bulk export must run WED 2.8

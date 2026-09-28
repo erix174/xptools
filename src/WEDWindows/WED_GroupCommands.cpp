@@ -4648,115 +4648,6 @@ static void collect_ramps_recursive(WED_Thing * who, vector<WED_RampPosition *>&
 	}
 }
 
-static const vector<Point2> canada {{-135,50}, {-123.3,48.2}, {-123.2,49}, {-94.5,49}, {-83.1,46}, {-81.8,43.6}, {-83.14,42.13}, {-82,41.7}, {-74.8,45},
-									{-72,45}, {-68,47}, {-67,45}, {-66,42}, {-40,50}, {-73,77}, {-50,84}, {-141,84}, {-141,60}, {-135,60}, {-130,56}};
-
-static string get_regional_codes(const Point2& loc, int ac_size, int ops_type)
-{
-	string code;
-	
-	if(ops_type == ramp_operation_Cargo)   // cargo isn't regionalized for now
-	{
-		return "";      // dont add FDX UPS etc - as it would prevent any 3rd party other csargo airlines to show up
-	}
-	
-	if (loc.x() < -32.0)
-	{
-		code = "aal ual dal ";
-		if(loc.x() < -150.0 && loc.y() > 10.0 && loc.y() < 40.0) // hawaii
-		{
-			if(ac_size > width_B) code += "hal swa asa ";
-			else                  code += "hal fdy ";
-		}
-		else if(loc.y() < 13.0)
-		{
-			if (loc.x() > -120.0)                   // south america
-				code += "tam lan glo azu ava arg ame ";
-			else                                    // south pacific
-				code += "";
-		}
-		else if(inside_polygon_pt(canada.rbegin(), canada.rend(), loc))  // canada
-			code += "aca wja ";
-		else
-		{
-			if(ac_size < width_D)
-			{
-				if(loc.x() < - 103.0)            // USA west
-					code += "swa asa qxe ";
-				else	                         // USA east
-					code += "swa jbu nks egf ";
-			}
-		}
-	}
-	else if(loc.x() < 60.0)
-	{
-		code = "baw afr klm dlh vir ";
-		if(loc.x() > 37.0 && loc.y() > 12.0 && loc.y() < 34.0)    // near east
-			code += "uae etd qtr ";
-		else if(loc.y() > 34.0)                   // europe
-		{
-			code += "sas aza ibe sva ";
-			if(ac_size <= width_C) 
-			{
-				code += "ber ryr vlg ezy ";
-				if(LonLatDistMeters(loc, Point2(11,47)) < 300e3) code += "wlc tyr lpv aua "; // within 300 km of LOWI
-			}
-		}
-		else                                       // africa
-			code += "eth saa msr ram ";
-	}
-	else
-	{
-		if(loc.y() < -10.5)                        // australia, nz
-			code = "qfa anz qlk ";
-		else
-		{
-			if(loc.x() < 86.0)                     // india
-				code = "aic igo ";
-			else if(loc.x() < 124.0 && loc.y() > 20.0)  // china
-				code = "csn ces cca chh cxa ";
-			else                                        // far east asia
-				code = "lni tlm sia cpa ana jal kal gia ";
-		}
-	}
-
-	return code;
-}
-
-static string get_xplane_codes(int width_enum, const set<int>& eq, int ops_type, WED_LibraryMgr* lmgr)
-{
-	const char *ops_str = ops_type == ramp_operation_Airline ? "lib/airport/aircraft/airliners" : "lib/airport/aircraft/cargo";
-	vector<string> static_ac_vpaths;
-	lmgr->GetResourceChildren(ops_str, pack_Default, static_ac_vpaths, true);
-	set<string>	codes_matching_start;
-	
-	char width_char = width_enum - width_A + 'a';
-	char width_char2 = max((char) (width_char - 1), 'a');
-	
-	for(auto v : static_ac_vpaths)
-	{
-		string s = v.substr(strlen(ops_str) + 1);
-		if(eq.count(atc_Turbos) && s.find("turboprop_") == 0)
-			if((s[10] == width_char || s[10] == width_char2 )&& s[11] != '.')
-				codes_matching_start.insert(s.substr(12,3));
-				
-		if(eq.count(atc_Jets) && s.find("jet_") == 0)
-			if((s[4] == width_char || s[4] == width_char2 )&& s[5] != '.')
-				codes_matching_start.insert(s.substr(6,3));
-				
-		if(eq.count(atc_Heavies) && s.find("heavy_") == 0)
-			if((s[6] == width_char || s[6] == width_char2) && s[7] != '.')
-				codes_matching_start.insert(s.substr(8,3));
-	}
-
-	string out;
-	for(auto c : codes_matching_start)
-		out += c + " ";
-
-	// printf("%s for size %c: %s\n", ops_str, width_char, out.c_str());
-	return out;
-}
-
 // Will X-Plane park its own static aircraft here? A 2.8 stand set to None, or
 // with all-zero weights, parks nothing, so a static the author placed on it is
 // no double and stays. Legacy stands are judged as before: all of them.
@@ -4773,7 +4664,6 @@ static bool parks_static_aircraft(WED_RampPosition * r)
 int wed_upgrade_ramps(WED_Thing* who, int * out_removed_statics)
 {
 	auto rmgr = WED_GetResourceMgr(who->GetArchive()->GetResolver());
-	auto lmgr = WED_GetLibraryMgr(who->GetArchive()->GetResolver());
 	auto sel  = WED_GetSelect(who->GetArchive()->GetResolver());
 
 	int did_work = 0;
@@ -4781,24 +4671,14 @@ int wed_upgrade_ramps(WED_Thing* who, int * out_removed_statics)
 	vector<obj_conflict_info> objs;
 	collect_ramps_recursive(who, ramps, objs, rmgr);
 
-	Point2 apt_loc;
-	if(auto apt = dynamic_cast<WED_Airport*>(who))
-	{
-		Bbox2 bounds;
-		apt->GetBounds(gis_Geo, bounds);
-		apt_loc = bounds.centroid();
-	}
-	else return 0;
-
-	srand( 100 * (apt_loc.x()+180) + 36000 * (apt_loc.y()+90) ); // for repeatable patterns per airport
+	if (!dynamic_cast<WED_Airport*>(who)) return 0;
 
 	for (auto r : ramps)
 	{
 		// A 2.8 stand (1313 or 1315, see HasLiveryFingerprint) is the author's:
-		// its operation type - None is a choice now, "no static aircraft" - and
-		// its airline list, picked against the livery index, are not upgraded.
-		// This is the only thing between a 2.8 airport and this 10.45-era code,
-		// which also runs on the Gateway's own bulk export (GATEWAY_IMPORT_MODE).
+		// its operation type - None is a choice now, "no static aircraft" - is
+		// not upgraded. This runs on the Gateway's own bulk export too
+		// (GATEWAY_IMPORT_MODE).
 		if (r->HasLiveryFingerprint()) continue;
 
 		if (r->GetRampOperationType() == ramp_operation_None)
@@ -4824,52 +4704,15 @@ int wed_upgrade_ramps(WED_Thing* who, int * out_removed_statics)
 				}
 			}
 		}
-		// determine "clusters"
-/*		auto ramps_by_dist(ramps);
-		ramps_by_dist.erase(std::find(ramps_by_dist.begin(), ramps_by_dist.end(), r));
-		Point2 my_loc;
-		r->GetLocation(gis_Geo, my_loc);
-		std::sort(ramps_by_dist.begin(), ramps_by_dist.end(),[&](WED_RampPosition* a, WED_RampPosition* b)
-		{
-			Point2 loc_a, loc_b;
-			a->GetLocation(gis_Geo, loc_a);
-			b->GetLocation(gis_Geo, loc_b);
-			return LonLatDistMeters(my_loc, loc_a) > LonLatDistMeters(my_loc, loc_b);
-		});
-*/	
-		// fill in regio apropriate airline names
-		if (r->GetRampOperationType() == ramp_operation_Airline || r->GetRampOperationType() == ramp_operation_Cargo)
-		{
-			string old_codes =  WED_RampPosition::CorrectAirlinesString(r->GetAirlines());
-			string new_codes;
-			if(r->GetWidth() < width_D || rand() & 1)     // regionalize only half the large ones, as large birds roam the whole world
-			{
-				set<int> eq;
-				r->GetEquipment(eq);
-				string available_codes = get_xplane_codes(r->GetWidth(), eq, r->GetRampOperationType(), lmgr);
-				string regional_codes = get_regional_codes(apt_loc,r->GetWidth(), r->GetRampOperationType());
-
-				bool old_codes_good_enough = false;
-				while (old_codes.size() >= 3)
-				{
-					if(available_codes.find(old_codes.substr(0,3)) != string::npos)
-					{
-						new_codes = old_codes;
-						old_codes_good_enough = true;
-						break;
-					}
-					new_codes += old_codes.substr(0, 3) + " ";
-					old_codes.erase(0, intmin2(old_codes.size(), 4));
-				}
-				
-				if(new_codes.empty() || !old_codes_good_enough)
-					new_codes += regional_codes;
-
-				std::transform(new_codes.begin(), new_codes.end(), new_codes.begin(), [](unsigned char c) {return toupper(c);} );
-				r->SetAirlines(new_codes);
-				did_work = 1;
-			}
-		}
+		// No airline codes are added any more (WED 2.8, Eric 2026-09-28). This
+		// used to append a hard-coded list of "regional" airlines, by longitude
+		// and latitude, to airline stands (every one below class D, half the rest)
+		// on every Gateway export -
+		// silently, into the exported apt.dat only. With the livery index those
+		// lists often named airlines that do not serve the airport or cannot reach
+		// it (R26). Authors fill stands with Auto-Populate instead: from the
+		// airport database, range and equipment checked, extend-only, undoable,
+		// and marked auto-filled (1315 A) for moderators.
 	}
 	// nuke static aircraft objects near ramps
 	for(auto& o : objs)
