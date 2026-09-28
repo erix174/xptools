@@ -252,11 +252,11 @@ void	WED_SlippyMap::DrawVisualization(bool inCurrent, GUI_GraphState * g)
 				default: yTransformed = y;
 			}
 #if IBM
-			char url[200]; _sprintf_p(url, 200, url_printf_fmt.c_str(), x, yTransformed, z);
-			char dir[200]; _sprintf_p(dir, 200, dir_printf_fmt.c_str(), x, yTransformed, z);
+			char url[1024]; _sprintf_p(url, sizeof(url), url_printf_fmt.c_str(), x, yTransformed, z);
+			char dir[1024]; _sprintf_p(dir, sizeof(dir), dir_printf_fmt.c_str(), x, yTransformed, z);
 #else
-			char url[200]; snprintf(url, 200, url_printf_fmt.c_str(), x, yTransformed, z);
-			char dir[200]; snprintf(dir, 200, dir_printf_fmt.c_str(), x, yTransformed, z);  // make sure ALL args are referenced in the format string
+			char url[1024]; snprintf(url, sizeof(url), url_printf_fmt.c_str(), x, yTransformed, z);
+			char dir[1024]; snprintf(dir, sizeof(dir), dir_printf_fmt.c_str(), x, yTransformed, z);  // make sure ALL args are referenced in the format string
 #endif
 			string folder_prefix(dir); folder_prefix.erase(folder_prefix.find_last_of(DIR_STR));
 
@@ -490,7 +490,14 @@ void	WED_SlippyMap::SetMode(int mode)
 	   y_coordinate_math != yNone &&
 	   replace_token(url_printf_fmt, "${z}", "%3$d"))
 	{
-		dir_printf_fmt = url_printf_fmt.substr(url_printf_fmt.find("//")+2);
+		// The cache file name comes from the url. With a query string all tiles would share the same folder,
+		// so put the tile coordinates into the folder names instead.
+		size_t query_pos = url_printf_fmt.find('?');
+		if(query_pos == string::npos)
+			dir_printf_fmt = url_printf_fmt;
+		else
+			dir_printf_fmt = url_printf_fmt.substr(0, query_pos) + "/%3$d/%1$d/%2$d";
+		dir_printf_fmt = dir_printf_fmt.substr(dir_printf_fmt.find("//")+2);
 		replace(dir_printf_fmt.begin(), dir_printf_fmt.end(), '/', DIR_CHAR);
 
 		mMapMode = mode;
