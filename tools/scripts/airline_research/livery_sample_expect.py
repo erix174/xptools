@@ -10,8 +10,12 @@ all applied, the same predicate the sim and WED's Liveries tab use. Hubs are
 placed from the install's Global Airports, so run it against the install the
 index came from.
 
-This is how docs/livery_sample/README.md's expected-results table is produced:
-regenerate the table with it whenever the index or the rules change.
+This is how docs/livery_sample/README.md's expected-results table was produced.
+
+NOT THE REFERENCE (2026-09-28). It predates the equipment filter (spec P3), HOME
+on every class, GA without range, pool stands (GA / military with no list) and
+the legacy step-down, and disagrees with WED on all of them. The reference is
+WED's own rule: WED_LiveryConformanceReport, see docs/livery_conformance/.
 """
 import math, os, sys
 

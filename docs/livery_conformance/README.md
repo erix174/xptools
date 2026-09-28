@@ -9,7 +9,7 @@ use it, so this is also what authors and moderators are told.
 
 | file | airport |
 |---|---|
-| `ZZBA_sample.tsv` | `docs/livery_sample/` - one stand per rule, including the malformed ones |
+| `ZBAA_sample.tsv` | `docs/livery_sample/` - one stand per rule, including the malformed ones |
 | `LFPG.tsv` | Paris Charles de Gaulle from Global Airports - 500+ stands, every operation type |
 
 Each header states the WED build and the livery index version it was made
