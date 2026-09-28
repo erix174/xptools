@@ -62,6 +62,11 @@ private:
 			double	mSelfTestStart;
 	// tile counts of the last DrawVisualization()
 			int		mWant, mGot, mBad, mZoom;
+	// when m_cache_request was made, to log requests that hang
+			double	mRequestStart;
+			bool	mStallReported;
+	// the mode of the last DrawVisualization(), for WED_SLIPPY_DEBUG
+			int		mDrawnMode;
 
 	WED_file_cache_request* m_cache_request;
 

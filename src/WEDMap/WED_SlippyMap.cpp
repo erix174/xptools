@@ -167,6 +167,15 @@ static const slippy_test_t slippy_tests[] = {
 	{  9, "LPPT",  38.7813,   -9.1359, false },
 	{ 10, "LSZH",  47.4647,    8.5492, true  },    // Switzerland, Liechtenstein
 	{ 10, "LSXB",  47.0664,    9.5372, true  },
+	// Eric's repro 2026-09-28: Japan, then ESRI, then back to Japan loaded nothing. Each step at a new place, so
+	// every step has to fetch new tiles instead of showing cached ones.
+	{  7, "RJTT",  35.5494,  139.7798, true  },
+	{  2, "RJAA",  35.7647,  140.3864, true  },
+	{  7, "RJAA",  35.7647,  140.3864, true  },
+	{  2, "RJBB",  34.4347,  135.2440, true  },
+	{  7, "RJBB",  34.4347,  135.2440, true  },
+	{  1, "RJOO",  34.7855,  135.4382, true  },
+	{  7, "RJOO",  34.7855,  135.4382, true  },
 };
 #define SELF_TESTS ((int) (sizeof(slippy_tests) / sizeof(slippy_tests[0])))
 #define SELF_TEST_TIMEOUT 20.0
@@ -296,7 +305,8 @@ WED_SlippyMap::WED_SlippyMap(GUI_Pane * h, WED_MapZoomerNew * zoomer, IResolver 
 	mSelfTest(slippy_self_test() ? 0 : -1),
 	mSelfTestStarted(false),
 	mSelfTestStart(0),
-	mWant(0), mGot(0), mBad(0), mZoom(0)
+	mWant(0), mGot(0), mBad(0), mZoom(0),
+	mRequestStart(0), mStallReported(false), mDrawnMode(0)
 {
 	if(mSelfTest >= 0)
 	{
@@ -313,7 +323,13 @@ WED_SlippyMap::~WED_SlippyMap()
 
 void	WED_SlippyMap::DrawVisualization(bool inCurrent, GUI_GraphState * g)
 {
-	if (mMapMode ==0) return;
+	if (mMapMode ==0) { mDrawnMode = 0; return; }
+	if (slippy_debug() && mMapMode != mDrawnMode)
+	{
+		LOG_MSG("I/Sli drawing mode %d\n", mMapMode);
+		LOG_FLUSH();
+	}
+	mDrawnMode = mMapMode;
 	finish_loading_tile();
 
 	double map_bounds[4];
@@ -419,6 +435,8 @@ void	WED_SlippyMap::DrawVisualization(bool inCurrent, GUI_GraphState * g)
 			else if(m_cache_request == NULL)
 			{
 				m_cache_request = new WED_file_cache_request(cache_domain_osm_tile, folder_prefix, url);
+				mRequestStart = seconds_now();
+				mStallReported = false;
 				if(slippy_debug())
 					LOG_MSG("I/Sli get %s\n         -> %s\n", url, potential_path.c_str());
 			}
@@ -614,10 +632,12 @@ void	WED_SlippyMap::finish_loading_tile()
 			delete m_cache_request;
 			m_cache_request = NULL;
 		}
-		else if (res.out_status == cache_status_error)
+		else if (res.out_status == cache_status_error || res.out_status == cache_status_cooling)
 		{
 			// res.out_path is empty on errors. Marking that instead of the tile left the tile unmarked, so it was requested
 			// again on the next draw - and with one request at a time, one missing tile stopped all others from loading.
+			// A tile that failed recently is 'cooling' for a minute in the file cache - waiting that out here stalled
+			// every other tile, of every map, for that minute. So it counts as failed as well.
 			string tile_path = gFileCache.url_to_cache_path(*m_cache_request);
 			LOG_MSG("E/Sli %s: %s\n", m_cache_request->in_url.c_str(), res.out_error_human.c_str());
 
@@ -626,7 +646,15 @@ void	WED_SlippyMap::finish_loading_tile()
 			delete m_cache_request;
 			m_cache_request = NULL;
 		}
+		else if (slippy_debug() && !mStallReported && seconds_now() - mRequestStart > 10.0)
+		{
+			LOG_MSG("W/Sli request pending for %.0fs, cache status %d, progress %.0f: %s\n", seconds_now() - mRequestStart,
+				(int) res.out_status, res.out_download_progress, m_cache_request->in_url.c_str());
+			mStallReported = true;
+		}
 	}
+	if (slippy_debug())
+		LOG_FLUSH();
 }
 
 void	WED_SlippyMap::self_test_step()
@@ -682,7 +710,10 @@ void	WED_SlippyMap::SetMode(int mode)
 	if(mode == 0)
 	{
 		mMapMode = 0;
+		mDrawnMode = 0;
 		SetVisible(0);
+		if(GetHost())
+			GetHost()->Refresh();
 		return;
 	}
 
@@ -728,6 +759,10 @@ void	WED_SlippyMap::SetMode(int mode)
 		SetVisible(0);
 		LOG_MSG("E/Sli Illegal URL string %s for SlippyMap\n", url_printf_fmt.c_str());
 	}
+	// SetVisible() does not redraw. Switching between two maps changes no visibility, so without this the old map
+	// stayed on screen until something else redrew the map - e.g. from ESRI, once loaded, back to Japan.
+	if(GetHost())
+		GetHost()->Refresh();
 }
 
 int		WED_SlippyMap::GetMode(void)
