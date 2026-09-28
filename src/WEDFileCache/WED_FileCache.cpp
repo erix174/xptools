@@ -25,6 +25,7 @@
 #include "curl_http.h"
 #include "curl/curl.h"
 #include <time.h>
+#include <string.h>
 
 #include <sstream>
 
@@ -508,7 +509,19 @@ string WED_FileCache::file_in_cache(const WED_file_cache_request & req)
 
 string WED_FileCache::url_to_cache_path(const WED_file_cache_request & req)
 {
-	return CACHE_folder + DIR_STR + req.in_folder_prefix + DIR_STR + FILE_get_file_name(req.in_url);
+	// URLs with a query string, e.g. "server/DataServer?x=1&y=2", would otherwise produce file names with
+	// characters that are illegal on Windows. So append the query to the file name in a sanitized form.
+	size_t query_pos = req.in_url.find('?');
+	string file_name = FILE_get_file_name(req.in_url.substr(0, query_pos));
+	if(query_pos != string::npos)
+	{
+		string query = req.in_url.substr(query_pos + 1);
+		for(auto& c : query)
+			if(strchr("\\/:*?\"<>|&", c) || c < ' ')
+				c = '_';
+		file_name += "_" + query;
+	}
+	return CACHE_folder + DIR_STR + req.in_folder_prefix + DIR_STR + file_name;
 }
 
 vector<string> WED_FileCache::get_files_available(CACHE_domain domain, string folder_prefix)
