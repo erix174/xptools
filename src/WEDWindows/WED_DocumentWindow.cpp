@@ -623,7 +623,13 @@ int	WED_DocumentWindow::CanHandleCommand(int command, string& ioName, int& ioChe
 						else				{								return 0; }
 	case gui_Clear:		return	WED_CanClear(mDocument);
 	case wed_Crop:		return	WED_CanCrop(mDocument);
-	case wed_Merge:		return WED_CanMerge(mDocument);
+	case wed_Merge:
+		if (WED_CanMerge(mDocument)) { ioName = "Merge"; return 1; }
+		{
+			string why = WED_WhyCantMerge(mDocument);
+			ioName = why.empty() ? string("Merge") : "Merge (" + why + ")";
+		}
+		return 0;
 	case gui_Close:															return 1;
 	case wed_Split:		return WED_CanSplit(mDocument);
 	case wed_Align:		return WED_CanAlign(mDocument);

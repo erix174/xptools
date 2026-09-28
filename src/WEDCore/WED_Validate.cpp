@@ -2087,6 +2087,26 @@ static void ValidateOneTaxiSign(WED_AirportSign* airSign, validation_error_vecto
 	}
 }
 
+// The direction a taxiway polygon runs: the bearing of its longest outer edge,
+// folded into 0..180 (a texture heading and its opposite look the same).
+static bool TaxiwayLongestEdgeBearing(WED_Taxiway * twy, double & out_deg)
+{
+	IGISPointSequence * ps = twy->GetOuterRing();
+	double best = 0.0;
+	for (int n = 0; n < ps->GetNumSides(); ++n)
+	{
+		Bezier2 b;
+		ps->GetSide(gis_Geo, n, b);
+		const double len = LonLatDistMeters(b.p1, b.p2);
+		if (len <= best) continue;
+		best = len;
+		const double dx = (b.p2.x() - b.p1.x()) * cos(b.p1.y() * DEG_TO_RAD);
+		const double dy = b.p2.y() - b.p1.y();
+		out_deg = fmod(atan2(dx, dy) * RAD_TO_DEG + 360.0, 180.0);
+	}
+	return best > 0.0;
+}
+
 static void ValidateOneTaxiway(WED_Taxiway* twy, validation_error_vector& msgs, WED_Airport * apt)
 {
 	/*--Taxiway Validation Rules-----------------------------------------------
@@ -2097,6 +2117,30 @@ static void ValidateOneTaxiway(WED_Taxiway* twy, validation_error_vector& msgs, 
 
 	if(twy->GetSurface() == surf_Water)
 		msgs.push_back(validation_error_t("Water is not a valid surface type for taxiways.", err_taxiway_surface_water_not_valid_type, twy,apt));
+
+	// Texture Heading left at its default of 0 on asphalt or concrete: the
+	// texture's grain then runs north-south whatever the taxiway does, and
+	// Gateway moderators decline the submission for it (forum, 2026-09). Only
+	// the untouched 0 is flagged - any other value is the author's choice - and
+	// only when the taxiway runs more than 30 degrees off north-south.
+	if (gExportTarget == wet_gateway && twy->GetHeading() == 0.0 && twy->GetOuterRing()->GetNumSides() >= 3)
+	{
+		string surf = ENUM_Desc(twy->GetSurface());
+		std::transform(surf.begin(), surf.end(), surf.begin(), [](unsigned char c) { return (char) tolower(c); });
+		double run;
+		if ((surf.find("asphalt") != string::npos || surf.find("concrete") != string::npos) &&
+			TaxiwayLongestEdgeBearing(twy, run))
+		{
+			const double off = run > 90.0 ? 180.0 - run : run;		// 0..90 away from north-south
+			if (off > 30.0)
+			{
+				char msg[300];
+				snprintf(msg, sizeof(msg), "Taxiway Texture Heading is 0 (never set), but the taxiway runs at %.0f degrees, so its texture lies across it. "
+						 "Set Texture Heading to %.0f (or %.0f).", run, run, run + 180.0);
+				msgs.push_back(validation_error_t(msg, warn_taxiway_texture_heading_not_set, twy, apt));
+			}
+		}
+	}
 
 	IGISPointSequence * ps;
 	ps = twy->GetOuterRing();

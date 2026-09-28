@@ -194,6 +194,7 @@ enum validate_error_t
 	warn_viewpoint_mislocated,
 	warn_apt_dat_rows_not_imported,		// rows the reader skipped (AptInfo_t::discarded_rows)
 	warn_ramp_livery_parks_nothing,		// R14: no listed operator has a livery the stand's sizes/weights allow
+	warn_taxiway_texture_heading_not_set,	// paved taxiway left at heading 0 while it runs another way
 };
 
 // The validation error record stores a single validation problem for reporting.

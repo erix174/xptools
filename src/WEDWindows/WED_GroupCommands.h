@@ -78,6 +78,8 @@ int		WED_CanCrop(IResolver * resolver);
 void	WED_DoCrop(IResolver * resolver);
 
 int		WED_CanMerge(IResolver * resolver);
+// Why Merge is unavailable, in a few words for the menu item ("" = no idea).
+string	WED_WhyCantMerge(IResolver * resolver);
 void	WED_DoMerge(IResolver * resolver);
 
 int		WED_CanSplit(IResolver * resolver);

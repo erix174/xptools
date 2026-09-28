@@ -3461,6 +3461,48 @@ int	WED_CanMerge(IResolver * resolver)
 	return is_chain_merge(sel, NULL) || is_ring_merge(sel, NULL) || is_node_merge(resolver)? 1 : 0;
 }
 
+// A greyed-out Merge used to give no reason, and people spent hours on the usual
+// three (forum, 2025-07): nodes a little over 1 m apart, an edge selected instead
+// of its nodes, or one node in a locked layer and so not selectable at all.
+// Only called when WED_CanMerge() said no; the same tests, just asked why.
+string	WED_WhyCantMerge(IResolver * resolver)
+{
+	ISelection * sel = WED_GetSelect(resolver);
+	const int n = sel->GetSelectionCount();
+	if (n < 2)
+		return "select two or more nodes - a locked or hidden one cannot be selected";
+
+	merge_class_map sinkmap;
+	for (int i = 0; i < n; ++i)
+	{
+		ISelectable * s = sel->GetNthSelection(i);
+		IGISPoint * p = dynamic_cast<IGISPoint *>(s);
+		if (!p)
+			return "select the nodes, not the lines or edges";
+		if (!iterate_can_merge(s, &sinkmap))
+			return "these kinds of nodes cannot be merged";
+	}
+	if (sinkmap.size() > 10000) return "too many nodes selected";
+
+	// the widest gap: the node farthest from its nearest partner
+	double worst = 0.0;
+	for (size_t i = 0; i < sinkmap.size(); ++i)
+	{
+		double nearest = 1e30;
+		for (size_t j = 0; j < sinkmap.size(); ++j)
+			if (i != j)
+				nearest = min(nearest, LonLatDistMeters(sinkmap[i].first, sinkmap[j].first));
+		worst = max(worst, nearest);
+	}
+	if (worst >= 1.0)
+	{
+		char buf[120];
+		snprintf(buf, sizeof(buf), "nodes %.1f m apart - Merge needs them within 1 m", worst);
+		return buf;
+	}
+	return "";
+}
+
 static void do_chain_merge(ISelection * sel, const chain_merge_info_t & info)
 {
 	IOperation * op = dynamic_cast<IOperation *>(sel);
