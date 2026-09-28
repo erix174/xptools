@@ -1155,6 +1155,9 @@ static void ValidateRampLiveries(WED_RampPosition * ramp, const AptGate_t & g, v
 	string msg;
 	if (WED_LiveryParksNothing(ramp, apt, msg))
 		msgs.push_back(validation_error_t(msg, warn_ramp_livery_parks_nothing, ramp, apt));
+	// the author sees a typo'd or invented code before a moderator has to
+	if (WED_LiveryUnknownOperators(ramp, msg))
+		msgs.push_back(validation_error_t(msg, warn_ramp_airline_unknown_operator, ramp, apt));
 }
 
 static int ValidateOneRampPosition(WED_RampPosition* ramp, validation_error_vector& msgs, WED_Airport * apt, const vector<WED_Runway *>& runways)

@@ -150,6 +150,13 @@ bool	WED_ModerationConfirmHidden(WED_Thing * root);
 // on the same X-Plane reproduces it - on the Gateway too.
 bool	WED_LiveryParksNothing(WED_RampPosition * ramp, WED_Airport * apt, std::string & out_msg);
 
+// Codes in the stand's airline list that are no operator at all: no OPERATOR
+// record in the livery index and no livery. Usually a typo ("dla" for "dal"),
+// sometimes filler. The pseudo-operators (XPGA, XPMI, XPZZ_*) are known by
+// definition. False, and nothing said, without a 12.5 index or when the
+// directory failed to load - then every code would look unknown.
+bool	WED_LiveryUnknownOperators(WED_RampPosition * ramp, std::string & out_msg);
+
 // R14's one-click fix. Fixable when something the stand may list fits it at a
 // class at or below its current top (a fix never enlarges a stand: the 1301
 // letter is its physical size for ATC and AI). The fix moves weights - or the

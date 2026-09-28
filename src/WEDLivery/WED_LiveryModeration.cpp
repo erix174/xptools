@@ -444,6 +444,35 @@ static bool	FixableAnalysis(const StandAnalysis & a)
 	return false;
 }
 
+bool	WED_LiveryUnknownOperators(WED_RampPosition * ramp, string & out_msg)
+{
+	out_msg.clear();
+	WED_LiveryData * d = WED_GetLiveryData(false);
+	if (!d || d->directory.LoadFailed()) return false;
+
+	vector<string> unknown;
+	std::istringstream ss(ramp->GetAirlines());
+	string code;
+	while (ss >> code)
+	{
+		const string uc = Upper(code);
+		if (uc == "XPGA" || uc == "XPMI" || WED_IsGenericAirlinerCode(uc)) continue;
+		WED_AirlineDirectoryEntry e;
+		if (d->directory.Lookup(uc, e)) continue;
+		const vector<const WED_LiveryIndexEntry *> * rows = d->index.GetForAirline(uc);
+		if (rows && !rows->empty()) continue;
+		unknown.push_back(code);
+	}
+	if (unknown.empty()) return false;
+
+	string name, list;
+	ramp->GetName(name);
+	for (size_t i = 0; i < unknown.size(); ++i) list += (i ? ", " : "") + unknown[i];
+	out_msg = "Ramp start '" + name + "' lists " + list + (unknown.size() == 1 ? ", which is not a known operator" : ", which are not known operators") +
+			  " (no record in X-Plane's livery index). Check the spelling; X-Plane parks nothing for an unknown code.";
+	return true;
+}
+
 bool	WED_LiveryParksNothing(WED_RampPosition * ramp, WED_Airport * apt, string & out_msg)
 {
 	out_msg.clear();
@@ -952,6 +981,8 @@ string	WED_ModerationReport(WED_Airport * apt, const std::set<string> & reviewed
 		WED_ModerationDescribe(ramps[i], apt, e);
 		if (e.auto_filled) ++n_auto;
 		if (e.op_type == ramp_operation_None) ++n_none;
+		{	string um;											// Validate's unknown-operator warning, word for word
+			if (WED_LiveryUnknownOperators(ramps[i], um)) parks.push_back(um); }
 		const bool rev = reviewed.count(e.signature) > 0;
 		if (rev) ++n_rev;
 		if (!WED_ModerationHasIssue(e)) continue;
