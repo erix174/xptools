@@ -1292,7 +1292,7 @@ To file a bug report, please visit the [Airport Scenery Gateway][75] and create 
 | Match Bezier handles | Automatically match a line or polygon to the shape of another one. |
 | Othogonalize	|	Straightens all sides of a polygon to make exact rectangles, etc. |
 | Make Regular Poly | Makes polygons into rotationally or axially symmetrical shapes. |
-| Merge                     | Merges two selected ATC network nodes into a single node, connecting the incoming routes of both. |
+| Merge                     | Merges two selected ATC network nodes into a single node, connecting the incoming routes of both. Nodes must be within 1 m of each other. When Merge is unavailable, the menu item says why: fewer than two nodes selected (a node in a locked or hidden layer cannot be selected), lines or edges selected instead of their nodes, or how far apart the nodes are. |
 | Reverse                   | Reverses the winding direction of a polygon. Note that if a polygon is right-side out and is reversed, it will be inside-out and stop rendering. |
 | Rotate                    | Rotates the order of sides on a polygon, which can change the position of facade sides and markings. |
 | Crop Unselected           | Deletes every unselected element from the WED project.  Parents and children of the selected elements in the hierarchy are kept. |
@@ -1486,7 +1486,7 @@ The following is a list of object types with descriptions of the properties asso
 |                             **Taxiway**                                         ||
 | Surface        | The material that makes up the surface of this taxiway.         |
 | Roughness      | A ratio for how bumpy the runway is (currently ignored by X-Plane). |
-| Texture heading | The direction of the "grain" of the surface, in true degrees.   |
+| Texture heading | The direction of the "grain" of the surface, in true degrees. For a Gateway export, an asphalt or concrete taxiway left at the default of 0 while it runs more than 30 degrees off north-south gets a validation warning that gives the heading to set. |
 | Line attributes | The pavement line markings attached to this taxiway---may be set on the entire taxiway or on segments by selecting individual points.    |
 | Light attributes | The airport lights attached to this taxiway---may be set on the entire taxiway or on its points.  |
 |                             **Tower Viewpoint**                                 ||
