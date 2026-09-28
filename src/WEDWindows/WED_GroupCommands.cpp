@@ -4739,29 +4739,13 @@ int wed_upgrade_ramps(WED_Thing* who)
 
 	for (auto r : ramps)
 	{
-		if (r->GetRampOperationType() == ramp_operation_None)
-		{
-			// fill in ops types
-			switch(r->GetType())
-			{
-				case atc_Ramp_Gate:
-					r->SetRampOperationType(ramp_operation_Airline);
-					did_work = 1;
-					break;			
-				case atc_Ramp_TieDown:
-				{
-					set<int> eq;
-					r->GetEquipment(eq);
+		// Operation type None is left alone. This used to turn every None gate
+		// into Airline and every None tie-down into GA or Airline, which undid
+		// the stands artists set to None on purpose to keep parked aircraft away
+		// (float plane docks, lone helipads). Validation now warns about None
+		// gates and tie-downs on Gateway exports instead, so a stand that was
+		// simply never set still gets noticed before it is submitted.
 
-					if(eq.count(atc_Heavies))
-						r->SetRampOperationType(ramp_operation_Airline);
-					else
-						r->SetRampOperationType(ramp_operation_GeneralAviation);
-					did_work = 1;
-					break;
-				}
-			}
-		}
 		// determine "clusters"
 /*		auto ramps_by_dist(ramps);
 		ramps_by_dist.erase(std::find(ramps_by_dist.begin(), ramps_by_dist.end(), r));
@@ -4809,11 +4793,13 @@ int wed_upgrade_ramps(WED_Thing* who)
 			}
 		}
 	}
-	// nuke static aircraft objects near ramps
+	// nuke static aircraft objects near ramps - but not near a None ramp: X-Plane
+	// parks nothing there, so a static placed on it is no double
 	for(auto& o : objs)
 	{
 		for(auto r : ramps)
 		{
+			if (r->GetRampOperationType() == ramp_operation_None) continue;
 			Point2 rp; double rs;
 			center_and_radius_for_ramp_start(r, rp, rs);
 
