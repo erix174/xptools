@@ -41,8 +41,14 @@ public:
 	virtual	void	DrawVisualization(bool inCurrent, GUI_GraphState * g);
 	virtual	void	GetCaps(bool& draw_ent_v, bool& draw_ent_s, bool& cares_about_sel, bool& wants_clicks);
 	virtual	void	TimerFired(void);
-			void	SetMode(int mode);  // mode 0 = custom map string, 1..2 OSM and ERSI maps
+			void	SetMode(int mode);  // mode 0 = off, 1 OSM, 2 ESRI, 3 custom map string, 4... regional maps
 			int		GetMode(void);
+
+	// The regional maps, n = 0 .. CountRegionalMaps()-1
+	static	int				CountRegionalMaps(void);
+	static	int				RegionalMapMode(int n);
+	static	const char *	RegionalMapName(int n);
+	static	const char *	RegionalMapCountries(int n);	// space separated IOC codes
 
 private:
 

@@ -459,6 +459,12 @@ int		WED_MapPane::Map_HandleCommand(int command)
 {
 	Bbox2 box;
 
+	if (command >= wed_SlippyMapRegional && command < wed_SlippyMapRegional + WED_SlippyMap::CountRegionalMaps())
+	{
+		mSlippyMap->SetMode(WED_SlippyMap::RegionalMapMode(command - wed_SlippyMapRegional));
+		return 1;
+	}
+
 	switch(command) {
 	case wed_ImportOrtho:	WED_MakeOrthos(mResolver, mMap); return 1;
 	case wed_ImportDem:		WED_MakeTerrain(mResolver, mMap); return 1;
@@ -503,6 +509,12 @@ int		WED_MapPane::Map_HandleCommand(int command)
 int		WED_MapPane::Map_CanHandleCommand(int command, string& ioName, int& ioCheck)
 {
 	Bbox2	box;
+
+	if (command >= wed_SlippyMapRegional && command < wed_SlippyMapRegional + WED_SlippyMap::CountRegionalMaps())
+	{
+		ioCheck = mSlippyMap->GetMode() == WED_SlippyMap::RegionalMapMode(command - wed_SlippyMapRegional);
+		return 1;
+	}
 
 	switch(command) {
 	case wed_PickOverlay:														return 1;

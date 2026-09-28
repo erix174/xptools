@@ -22,6 +22,10 @@
  */
 
 #include "WED_Menus.h"
+#include "WED_SlippyMap.h"
+#include "WED_FlagAssets.h"
+#include "WED_FlagIndex.h"
+#include <sstream>
 #include "WED_MetaDataKeys.h"
 #include "GUI_Application.h"
 #if APL
@@ -188,6 +192,8 @@ static const GUI_MenuItem_t kSlippyMapMenu[] = {
 {	"&OpenStreetMap",			0,	0,							0,	wed_SlippyMapOSM	},
 {	"&ESRI Imagery",			0,	0,							0,	wed_SlippyMapESRI	},
 {	"&Custom",					0,	0,							0,	wed_SlippyMapCustom	},
+{	"-",						0,	0,							0,	0					},
+{	"&Regional Imagery",		0,	0,							0,	0					},
 {	NULL,						0,	0,							0,	0					}
 };
 
@@ -313,6 +319,83 @@ static const GUI_MenuItem_t kHelpMenu[] = {
 
 */
 
+// Box filtered copy of a flag into a w x h cell of dst, with a thin frame so white flags don't vanish into the menu.
+static void draw_flag(const vector<uint32_t>& src, int sw, int sh, vector<uint32_t>& dst, int dst_w, int x0, int y0, int w, int h)
+{
+	for (int y = 0; y < h; ++y)
+	for (int x = 0; x < w; ++x)
+	{
+		uint32_t& out = dst[(y0 + y) * dst_w + x0 + x];
+		if (x == 0 || y == 0 || x == w - 1 || y == h - 1)
+		{
+			out = 0x80606060;
+			continue;
+		}
+		int sx0 = (x - 1) * sw / (w - 2), sx1 = max(sx0 + 1, x * sw / (w - 2));
+		int sy0 = (y - 1) * sh / (h - 2), sy1 = max(sy0 + 1, y * sh / (h - 2));
+		double a = 0, r = 0, g = 0, b = 0;
+		for (int sy = sy0; sy < sy1; ++sy)
+		for (int sx = sx0; sx < sx1; ++sx)
+		{
+			uint32_t p = src[sy * sw + sx];
+			double pa = (p >> 24) / 255.0;
+			a += pa; r += pa * (p >> 16 & 0xFF); g += pa * (p >> 8 & 0xFF); b += pa * (p & 0xFF);
+		}
+		if (a > 0)
+		{
+			int n = (sx1 - sx0) * (sy1 - sy0);
+			out = (uint32_t) (a / n * 255.0 + 0.5) << 24 | (uint32_t) (r / a + 0.5) << 16 | (uint32_t) (g / a + 0.5) << 8 | (uint32_t) (b / a + 0.5);
+		}
+	}
+}
+
+// Flags of the covered countries in front of each regional map, so it is obvious these are not world wide.
+// All icons get the width of the widest one, so the item texts line up.
+static void AddRegionalFlags(GUI_Application * inApp, GUI_Menu menu)
+{
+	int h = inApp->MenuIconPixelHeight();
+	if (h <= 0) return;
+
+	int flag_h = max(8, h * 3 / 4), flag_w = (flag_h - 2) * 3 / 2 + 2, gap = max(2, h / 6);
+
+	vector<vector<string> > countries;
+	int most = 0;
+	for (int n = 0; n < WED_SlippyMap::CountRegionalMaps(); ++n)
+	{
+		vector<string> codes;
+		stringstream ss(WED_SlippyMap::RegionalMapCountries(n));
+		string code;
+		while (ss >> code)
+		{
+			string path = WED_FlagSourcePathForCountry(code);
+			if (path.find("_fallback_") == string::npos)     // no white placeholders in the menu
+				codes.push_back(path);
+		}
+		most = max(most, (int) codes.size());
+		countries.push_back(codes);
+	}
+	if (most == 0) return;                                   // flags folder missing
+
+	int w = most * flag_w + (most - 1) * gap;
+	for (int n = 0; n < countries.size(); ++n)
+	{
+		vector<uint32_t> icon(w * h, 0);
+		int x = 0;
+		for (auto& path : countries[n])
+		{
+			vector<uint32_t> flag;
+			int fw, fh;
+			if (WED_LoadPngTopDownARGB(path, flag, fw, fh) && fw > 0 && fh > 0)
+			{
+				draw_flag(flag, fw, fh, icon, w, x, (h - flag_h) / 2, flag_w, flag_h);
+				x += flag_w + gap;
+			}
+		}
+		if (x > 0)
+			inApp->SetMenuItemIcon(menu, n, icon.data(), w, h);
+	}
+}
+
 void WED_MakeMenus(GUI_Application * inApp)
 {
 	GUI_Menu file_menu = inApp->CreateMenu(
@@ -344,6 +427,14 @@ void WED_MakeMenus(GUI_Application * inApp)
 
 	GUI_Menu	slippy_menu = inApp->CreateMenu(
 		"S&lippy Map",	kSlippyMapMenu, view_menu, 13);
+
+	static vector<GUI_MenuItem_t> regional_items;
+	for (int n = 0; n < WED_SlippyMap::CountRegionalMaps(); ++n)
+		regional_items.push_back({ WED_SlippyMap::RegionalMapName(n), 0, 0, 0, wed_SlippyMapRegional + n });
+	regional_items.push_back({ NULL, 0, 0, 0, 0 });
+	GUI_Menu	regional_menu = inApp->CreateMenu(
+		"&Regional Imagery", regional_items.data(), slippy_menu, 5);
+	AddRegionalFlags(inApp, regional_menu);
 
 #if WITHNWLINK
 	const int preview_window_parent = 17;

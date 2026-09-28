@@ -356,6 +356,48 @@ void			GUI_Application::Quit(void)
 #endif
 }
 
+int		GUI_Application::MenuIconPixelHeight(void)
+{
+#if APL
+	return 32;                                  // 16 points on a 2x display, macOS scales it down otherwise
+#elif IBM
+	return GetSystemMetrics(SM_CYMENUCHECK);    // WED is DPI aware, so this is already scaled
+#else
+	return 0;
+#endif
+}
+
+void	GUI_Application::SetMenuItemIcon(GUI_Menu menu, int item, const unsigned int * argb, int w, int h)
+{
+	if(!menu || w <= 0 || h <= 0) return;
+#if APL
+	set_menu_item_image(menu, item, argb, w, h, w / 2.0f, h / 2.0f);
+#elif IBM
+	BITMAPINFO bmi = { 0 };
+	bmi.bmiHeader.biSize = sizeof(bmi.bmiHeader);
+	bmi.bmiHeader.biWidth = w;
+	bmi.bmiHeader.biHeight = -h;                // top-down
+	bmi.bmiHeader.biPlanes = 1;
+	bmi.bmiHeader.biBitCount = 32;
+	bmi.bmiHeader.biCompression = BI_RGB;
+	void * bits = NULL;
+	HBITMAP bmp = CreateDIBSection(NULL, &bmi, DIB_RGB_COLORS, &bits, NULL, 0);
+	if(!bmp) return;
+
+	unsigned int * dst = (unsigned int *) bits;  // menus want premultiplied alpha
+	for(int i = 0; i < w * h; ++i)
+	{
+		unsigned int p = argb[i], a = p >> 24;
+		dst[i] = (a << 24) | (((p >> 16 & 0xFF) * a / 255) << 16) | (((p >> 8 & 0xFF) * a / 255) << 8) | ((p & 0xFF) * a / 255);
+	}
+	MENUITEMINFOA mif = { 0 };
+	mif.cbSize = sizeof(mif);
+	mif.fMask = MIIM_BITMAP;
+	mif.hbmpItem = bmp;                         // lives as long as WED, menus never delete their bitmaps
+	SetMenuItemInfoA((HMENU) menu, item, true, &mif);
+#endif
+}
+
 GUI_Menu		GUI_Application::GetMenuBar(void)
 {
 #if APL

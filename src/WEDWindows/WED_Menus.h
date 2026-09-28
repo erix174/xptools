@@ -124,6 +124,8 @@ enum {
 	wed_SlippyMapOSM,
 	wed_SlippyMapESRI,
 	wed_SlippyMapCustom,
+	wed_SlippyMapRegional,                                  // one command per regional map, see WED_SlippyMap::CountRegionalMaps()
+	wed_SlippyMapRegionalLast = wed_SlippyMapRegional + 31,
 #if WITHNWLINK
 	wed_ToggleLiveView,
 #endif

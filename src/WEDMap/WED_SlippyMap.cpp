@@ -61,13 +61,81 @@
 							// Since zoom goes by 1.2x steps - it matters little w.r.t "sharpness"
 							// but saves on average 34% of all tile loads
 
-#define PREDEFINED_MAPS 2
+struct slippy_source_t {
+	const char * name;         // menu item text, regional maps only
+	const char * url;          // tile url template, see SetMode()
+	int          max_zoom;
+	const char * attribution;
+	const char * countries;    // IOC codes of the countries covered, regional maps only
+};
 
-static const char * attributions[PREDEFINED_MAPS] = {
-"© OpenStreetMap Contributors",
+// Map modes: 0 = off, 1 = OSM, 2 = ESRI, 3 = custom url, 4... = regional maps in the order below.
+// The mode is saved in the document prefs, so only ever append to this list.
+static const slippy_source_t slippy_sources[] = {
+{ NULL, WED_URL_OSM_TILES  "${z}/${x}/${y}.png", 16,  // OSM tiles below this zoom are not cached, but on-demand generated. Openstreetmap foundation asks to limit their use.
+  "© OpenStreetMap Contributors", NULL },
 // ToDo: use shorter specific ESRI attribution by downloading https://static.arcgis.com/attribution/World_Imagery
 //       and decode it per https://github.com/Esri/esri-leaflet  (which is java code)
-"© Esri, DigitalGlobe, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID and the GIS User Community" };
+{ NULL, WED_URL_ESRI_TILES "${z}/${y}/${x}.jpg", 18,  // ESRI maps are available down to ZL17 in general, but since 2021 below 60 deg also in ZL18
+  "© Esri, DigitalGlobe, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID and the GIS User Community", NULL },
+
+// Official orthophotos under open licenses. Coverage checked 2026-09: outside it the servers return 404, blank tiles or,
+// for swisstopo, heavily upscaled imagery. Only countries with high resolution coverage get listed and flagged.
+{ "&Austria (basemap.at)",
+  "https://maps.wien.gv.at/basemap/bmaporthofoto30cm/normal/google3857/${z}/${y}/${x}.jpeg", 19,
+  "© basemap.at, CC BY 4.0", "AUT" },
+{ "&Estonia (Maa- ja Ruumiamet)",
+  "https://tiles.maaamet.ee/tm/tms/1.0.0/foto@GMC/${z}/${x}/${-y}.jpg", 18,
+  "© Maa- ja Ruumiamet", "EST" },
+{ "&France, Monaco (IGN)",                           // incl. overseas departments, St Pierre, New Caledonia, Wallis - but not French Polynesia
+  "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal"
+  "&TILEMATRIXSET=PM&FORMAT=image/jpeg&TILEMATRIX=${z}&TILEROW=${y}&TILECOL=${x}", 19,
+  "© IGN / Geoplateforme, Licence Ouverte 2.0", "FRA MON" },
+{ "&Japan (GSI)",
+  "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/${z}/${x}/${y}.jpg", 18,
+  "© Geospatial Information Authority of Japan", "JPN" },
+{ "&Netherlands (PDOK)",                             // European part only
+  "https://service.pdok.nl/hwh/luchtfotorgb/wmts/v1_0/Actueel_orthoHR/EPSG:3857/${z}/${x}/${y}.jpeg", 19,
+  "© Beeldmateriaal Nederland / PDOK, CC BY 4.0", "NED" },
+{ "S&pain, Gibraltar (PNOA)",                        // Gibraltar has no IOC flag
+  "https://tms-pnoa-ma.idee.es/1.0.0/pnoa-ma/${z}/${x}/${-y}.jpeg", 19,
+  "PNOA © Instituto Geografico Nacional de Espana, CC BY 4.0", "ESP" },
+{ "&Switzerland, Liechtenstein (swisstopo)",
+  "https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/${z}/${x}/${y}.jpeg", 20,
+  "© swisstopo", "SUI LIE" },
+};
+
+#define PREDEFINED_MAPS  ((int) (sizeof(slippy_sources) / sizeof(slippy_sources[0])))
+#define FIRST_REGIONAL   2      // index of the first regional map in slippy_sources
+#define MODE_CUSTOM      3
+
+// index into slippy_sources, -1 for the custom map and invalid modes
+static int predefined_idx(int mode)
+{
+	if(mode == 1 || mode == 2)                              return mode - 1;
+	if(mode > MODE_CUSTOM && mode - 2 < PREDEFINED_MAPS)    return mode - 2;
+	return -1;
+}
+
+int WED_SlippyMap::CountRegionalMaps(void)
+{
+	return PREDEFINED_MAPS - FIRST_REGIONAL;
+}
+
+int WED_SlippyMap::RegionalMapMode(int n)
+{
+	return MODE_CUSTOM + 1 + n;
+}
+
+const char * WED_SlippyMap::RegionalMapName(int n)
+{
+	return slippy_sources[FIRST_REGIONAL + n].name;
+}
+
+const char * WED_SlippyMap::RegionalMapCountries(int n)
+{
+	return slippy_sources[FIRST_REGIONAL + n].countries;
+}
 
 struct attrib_t {
 	char zoomMax;
@@ -102,16 +170,8 @@ static string ESRI_attributions(float lon, float lat, int z)
 			}
 		}
 	}
-	return attrib.empty() ? attributions[1] : attrib;
+	return attrib.empty() ? slippy_sources[1].attribution : attrib;
 }
-
-static const char * tile_url[PREDEFINED_MAPS] = {
-WED_URL_OSM_TILES  "${z}/${x}/${y}.png",
-WED_URL_ESRI_TILES "${z}/${y}/${x}.jpg" };
-
-static const int max_zoom[PREDEFINED_MAPS] = {
-16,        // OSM tiles below this zoom are not cached, but on-demand generated. Openstreetmap foundation asks to limit their use.
-18 };      // ESRI maps are available down to ZL17 in general, but since 2021 below 60 deg also in ZL18
 
 
 static inline int long2tilex(double lon, int z)
@@ -140,7 +200,8 @@ int WED_SlippyMap::get_zl_for_map(double in_ppm, double lattitude)
 	double mpp = 1.0 / in_ppm;
 	double zl_mpp = 156543.03 * TILE_FACTOR / 1.4 * cos(lattitude * 3.14/180.0);
 	int zl = 0;
-	int max_zl = mMapMode <= PREDEFINED_MAPS ? max_zoom[mMapMode-1] : MAX_ZOOM;
+	int idx = predefined_idx(mMapMode);
+	int max_zl = idx >= 0 ? slippy_sources[idx].max_zoom : MAX_ZOOM;
 	if (lattitude > 60.0 || lattitude < -60.0) max_zl--;
 	if (lattitude > 75.0 || lattitude < -75.0) max_zl--;
 
@@ -328,9 +389,11 @@ void	WED_SlippyMap::DrawVisualization(bool inCurrent, GUI_GraphState * g)
 	}
 	GUI_FontDraw(g, font_UI_Basic, white, bnds[0] + 10, bnds[1] + 40, str);
 
-	if(mMapMode <= PREDEFINED_MAPS)
+	int idx = predefined_idx(mMapMode);
+	if(idx >= 0)
 	{
-		int txtWidth = GUI_MeasureRange(font_UI_Small,attributions[mMapMode-1],attributions[mMapMode-1]+strlen(attributions[mMapMode-1]));
+		const char * attrib = slippy_sources[idx].attribution;
+		int txtWidth = GUI_MeasureRange(font_UI_Small, attrib, attrib + strlen(attrib));
 
 		g->SetState(0, 0, 0, 0, 1, 0, 0);
 		glColor4f(0,0,0,0.65);
@@ -340,7 +403,7 @@ void	WED_SlippyMap::DrawVisualization(bool inCurrent, GUI_GraphState * g)
 			glVertex2f(bnds[2],                 bnds[1]      );
 			glVertex2f(bnds[2] - 10 - txtWidth, bnds[1]      );
 		glEnd();
-		GUI_FontDraw(g, font_UI_Small, white, bnds[2] - 5, bnds[1] + 2, attributions[mMapMode-1], align_Right);
+		GUI_FontDraw(g, font_UI_Small, white, bnds[2] - 5, bnds[1] + 2, attrib, align_Right);
 	}
 	if (rot != 0)
 	{
@@ -475,10 +538,13 @@ void	WED_SlippyMap::SetMode(int mode)
 		return;
 	}
 
-	if(mode <= PREDEFINED_MAPS)
-		url_printf_fmt = tile_url[mode-1];
-	else
+	int idx = predefined_idx(mode);
+	if(idx >= 0)
+		url_printf_fmt = slippy_sources[idx].url;
+	else if(mode == MODE_CUSTOM)
 		url_printf_fmt = gCustomSlippyMap;
+	else
+		url_printf_fmt.clear();     // unknown mode, e.g. saved by a newer WED - fails below and turns the map off
 
 	y_coordinate_math = yNone;
 	if     (replace_token(url_printf_fmt, "${y}",  "%2$d")) 	y_coordinate_math = yNormal;

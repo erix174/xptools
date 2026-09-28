@@ -547,6 +547,12 @@ void CopyMenusRecursive(HMENU src, HMENU dst)
 		InsertMenuItemA(dst,-1,true,&mif);
 		if (mif.hSubMenu)
 			CopyMenusRecursive(orig_submenu, mif.hSubMenu);
+
+		MENUITEMINFOA bmp = { 0 };                  // MIIM_TYPE can not be combined with MIIM_BITMAP
+		bmp.cbSize = sizeof(bmp);
+		bmp.fMask = MIIM_BITMAP;
+		if (GetMenuItemInfoA(src, i, true, &bmp) && bmp.hbmpItem)
+			SetMenuItemInfoA(dst, i, true, &bmp);
 	}
 }
 #endif

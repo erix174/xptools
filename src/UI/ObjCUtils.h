@@ -104,6 +104,7 @@ extern "C" {
 							const char *shortcut,
 							int			flags);
 	void		add_separator(void * menu);
+	void		set_menu_item_image(void * menu, int item, const unsigned int * argb, int w, int h, float pt_w, float pt_h);
 	void		clear_menu(void * menu);
 
 	

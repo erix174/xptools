@@ -70,6 +70,13 @@ public:
 	GUI_Menu		CreateMenu(const char * inTitle, const GUI_MenuItem_t	items[], GUI_Menu parent, int parent_item);
 	void			RebuildMenu(GUI_Menu menu, const GUI_MenuItem_t	items[]);
 
+	// An image in front of a menu item's text. argb is w x h pixels, top row first, 0xAARRGGBB with straight alpha.
+	// Build it MenuIconPixelHeight() pixels high. That is 0 where menus can not show images (Linux) and
+	// SetMenuItemIcon() then does nothing. Set icons right after CreateMenu(), before any document window
+	// copies the menu bar.
+	int				MenuIconPixelHeight(void);
+	void			SetMenuItemIcon(GUI_Menu menu, int item, const unsigned int * argb, int w, int h);
+
 	virtual	void	AboutBox(void)=0;
 	virtual	void	Preferences(void)=0;
 	virtual	bool	CanQuit(void)=0;

@@ -590,6 +590,28 @@ void		clear_menu(void * menu)
 	[m removeAllItems];
 }
 
+void		set_menu_item_image(void * menu, int item, const unsigned int * argb, int w, int h, float pt_w, float pt_h)
+{
+	NSMenu * m = (NSMenu *) menu;
+	if(item < 0 || item >= [m numberOfItems]) return;
+
+	NSBitmapImageRep * rep = [[[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL
+		pixelsWide:w pixelsHigh:h bitsPerSample:8 samplesPerPixel:4 hasAlpha:YES isPlanar:NO
+		colorSpaceName:NSDeviceRGBColorSpace bitmapFormat:NSAlphaNonpremultipliedBitmapFormat
+		bytesPerRow:w * 4 bitsPerPixel:32] autorelease];
+	unsigned char * dst = [rep bitmapData];
+	for(int i = 0; i < w * h; ++i, dst += 4)
+	{
+		dst[0] = argb[i] >> 16;
+		dst[1] = argb[i] >> 8;
+		dst[2] = argb[i];
+		dst[3] = argb[i] >> 24;
+	}
+	NSImage * img = [[[NSImage alloc] initWithSize:NSMakeSize(pt_w, pt_h)] autorelease];
+	[img addRepresentation:rep];
+	[[m itemAtIndex:item] setImage:img];
+}
+
 
 #ifdef __cplusplus
 }
