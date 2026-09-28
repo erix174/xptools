@@ -1,0 +1,142 @@
+# WED livery conformance report - ZBAA Livery Range Test (shadows Beijing Capital - see README)
+# WED 2.7.3-r1, livery index X-Plane 12.4.3-r2-15ff1e4d, data 20260927-r1
+# What WED's rule (spec §4.1, R17-R31) says can park at each stand. One line per
+# livery row at a class the stand opens, then one STAND line. verdict: yes, equipment,
+# out_of_range, home_only; code-level: wrong_operation_class, no_livery. Obsolete rows
+# never appear (R25). Pool stands (GA, military with no list) try the whole library.
+stand	lat	lon	op	equipment	weights	class	airline	type	path	verdict
+01-CONTROL	40.07800000	116.57000000	Airline	Jets	legacy C	C	DAL	A320	jet/A320_DAL/A320_DAL_static.obj	out_of_range
+01-CONTROL	40.07800000	116.57000000	Airline	Jets	legacy C	C	DAL	B738	jet/B738_DAL/B738_DAL_static.obj	out_of_range
+01-CONTROL	40.07800000	116.57000000	Airline	Jets	legacy C	C	UAL	A320	jet/A320_UAL/A320_UAL_static.obj	out_of_range
+01-CONTROL	40.07800000	116.57000000	Airline	Jets	legacy C	C	UAL	B738	jet/B738_UAL_Legacy/738_United_Legacy_N78540.obj	out_of_range
+01-CONTROL	40.07800000	116.57000000	Airline	Jets	legacy C	C	UAL	B738	jet/B738_UAL_Modern/738_United_Modern_N79521.obj	out_of_range
+01-CONTROL	40.07800000	116.57000000	Airline	Jets	legacy C	STAND	-	-	-	PARKS NOTHING
+02-PIN-C	40.07800000	116.57111600	Airline	Jets	0 0 10 0 0 0	C	DAL	A320	jet/A320_DAL/A320_DAL_static.obj	out_of_range
+02-PIN-C	40.07800000	116.57111600	Airline	Jets	0 0 10 0 0 0	C	DAL	B738	jet/B738_DAL/B738_DAL_static.obj	out_of_range
+02-PIN-C	40.07800000	116.57111600	Airline	Jets	0 0 10 0 0 0	C	UAL	A320	jet/A320_UAL/A320_UAL_static.obj	out_of_range
+02-PIN-C	40.07800000	116.57111600	Airline	Jets	0 0 10 0 0 0	C	UAL	B738	jet/B738_UAL_Legacy/738_United_Legacy_N78540.obj	out_of_range
+02-PIN-C	40.07800000	116.57111600	Airline	Jets	0 0 10 0 0 0	C	UAL	B738	jet/B738_UAL_Modern/738_United_Modern_N79521.obj	out_of_range
+02-PIN-C	40.07800000	116.57111600	Airline	Jets	0 0 10 0 0 0	STAND	-	-	-	PARKS NOTHING
+03-MIX-CDE	40.07800000	116.57223200	Airline	Heavy Jets|Jets	0 0 6 3 1 0	C	DAL	A320	jet/A320_DAL/A320_DAL_static.obj	out_of_range
+03-MIX-CDE	40.07800000	116.57223200	Airline	Heavy Jets|Jets	0 0 6 3 1 0	C	DAL	B738	jet/B738_DAL/B738_DAL_static.obj	out_of_range
+03-MIX-CDE	40.07800000	116.57223200	Airline	Heavy Jets|Jets	0 0 6 3 1 0	C	UAL	A320	jet/A320_UAL/A320_UAL_static.obj	out_of_range
+03-MIX-CDE	40.07800000	116.57223200	Airline	Heavy Jets|Jets	0 0 6 3 1 0	C	UAL	B738	jet/B738_UAL_Legacy/738_United_Legacy_N78540.obj	out_of_range
+03-MIX-CDE	40.07800000	116.57223200	Airline	Heavy Jets|Jets	0 0 6 3 1 0	C	UAL	B738	jet/B738_UAL_Modern/738_United_Modern_N79521.obj	out_of_range
+03-MIX-CDE	40.07800000	116.57223200	Airline	Heavy Jets|Jets	0 0 6 3 1 0	D	DAL	B752	jet/B752/757_Delta_N654DL.obj	out_of_range
+03-MIX-CDE	40.07800000	116.57223200	Airline	Heavy Jets|Jets	0 0 6 3 1 0	D	DAL	B752	jet/B752/757_Delta_N695DL.obj	out_of_range
+03-MIX-CDE	40.07800000	116.57223200	Airline	Heavy Jets|Jets	0 0 6 3 1 0	D	DAL	B763	jet/B763_DAL/B763_DAL_static.obj	yes
+03-MIX-CDE	40.07800000	116.57223200	Airline	Heavy Jets|Jets	0 0 6 3 1 0	D	UAL	B752	jet/B752/757_United_Legacy_N14121.obj	out_of_range
+03-MIX-CDE	40.07800000	116.57223200	Airline	Heavy Jets|Jets	0 0 6 3 1 0	D	UAL	B752	jet/B752/757_United_Modern_N48127.obj	out_of_range
+03-MIX-CDE	40.07800000	116.57223200	Airline	Heavy Jets|Jets	0 0 6 3 1 0	D	UAL	B763	jet/B763_UAL/B763_UAL_static.obj	yes
+03-MIX-CDE	40.07800000	116.57223200	Airline	Heavy Jets|Jets	0 0 6 3 1 0	STAND	-	-	-	parks at D
+04-ALL-ZERO	40.07800000	116.57334800	Airline	Jets	0 0 0 0 0 0	STAND	-	-	-	not judged (no list, all-zero weights, or no index)
+05-CLASS-F	40.07800000	116.57446400	Airline	Heavy Jets|Jets	0 0 0 0 0 10	STAND	-	-	-	PARKS NOTHING
+06-UNFILLABLE	40.07800000	116.57558000	Airline	Heavy Jets|Jets	0 0 0 10 0 0	STAND	-	-	-	PARKS NOTHING
+07-EXCLUDE	40.07800000	116.57669600	Airline	Jets	0 0 10 0 0 0	C	DAL	A320	jet/A320_DAL/A320_DAL_static.obj	out_of_range
+07-EXCLUDE	40.07800000	116.57669600	Airline	Jets	0 0 10 0 0 0	C	DAL	B738	jet/B738_DAL/B738_DAL_static.obj	out_of_range
+07-EXCLUDE	40.07800000	116.57669600	Airline	Jets	0 0 10 0 0 0	STAND	-	-	-	PARKS NOTHING
+08-WHITELIST	40.07800000	116.57781200	Airline	Heavy Jets|Jets	0 0 0 0 10 0	E	AAL	B772	heavy/B772_AAL/B772_AAL_static.obj	yes
+08-WHITELIST	40.07800000	116.57781200	Airline	Heavy Jets|Jets	0 0 0 0 10 0	E	BAW	B772	heavy/B772_BAW/B772_BAW_static.obj	yes
+08-WHITELIST	40.07800000	116.57781200	Airline	Heavy Jets|Jets	0 0 0 0 10 0	STAND	-	-	-	parks at E
+09-MIXED-SIGILS	40.07800000	116.57892800	Airline	Heavy Jets|Jets	0 0 0 0 10 0	E	AAL	B772	heavy/B772_AAL/B772_AAL_static.obj	yes
+09-MIXED-SIGILS	40.07800000	116.57892800	Airline	Heavy Jets|Jets	0 0 0 0 10 0	E	BAW	B772	heavy/B772_BAW/B772_BAW_static.obj	yes
+09-MIXED-SIGILS	40.07800000	116.57892800	Airline	Heavy Jets|Jets	0 0 0 0 10 0	STAND	-	-	-	parks at E
+10-PLUS-WINS	40.07800000	116.58004400	Airline	Heavy Jets|Jets	0 0 0 0 10 0	STAND	-	-	-	PARKS NOTHING
+11-BAD-5-WEIGHTS	40.07800000	116.58116000	Airline	Jets	legacy C	C	DAL	A320	jet/A320_DAL/A320_DAL_static.obj	out_of_range
+11-BAD-5-WEIGHTS	40.07800000	116.58116000	Airline	Jets	legacy C	C	DAL	B738	jet/B738_DAL/B738_DAL_static.obj	out_of_range
+11-BAD-5-WEIGHTS	40.07800000	116.58116000	Airline	Jets	legacy C	C	UAL	A320	jet/A320_UAL/A320_UAL_static.obj	out_of_range
+11-BAD-5-WEIGHTS	40.07800000	116.58116000	Airline	Jets	legacy C	C	UAL	B738	jet/B738_UAL_Legacy/738_United_Legacy_N78540.obj	out_of_range
+11-BAD-5-WEIGHTS	40.07800000	116.58116000	Airline	Jets	legacy C	C	UAL	B738	jet/B738_UAL_Modern/738_United_Modern_N79521.obj	out_of_range
+11-BAD-5-WEIGHTS	40.07800000	116.58116000	Airline	Jets	legacy C	STAND	-	-	-	PARKS NOTHING
+12-BAD-DECIMAL	40.07800000	116.58227600	Airline	Jets	legacy C	C	DAL	A320	jet/A320_DAL/A320_DAL_static.obj	out_of_range
+12-BAD-DECIMAL	40.07800000	116.58227600	Airline	Jets	legacy C	C	DAL	B738	jet/B738_DAL/B738_DAL_static.obj	out_of_range
+12-BAD-DECIMAL	40.07800000	116.58227600	Airline	Jets	legacy C	C	UAL	A320	jet/A320_UAL/A320_UAL_static.obj	out_of_range
+12-BAD-DECIMAL	40.07800000	116.58227600	Airline	Jets	legacy C	C	UAL	B738	jet/B738_UAL_Legacy/738_United_Legacy_N78540.obj	out_of_range
+12-BAD-DECIMAL	40.07800000	116.58227600	Airline	Jets	legacy C	C	UAL	B738	jet/B738_UAL_Modern/738_United_Modern_N79521.obj	out_of_range
+12-BAD-DECIMAL	40.07800000	116.58227600	Airline	Jets	legacy C	STAND	-	-	-	PARKS NOTHING
+13-BAD-NEGATIVE	40.07800000	116.58339200	Airline	Jets	legacy C	C	DAL	A320	jet/A320_DAL/A320_DAL_static.obj	out_of_range
+13-BAD-NEGATIVE	40.07800000	116.58339200	Airline	Jets	legacy C	C	DAL	B738	jet/B738_DAL/B738_DAL_static.obj	out_of_range
+13-BAD-NEGATIVE	40.07800000	116.58339200	Airline	Jets	legacy C	C	UAL	A320	jet/A320_UAL/A320_UAL_static.obj	out_of_range
+13-BAD-NEGATIVE	40.07800000	116.58339200	Airline	Jets	legacy C	C	UAL	B738	jet/B738_UAL_Legacy/738_United_Legacy_N78540.obj	out_of_range
+13-BAD-NEGATIVE	40.07800000	116.58339200	Airline	Jets	legacy C	C	UAL	B738	jet/B738_UAL_Modern/738_United_Modern_N79521.obj	out_of_range
+13-BAD-NEGATIVE	40.07800000	116.58339200	Airline	Jets	legacy C	STAND	-	-	-	PARKS NOTHING
+14-BAD-REFINE	40.07800000	116.58450800	Airline	Jets	0 0 10 0 0 0	C	DAL	A320	jet/A320_DAL/A320_DAL_static.obj	out_of_range
+14-BAD-REFINE	40.07800000	116.58450800	Airline	Jets	0 0 10 0 0 0	C	DAL	B738	jet/B738_DAL/B738_DAL_static.obj	out_of_range
+14-BAD-REFINE	40.07800000	116.58450800	Airline	Jets	0 0 10 0 0 0	C	UAL	A320	jet/A320_UAL/A320_UAL_static.obj	out_of_range
+14-BAD-REFINE	40.07800000	116.58450800	Airline	Jets	0 0 10 0 0 0	C	UAL	B738	jet/B738_UAL_Legacy/738_United_Legacy_N78540.obj	out_of_range
+14-BAD-REFINE	40.07800000	116.58450800	Airline	Jets	0 0 10 0 0 0	C	UAL	B738	jet/B738_UAL_Modern/738_United_Modern_N79521.obj	out_of_range
+14-BAD-REFINE	40.07800000	116.58450800	Airline	Jets	0 0 10 0 0 0	STAND	-	-	-	PARKS NOTHING
+15-UNKNOWN-ROW	40.07800000	116.58562400	Airline	Jets	0 0 10 0 0 0	C	DAL	A320	jet/A320_DAL/A320_DAL_static.obj	out_of_range
+15-UNKNOWN-ROW	40.07800000	116.58562400	Airline	Jets	0 0 10 0 0 0	C	DAL	B738	jet/B738_DAL/B738_DAL_static.obj	out_of_range
+15-UNKNOWN-ROW	40.07800000	116.58562400	Airline	Jets	0 0 10 0 0 0	C	UAL	A320	jet/A320_UAL/A320_UAL_static.obj	out_of_range
+15-UNKNOWN-ROW	40.07800000	116.58562400	Airline	Jets	0 0 10 0 0 0	C	UAL	B738	jet/B738_UAL_Legacy/738_United_Legacy_N78540.obj	out_of_range
+15-UNKNOWN-ROW	40.07800000	116.58562400	Airline	Jets	0 0 10 0 0 0	C	UAL	B738	jet/B738_UAL_Modern/738_United_Modern_N79521.obj	out_of_range
+15-UNKNOWN-ROW	40.07800000	116.58562400	Airline	Jets	0 0 10 0 0 0	STAND	-	-	-	PARKS NOTHING
+16-EXCL-NO-WEIGHTS	40.07800000	116.58674000	Airline	Jets	legacy C	C	DAL	A320	jet/A320_DAL/A320_DAL_static.obj	out_of_range
+16-EXCL-NO-WEIGHTS	40.07800000	116.58674000	Airline	Jets	legacy C	C	DAL	B738	jet/B738_DAL/B738_DAL_static.obj	out_of_range
+16-EXCL-NO-WEIGHTS	40.07800000	116.58674000	Airline	Jets	legacy C	C	UAL	A320	jet/A320_UAL/A320_UAL_static.obj	out_of_range
+16-EXCL-NO-WEIGHTS	40.07800000	116.58674000	Airline	Jets	legacy C	C	UAL	B738	jet/B738_UAL_Legacy/738_United_Legacy_N78540.obj	out_of_range
+16-EXCL-NO-WEIGHTS	40.07800000	116.58674000	Airline	Jets	legacy C	C	UAL	B738	jet/B738_UAL_Modern/738_United_Modern_N79521.obj	out_of_range
+16-EXCL-NO-WEIGHTS	40.07800000	116.58674000	Airline	Jets	legacy C	STAND	-	-	-	PARKS NOTHING
+20-CN-CONTROL	40.07800000	116.58785600	Airline	Jets	0 0 10 0 0 0	C	CCA	A320	jet/A320_CCA/A320_CCA_static.obj	yes
+20-CN-CONTROL	40.07800000	116.58785600	Airline	Jets	0 0 10 0 0 0	C	CCA	B738	jet/B738_CCA/B738_CCA_static.obj	yes
+20-CN-CONTROL	40.07800000	116.58785600	Airline	Jets	0 0 10 0 0 0	C	CCA	B738	jet/B738_CCA_Peony_2642/738_AirChina_Peony_B2642.obj	yes
+20-CN-CONTROL	40.07800000	116.58785600	Airline	Jets	0 0 10 0 0 0	C	CCA	B738	jet/B738_CCA_Peony_5177/738_AirChina_Peony_B5177.obj	yes
+20-CN-CONTROL	40.07800000	116.58785600	Airline	Jets	0 0 10 0 0 0	C	CCA	B738	jet/B738_CCA_Peony_5178/738_AirChina_Peony_B5178.obj	yes
+20-CN-CONTROL	40.07800000	116.58785600	Airline	Jets	0 0 10 0 0 0	C	CCA	B738	jet/B738_CCA_Peony_5198/738_AirChina_Peony_B5198.obj	yes
+20-CN-CONTROL	40.07800000	116.58785600	Airline	Jets	0 0 10 0 0 0	C	CCA	B738	jet/B738_CCA_Peony_5390/738_AirChina_Peony_B5390.obj	yes
+20-CN-CONTROL	40.07800000	116.58785600	Airline	Jets	0 0 10 0 0 0	C	CES	B738	jet/B738_CES/738_ChinaEastern_B1722.obj	yes
+20-CN-CONTROL	40.07800000	116.58785600	Airline	Jets	0 0 10 0 0 0	C	CSN	A320	jet/A320_CSN/A320_CSN_static.obj	yes
+20-CN-CONTROL	40.07800000	116.58785600	Airline	Jets	0 0 10 0 0 0	C	CSN	B738	jet/B738_CSN/738_ChinaSouthern_B1410.obj	yes
+20-CN-CONTROL	40.07800000	116.58785600	Airline	Jets	0 0 10 0 0 0	C	CSZ	B738	jet/B738_CSZ/738_ShenzhenAirlines_B5613.obj	yes
+20-CN-CONTROL	40.07800000	116.58785600	Airline	Jets	0 0 10 0 0 0	STAND	-	-	-	parks at C
+21-NEVER-HERE	40.07800000	116.58897200	Airline	Jets	0 0 10 0 0 0	C	EJU	A320	jet/A320_EZY/A320_EZY_static.obj	out_of_range
+21-NEVER-HERE	40.07800000	116.58897200	Airline	Jets	0 0 10 0 0 0	C	SWA	B738	jet/B738_SWA/B738_SWA_static.obj	out_of_range
+21-NEVER-HERE	40.07800000	116.58897200	Airline	Jets	0 0 10 0 0 0	STAND	-	-	-	PARKS NOTHING
+22-FOREIGN-NARROW	40.07800000	116.59008800	Airline	Jets	0 0 10 0 0 0	C	AAL	A320	jet/A320_AAL/A320_AAL_static.obj	out_of_range
+22-FOREIGN-NARROW	40.07800000	116.59008800	Airline	Jets	0 0 10 0 0 0	C	AAL	B738	jet/B738_AAL/B738_AAL_static.obj	out_of_range
+22-FOREIGN-NARROW	40.07800000	116.59008800	Airline	Jets	0 0 10 0 0 0	C	BAW	A320	jet/A320_BAW/A320_BAW_static.obj	out_of_range
+22-FOREIGN-NARROW	40.07800000	116.59008800	Airline	Jets	0 0 10 0 0 0	C	DAL	A320	jet/A320_DAL/A320_DAL_static.obj	out_of_range
+22-FOREIGN-NARROW	40.07800000	116.59008800	Airline	Jets	0 0 10 0 0 0	C	DAL	B738	jet/B738_DAL/B738_DAL_static.obj	out_of_range
+22-FOREIGN-NARROW	40.07800000	116.59008800	Airline	Jets	0 0 10 0 0 0	C	UAL	A320	jet/A320_UAL/A320_UAL_static.obj	out_of_range
+22-FOREIGN-NARROW	40.07800000	116.59008800	Airline	Jets	0 0 10 0 0 0	C	UAL	B738	jet/B738_UAL_Legacy/738_United_Legacy_N78540.obj	out_of_range
+22-FOREIGN-NARROW	40.07800000	116.59008800	Airline	Jets	0 0 10 0 0 0	C	UAL	B738	jet/B738_UAL_Modern/738_United_Modern_N79521.obj	out_of_range
+22-FOREIGN-NARROW	40.07800000	116.59008800	Airline	Jets	0 0 10 0 0 0	STAND	-	-	-	PARKS NOTHING
+23-FOREIGN-WIDE	40.07800000	116.59120400	Airline	Heavy Jets|Jets	0 0 0 0 10 0	E	AAL	B772	heavy/B772_AAL/B772_AAL_static.obj	yes
+23-FOREIGN-WIDE	40.07800000	116.59120400	Airline	Heavy Jets|Jets	0 0 0 0 10 0	E	BAW	B772	heavy/B772_BAW/B772_BAW_static.obj	yes
+23-FOREIGN-WIDE	40.07800000	116.59120400	Airline	Heavy Jets|Jets	0 0 0 0 10 0	STAND	-	-	-	parks at E
+24-SPLIT-IN-CLASS	40.07800000	116.59232000	Airline	Heavy Jets|Jets	0 0 0 10 0 0	-	UPS	-	-	wrong_operation_class
+24-SPLIT-IN-CLASS	40.07800000	116.59232000	Airline	Heavy Jets|Jets	0 0 0 10 0 0	D	UAL	B752	jet/B752/757_United_Legacy_N14121.obj	out_of_range
+24-SPLIT-IN-CLASS	40.07800000	116.59232000	Airline	Heavy Jets|Jets	0 0 0 10 0 0	D	UAL	B752	jet/B752/757_United_Modern_N48127.obj	out_of_range
+24-SPLIT-IN-CLASS	40.07800000	116.59232000	Airline	Heavy Jets|Jets	0 0 0 10 0 0	D	UAL	B763	jet/B763_UAL/B763_UAL_static.obj	yes
+24-SPLIT-IN-CLASS	40.07800000	116.59232000	Airline	Heavy Jets|Jets	0 0 0 10 0 0	STAND	-	-	-	parks at D
+25-MIXED-STAND	40.07800000	116.59343600	Airline	Heavy Jets|Jets	0 0 5 0 5 0	C	CCA	A320	jet/A320_CCA/A320_CCA_static.obj	yes
+25-MIXED-STAND	40.07800000	116.59343600	Airline	Heavy Jets|Jets	0 0 5 0 5 0	C	CCA	B738	jet/B738_CCA/B738_CCA_static.obj	yes
+25-MIXED-STAND	40.07800000	116.59343600	Airline	Heavy Jets|Jets	0 0 5 0 5 0	C	CCA	B738	jet/B738_CCA_Peony_2642/738_AirChina_Peony_B2642.obj	yes
+25-MIXED-STAND	40.07800000	116.59343600	Airline	Heavy Jets|Jets	0 0 5 0 5 0	C	CCA	B738	jet/B738_CCA_Peony_5177/738_AirChina_Peony_B5177.obj	yes
+25-MIXED-STAND	40.07800000	116.59343600	Airline	Heavy Jets|Jets	0 0 5 0 5 0	C	CCA	B738	jet/B738_CCA_Peony_5178/738_AirChina_Peony_B5178.obj	yes
+25-MIXED-STAND	40.07800000	116.59343600	Airline	Heavy Jets|Jets	0 0 5 0 5 0	C	CCA	B738	jet/B738_CCA_Peony_5198/738_AirChina_Peony_B5198.obj	yes
+25-MIXED-STAND	40.07800000	116.59343600	Airline	Heavy Jets|Jets	0 0 5 0 5 0	C	CCA	B738	jet/B738_CCA_Peony_5390/738_AirChina_Peony_B5390.obj	yes
+25-MIXED-STAND	40.07800000	116.59343600	Airline	Heavy Jets|Jets	0 0 5 0 5 0	C	UAL	A320	jet/A320_UAL/A320_UAL_static.obj	out_of_range
+25-MIXED-STAND	40.07800000	116.59343600	Airline	Heavy Jets|Jets	0 0 5 0 5 0	C	UAL	B738	jet/B738_UAL_Legacy/738_United_Legacy_N78540.obj	out_of_range
+25-MIXED-STAND	40.07800000	116.59343600	Airline	Heavy Jets|Jets	0 0 5 0 5 0	C	UAL	B738	jet/B738_UAL_Modern/738_United_Modern_N79521.obj	out_of_range
+25-MIXED-STAND	40.07800000	116.59343600	Airline	Heavy Jets|Jets	0 0 5 0 5 0	STAND	-	-	-	parks at C
+26-CARGO-SPLIT	40.07800000	116.59455200	Cargo	Heavy Jets|Jets	0 0 0 10 0 0	D	FDX	B752	jet/B752/757_Fedex_N927FD.obj	yes
+26-CARGO-SPLIT	40.07800000	116.59455200	Cargo	Heavy Jets|Jets	0 0 0 10 0 0	D	FDX	B763	jet/B763_FDX/B763_FDX_static.obj	yes
+26-CARGO-SPLIT	40.07800000	116.59455200	Cargo	Heavy Jets|Jets	0 0 0 10 0 0	STAND	-	-	-	parks at D
+27-DOMESTIC-FAR	40.07800000	116.59566800	Airline	Jets	0 0 10 0 0 0	C	CCA	A320	jet/A320_CCA/A320_CCA_static.obj	yes
+27-DOMESTIC-FAR	40.07800000	116.59566800	Airline	Jets	0 0 10 0 0 0	C	CCA	B738	jet/B738_CCA/B738_CCA_static.obj	yes
+27-DOMESTIC-FAR	40.07800000	116.59566800	Airline	Jets	0 0 10 0 0 0	C	CCA	B738	jet/B738_CCA_Peony_2642/738_AirChina_Peony_B2642.obj	yes
+27-DOMESTIC-FAR	40.07800000	116.59566800	Airline	Jets	0 0 10 0 0 0	C	CCA	B738	jet/B738_CCA_Peony_5177/738_AirChina_Peony_B5177.obj	yes
+27-DOMESTIC-FAR	40.07800000	116.59566800	Airline	Jets	0 0 10 0 0 0	C	CCA	B738	jet/B738_CCA_Peony_5178/738_AirChina_Peony_B5178.obj	yes
+27-DOMESTIC-FAR	40.07800000	116.59566800	Airline	Jets	0 0 10 0 0 0	C	CCA	B738	jet/B738_CCA_Peony_5198/738_AirChina_Peony_B5198.obj	yes
+27-DOMESTIC-FAR	40.07800000	116.59566800	Airline	Jets	0 0 10 0 0 0	C	CCA	B738	jet/B738_CCA_Peony_5390/738_AirChina_Peony_B5390.obj	yes
+27-DOMESTIC-FAR	40.07800000	116.59566800	Airline	Jets	0 0 10 0 0 0	STAND	-	-	-	parks at C
+28-DOUBLE-1313	40.07800000	116.59678400	Airline	Jets	0 0 10 0 0 0	C	CCA	A320	jet/A320_CCA/A320_CCA_static.obj	yes
+28-DOUBLE-1313	40.07800000	116.59678400	Airline	Jets	0 0 10 0 0 0	C	CCA	B738	jet/B738_CCA/B738_CCA_static.obj	yes
+28-DOUBLE-1313	40.07800000	116.59678400	Airline	Jets	0 0 10 0 0 0	C	CCA	B738	jet/B738_CCA_Peony_2642/738_AirChina_Peony_B2642.obj	yes
+28-DOUBLE-1313	40.07800000	116.59678400	Airline	Jets	0 0 10 0 0 0	C	CCA	B738	jet/B738_CCA_Peony_5177/738_AirChina_Peony_B5177.obj	yes
+28-DOUBLE-1313	40.07800000	116.59678400	Airline	Jets	0 0 10 0 0 0	C	CCA	B738	jet/B738_CCA_Peony_5178/738_AirChina_Peony_B5178.obj	yes
+28-DOUBLE-1313	40.07800000	116.59678400	Airline	Jets	0 0 10 0 0 0	C	CCA	B738	jet/B738_CCA_Peony_5198/738_AirChina_Peony_B5198.obj	yes
+28-DOUBLE-1313	40.07800000	116.59678400	Airline	Jets	0 0 10 0 0 0	C	CCA	B738	jet/B738_CCA_Peony_5390/738_AirChina_Peony_B5390.obj	yes
+28-DOUBLE-1313	40.07800000	116.59678400	Airline	Jets	0 0 10 0 0 0	STAND	-	-	-	parks at C
