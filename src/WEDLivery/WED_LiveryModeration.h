@@ -157,6 +157,12 @@ bool	WED_LiveryParksNothing(WED_RampPosition * ramp, WED_Airport * apt, std::str
 // directory failed to load - then every code would look unknown.
 bool	WED_LiveryUnknownOperators(WED_RampPosition * ramp, std::string & out_msg);
 
+// The conformance kit (spec §0): for every ramp start of the airport, every
+// livery row WED's rule considers and its verdict, then what the stand parks -
+// tab-separated, sorted, so the sim's own output in the same form diffs line
+// for line. Shift+click on Copy Summary to Clipboard puts it on the clipboard.
+std::string	WED_LiveryConformanceReport(WED_Airport * apt);
+
 // R14's one-click fix. Fixable when something the stand may list fits it at a
 // class at or below its current top (a fix never enlarges a stand: the 1301
 // letter is its physical size for ATC and AI). The fix moves weights - or the

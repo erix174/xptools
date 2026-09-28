@@ -1628,7 +1628,10 @@ int		WED_ModerationLayer::HandleClickDown(int inX, int inY, int inButton, GUI_Ke
 			}
 			if (pass == 1 && h.kind == Hit::hit_Copy)
 			{
-				GUI_SetTextToClipboard(WED_ModerationReport(WED_GetCurrentAirport(GetResolver()), mReviewed));
+				// Shift: the conformance report for the sim side instead (spec §0)
+				WED_Airport * cur = WED_GetCurrentAirport(GetResolver());
+				GUI_SetTextToClipboard((modifiers & gui_ShiftFlag) ? WED_LiveryConformanceReport(cur)
+																   : WED_ModerationReport(cur, mReviewed));
 				mCopiedUntil = NowSec() + 2.0;
 				GetHost()->Refresh();
 				return 1;

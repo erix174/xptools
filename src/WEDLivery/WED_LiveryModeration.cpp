@@ -320,9 +320,17 @@ struct StandAnalysis {
 	int		op = 0;
 	string	country;
 };
+
+// One candidate the analysis looked at, for the conformance report: every
+// livery row at an open class, with WED_LiveryFitsStand's verdict, and every
+// listed code that never reached the rows (wrong operation class, no livery).
+struct StandTrace {
+	int		k;				// class 0..5, -1 for a code-level line
+	string	code, type, path, verdict;
+};
 }
 
-static void	AnalyseStand(WED_RampPosition * ramp, WED_Airport * apt, StandAnalysis & a)
+static void	AnalyseStand(WED_RampPosition * ramp, WED_Airport * apt, StandAnalysis & a, vector<StandTrace> * trace = NULL)
 {
 	a = StandAnalysis();
 	if (!ramp || !apt) return;
@@ -387,16 +395,33 @@ static void	AnalyseStand(WED_RampPosition * ramp, WED_Airport * apt, StandAnalys
 	for (size_t n = 0; n < candidates.size(); ++n)
 	{
 		const string & code = candidates[n];
-		if (!WED_LiveryOperatorFitsRampOp(code, a.op, d->directory)) continue;
+		if (!WED_LiveryOperatorFitsRampOp(code, a.op, d->directory))
+		{
+			if (trace && !a.pool) trace->push_back({ -1, code, "-", "-", "wrong_operation_class" });
+			continue;
+		}
 		const vector<const WED_LiveryIndexEntry *> * all = d->index.GetForAirline(code);
-		if (!all) continue;
+		if (!all)
+		{
+			if (trace && !a.pool) trace->push_back({ -1, code, "-", "-", "no_livery" });
+			continue;
+		}
 		for (size_t i = 0; i < all->size(); ++i)
 		{
 			const WED_LiveryIndexEntry & e = *(*all)[i];
 			if (e.size_class < 'A' || e.size_class > 'F') continue;
 			const int k = e.size_class - 'A';
 			if (a.allowed[k]) a.listed_at_allowed = true;
-			if (!a.fits[k] && WED_LiveryFitsStand(e, d->directory, a.country, here.y(), here.x(), equipment) == livery_allow_Yes)
+			if (trace && a.allowed[k])
+			{
+				// no first-fit shortcut here: the report lists every row
+				const WED_LiveryAllow v = WED_LiveryFitsStand(e, d->directory, a.country, here.y(), here.x(), equipment);
+				if (v == livery_allow_Yes) a.fits[k] = true;
+				trace->push_back({ k, code, e.type, e.obj_path,
+								   v == livery_allow_Yes ? "yes" : v == livery_allow_Equipment ? "equipment" :
+								   v == livery_allow_OutOfRange ? "out_of_range" : "home_only" });
+			}
+			else if (!a.fits[k] && WED_LiveryFitsStand(e, d->directory, a.country, here.y(), here.x(), equipment) == livery_allow_Yes)
 				a.fits[k] = true;
 		}
 	}
@@ -442,6 +467,73 @@ static bool	FixableAnalysis(const StandAnalysis & a)
 	if (!a.weighted) return false;
 	for (int k = 0; k < 6; ++k) if (a.allowed[k] && NearestFit(a, k) >= 0) return true;
 	return false;
+}
+
+string	WED_LiveryConformanceReport(WED_Airport * apt)
+{
+	if (!apt) return string();
+	const string NL = "\n", T = "\t";
+	vector<WED_RampPosition *> ramps;
+	WED_ModerationRamps(apt, ramps);
+	WED_LiveryData * d = WED_GetLiveryData(true);
+
+	string icao, city, name;
+	AirportIds(apt, icao, city);
+	apt->GetName(name);
+	string r = "# WED livery conformance report - " + icao + " " + name + NL;
+	r += string("# WED ") + WED_VERSION_STRING + ", livery index " + (d ? d->index.DescribeVersion() : string("(none)")) + NL;
+	r += "# What WED's rule (spec §4.1, R17-R31) says can park at each stand. One line per" + NL;
+	r += "# livery row at a class the stand opens, then one STAND line. verdict: yes, equipment," + NL;
+	r += "# out_of_range, home_only; code-level: wrong_operation_class, no_livery. Obsolete rows" + NL;
+	r += "# never appear (R25). Pool stands (GA, military with no list) try the whole library." + NL;
+	r += "stand" + T + "lat" + T + "lon" + T + "op" + T + "equipment" + T + "weights" + T + "class" + T + "airline" + T + "type" + T + "path" + T + "verdict" + NL;
+
+	char buf[96];
+	for (size_t i = 0; i < ramps.size(); ++i)
+	{
+		WED_RampPosition * ramp = ramps[i];
+		StandAnalysis a;
+		vector<StandTrace> tr;
+		AnalyseStand(ramp, apt, a, &tr);
+
+		string sname, eq;
+		ramp->GetName(sname);
+		set<int> equipment;
+		ramp->GetEquipment(equipment);
+		for (set<int>::const_iterator q = equipment.begin(); q != equipment.end(); ++q)
+			eq += (eq.empty() ? "" : "|") + string(ENUM_Desc(*q));
+		Point2 here;
+		ramp->GetLocation(gis_Geo, here);
+		string wts;
+		if (a.weighted)
+		{
+			snprintf(buf, sizeof(buf), "%d %d %d %d %d %d", a.wts[0], a.wts[1], a.wts[2], a.wts[3], a.wts[4], a.wts[5]);
+			wts = buf;
+		}
+		else
+			wts = string("legacy ") + (char) ('A' + ENUM_Export(ramp->GetWidth()));
+		snprintf(buf, sizeof(buf), "%.8f\t%.8f", here.y(), here.x());
+		const string head = sname + T + buf + T + ENUM_Desc(a.op) + T + eq + T + wts + T;
+
+		std::sort(tr.begin(), tr.end(), [](const StandTrace & x, const StandTrace & y) {
+			if (x.k != y.k) return x.k < y.k;
+			if (x.code != y.code) return x.code < y.code;
+			return x.path < y.path; });
+		for (size_t t = 0; t < tr.size(); ++t)
+			r += head + (tr[t].k < 0 ? string("-") : string(1, (char) ('A' + tr[t].k))) + T + tr[t].code + T + tr[t].type + T + tr[t].path + T + tr[t].verdict + NL;
+
+		string verdict;
+		if (a.op == ramp_operation_None)			verdict = "none: nothing parks (R29)";
+		else if (!a.checked)						verdict = "not judged (no list, all-zero weights, or no index)";
+		else if (ParksNothing(a))					verdict = "PARKS NOTHING";
+		else
+		{
+			verdict = "parks at";
+			for (int k = 0; k < 6; ++k) if (a.allowed[k] && a.fits[k]) verdict += string(" ") + (char) ('A' + k);
+		}
+		r += head + "STAND" + T + "-" + T + "-" + T + "-" + T + verdict + NL;
+	}
+	return r;
 }
 
 bool	WED_LiveryUnknownOperators(WED_RampPosition * ramp, string & out_msg)
