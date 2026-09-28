@@ -387,6 +387,13 @@ static void AddRegionalFlags(GUI_Application * inApp, GUI_Menu menu, int first_i
 		if (x > 0)
 			inApp->SetMenuItemIcon(menu, first_item + n, icon.data(), w, h);
 	}
+
+	// The other items get an empty icon of the same size: on Windows the check mark of an item with an icon is drawn
+	// at the very left, the system's own check mark sits further in - with blanks all check marks line up.
+	vector<uint32_t> blank(w * h, 0);
+	for (int i = 0; i < first_item; ++i)
+		inApp->SetMenuItemIcon(menu, i, blank.data(), w, h);
+	inApp->SetMenuItemIcon(menu, first_item + (int) countries.size(), blank.data(), w, h);    // Custom
 }
 
 void WED_MakeMenus(GUI_Application * inApp)

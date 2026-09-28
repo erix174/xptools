@@ -367,12 +367,14 @@ int		GUI_Application::MenuIconPixelHeight(void)
 #endif
 }
 
-void	GUI_Application::SetMenuItemIcon(GUI_Menu menu, int item, const unsigned int * argb, int w, int h)
+#if IBM
+// Windows draws no check mark for an item with an hbmpItem, only a faint frame around the bitmap. So such items
+// get two bitmaps, the icon behind an empty and behind a checked check mark slot, and GUI_Window swaps them
+// whenever it updates the check state.
+static map<int, pair<HBITMAP, HBITMAP> >	sMenuIcons;		// command -> unchecked, checked
+
+static HBITMAP make_menu_bitmap(const vector<unsigned int>& argb, int w, int h)
 {
-	if(!menu || w <= 0 || h <= 0) return;
-#if APL
-	set_menu_item_image(menu, item, argb, w, h, w / 2.0f, h / 2.0f);
-#elif IBM
 	BITMAPINFO bmi = { 0 };
 	bmi.bmiHeader.biSize = sizeof(bmi.bmiHeader);
 	bmi.bmiHeader.biWidth = w;
@@ -382,7 +384,7 @@ void	GUI_Application::SetMenuItemIcon(GUI_Menu menu, int item, const unsigned in
 	bmi.bmiHeader.biCompression = BI_RGB;
 	void * bits = NULL;
 	HBITMAP bmp = CreateDIBSection(NULL, &bmi, DIB_RGB_COLORS, &bits, NULL, 0);
-	if(!bmp) return;
+	if(!bmp) return NULL;
 
 	unsigned int * dst = (unsigned int *) bits;  // menus want premultiplied alpha
 	for(int i = 0; i < w * h; ++i)
@@ -390,10 +392,68 @@ void	GUI_Application::SetMenuItemIcon(GUI_Menu menu, int item, const unsigned in
 		unsigned int p = argb[i], a = p >> 24;
 		dst[i] = (a << 24) | (((p >> 16 & 0xFF) * a / 255) << 16) | (((p >> 8 & 0xFF) * a / 255) << 8) | ((p & 0xFF) * a / 255);
 	}
+	return bmp;
+}
+
+static float dist_to_segment(float px, float py, float ax, float ay, float bx, float by)
+{
+	float dx = bx - ax, dy = by - ay;
+	float t = ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy);
+	t = t < 0 ? 0 : (t > 1 ? 1 : t);
+	float ex = ax + t * dx - px, ey = ay + t * dy - py;
+	return sqrtf(ex * ex + ey * ey);
+}
+
+// an antialiased tick into the h x h square at the left of a w wide image
+static void draw_check_mark(vector<unsigned int>& argb, int w, int h, unsigned int rgb)
+{
+	const float half_width = max(1.0f, h / 13.0f);
+	for(int y = 0; y < h; ++y)
+	for(int x = 0; x < h; ++x)
+	{
+		float px = (x + 0.5f) / h, py = (y + 0.5f) / h;
+		float d = min(dist_to_segment(px, py, 0.22f, 0.52f, 0.42f, 0.72f), dist_to_segment(px, py, 0.42f, 0.72f, 0.80f, 0.30f)) * h;
+		float cover = half_width + 0.5f - d;
+		if(cover > 0)
+			argb[y * w + x] = ((unsigned int) (min(cover, 1.0f) * 255.0f) << 24) | (rgb & 0xFFFFFF);
+	}
+}
+
+void *	GUI_MenuIconForCheckState(int cmd, bool checked)
+{
+	map<int, pair<HBITMAP, HBITMAP> >::iterator i = sMenuIcons.find(cmd);
+	if(i == sMenuIcons.end()) return NULL;
+	return checked ? i->second.second : i->second.first;
+}
+#endif
+
+void	GUI_Application::SetMenuItemIcon(GUI_Menu menu, int item, const unsigned int * argb, int w, int h)
+{
+	if(!menu || w <= 0 || h <= 0) return;
+#if APL
+	set_menu_item_image(menu, item, argb, w, h, w / 2.0f, h / 2.0f);
+#elif IBM
+	int gap = max(2, h / 5);
+	int total_w = h + gap + w;
+	vector<unsigned int> unchecked(total_w * h, 0);
+	for(int y = 0; y < h; ++y)
+		for(int x = 0; x < w; ++x)
+			unchecked[y * total_w + h + gap + x] = argb[y * w + x];
+
+	vector<unsigned int> checked(unchecked);
+	COLORREF c = GetSysColor(COLOR_MENUTEXT);
+	draw_check_mark(checked, total_w, h, GetRValue(c) << 16 | GetGValue(c) << 8 | GetBValue(c));
+
+	HBITMAP bmp_unchecked = make_menu_bitmap(unchecked, total_w, h);  // both live as long as WED, menus never delete their bitmaps
+	HBITMAP bmp_checked   = make_menu_bitmap(checked, total_w, h);
+	if(!bmp_unchecked || !bmp_checked) return;
+
+	sMenuIcons[GetMenuItemID((HMENU) menu, item)] = make_pair(bmp_unchecked, bmp_checked);
+
 	MENUITEMINFOA mif = { 0 };
 	mif.cbSize = sizeof(mif);
 	mif.fMask = MIIM_BITMAP;
-	mif.hbmpItem = bmp;                         // lives as long as WED, menus never delete their bitmaps
+	mif.hbmpItem = bmp_unchecked;
 	SetMenuItemInfoA((HMENU) menu, item, true, &mif);
 #endif
 }
