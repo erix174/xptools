@@ -477,6 +477,28 @@ void	WED_SlippyMap::DrawVisualization(bool inCurrent, GUI_GraphState * g)
 		glEnd();
 		GUI_FontDraw(g, font_UI_Small, white, bnds[2] - 5, bnds[1] + 2, attrib, align_Right);
 	}
+
+	// A regional map outside its country is just empty - say so, or it looks broken.
+	// Failed tiles come back slowly, so don't wait for all of them.
+	if(idx >= FIRST_REGIONAL && got >= min(want, 4) && got > 0 && bad == got)
+	{
+		string name(slippy_sources[idx].name);                  // "S&pain, Gibraltar (PNOA)"
+		name.erase(remove(name.begin(), name.end(), '&'), name.end());
+		size_t paren = name.find(" (");
+		string msg = "No imagery here - this map covers " + name.substr(0, paren) + " only";
+
+		int txtWidth = GUI_MeasureRange(font_UI_Basic, msg.c_str(), msg.c_str() + msg.size());
+		float cx = (bnds[0] + bnds[2]) * 0.5f, cy = (bnds[1] + bnds[3]) * 0.5f;
+		g->SetState(0, 0, 0, 0, 1, 0, 0);
+		glColor4f(0,0,0,0.65);
+		glBegin(GL_QUADS);
+			glVertex2f(cx - txtWidth / 2 - 10, cy + 20);
+			glVertex2f(cx + txtWidth / 2 + 10, cy + 20);
+			glVertex2f(cx + txtWidth / 2 + 10, cy - 10);
+			glVertex2f(cx - txtWidth / 2 - 10, cy - 10);
+		glEnd();
+		GUI_FontDraw(g, font_UI_Basic, white, cx, cy, msg.c_str(), align_Center);
+	}
 	if (rot != 0)
 	{
 		glMatrixMode(GL_MODELVIEW);
