@@ -25,7 +25,7 @@ structured so that can be done mechanically:
 | 9 | Open questions | what is not decided |
 
 **The short version is `WED_LiveryFormat_Brief.md`**: what the feature is, what
-we are asking of the sim, and where the WED side stands. If you are Jim or a
+we are asking of the sim, and where the WED side stands. If you work on the X-Plane side or are a
 reviewer, read that one first.
 
 ### Conventions
@@ -93,7 +93,7 @@ format itself is still one row.
 
 - **`1313` is live.** WED 2.8 writes it on every export aimed at X-Plane 12,
   Gateway included (`AptIO.cpp:1428`, gated on version 1200). The number is
-  still provisional pending Jim K.'s confirmation, and changing it is one
+  still provisional pending the sim side's confirmation, and changing it is one
   constant (`apt_startup_loc_weights`, `AptDefs.h:104`). The feature targets
   X-Plane 12.5. No apt.dat version bump; the recommendation of §9 stands.
 - **`1312` stays deleted.** It survives only as history (§8.6).
@@ -219,7 +219,7 @@ stand at a time, worldwide.
 From here on WED and its data change only in ways that need no sim change;
 anything that would need one is a new draft, agreed with the sim side first.
 Items still open on the sim side are listed at the end of this section and
-marked **PENDING JIM** where they appear.
+marked **PENDING SIM** where they appear.
 
 **Frozen - changing any of these needs the sim:**
 
@@ -247,7 +247,7 @@ marked **PENDING JIM** where they appear.
 its last cell; an OPERATOR record's first seven cells keep their meaning; a
 code that was valid under R10 stays valid.
 
-**Pending the sim side (Jim):**
+**Pending the sim side:**
 
 - **P0** Confirm the row codes `1313` and `1315`, or give the ones to use. Each
   is one constant in WED.
@@ -373,7 +373,7 @@ correctly.
   capped it at 99 characters (25 three-letter codes), which kept busy hubs from
   listing every airline that serves them. **WED 2.8 raises it to 299 characters**
   (75 three-letter codes; `kGatewayAirlinesMaxChars`, Eric 2026-09-27), pending
-  the Gateway team and Jim confirming that neither the server nor the sim's
+  the Gateway team and the sim side confirming that neither the server nor the sim's
   reader has a shorter limit - where the old 100 came from is not recorded.
   Auto-fill and the Liveries tab stop at the last whole code before the cap, and
   WED drops a code listed twice, silently.
@@ -398,7 +398,7 @@ correctly.
   parks nothing only when nothing fits at any of them. "Can fill" is
   the same `eligible()` the sim uses (§4.1), range (R26) and `HOME` (R27)
   included, plus the stand's equipment type - which the sim must apply too, or
-  WED must drop it (**PENDING JIM, P3** in §0). The Liveries tab's
+  WED must drop it (**PENDING SIM, P3** in §0). The Liveries tab's
   multi-stand count, the Moderation View and its report call the same function,
   so none of them disagrees with Validate. Without an index (an X-Plane before
   12.5) there is nothing to check against and the warning stays quiet.
@@ -615,7 +615,7 @@ correctly.
     rest are ignored (as R24 does for apt.dat).
   - `????` in any cell the sim reads makes that row ineligible.
   - `path` is relative to `apt_aircraft/`, uses `/` only, never `..`, UTF-8.
-  - An operation class other than the five words: **PENDING JIM (P4)**,
+  - An operation class other than the five words: **PENDING SIM (P4)**,
     proposed fail closed.
   - `NAME`, `FLEET`, `REG` and `TYPE` are for display; the sim need not read them.
   - `XPZZ_<type>` is a passenger operator to the sim; that WED never places it
@@ -2371,7 +2371,7 @@ existing apt.dat is covered the day the index is.
 
 ## 9. Open questions
 
-1. **Row code confirmation.** `1313` is provisional, pending Jim K. **One code,
+1. **Row code confirmation.** `1313` is provisional, pending the sim side. **One code,
    not two** — dropping per-stand refinement (§8.6) gave back the one that
    carried them, as dropping the grouping machinery before it (§8.2) gave back
    two more. Four, to two, to one. **Any single unused code works.**
@@ -2393,7 +2393,7 @@ existing apt.dat is covered the day the index is.
    file that carries rows it does not know, but WED 2.7.x and earlier still
    refuse one. If a bump happens as well, new WED writes a version old X-Plane
    refuses, while Gateway serves both. Who generates which version for whom?
-   This needs Jim and the release manager.
+   This needs the sim side and the release manager.
 4. **Gateway's airline-string cap.** WED 2.7 kept the `1301` airline string under
    100 characters for a Gateway submission; WED 2.8 raises it to 299 (R10). A
    busy hub is served by more airlines than that, and auto-fill stops short. The

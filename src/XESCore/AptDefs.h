@@ -98,7 +98,7 @@ enum {
 	apt_startup_loc_new	= 1300,			// 1300 lat lon heading misc|gate|tie_down|hangar traffic name
 	apt_startup_loc_extended = 1301,	// 1301 size opertaions_type airline_list
 	// 1313 w w w w w w - per-class spawn weights, six relative integers A..F.
-	// PROPOSED, not allocated: Jim K. has not assigned a code yet, and changing
+	// PROPOSED, not allocated: the sim side has not assigned a code yet, and changing
 	// this one line is the whole of adopting whatever he picks. See section 9 of
 	// WED_LiveryFormatSpec.md.
 	apt_startup_loc_weights = 1313,
