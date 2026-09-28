@@ -482,7 +482,7 @@ string	WED_LiveryConformanceReport(WED_Airport * apt)
 	apt->GetName(name);
 	string r = "# WED livery conformance report - " + icao + " " + name + NL;
 	r += string("# WED ") + WED_VERSION_STRING + ", livery index " + (d ? d->index.DescribeVersion() : string("(none)")) + NL;
-	r += "# What WED's rule (spec §4.1, R17-R31) says can park at each stand. One line per" + NL;
+	r += "# What WED's rule (spec §4.1, R17-R33) says can park at each stand. One line per" + NL;
 	r += "# livery row at a class the stand opens, then one STAND line. verdict: yes, equipment," + NL;
 	r += "# out_of_range, home_only; code-level: wrong_operation_class, no_livery. Obsolete rows" + NL;
 	r += "# never appear (R25). Pool stands (GA, military with no list) try the whole library." + NL;
