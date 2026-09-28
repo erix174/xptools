@@ -1,6 +1,6 @@
 # apt.dat row 1313: per-stand fleet weighting
 
-**Specification and implementation manual.** Draft 9, 2026-09-26. WED 2.8.0,
+**Specification and implementation manual.** Draft 10, 2026-09-28. WED 2.8.0,
 for X-Plane 12.5. For the X-Plane side of WED's ramp livery picker.
 
 ---
@@ -13,6 +13,7 @@ structured so that can be done mechanically:
 
 | § | contains | use it for |
 |---|---|---|
+| 0 | Contract for X-Plane 12.5 | what is frozen, what may change without the sim, and what is pending - read first |
 | 1 | Normative rules, numbered `R1`… | the checklist an implementation is graded against |
 | 2 | ABNF grammar, and a worked example | writing the parser |
 | 3 | Reader algorithm | what to do with each row |
@@ -41,6 +42,22 @@ Retired rule numbers: R6-R8, R12, R13 and R16 (dropped by earlier drafts;
 §8.2 counts six rules that existed only for the named-policy machinery of
 drafts 1-5) and R21, R22 (`1312`, deleted in draft 7).
 Retired vector numbers: V3-V5, V7, V13-V15, V23-V25 and V27-V29.
+
+### What changed since draft 9
+
+Draft 10 freezes the contract for X-Plane 12.5 (§0):
+
+- **§0** lists what is frozen, what changes without the sim, and six items
+  pending the sim side (P0-P6).
+- **R31** promotes the appendix's note on matching `1301` codes against the
+  index's `AIRLINE`, not a library bucket's suffix, to a rule.
+- **R32 and R33** give the livery index the forward compatibility apt.dat
+  already had under R15, and pin the values the sim reads: `Obsolete`,
+  `SCOPE`, `RANGE_KM`, unknown countries, duplicates, `????`.
+- **R30 corrected**: tuning the weights of an auto-filled stand keeps its `A`,
+  as WED does and the manual says; draft 9 listed weights among the edits that
+  turn `A` into `M`.
+- **R23**: all-zero weights leave the letter as the author set it.
 
 ### What changed since draft 8
 
@@ -196,6 +213,77 @@ stand at a time, worldwide.
 
 ---
 
+## 0. Contract for X-Plane 12.5
+
+**Frozen as of draft 10 (2026-09-28).** This is what the sim implements against.
+From here on WED and its data change only in ways that need no sim change;
+anything that would need one is a new draft, agreed with the sim side first.
+Items still open on the sim side are listed at the end of this section and
+marked **PENDING JIM** where they appear.
+
+**Frozen - changing any of these needs the sim:**
+
+- apt.dat: row codes `1313` and `1315` (proposed until confirmed, P0), their
+  grammar (§2), and rules R1-R5, R9-R11, R14, R15, R17-R20, R23-R31.
+- The livery index layout (§6.2): the header, the seven OPERATOR cells and the
+  ten livery-row cells in their order and meaning, read under R32 and R33.
+- The reserved words, all case-sensitive: `OPERATOR`; the operation classes
+  `Pax`, `Cargo`, `GA`, `Military`, `Gov`; `HOME`; `Obsolete`; and the
+  pseudo-operators `XPGA`, `XPMI`, `XPZZ_<type>` (§6.7c). Airline codes
+  themselves compare without regard to case (R10).
+
+**Free - changes that never need the sim:**
+
+- Every value in the index: operators, names, countries, fleets, hubs; livery
+  rows added or removed; `RANGE_KM`; `NOTE` text; `Obsolete` marks; `SCOPE` on
+  a row. A new `data` stamp is the only visible change.
+- New index cells, where R32 allows them.
+- `WED_AirportDatabase.txt`: WED-only (recommendations, flags). The sim never
+  reads it.
+- Everything WED does for authors and moderators: the Liveries tab, auto-fill,
+  validation, Moderation Mode, and how WED uses `1315`.
+
+**What the sim can rely on not changing under it:** a livery row's `path` stays
+its last cell; an OPERATOR record's first seven cells keep their meaning; a
+code that was valid under R10 stays valid.
+
+**Pending the sim side (Jim):**
+
+- **P0** Confirm the row codes `1313` and `1315`, or give the ones to use. Each
+  is one constant in WED.
+- **P1** Does the sim read `livery_index.txt` from `apt_aircraft/` as §6.2
+  describes, and who regenerates it for each X-Plane release (it is
+  install-specific, §6.4)? This is the only open question that could still
+  change the file.
+- **P2** The airport's country for R27 and R28. WED takes it from its own
+  airport database, which the sim does not have. Options: the airport's
+  `1302 country` (WED's Gateway export adds an ISO 3166 code to every airport)
+  mapped to IOC with a table shipped with the index, or a country per airport
+  in a file the sim already reads.
+- **P3** Equipment. WED does not offer a livery at a stand whose equipment
+  types exclude it, judging the livery by the first folder of its `path`:
+  `heavy` = heavies, `jet` = jets, `turboprop` = turboprops, `prop` = props,
+  `helo` = helicopters, `fighter` = fighters; any other folder, or a stand with
+  no equipment set, passes. If the sim does not apply the same test in
+  `eligible()`, WED's previews, coverage readout and R14 warnings will disagree
+  with what parks (R18), and WED must drop it instead. Recommendation: the sim
+  applies it, with exactly this mapping.
+- **P4** An operation class other than the five words, in either cell.
+  Proposal: fail closed - such a row is never eligible anywhere.
+- **P5** What today's sim does with a `1301` operation type of `none`. R29
+  assumes nothing parks; if today's sim parks aircraft there, R29 changes
+  legacy stands and must be revisited with R2 and R17.
+- **P6** Confirm today's step-down numbers and its fall-through for a class
+  with nothing to park (R17), which WED models as 75% to the letter's class and
+  75% of the rest to each smaller one, class A taking the remainder.
+
+The **conformance kit** in `docs/livery_conformance/` lists, for the sample
+package and one large airport, what WED's rule says can park at every stand.
+The sim's own output in the same form should match it line for line; every
+difference is either a bug on one side or a question for this list.
+
+---
+
 ## 1. Normative rules
 
 ### Format-level
@@ -219,7 +307,8 @@ stand at a time, worldwide.
 
   This is the one place where a value in `1301` follows the new rows instead of
   leading them, and it is safe precisely because no reader uses it for selection
-  once `1313` exists.
+  once `1313` exists. All-zero weights (nothing parks, by choice) have no highest
+  class, and leave the letter as the author set it.
 - **R4** — A malformed or unparseable `1313` row MUST be
   discarded, and MUST NOT fail the file, the airport, or the stand. **This is the
   opposite of the rest of `AptIO.cpp`**, where a bad row sets `ok = "Illegal …"`
@@ -308,7 +397,8 @@ correctly.
   sim parks it (R17): every class at or below its `1301` letter counts, so it
   parks nothing only when nothing fits at any of them. "Can fill" is
   the same `eligible()` the sim uses (§4.1), range (R26) and `HOME` (R27)
-  included, and WED adds the stand's equipment type. The Liveries tab's
+  included, plus the stand's equipment type - which the sim must apply too, or
+  WED must drop it (**PENDING JIM, P3** in §0). The Liveries tab's
   multi-stand count, the Moderation View and its report call the same function,
   so none of them disagrees with Validate. Without an index (an X-Plane before
   12.5) there is nothing to check against and the warning stays quiet.
@@ -462,11 +552,13 @@ correctly.
   changes.
 
 - **R30** — **Row `1315 A|M` says who set the stand's static-aircraft data.**
-  `A`: WED's auto-fill, and no author has changed the stand since. `M`: an
-  author set it in WED 2.8 or later - weights, the operation type (None
-  included), the size or the airline list, on the Liveries tab or in the
-  property grid, or Fix. Absent: nothing said - a stand no 2.8 tool has
-  touched. It binds to the most recent `1300` like
+  `A`: WED's auto-fill, and no author has changed what it decided since -
+  tuning the weights of an auto-filled stand keeps its `A`, since that is what
+  an author is expected to do after a fill. `M`: an author set the stand in WED
+  2.8 or later - the operation type (None included), the airline list, the
+  size, the ramp type or equipment of an auto-filled stand, weights on a stand
+  that was not auto-filled, or Fix - on the Liveries tab or in the property
+  grid. Absent: nothing said - a stand no 2.8 tool has touched. It binds to the most recent `1300` like
   `1313` (R20), the first valid one wins (R24), and anything other than exactly
   one token `A` or `M` is discarded (R4). **It changes nothing about what
   parks** - the sim MUST ignore it for selection; readers other than editors
@@ -489,7 +581,45 @@ correctly.
   entirely, and near a 2.8 stand that parks nothing (None, or all-zero weights)
   it removes no object. A new stand placed with the tool and never set keeps no
   mark and is upgraded as before. **The Gateway's bulk export must run WED 2.8
-  or later** for the fingerprint to hold in the global apt.dat.
+  or later** for the fingerprint to hold in the global apt.dat. WED 2.7.2
+  (X-Plane/xptools#61) stops turning `none` into anything at all, so after 2.8
+  is rebased on it no `none` is converted, fingerprinted or not.
+
+- **R31** — **A `1301` code is matched against the index's `AIRLINE` cell,
+  without regard to case - never against a `library.txt` bucket's suffix.**
+  The index code and the bucket suffix differ for several operators (EJU,
+  CES_1, CHH, MAY/RUK/RYS, BCS, PLF, HMF, GLO - see the appendix); a sim that
+  matched buckets would park nothing, or the wrong livery, there.
+
+- **R32** — **The livery index is read by cell position, and tolerates cells
+  it does not know.** A reader takes `path` from the end of a livery row and
+  every other cell by its position from the start; it reads an OPERATOR
+  record's first seven cells by position and ignores any after them. New cells
+  are only ever added between `OP` and `path` in a livery row, and at the end
+  of an OPERATOR record, so a schema 4 reader keeps working on a later file.
+  A reader MUST NOT reject a file for its `# schema` number; that number
+  changes only when the meaning of an existing cell changes. `# data`,
+  `# source` and `# assets` are informational.
+
+- **R33** — **Index values the sim reads, pinned:**
+  - `Obsolete` is the whole `NOTE` cell after trimming, case-sensitive;
+    `Obsolete Retro` is not obsolete. An empty `NOTE` means `Default`.
+  - `SCOPE` other than exactly `HOME` counts as empty (fails open).
+  - `RANGE_KM` is a whole number of km; empty, zero, negative or not a number
+    means no range limit. Distance is great-circle on a 6371 km sphere from the
+    stand's `1300` position to the nearest hub that could be placed (§6.7b);
+    an operator with no placed hub has no range limit.
+  - `REG CTY` or an OPERATOR country that is empty or `???` is unknown, and
+    R27/R28 fail open for it.
+  - A duplicate OPERATOR code, or a duplicate `path`: the first one wins, the
+    rest are ignored (as R24 does for apt.dat).
+  - `????` in any cell the sim reads makes that row ineligible.
+  - `path` is relative to `apt_aircraft/`, uses `/` only, never `..`, UTF-8.
+  - An operation class other than the five words: **PENDING JIM (P4)**,
+    proposed fail closed.
+  - `NAME`, `FLEET`, `REG` and `TYPE` are for display; the sim need not read them.
+  - `XPZZ_<type>` is a passenger operator to the sim; that WED never places it
+    automatically (§6.7c) is WED's business only.
 
 ---
 
@@ -1411,6 +1541,9 @@ B752 *** D *** DOJ *** N119NA *** USA *** Default *** 7200 *** HOME *** Gov *** 
 - `SCOPE` is `HOME` or empty (R27, §6.7d).
 - `OP` repeats the operator's operation class, so a row is self-contained.
 - `path` is relative to `apt_aircraft/`, and is the only unique key (§6.3).
+
+**Reading newer schemas.** R32: new cells only ever appear between `OP` and
+`path`, or at the end of an OPERATOR record; a reader ignores them.
 
 **Reading older schemas.** `path` has been the last cell in every schema, so a
 reader takes it from the end. A schema 1 row has seven cells (no range, no

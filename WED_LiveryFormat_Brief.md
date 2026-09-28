@@ -47,12 +47,26 @@ being present (R17); without the row, today's behaviour is untouched.
 
 ## What we are asking of the sim
 
+**The contract is frozen for 12.5** (spec §0, draft 10). Frozen: the row codes,
+R1-R33, the index cells in their order and meaning, and the reserved words
+(`OPERATOR`, `Pax Cargo GA Military Gov`, `HOME`, `Obsolete`, `XPGA XPMI
+XPZZ_*`). Free, never needing the sim: every data value in the index, new index
+cells where R32 puts them, and everything WED-only. Six items are still yours
+to settle (P0-P6, below); nothing else should move under you.
+
 | # | ask | notes |
 |---|---|---|
-| 1 | **Confirm row code `1313`**, or give the one to use | It is **live**: WED 2.8 writes it on every X-Plane 12 export, Gateway included. Changing it is one constant (`AptDefs.h`). Best settled before 2.8 is released |
-| 1b | **Confirm row code `1315`** (`1315 A` / `1315 M`: auto-filled or set by hand, R30), or give the one to use | New 2026-09-27. It carries WED's auto-fill mark through apt.dat so Gateway moderators see it. The sim only has to skip it - it never changes what parks. One constant in `AptDefs.h` |
+| P1 | **Does the sim read `livery_index.txt` as specified, and who regenerates it per release?** | The only open question that could still change the file (spec §0, §6.4) |
+| P2 | **Where does the sim get an airport's country?** (R27 home-only rows, R28 GA) | WED uses its own airport database, which the sim does not have. Options: `1302 country` (ISO, added by WED's Gateway export) mapped to IOC with a table shipped beside the index, or a country per airport in a file the sim already reads |
+| P3 | **Equipment filter** | WED refuses a livery whose `path` starts with a folder the stand's equipment excludes (`heavy`, `jet`, `turboprop`, `prop`, `helo`, `fighter`; any other folder passes). If the sim does not do the same, WED's warnings will disagree with what parks. We recommend the sim applies exactly this |
+| P4 | **Unknown operation class in the index** | Proposal: fail closed, the row is never eligible |
+| P5 | **What does today's sim do with operation type `none`?** | R29 assumes nothing parks. WED 2.7.2 (#61) now keeps `none` on Gateway export instead of turning it into Airline/GA |
+| P6 | **Confirm today's step-down** | WED models it as 75% to the letter's class, 75% of the rest to each smaller one, A the remainder, with fall-through past an empty class (R17) |
+| 7 | **Run the conformance kit** | `docs/livery_conformance/`: WED's per-stand answer for the sample and LFPG; the sim's output should match line for line |
+| 1 (P0) | **Confirm row code `1313`**, or give the one to use | It is **live**: WED 2.8 writes it on every X-Plane 12 export, Gateway included. Changing it is one constant (`AptDefs.h`). Best settled before 2.8 is released |
+| 1b (P0) | **Confirm row code `1315`** (`1315 A` / `1315 M`: auto-filled or set by hand, R30), or give the one to use | New 2026-09-27. It carries WED's auto-fill mark through apt.dat so Gateway moderators see it. The sim only has to skip it - it never changes what parks. One constant in `AptDefs.h` |
 | 2 | **Version policy** | Our recommendation: **no bump.** Tested on 12.4.4 and 12.4.3-r2: the sim ignores unknown rows *and* unknown version numbers (spec §7.2), so the row rides in a `1200` file |
-| 3 | **Implement the reader rules** | Three-stage selection (R17, R18) plus: **R25** NOTE `Obsolete` never spawns; **R26** skip a row when the stand is farther than `RANGE_KM` from the operator's nearest hub (Military/Gov exempt; unknown range or no placed hub is never filtered); **R27** `HOME` rows only in the operator's own country, fail open if unknown; **R28** GA stands draw a home-registered GA livery 70% of the time when one exists, no range, no airline list; **R29** operation type `none` = no static aircraft, read exactly as six zero weights |
+| 3 | **Implement the reader rules** | Three-stage selection (R17, R18) plus: **R25** NOTE `Obsolete` never spawns; **R26** skip a row when the stand is farther than `RANGE_KM` from the operator's nearest hub (Military/Gov exempt; unknown range or no placed hub is never filtered); **R27** `HOME` rows only in the operator's own country, fail open if unknown; **R28** GA stands draw a home-registered GA livery 70% of the time when one exists, no range, no airline list; **R29** operation type `none` = no static aircraft, read exactly as six zero weights; **R31** match `1301` codes against the index's `AIRLINE` cell; **R32** read the index by cell position and ignore cells you do not know (new ones only appear between `OP` and `path`, or at the end of an OPERATOR record); **R33** the pinned values (`Obsolete` exact, unknown `SCOPE` = empty, `RANGE_KM` <= 0 = no limit, duplicates first wins, `????` ineligible) |
 | 4 | **Ship `livery_index.txt` (schema 4) with X-Plane 12.5** | Under `Resources/default scenery/sim objects/apt_aircraft/`, from the same build as the assets (a mismatch fails silently, spec §6.4). WED 2.8 turns its livery features on when it finds it |
 | 5 | **Please don't add a fallback** | An empty stand is the correct reading of what the author wrote. WED makes empties visible instead (below) |
 

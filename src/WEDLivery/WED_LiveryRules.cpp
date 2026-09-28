@@ -156,17 +156,3 @@ void	WED_LegacyStepDownWeights(int top_class, int out_w[6])
 	out_w[0] = 1000 - sum;					// A takes the remainder
 }
 
-void	WED_LegacyClassWeights(int size_class, int out_w[6])
-{
-	static const int kTable[6][6] = {
-		// A    B    C    D    E    F
-		{ 100,   0,   0,   0,   0,   0 },	// A - A to A, in the old system too
-		{  30,  70,   0,   0,   0,   0 },	// B
-		{   0,  30,  70,   0,   0,   0 },	// C - the A320 / 737 field
-		{   0,  10,  40,  50,   0,   0 },	// D
-		{   0,   0,  10,  30,  60,   0 },	// E
-		{   0,   0,   0,  10,  50,  40 },	// F
-	};
-	if (size_class < 0 || size_class > 5) size_class = 2;
-	for (int k = 0; k < 6; ++k) out_w[k] = kTable[size_class][k];
-}

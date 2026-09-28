@@ -97,13 +97,6 @@ bool			WED_LiveryOperatorFitsRampOp(const std::string & code_uc, int ramp_op,
 // atc_Heavies / atc_Jets / ... enum values, or -1 when the folder says nothing.
 int				WED_LiveryEquipment(const WED_LiveryIndexEntry & e);
 
-// Class weights for a stand that only ever had one size letter (0 = A .. 5 = F).
-// The old letter meant "up to this size", so the weight spreads downward:
-//   A: A100   B: A30 B70   C: B30 C70   D: B10 C40 D50   E: C10 D30 E60   F: D10 E50 F40
-// A class the draw lands on with no livery leaves the stand empty for that
-// load (R18) - the weights are never renormalised onto the classes that exist.
-void			WED_LegacyClassWeights(int size_class, int out_w[6]);
-
 // TODAY'S STEP-DOWN, as weights. A stand with no 1313 row is the legacy format:
 // the sim takes its 1301 letter 75% of the time and hands 75% of what is left to
 // each smaller class in turn, class A taking the remainder - share

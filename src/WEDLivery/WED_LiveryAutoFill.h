@@ -33,7 +33,7 @@
 // aircraft):
 //   op type None    - skipped. None means "no static aircraft here".
 //   no weights yet  - a legacy stand: its one size letter becomes a weight
-//                     spread (WED_LegacyClassWeights). Stands that already
+//                     spread (WED_LegacyStepDownWeights). Stands that already
 //                     carry weights keep them.
 //   Passenger/Cargo - adds the airport's RECOMMENDED operators (the airlines
 //                     WED_AirportDatabase says serve it) of that operation
