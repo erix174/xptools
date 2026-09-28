@@ -187,15 +187,8 @@ static const GUI_MenuItem_t k3DPreviewMenu[] = {
 {	NULL,								0,	0,										0,	0								}
 };
 
-static const GUI_MenuItem_t kSlippyMapMenu[] = {
-{	"&None",					0,	0,							0,	wed_SlippyMapNone	},
-{	"&OpenStreetMap",			0,	0,							0,	wed_SlippyMapOSM	},
-{	"&ESRI Imagery",			0,	0,							0,	wed_SlippyMapESRI	},
-{	"&Custom",					0,	0,							0,	wed_SlippyMapCustom	},
-{	"-",						0,	0,							0,	0					},
-{	"&Regional Imagery",		0,	0,							0,	0					},
-{	NULL,						0,	0,							0,	0					}
-};
+// The Slippy Map menu is built in WED_MakeMenus(), the regional maps come from WED_SlippyMap.
+#define SLIPPY_FIRST_REGIONAL 3     // menu position of the first regional map, after None, OSM and ESRI
 
 
 static const GUI_MenuItem_t kPavementMenu[] = {
@@ -351,7 +344,7 @@ static void draw_flag(const vector<uint32_t>& src, int sw, int sh, vector<uint32
 
 // Flags of the covered countries in front of each regional map, so it is obvious these are not world wide.
 // All icons get the width of the widest one, so the item texts line up.
-static void AddRegionalFlags(GUI_Application * inApp, GUI_Menu menu)
+static void AddRegionalFlags(GUI_Application * inApp, GUI_Menu menu, int first_item)
 {
 	int h = inApp->MenuIconPixelHeight();
 	if (h <= 0) return;
@@ -392,7 +385,7 @@ static void AddRegionalFlags(GUI_Application * inApp, GUI_Menu menu)
 			}
 		}
 		if (x > 0)
-			inApp->SetMenuItemIcon(menu, n, icon.data(), w, h);
+			inApp->SetMenuItemIcon(menu, first_item + n, icon.data(), w, h);
 	}
 }
 
@@ -425,16 +418,18 @@ void WED_MakeMenus(GUI_Application * inApp)
 	GUI_Menu	objd_menu = inApp->CreateMenu(
 		"&Object Density", kObjDensityMenu, view_menu, 7);
 
-	GUI_Menu	slippy_menu = inApp->CreateMenu(
-		"S&lippy Map",	kSlippyMapMenu, view_menu, 13);
-
-	static vector<GUI_MenuItem_t> regional_items;
+	static vector<GUI_MenuItem_t> slippy_items = {
+		{ "&None",          0, 0, 0, wed_SlippyMapNone },
+		{ "&OpenStreetMap", 0, 0, 0, wed_SlippyMapOSM  },
+		{ "&ESRI Imagery",  0, 0, 0, wed_SlippyMapESRI } };
 	for (int n = 0; n < WED_SlippyMap::CountRegionalMaps(); ++n)
-		regional_items.push_back({ WED_SlippyMap::RegionalMapName(n), 0, 0, 0, wed_SlippyMapRegional + n });
-	regional_items.push_back({ NULL, 0, 0, 0, 0 });
-	GUI_Menu	regional_menu = inApp->CreateMenu(
-		"&Regional Imagery", regional_items.data(), slippy_menu, 5);
-	AddRegionalFlags(inApp, regional_menu);
+		slippy_items.push_back({ WED_SlippyMap::RegionalMapName(n), 0, 0, 0, wed_SlippyMapRegional + n });
+	slippy_items.push_back({ "&Custom", 0, 0, 0, wed_SlippyMapCustom });
+	slippy_items.push_back({ NULL, 0, 0, 0, 0 });
+
+	GUI_Menu	slippy_menu = inApp->CreateMenu(
+		"S&lippy Map",	slippy_items.data(), view_menu, 13);
+	AddRegionalFlags(inApp, slippy_menu, SLIPPY_FIRST_REGIONAL);
 
 #if WITHNWLINK
 	const int preview_window_parent = 17;

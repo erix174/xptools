@@ -75,33 +75,34 @@ struct slippy_source_t {
 // The mode is saved in the document prefs, so only ever append to this list.
 static const slippy_source_t slippy_sources[] = {
 { NULL, WED_URL_OSM_TILES  "${z}/${x}/${y}.png", 16,  // OSM tiles below this zoom are not cached, but on-demand generated. Openstreetmap foundation asks to limit their use.
-  "© OpenStreetMap Contributors", NULL },
+  "© OpenStreetMap contributors, ODbL", NULL },
 // ToDo: use shorter specific ESRI attribution by downloading https://static.arcgis.com/attribution/World_Imagery
 //       and decode it per https://github.com/Esri/esri-leaflet  (which is java code)
 { NULL, WED_URL_ESRI_TILES "${z}/${y}/${x}.jpg", 18,  // ESRI maps are available down to ZL17 in general, but since 2021 below 60 deg also in ZL18
-  "© Esri, DigitalGlobe, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID and the GIS User Community", NULL },
+  "Powered by Esri. Source: Esri, Vantor, Earthstar Geographics, and the GIS User Community", NULL },
 
 // Official orthophotos under open licenses. Coverage checked 2026-09: outside it the servers return 404, blank tiles or,
 // for swisstopo, heavily upscaled imagery. Only countries with high resolution coverage get listed and flagged.
+// Attributions follow each provider's terms as of 2026-09. The map font has no CJK glyphs, hence GSI's English credit.
 { "&Austria (basemap.at)",
-  "https://maps.wien.gv.at/basemap/bmaporthofoto30cm/normal/google3857/${z}/${y}/${x}.jpeg", 19,
-  "© basemap.at, CC BY 4.0", "AUT" },
-{ "&Estonia (Maa- ja Ruumiamet)",
+  "https://mapsneu.wien.gv.at/basemap/bmaporthofoto30cm/normal/google3857/${z}/${y}/${x}.jpeg", 19,
+  "Data source: basemap.at, CC BY 4.0", "AUT" },
+{ "Es&tonia (Maa- ja Ruumiamet)",
   "https://tiles.maaamet.ee/tm/tms/1.0.0/foto@GMC/${z}/${x}/${-y}.jpg", 18,
-  "© Maa- ja Ruumiamet", "EST" },
+  "Ortofoto: Maa- ja Ruumiamet, open data licence geoportaal.maaruum.ee/opendata-licence", "EST" },
 { "&France, Monaco (IGN)",                           // incl. overseas departments, St Pierre, New Caledonia, Wallis - but not French Polynesia
   "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal"
   "&TILEMATRIXSET=PM&FORMAT=image/jpeg&TILEMATRIX=${z}&TILEROW=${y}&TILECOL=${x}", 19,
-  "© IGN / Geoplateforme, Licence Ouverte 2.0", "FRA MON" },
+  "© IGN - BD ORTHO, Géoplateforme, Licence Ouverte Etalab 2.0", "FRA MON" },
 { "&Japan (GSI)",
   "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/${z}/${x}/${y}.jpg", 18,
-  "© Geospatial Information Authority of Japan", "JPN" },
-{ "&Netherlands (PDOK)",                             // European part only
+  "Source: GSI Tiles (Chiriin Tile), Geospatial Information Authority of Japan", "JPN" },
+{ "Net&herlands (PDOK)",                             // European part only
   "https://service.pdok.nl/hwh/luchtfotorgb/wmts/v1_0/Actueel_orthoHR/EPSG:3857/${z}/${x}/${y}.jpeg", 19,
-  "© Beeldmateriaal Nederland / PDOK, CC BY 4.0", "NED" },
+  "Luchtfoto: Beeldmateriaal.nl / PDOK, CC BY 4.0", "NED" },
 { "S&pain, Gibraltar (PNOA)",                        // Gibraltar has no IOC flag
   "https://tms-pnoa-ma.idee.es/1.0.0/pnoa-ma/${z}/${x}/${-y}.jpeg", 19,
-  "PNOA © Instituto Geografico Nacional de Espana, CC BY 4.0", "ESP" },
+  "PNOA, CC BY 4.0 scne.es", "ESP" },
 { "&Switzerland, Liechtenstein (swisstopo)",
   "https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/${z}/${x}/${y}.jpeg", 20,
   "© swisstopo", "SUI LIE" },
