@@ -364,6 +364,8 @@ set (WED_SOURCES
 	src/WEDMap/WED_BoundaryLayer.h
 	src/WEDMap/WED_SlippyMap.cpp
 	src/WEDMap/WED_SlippyMap.h
+	src/WEDMap/WED_TiandituKeyDialog.cpp
+	src/WEDMap/WED_TiandituKeyDialog.h
 	src/WEDNetwork/RAII_Classes.cpp
 	src/WEDNetwork/RAII_Classes.h
 	src/WEDTCE/WED_TCE.cpp

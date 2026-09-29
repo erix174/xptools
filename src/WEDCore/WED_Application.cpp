@@ -138,6 +138,16 @@ void WED_Settings::ReceiveMessage(
 			 ((GUI_TextField *) inParam)->GetDescriptor(gCustomSlippyMap);
 			 printf("%s\n",gCustomSlippyMap.c_str());
 	}
+	else if(inMsg == (intptr_t) &gTiandituKey)
+	{
+			string key;
+			((GUI_TextField *) inParam)->GetDescriptor(key);
+			if(key != gTiandituKey)
+			{
+				gTiandituKey = key;
+				gTiandituVerified = 0;      // a new key is checked the next time Tianditu is picked
+			}
+	}
 	else if(inMsg == (intptr_t) &gFontSize)
 	{
 			string new_val;
@@ -153,6 +163,11 @@ void WED_Settings::ReceiveMessage(
 			{
 				mCustom_box->GetBounds(b);
 				mCustom_box->SetBounds(b[0],b[3]-field_height,b[2],b[3]);
+			}
+			if(mTianditu_box)
+			{
+				mTianditu_box->GetBounds(b);
+				mTianditu_box->SetBounds(b[0],b[3]-field_height,b[2],b[3]);
 			}
 			if(mFont_box)
 			{
@@ -262,6 +277,24 @@ WED_Settings::WED_Settings(GUI_Commander * cmdr) : GUI_Window("WED Preferences",
 	label->SetParent(this);
 	label->SetDescriptor("Tile Server Custom URL");
 	label->Show();
+
+	mTianditu_box = new GUI_TextField(true, this);
+	GUI_Label * label3 = new GUI_Label();
+	mTianditu_box->SetMargins(3,2,3,2);
+	mTianditu_box->SetBounds(20,96-field_height,340,96);
+	label3->SetBounds(20,98,300,118);
+	mTianditu_box->SetParent(this);
+	mTianditu_box->AddListener(this);
+	mTianditu_box->SetKeyMsg((intptr_t) &gTiandituKey, (intptr_t) mTianditu_box);
+	mTianditu_box->SetDescriptor(gTiandituKey);
+	mTianditu_box->Show();
+	mTianditu_box->SetKeyAllowed(GUI_KEY_RETURN, false);
+	mTianditu_box->SetKeyAllowed(GUI_VK_ESCAPE, false);
+	mTianditu_box->SetKeyAllowed('\\', false);
+	label3->SetColors(white);
+	label3->SetParent(this);
+	label3->SetDescriptor("Tianditu API Key");
+	label3->Show();
 
 	mFont_box = new GUI_TextField(false, this);
 	GUI_Label * label2 = new GUI_Label();

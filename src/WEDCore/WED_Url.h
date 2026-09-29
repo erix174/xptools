@@ -42,5 +42,8 @@
 #define WED_URL_ESRI_USES		"https://www.arcgis.com/home/item.html?id=8e90a00a0a6845a49262e0b756f57a10"
 #define WED_URL_ESRI_TILES		"https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/"
 
+#define WED_URL_TIANDITU_TILES	"https://t0.tianditu.gov.cn/DataServer"
+#define WED_URL_TIANDITU_CONSOLE	"https://console.tianditu.gov.cn/"
+
 
 #endif /* WED_Url_H */

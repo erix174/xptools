@@ -76,6 +76,7 @@ public:
 private:
 
 	GUI_TextField * mCustom_box;
+	GUI_TextField * mTianditu_box;
 	GUI_TextField * mFont_box;
 };
 

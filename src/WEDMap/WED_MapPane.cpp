@@ -461,7 +461,11 @@ int		WED_MapPane::Map_HandleCommand(int command)
 
 	if (command >= wed_SlippyMapRegional && command < wed_SlippyMapRegional + WED_SlippyMap::CountRegionalMaps())
 	{
-		mSlippyMap->SetMode(WED_SlippyMap::RegionalMapMode(command - wed_SlippyMapRegional));
+		int n = command - wed_SlippyMapRegional;
+		if (WED_SlippyMap::RegionalMapNeedsKey(n) && !gTiandituVerified)
+			mSlippyMap->AskForKey(WED_SlippyMap::RegionalMapMode(n));
+		else
+			mSlippyMap->SetMode(WED_SlippyMap::RegionalMapMode(n));
 		return 1;
 	}
 

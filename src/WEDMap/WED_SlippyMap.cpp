@@ -23,6 +23,7 @@
  */
 
 #include "WED_SlippyMap.h"
+#include "WED_TiandituKeyDialog.h"
 
 #include <sstream>
 
@@ -69,6 +70,7 @@ struct slippy_source_t {
 	int          max_zoom;
 	const char * attribution;
 	const char * countries;    // IOC codes of the countries covered, regional maps only
+	bool         needs_key;    // the user's own Tianditu key is appended to the url, once verified
 };
 
 // Map modes: 0 = off, 1 = OSM, 2 = ESRI, 3 = custom url, 4... = regional maps in the order below.
@@ -106,6 +108,10 @@ static const slippy_source_t slippy_sources[] = {
 { "&Switzerland, Liechtenstein (swisstopo)",
   "https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/${z}/${x}/${y}.jpeg", 20,
   "© swisstopo", "SUI LIE" },
+// Tianditu: China's national map service, CGCS2000 - no GCJ-02 offset. Needs the user's own server-type key.
+{ "Ch&ina (Tianditu)",
+  WED_URL_TIANDITU_TILES "?T=img_w&x=${x}&y=${y}&l=${z}&tk=", 18,
+  "© Tianditu - National Platform for Common GeoSpatial Information Services", "CHN", true },
 };
 
 #define PREDEFINED_MAPS  ((int) (sizeof(slippy_sources) / sizeof(slippy_sources[0])))
@@ -194,6 +200,24 @@ int WED_SlippyMap::RegionalMapMode(int n)
 const char * WED_SlippyMap::RegionalMapName(int n)
 {
 	return slippy_sources[FIRST_REGIONAL + n].name;
+}
+
+bool WED_SlippyMap::RegionalMapNeedsKey(int n)
+{
+	return slippy_sources[FIRST_REGIONAL + n].needs_key;
+}
+
+// The url with any API key blanked out, for the log
+static string redact_key(const string& url)
+{
+	string r(url);
+	size_t p = r.find("tk=");
+	if(p != string::npos)
+	{
+		size_t e = r.find('&', p);
+		r.replace(p + 3, (e == string::npos ? r.size() : e) - p - 3, "<key>");
+	}
+	return r;
 }
 
 const char * WED_SlippyMap::RegionalMapCountries(int n)
@@ -317,6 +341,7 @@ WED_SlippyMap::WED_SlippyMap(GUI_Pane * h, WED_MapZoomerNew * zoomer, IResolver 
 
 WED_SlippyMap::~WED_SlippyMap()
 {
+	WED_TiandituKeyDialog::MapGone(this);
 	delete m_cache_request;
 	m_cache_request = NULL;
 }
@@ -438,7 +463,7 @@ void	WED_SlippyMap::DrawVisualization(bool inCurrent, GUI_GraphState * g)
 				mRequestStart = seconds_now();
 				mStallReported = false;
 				if(slippy_debug())
-					LOG_MSG("I/Sli get %s\n         -> %s\n", url, potential_path.c_str());
+					LOG_MSG("I/Sli get %s\n         -> %s\n", redact_key(url).c_str(), potential_path.c_str());
 			}
 		}
 	}
@@ -639,7 +664,7 @@ void	WED_SlippyMap::finish_loading_tile()
 			// A tile that failed recently is 'cooling' for a minute in the file cache - waiting that out here stalled
 			// every other tile, of every map, for that minute. So it counts as failed as well.
 			string tile_path = gFileCache.url_to_cache_path(*m_cache_request);
-			LOG_MSG("E/Sli %s: %s\n", m_cache_request->in_url.c_str(), res.out_error_human.c_str());
+			LOG_MSG("E/Sli %s: %s\n", redact_key(m_cache_request->in_url).c_str(), res.out_error_human.c_str());
 
 			m_cache[tile_path] = 0;
 
@@ -649,7 +674,7 @@ void	WED_SlippyMap::finish_loading_tile()
 		else if (slippy_debug() && !mStallReported && seconds_now() - mRequestStart > 10.0)
 		{
 			LOG_MSG("W/Sli request pending for %.0fs, cache status %d, progress %.0f: %s\n", seconds_now() - mRequestStart,
-				(int) res.out_status, res.out_download_progress, m_cache_request->in_url.c_str());
+				(int) res.out_status, res.out_download_progress, redact_key(m_cache_request->in_url).c_str());
 			mStallReported = true;
 		}
 	}
@@ -719,7 +744,19 @@ void	WED_SlippyMap::SetMode(int mode)
 
 	int idx = predefined_idx(mode);
 	if(idx >= 0)
+	{
 		url_printf_fmt = slippy_sources[idx].url;
+		if(slippy_sources[idx].needs_key)
+		{
+			if(gTiandituVerified && !gTiandituKey.empty())
+				url_printf_fmt += gTiandituKey;
+			else
+			{
+				LOG_MSG("I/Sli map %d needs a verified Tianditu key, turned off\n", mode);
+				url_printf_fmt.clear();
+			}
+		}
+	}
 	else if(mode == MODE_CUSTOM)
 		url_printf_fmt = gCustomSlippyMap;
 	else
@@ -751,7 +788,7 @@ void	WED_SlippyMap::SetMode(int mode)
 		mMapMode = mode;
 		SetVisible(1);
 		if(slippy_debug())
-			LOG_MSG("I/Sli mode %d url %s\n                dir %s\n", mode, url_printf_fmt.c_str(), dir_printf_fmt.c_str());
+			LOG_MSG("I/Sli mode %d url %s\n                dir %s\n", mode, redact_key(url_printf_fmt).c_str(), dir_printf_fmt.c_str());
 	}
 	else
 	{
@@ -763,6 +800,11 @@ void	WED_SlippyMap::SetMode(int mode)
 	// stayed on screen until something else redrew the map - e.g. from ESRI, once loaded, back to Japan.
 	if(GetHost())
 		GetHost()->Refresh();
+}
+
+void	WED_SlippyMap::AskForKey(int mode)
+{
+	WED_TiandituKeyDialog::Open(this, mode);
 }
 
 int		WED_SlippyMap::GetMode(void)

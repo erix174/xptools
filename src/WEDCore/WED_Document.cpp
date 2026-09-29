@@ -64,6 +64,8 @@ int gInfoDMS;
 int gModeratorMode;
 int gFontSize;
 string gCustomSlippyMap;
+string gTiandituKey;
+int gTiandituVerified;
 int gOrthoExport;
 int gPromptLiveriesOnRampSelect;
 int gShowLiveryRecommendation;
@@ -778,6 +780,8 @@ void	WED_Document::ReadGlobalPrefs(void)
 	gIsFeet  = atoi(GUI_GetPrefString("preferences","use_feet","0"));
 	gInfoDMS = atoi(GUI_GetPrefString("preferences","InfoDMS","0"));
 	gCustomSlippyMap = GUI_GetPrefString("preferences","CustomSlippyMap","");
+	gTiandituKey = GUI_GetPrefString("preferences","TiandituKey","");
+	gTiandituVerified = atoi(GUI_GetPrefString("preferences","TiandituVerified","0"));
 	int FontSize = atoi(GUI_GetPrefString("preferences","FontSize","12"));
 	gFontSize = intlim(FontSize, 10, 18);
 	GUI_SetFontSizes(gFontSize);
@@ -792,6 +796,8 @@ void	WED_Document::WriteGlobalPrefs(void)
 	GUI_SetPrefString("preferences","use_feet",gIsFeet ? "1" : "0");
 	GUI_SetPrefString("preferences","InfoDMS",gInfoDMS ? "1" : "0");
 	GUI_SetPrefString("preferences","CustomSlippyMap",gCustomSlippyMap.c_str());
+	GUI_SetPrefString("preferences","TiandituKey",gTiandituKey.c_str());
+	GUI_SetPrefString("preferences","TiandituVerified",gTiandituVerified ? "1" : "0");
 	string FontSize(to_string(gFontSize));
 	GUI_SetPrefString("preferences","FontSize",FontSize.c_str());
 	GUI_SetPrefString("preferences","OrthoExport",gOrthoExport ? "1" : "0");

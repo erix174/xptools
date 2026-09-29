@@ -515,7 +515,19 @@ string WED_FileCache::url_to_cache_path(const WED_file_cache_request & req)
 	string file_name = FILE_get_file_name(req.in_url.substr(0, query_pos));
 	if(query_pos != string::npos)
 	{
-		string query = req.in_url.substr(query_pos + 1);
+		// Parameters that carry an API key stay out of the name: a key must not end up on disk, and a new key
+		// must not make every cached tile look new.
+		string query;
+		stringstream params(req.in_url.substr(query_pos + 1));
+		string param;
+		while(getline(params, param, '&'))
+		{
+			string name = param.substr(0, param.find('='));
+			if(name == "tk" || name == "key" || name == "apikey" || name == "api_key" || name == "token" || name == "access_token")
+				continue;
+			if(!query.empty()) query += '&';
+			query += param;
+		}
 		for(auto& c : query)
 			if(strchr("\\/:*?\"<>|&", c) || c < ' ')
 				c = '_';

@@ -43,12 +43,14 @@ public:
 	virtual	void	TimerFired(void);
 			void	SetMode(int mode);  // mode 0 = off, 1 OSM, 2 ESRI, 3 custom map string, 4... regional maps
 			int		GetMode(void);
+			void	AskForKey(int mode);	// opens WED_TiandituKeyDialog, which switches to 'mode' once the key works
 
 	// The regional maps, n = 0 .. CountRegionalMaps()-1
 	static	int				CountRegionalMaps(void);
 	static	int				RegionalMapMode(int n);
 	static	const char *	RegionalMapName(int n);
 	static	const char *	RegionalMapCountries(int n);	// space separated IOC codes
+	static	bool			RegionalMapNeedsKey(int n);		// Tianditu: the user's key, verified by WED_TiandituKeyDialog
 
 private:
 

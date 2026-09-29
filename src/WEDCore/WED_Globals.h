@@ -83,4 +83,8 @@ extern WED_Export_Target gExportTarget;
 /* Changes the listing in the gateway Import for GW moderation purposes */
 extern string gCustomSlippyMap;
 
+/* The user's own Tianditu API key, and whether a tile was fetched with it (see WED_TiandituKeyDialog) */
+extern string gTiandituKey;
+extern int    gTiandituVerified;
+
 #endif
