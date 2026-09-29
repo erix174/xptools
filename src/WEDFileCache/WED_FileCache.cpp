@@ -59,7 +59,8 @@ WED_file_cache_response::WED_file_cache_response(float download_progress, string
 		  out_error_human(error_human),
 		  out_error_type(error_type),
 		  out_path(path),
-		  out_status(status)
+		  out_status(status),
+		  out_error_code(0)
 {
 }
 
@@ -455,6 +456,7 @@ WED_file_cache_response WED_FileCache::request_file(const WED_file_cache_request
 			{
 				WED_file_cache_response res(hndl.get_progress(), "", cache_error_type_unknown, "", cache_status_error);
 				interpret_error(hndl, res.out_error_human, res.out_error_type);
+				res.out_error_code = hndl.get_error();
 
 				co.trigger_cool_down();
 

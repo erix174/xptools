@@ -75,6 +75,13 @@ private:
 	//The texture cache, where they key is the tile texture path on disk and the value is the texture id
 	map<string,int>	m_cache;
 
+	// Why a tile failed (texture 0 in m_cache). A tile with no data is never asked for again this session; one
+	// the server could not be reached for, or refused, is tried again after retry_at, and on every map change.
+	enum { fail_no_data, fail_unreachable, fail_refused };
+	struct tile_failure_t { int kind; int code; double retry_at; };
+	map<string, tile_failure_t>	m_failed;
+			void	forget_retryable_failures(void);
+
 			int		mMapMode;
 			string	url_printf_fmt;
 			string	dir_printf_fmt;

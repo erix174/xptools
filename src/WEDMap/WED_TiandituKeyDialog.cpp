@@ -22,8 +22,11 @@
  */
 
 #include "WED_TiandituKeyDialog.h"
+#include <stdlib.h>
 #include "WED_SlippyMap.h"
 #include "WED_Globals.h"
+#include "WED_Document.h"
+#include "GUI_Prefs.h"
 #include "WED_Url.h"
 #include "GUI_Application.h"
 #include "GUI_Help.h"
@@ -116,7 +119,10 @@ void	WED_TiandituKeyDialog::Submit()
 	// Tianditu's firewall answer with an error page instead.
 	mKey = key;
 	mResponse.clear();
-	mCurl = new curl_http_get_file(string(WED_URL_TIANDITU_TILES) + "?T=img_w&x=843&y=388&l=10&tk=" + key, &mResponse);
+	// WED_TIANDITU_VERIFY_URL: a stand-in for the check, for testing this dialog without a key or a network
+	// that Tianditu serves (e.g. file:///C:/some/tile.jpg).
+	const char * test_url = getenv("WED_TIANDITU_VERIFY_URL");
+	mCurl = new curl_http_get_file(test_url ? string(test_url) : string(WED_URL_TIANDITU_TILES) + "?T=img_w&x=843&y=388&l=10&tk=" + key, &mResponse);
 	mPhase = phase_checking;
 	Reset("", "", "Cancel", false);
 	AddLabel("Checking the key with Tianditu ...");
@@ -138,6 +144,9 @@ void	WED_TiandituKeyDialog::TimerFired()
 	{
 		gTiandituKey = mKey;
 		gTiandituVerified = 1;
+		// Saved now, not only when WED quits: a crash or a killed WED would otherwise ask for the key again.
+		WED_Document::WriteGlobalPrefs();
+		GUI_Prefs_Write("WED");
 	}
 	else if (mCurl->is_ok())
 		problem = "Tianditu answered, but not with imagery - the key was not accepted.";

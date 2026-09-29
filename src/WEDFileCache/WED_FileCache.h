@@ -80,6 +80,7 @@ struct WED_file_cache_response
 	CACHE_error_type out_error_type;// The type of error we just occured (who is to blame.) cached inside CACHE_CacheObject
 	string out_path;	            // Path to load downloaded file from, cached inside CACHE_CacheObject and file existing on disk
 	CACHE_status out_status;      // Status of the cache
+	int out_error_code;           // On cache_status_error: the curl error, or above CURL_LAST the HTTP status. 0 otherwise.
 
 	bool operator==(const WED_file_cache_response& rhs) const;
 	bool operator!=(const WED_file_cache_response& rhs) const;

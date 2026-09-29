@@ -372,6 +372,8 @@ void	WED_SlippyMap::DrawVisualization(bool inCurrent, GUI_GraphState * g)
 	if(z_max < min_zoom) return;
 
 	int want = 0, got = 0, bad = 0;
+	int bad_unreachable = 0, bad_refused = 0, fail_code = 0;
+	const double now = seconds_now();
 	for(int z = max(min_zoom,z_max-1); z <= z_max; ++z)      // Display only the next lower zoom level
 	{                                                        // avoids having to load up to 4x14 extra tiles at ZL16
 		int tiles[4];
@@ -429,6 +431,14 @@ void	WED_SlippyMap::DrawVisualization(bool inCurrent, GUI_GraphState * g)
 			//The potential place the tile could appear on disk, were it to be downloaded or have been downloaded
 			string potential_path = gFileCache.url_to_cache_path(WED_file_cache_request(cache_domain_osm_tile, folder_prefix , url));
 
+			auto failed = m_failed.find(potential_path);
+			if (failed != m_failed.end() && failed->second.kind != fail_no_data && now > failed->second.retry_at)
+			{
+				m_cache.erase(potential_path);             // the network may be back - ask again
+				m_failed.erase(failed);
+				failed = m_failed.end();
+			}
+
 			if (m_cache.count(potential_path))
 			{
 				++got;
@@ -455,6 +465,12 @@ void	WED_SlippyMap::DrawVisualization(bool inCurrent, GUI_GraphState * g)
 				else
 				{
 					++bad;
+					if (failed != m_failed.end())
+					{
+						if (failed->second.kind == fail_unreachable)	++bad_unreachable;
+						if (failed->second.kind == fail_refused)		++bad_refused;
+						fail_code = failed->second.code;
+					}
 				}
 			}
 			else if(m_cache_request == NULL)
@@ -521,26 +537,52 @@ void	WED_SlippyMap::DrawVisualization(bool inCurrent, GUI_GraphState * g)
 		GUI_FontDraw(g, font_UI_Small, white, bnds[2] - 5, bnds[1] + 2, attrib, align_Right);
 	}
 
-	// A regional map outside its country is just empty - say so, or it looks broken.
-	// Failed tiles come back slowly, so don't wait for all of them.
-	if(idx >= FIRST_REGIONAL && got >= min(want, 4) && got > 0 && bad == got)
+	// An empty map says why: the server cannot be reached (offline, firewall), it refuses the requests (key), or
+	// - for a regional map - there is simply no imagery here. Failed tiles come back slowly, so don't wait for all.
+	vector<string> hint;
 	{
-		string name(slippy_sources[idx].name);                  // "S&pain, Gibraltar (PNOA)"
-		name.erase(remove(name.begin(), name.end(), '&'), name.end());
-		size_t paren = name.find(" (");
-		string msg = "No imagery here - this map covers " + name.substr(0, paren) + " only";
+		string host = url_printf_fmt.substr(url_printf_fmt.find("//") + 2);
+		host = host.substr(0, host.find('/'));
+		string code = fail_code >= 200 ? "HTTP " + to_string(fail_code) : "network error " + to_string(fail_code);
+		bool tianditu = idx >= 0 && slippy_sources[idx].needs_key;
 
-		int txtWidth = GUI_MeasureRange(font_UI_Basic, msg.c_str(), msg.c_str() + msg.size());
+		if (bad_unreachable > 0 && bad_unreachable >= min(want, 4))
+		{
+			hint.push_back("Cannot reach " + host + " (" + code + ") - offline, or blocked by a firewall");
+			hint.push_back(tianditu ? "Tianditu only serves networks in mainland China. Not a coverage gap - retrying every 30 s."
+			                        : "Not a coverage gap - tiles are tried again every 30 seconds.");
+		}
+		else if (bad_refused > 0 && bad_refused >= min(want, 4))
+		{
+			hint.push_back(host + " refused the tiles (" + code + ")");
+			hint.push_back(tianditu ? "Check the Tianditu API key in Preferences - it must be a server key."
+			                        : "The server does not allow these requests.");
+		}
+		else if (idx >= FIRST_REGIONAL && got >= min(want, 4) && got > 0 && bad == got)
+		{
+			string name(slippy_sources[idx].name);              // "S&pain, Gibraltar (PNOA)"
+			name.erase(remove(name.begin(), name.end(), '&'), name.end());
+			hint.push_back("No imagery here - this map covers " + name.substr(0, name.find(" (")) + " only");
+		}
+	}
+	if (!hint.empty())
+	{
+		int txtWidth = 0;
+		for (auto& line : hint)
+			txtWidth = max(txtWidth, (int) GUI_MeasureRange(font_UI_Basic, line.c_str(), line.c_str() + line.size()));
+		const float line_h = 22;
 		float cx = (bnds[0] + bnds[2]) * 0.5f, cy = (bnds[1] + bnds[3]) * 0.5f;
+		float top = cy + 20, bottom = cy - 10 - line_h * (hint.size() - 1);
 		g->SetState(0, 0, 0, 0, 1, 0, 0);
 		glColor4f(0,0,0,0.65);
 		glBegin(GL_QUADS);
-			glVertex2f(cx - txtWidth / 2 - 10, cy + 20);
-			glVertex2f(cx + txtWidth / 2 + 10, cy + 20);
-			glVertex2f(cx + txtWidth / 2 + 10, cy - 10);
-			glVertex2f(cx - txtWidth / 2 - 10, cy - 10);
+			glVertex2f(cx - txtWidth / 2 - 10, top);
+			glVertex2f(cx + txtWidth / 2 + 10, top);
+			glVertex2f(cx + txtWidth / 2 + 10, bottom);
+			glVertex2f(cx - txtWidth / 2 - 10, bottom);
 		glEnd();
-		GUI_FontDraw(g, font_UI_Basic, white, cx, cy, msg.c_str(), align_Center);
+		for (size_t i = 0; i < hint.size(); ++i)
+			GUI_FontDraw(g, font_UI_Basic, white, cx, cy - line_h * i, hint[i].c_str(), align_Center);
 	}
 	if (rot != 0)
 	{
@@ -666,7 +708,20 @@ void	WED_SlippyMap::finish_loading_tile()
 			string tile_path = gFileCache.url_to_cache_path(*m_cache_request);
 			LOG_MSG("E/Sli %s: %s\n", redact_key(m_cache_request->in_url).c_str(), res.out_error_human.c_str());
 
+			// 404 and friends: the server answered, there is nothing here. 401/403: it will not serve us (a key).
+			// Everything else - no connection, DNS, TLS, timeouts, Tianditu's firewall (418), 429, 5xx - says
+			// nothing about coverage. Cooling: only tiles that failed that way are ever asked for again.
+			tile_failure_t f = { fail_unreachable, res.out_error_code, seconds_now() + 30.0 };
+			const int c = res.out_error_code;
+			if (res.out_status == cache_status_cooling)
+			{
+				auto prev = m_failed.find(tile_path);
+				if (prev != m_failed.end()) f.code = prev->second.code;
+			}
+			else if (c == 401 || c == 403)								f.kind = fail_refused;
+			else if (c == 400 || c == 404 || c == 204 || c == 410)		f.kind = fail_no_data;
 			m_cache[tile_path] = 0;
+			m_failed[tile_path] = f;
 
 			delete m_cache_request;
 			m_cache_request = NULL;
@@ -730,8 +785,21 @@ static bool replace_token(string& str, const string& from, const string& to)
     return true;
 }
 
+void	WED_SlippyMap::forget_retryable_failures(void)
+{
+	for (auto f = m_failed.begin(); f != m_failed.end(); )
+		if (f->second.kind != fail_no_data)
+		{
+			m_cache.erase(f->first);
+			f = m_failed.erase(f);
+		}
+		else
+			++f;
+}
+
 void	WED_SlippyMap::SetMode(int mode)
 {
+	forget_retryable_failures();
 	if(mode == 0)
 	{
 		mMapMode = 0;
