@@ -727,7 +727,13 @@ void	WED_PropertyTable::SelectionEnd(void)
 
    if(gModeratorMode) // special behavior requested by Julian
    {
-      DispatchHandleCommand(wed_ZoomSelection);
+      // Ramp starts are only brought to the middle of the map, at the current
+      // zoom (Eric, 2026-09-28): fitting the view to a single stand zoomed right
+      // in, and a moderator going down the list sets the zoom once.
+      bool only_ramps = s->GetSelectionCount() > 0;
+      for (int i = 0; i < s->GetSelectionCount() && only_ramps; ++i)
+         only_ramps = SAFE_CAST(WED_RampPosition, s->GetNthSelection(i)) != NULL;
+      DispatchHandleCommand(only_ramps ? wed_CenterSelection : wed_ZoomSelection);
 
       ISelectable * sel0 = s->GetNthSelection(0);
 		WED_Group * grp = SAFE_CAST(WED_Group, sel0);

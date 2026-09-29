@@ -501,6 +501,10 @@ int		WED_MapPane::Map_HandleCommand(int command)
 	case wed_ZoomWorld:		mMap->ZoomShowArea(-180,-90,180,90);	mMap->Refresh(); return 1;
 	case wed_ZoomAll:		GetExtentAll(box, mResolver); mMap->ZoomShowArea(box.p1.x(),box.p1.y(),box.p2.x(),box.p2.y());	mMap->Refresh(); return 1;
 	case wed_ZoomSelection:	ZoomShowSel();              return 1;
+	case wed_CenterSelection:
+		GetExtentSel(box, mResolver);
+		if (!box.is_empty() && !box.is_null()) CenterOnPoint(box.centroid());
+		return 1;
 	case wed_Map3D:         SetTabFilterMode(tab_3D);   return 1;
 	case wed_MapATC:        SetTabFilterMode(tab_ATC);  return 1;
 	case wed_MapPavement:   SetTabFilterMode(tab_Pavement);  return 1;

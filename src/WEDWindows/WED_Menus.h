@@ -199,6 +199,7 @@ enum {
 	wed_autoOpenLibPane,
 	wed_autoOpenPropPane,
 	wed_autoClosePane,
+	wed_CenterSelection,	// no menu item: centre the map on the selection, keeping the zoom
 	// Help Menu
 	wed_HelpManual,
 	wed_HelpScenery,
