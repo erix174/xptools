@@ -33,6 +33,9 @@
 #include "ObjCUtils.h"
 #if IBM
 #include <commctrl.h>
+#include <uxtheme.h>
+#include <vssym32.h>
+#pragma comment(lib, "uxtheme.lib")
 #endif
 
 #if LIN
@@ -370,7 +373,7 @@ int		GUI_Application::MenuIconPixelHeight(void)
 #if IBM
 // Windows draws no check mark for an item with an hbmpItem, only a faint frame around the bitmap. So such items
 // get two bitmaps, the icon behind an empty and behind a checked check mark slot, and GUI_Window swaps them
-// whenever it updates the check state.
+// whenever it updates the check state. The check mark is the menu theme's own, the same one as in any other menu.
 static map<int, pair<HBITMAP, HBITMAP> >	sMenuIcons;		// command -> unchecked, checked
 
 static HBITMAP make_menu_bitmap(const vector<unsigned int>& argb, int w, int h)
@@ -395,35 +398,44 @@ static HBITMAP make_menu_bitmap(const vector<unsigned int>& argb, int w, int h)
 	return bmp;
 }
 
-static float dist_to_segment(float px, float py, float ax, float ay, float bx, float by)
+// The size of the theme's menu check mark, 0 x 0 without themes.
+static SIZE theme_check_size(void)
 {
-	float dx = bx - ax, dy = by - ay;
-	float t = ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy);
-	t = t < 0 ? 0 : (t > 1 ? 1 : t);
-	float ex = ax + t * dx - px, ey = ay + t * dy - py;
-	return sqrtf(ex * ex + ey * ey);
-}
-
-// an antialiased tick into the h x h square at the left of a w wide image
-static void draw_check_mark(vector<unsigned int>& argb, int w, int h, unsigned int rgb)
-{
-	const float half_width = max(1.0f, h / 13.0f);
-	for(int y = 0; y < h; ++y)
-	for(int x = 0; x < h; ++x)
+	SIZE sz = { 0, 0 };
+	if(HTHEME th = OpenThemeData(NULL, L"MENU"))
 	{
-		float px = (x + 0.5f) / h, py = (y + 0.5f) / h;
-		float d = min(dist_to_segment(px, py, 0.22f, 0.52f, 0.42f, 0.72f), dist_to_segment(px, py, 0.42f, 0.72f, 0.80f, 0.30f)) * h;
-		float cover = half_width + 0.5f - d;
-		if(cover > 0)
-			argb[y * w + x] = ((unsigned int) (min(cover, 1.0f) * 255.0f) << 24) | (rgb & 0xFFFFFF);
+		GetThemePartSize(th, NULL, MENU_POPUPCHECK, MC_CHECKMARKNORMAL, NULL, TS_TRUE, &sz);
+		CloseThemeData(th);
 	}
+	return sz;
 }
 
-void *	GUI_MenuIconForCheckState(int cmd, bool checked)
+// Draws the theme's check mark into the check_w wide slot at the left of the bitmap. The theme art is alpha blended,
+// which fills in the bitmap's alpha channel as well.
+static bool draw_theme_check(HBITMAP bmp, int check_w, int h)
+{
+	HTHEME th = OpenThemeData(NULL, L"MENU");
+	if(!th) return false;
+	SIZE sz = theme_check_size();
+	HDC dc = CreateCompatibleDC(NULL);
+	HGDIOBJ old = SelectObject(dc, bmp);
+	RECT r = { (check_w - sz.cx) / 2, (h - sz.cy) / 2, 0, 0 };
+	r.right = r.left + sz.cx; r.bottom = r.top + sz.cy;
+	HRESULT res = DrawThemeBackground(th, dc, MENU_POPUPCHECK, MC_CHECKMARKNORMAL, &r, NULL);
+	GdiFlush();
+	SelectObject(dc, old);
+	DeleteDC(dc);
+	CloseThemeData(th);
+	return SUCCEEDED(res);
+}
+
+bool	GUI_MenuIconForState(int cmd, bool checked, bool enabled, void ** out_bitmap)
 {
 	map<int, pair<HBITMAP, HBITMAP> >::iterator i = sMenuIcons.find(cmd);
-	if(i == sMenuIcons.end()) return NULL;
-	return checked ? i->second.second : i->second.first;
+	if(i == sMenuIcons.end()) return false;
+	// Windows draws the bitmap of a disabled item as a grey block, so a disabled item shows none
+	*out_bitmap = enabled ? (checked ? i->second.second : i->second.first) : NULL;
+	return true;
 }
 #endif
 
@@ -433,20 +445,20 @@ void	GUI_Application::SetMenuItemIcon(GUI_Menu menu, int item, const unsigned in
 #if APL
 	set_menu_item_image(menu, item, argb, w, h, w / 2.0f, h / 2.0f);
 #elif IBM
+	SIZE check = theme_check_size();
+	int check_w = check.cx > 0 ? check.cx : h;
 	int gap = max(2, h / 5);
-	int total_w = h + gap + w;
+	int total_w = check_w + gap + w;
 	vector<unsigned int> unchecked(total_w * h, 0);
 	for(int y = 0; y < h; ++y)
 		for(int x = 0; x < w; ++x)
-			unchecked[y * total_w + h + gap + x] = argb[y * w + x];
-
-	vector<unsigned int> checked(unchecked);
-	COLORREF c = GetSysColor(COLOR_MENUTEXT);
-	draw_check_mark(checked, total_w, h, GetRValue(c) << 16 | GetGValue(c) << 8 | GetBValue(c));
+			unchecked[y * total_w + check_w + gap + x] = argb[y * w + x];
 
 	HBITMAP bmp_unchecked = make_menu_bitmap(unchecked, total_w, h);  // both live as long as WED, menus never delete their bitmaps
-	HBITMAP bmp_checked   = make_menu_bitmap(checked, total_w, h);
+	HBITMAP bmp_checked   = make_menu_bitmap(unchecked, total_w, h);
 	if(!bmp_unchecked || !bmp_checked) return;
+	if(!draw_theme_check(bmp_checked, check_w, h))
+		return;                                 // no themes - keep the system's own check marks, without icon
 
 	sMenuIcons[GetMenuItemID((HMENU) menu, item)] = make_pair(bmp_unchecked, bmp_checked);
 

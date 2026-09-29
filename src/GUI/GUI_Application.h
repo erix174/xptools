@@ -117,8 +117,8 @@ private:
 extern	GUI_Application *	gApplication;
 
 #if IBM
-// For GUI_Window's menu updates: the HBITMAP to show for an item with an icon in this check state, NULL if it has none.
-void *	GUI_MenuIconForCheckState(int cmd, bool checked);
+// For GUI_Window's menu updates: false if the item has no icon, else the HBITMAP to show in this state (may be NULL).
+bool	GUI_MenuIconForState(int cmd, bool checked, bool enabled, void ** out_bitmap);
 #endif
 
 #endif

@@ -1594,12 +1594,13 @@ static void ApplyCmdsRecursive(HMENU menu, const CmdMap_t& io_map)
 				mif.fState = (iter->second.enabled ? MFS_ENABLED : MFS_DISABLED) | (iter->second.checked ? MFS_CHECKED : MFS_UNCHECKED);
 				SetMenuItemInfoA(menu, n, true, &mif);
 
-				if (HBITMAP icon = (HBITMAP) GUI_MenuIconForCheckState(mif.wID, iter->second.checked))
+				void * icon = NULL;
+				if (GUI_MenuIconForState(mif.wID, iter->second.checked, iter->second.enabled, &icon))
 				{
 					MENUITEMINFOA bmp = { 0 };      // items with an icon show no check mark, it is part of the icon
 					bmp.cbSize = sizeof(bmp);
 					bmp.fMask = MIIM_BITMAP;
-					bmp.hbmpItem = icon;
+					bmp.hbmpItem = (HBITMAP) icon;
 					SetMenuItemInfoA(menu, n, true, &bmp);
 				}
 			}
