@@ -1,7 +1,7 @@
 I
 1 WED Aviation Database
 # schema 4
-# data 20260928-r1
+# data 20260929-r1
 # source X-Plane 12.4.3-r2-15ff1e4d
 # assets 298 liveries under apt_aircraft/
 #
@@ -2004,7 +2004,7 @@ J328 *** B *** AIO       *** N3220U    *** USA *** Default    *** 1665  *** HOME
 P180 *** A *** IAM       ***           ***     *** Default    *** 2800  *** HOME *** Military *** turboprop/P180_AM/P180_AM_static.obj
 P46T *** A *** XPMI      ***           ***     *** Default    *** 3300  ***      *** Military *** turboprop/P46T/M500_MIL.obj
 PC12 *** B *** AIO       *** 80519     *** USA *** Default    *** 3400  *** HOME *** Military *** turboprop/PC12/PC12_US_Army.obj
+S76  *** A *** XPMI      ***           ***     *** Default    *** 760   ***      *** Military *** helo/S76_coastguard/S76_coastguard_static.obj
 # -- Gov -----------------------------------------------------------------------
 B738 *** C *** DAH_V     *** 7TVKQ     *** ALG *** Government *** 5700  *** HOME *** Gov      *** jet/B738_DAH_Mil/738_AirAlgerie_VIP_7TVKQ.obj
 B752 *** D *** DOJ       *** N119NA    *** USA *** Default    *** 7200  *** HOME *** Gov      *** jet/B752/757_USDOJ_N119NA.obj
-S76  *** A *** HMF       *** SEJRM     *** SWE *** Obsolete   *** 760   *** HOME *** Gov      *** helo/S76_coastguard/S76_coastguard_static.obj
