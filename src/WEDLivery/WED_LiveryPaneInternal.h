@@ -128,6 +128,8 @@ namespace livery_pane {
 	extern const char * kFilterTips[5];
 	extern const int kWidthOrder[6];
 	extern const char * kWidthLabels[6];
+	// Extra room under the legacy slider's title row, where Set Spawn Weights sits.
+	const float kSliderButtonClear = 6.0f;
 
 	string NoIndexSentence(WedDataFileError err);
 	int CollectRamps(ISelectable * who, void * ref);

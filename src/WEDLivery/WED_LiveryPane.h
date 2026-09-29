@@ -161,6 +161,7 @@ private:
 	// multi-value numeric control anywhere to reuse.
 	bool				SelectionWeights(int out_w[6]) const;	// false if none, or if the selection disagrees
 	bool				SelectionHasWeights(void) const;
+	bool				SelectionAllWeights(void) const;	// every selected stand has weights in use
 	int					WeightBarForXY(int bounds[4], int x, int y) const;	// -1 if not on one
 	int					WeightValueForY(int bounds[4], int y) const;		// snapped to an integer, clamped
 	int					WeightTrackMax(void) const;			// 10, or higher if an imported file needs it
@@ -495,6 +496,7 @@ private:
 	int							mDragHandle;		// -1 when not dragging
 	int							mDragAnchorIndex;
 	int							mDragCurrentIndex;
+	int							mDragStartIndex;	// the letter when the press began; unchanged -> no undo entry
 
 	// Weight-bar drag. mDragWeightBar is the grabbed bar, -1 when idle; the
 	// gesture is locked to it, so sliding sideways never paints across its
@@ -505,6 +507,11 @@ private:
 	int							mDragWeightBar;
 	int							mDragWeights[6];
 	int							mDragWeights0[6];
+	// The track's scale, frozen for the length of a drag. WeightTrackMax() follows
+	// the tallest bar, so while that bar was the one being dragged every mouse
+	// move rescaled the track under the cursor: the bar stayed full height and
+	// the value halved itself away on each event.
+	int							mDragTrackMax;
 	int							mHoverWeightBar;	// -1 when the cursor is off the bars
 	bool						mHoverWeightButton, mTrackWeightButton;
 	bool						mHoverPopulate, mTrackPopulate;

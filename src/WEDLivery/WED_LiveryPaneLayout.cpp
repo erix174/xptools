@@ -48,6 +48,7 @@ void	WED_LiveryPane::FlagBannerRect(int bounds[4], float strip_top, float strip_
 // so the track grows to fit whatever is already there.
 int		WED_LiveryPane::WeightTrackMax(void) const
 {
+	if (mDragWeightBar >= 0 && mDragTrackMax > 0) return mDragTrackMax;	// frozen while dragging
 	int w[6], hi = 10;
 	if (SelectionWeights(w))
 		for (int i = 0; i < 6; ++i) if (w[i] > hi) hi = w[i];
@@ -200,7 +201,7 @@ float	WED_LiveryPane::SliderHeight(void) const
 	// the weights section's title row - see WeightButtonRect().
 	if (SelectionHasWeights()) return 0;
 	// title row + A-F label row + step-down share row + track/ball row, plus padding
-	return GUI_GetLineHeight(font_UI_Basic) * 4 + 16;
+	return GUI_GetLineHeight(font_UI_Basic) * 4 + 16 + kSliderButtonClear;
 }
 
 float	WED_LiveryPane::WeightsHeight(void) const
@@ -605,6 +606,8 @@ int		WED_LiveryPane::SliderHandleForXY(int bounds[4], int x, int y) const
 
 	if (y < track_y - handle_r*1.5f || y > track_y + handle_r*1.5f) return -1;
 	if (fabs((double)(x - max_x)) <= handle_r*1.5) return 1;
+	// Anywhere else along the track: MouseDown moves the ball there first.
+	if (x >= track_x0 - handle_r && x <= track_x1 + handle_r) return 0;
 	return -1;
 }
 

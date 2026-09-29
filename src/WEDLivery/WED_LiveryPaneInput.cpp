@@ -567,12 +567,18 @@ int		WED_LiveryPane::MouseDown(int x, int y, int button)
 			// Mixed selection: the first drag unifies it, which is the rule the
 			// tri-state operator checkbox already uses. Start from the first
 			// ramp's own weights so the gesture has somewhere to stand.
-			if (!mSelectedRamps.empty() && !mSelectedRamps[0]->GetClassWeights(w))
+			// From the first stand that HAS weights - a legacy stand first in the
+			// selection used to start the gesture from six zeros.
+			bool found = false;
+			for (size_t k = 0; k < mSelectedRamps.size() && !found; ++k)
+				found = mSelectedRamps[k]->GetClassWeights(w);
+			if (!found)
 				for (int k = 0; k < 6; ++k) w[k] = 0;
 		}
 		memcpy(mDragWeights,  w, sizeof(w));
 		memcpy(mDragWeights0, w, sizeof(w));	// what MouseUp compares against
 
+		mDragTrackMax  = WeightTrackMax();		// before mDragWeightBar is set: the live scale
 		mDragWeightBar = wbar;
 		mArchive->StartCommand("Set Spawn Weights");
 
@@ -594,9 +600,25 @@ int		WED_LiveryPane::MouseDown(int x, int y, int button)
 		int maxIdx = WidthEnumToIndex(mSelectedRamps[0]->GetWidth());
 		mDragAnchorIndex  = 0;
 		mDragCurrentIndex = maxIdx;
+		mDragStartIndex   = maxIdx;
 		mDragHandle = 1;
 
 		mArchive->StartCommand("Set Ramp Start Size");
+
+		// A press on the track away from the ball jumps the ball there. Only
+		// the ball itself used to respond, so a click beside it did nothing.
+		if (handle == 0)
+		{
+			int idx = (int) (SliderContinuousIndexForX(b, x) + 0.5f);
+			if (idx < 0) idx = 0;
+			if (idx > 5) idx = 5;
+			if (idx != mDragCurrentIndex)
+			{
+				mDragCurrentIndex = idx;
+				ApplyDragRange();
+			}
+		}
+		Refresh();
 		return 1;
 	}
 
@@ -769,8 +791,8 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 		WeightButtonRect(b, wb);
 		if (x >= wb[0] && x <= wb[2] && y >= wb[1] && y <= wb[3])
 		{
-			if (SelectionHasWeights())	SwitchToSimpleMode();
-			else						SeedWeightsFromSizeRange();
+			if (SelectionAllWeights())	SwitchToSimpleMode();
+			else						SeedWeightsFromSizeRange();	// keeps the stands that already have them
 		}
 		Refresh();
 		return;
@@ -815,7 +837,9 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 
 	if (mDragHandle >= 0)
 	{
-		mArchive->CommitCommand();
+		// A press that ends where it began changed nothing - no undo entry.
+		if (mDragCurrentIndex == mDragStartIndex)	mArchive->AbortCommand();
+		else										mArchive->CommitCommand();
 		mDragHandle = -1;
 		mDragAnchorIndex = -1;
 		mDragCurrentIndex = -1;

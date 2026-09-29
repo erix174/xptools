@@ -1281,7 +1281,9 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			glVertex2f((float) b[0] + 1, slider_top);
 		glEnd();
 
-		// title, so it's unmistakable what this control is
+		// title, so it's unmistakable what this control is. The rows under it sit
+		// kSliderButtonClear lower so Set Spawn Weights, right-aligned on the title
+		// row, does not cover the E and F letters.
 		GUI_FontDraw(state, font_UI_Basic, header_col2, b[0] + pad, slider_top - line_h * 0.9f, "Size (legacy step-down)");
 
 		for (int i = 0; i < 6; ++i)
@@ -1294,7 +1296,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			float lx = fx - tw * 0.5f;
 			if (lx < (float) b[0] + 2)          lx = (float) b[0] + 2;
 			if (lx + tw > (float) b[2] - 2)     lx = (float) b[2] - 2 - tw;
-			GUI_FontDraw(state, font_UI_Basic, lbl_col, lx, slider_top - line_h * 1.9f, kWidthLabels[i]);
+			GUI_FontDraw(state, font_UI_Basic, lbl_col, lx, slider_top - line_h * 1.9f - kSliderButtonClear, kWidthLabels[i]);
 
 			// the step-down share, under its letter
 			if (i <= maxIdx)
@@ -1308,7 +1310,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 				if (px < (float) b[0] + 2)          px = (float) b[0] + 2;
 				if (px + pw > (float) b[2] - 2)     px = (float) b[2] - 2 - pw;
 				float pct_col[4] = { 0.62f, 0.62f, 0.64f, 1.0f };
-				GUI_FontDraw(state, font_UI_Basic, i == maxIdx ? lbl_col : pct_col, px, slider_top - line_h * 2.9f, pct);
+				GUI_FontDraw(state, font_UI_Basic, i == maxIdx ? lbl_col : pct_col, px, slider_top - line_h * 2.9f - kSliderButtonClear, pct);
 			}
 		}
 
@@ -1480,6 +1482,8 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			char pct[16];
 			if (!uniform)        snprintf(pct, sizeof(pct), "--");
 			else if (total <= 0) snprintf(pct, sizeof(pct), "0%%");
+			else if (w[i] > 0 && 100.0f * w[i] / total < 0.5f)
+								 snprintf(pct, sizeof(pct), "<1%%");	// a token weight (the kept size letter) is not 0%
 			else                 snprintf(pct, sizeof(pct), "%d%%", (int) (100.0f * w[i] / total + 0.5f));
 			float pw = GUI_MeasureRange(font_UI_Basic, pct, pct + strlen(pct));
 			GUI_FontDraw(state, font_UI_Basic, (w[i] > 0) ? lbl_col : dim,
@@ -1496,7 +1500,9 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 	{
 		float wb[4];
 		WeightButtonRect(b, wb);
-		const bool has = SelectionHasWeights();
+		// "Simple Mode" only when every stand has weights: in a mixed selection
+		// the button adds them to the rest, the one step that makes it uniform.
+		const bool has = SelectionAllWeights();
 
 		state->SetState(0,0,0,0,0,0,0);
 		float k = mTrackWeightButton ? 0.82f : (mHoverWeightButton ? 1.15f : 1.0f);

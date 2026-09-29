@@ -50,6 +50,7 @@ WED_LiveryPane::WED_LiveryPane(
 	mTrackRecommendButton(false),
 	mDragHandle(-1),
 	mDragAnchorIndex(-1),
+	mDragStartIndex(-1),
 	mDragCurrentIndex(-1),
 	mFlagTexId(0),
 	mFlagTexW(0),
@@ -78,6 +79,7 @@ WED_LiveryPane::WED_LiveryPane(
 	mTrayOpen(0.0f),
 	mTrayClosingOpen(0.0f),
 	mDragWeightBar(-1),
+	mDragTrackMax(0),
 	mHoverWeightBar(-1),
 	mHoverWeightButton(false),
 	mTrackWeightButton(false),
@@ -686,6 +688,14 @@ bool	WED_LiveryPane::SelectionHasWeights(void) const
 	for (size_t i = 0; i < mSelectedRamps.size(); ++i)
 		if (mSelectedRamps[i]->GetClassWeights(w)) return true;
 	return false;
+}
+
+bool	WED_LiveryPane::SelectionAllWeights(void) const
+{
+	int w[6];
+	for (size_t i = 0; i < mSelectedRamps.size(); ++i)
+		if (!mSelectedRamps[i]->GetClassWeights(w)) return false;
+	return !mSelectedRamps.empty();
 }
 
 // The weights to draw, or false when the selection disagrees about them. A
