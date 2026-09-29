@@ -102,6 +102,7 @@ static int get_apt_export_version()
 		break;
 	case wet_xplane_1200:
 	case wet_xplane_1212:
+	case wet_xplane_1250:		// 1313/1315 need no version bump (spec 7.2)
 		version = 1200;
 		break;
 	default:
@@ -462,11 +463,29 @@ void	AptExportRecursive(WED_Thing * what, AptVector& apts, vector<WED_TaxiRoute 
 	}
 }
 
+// The static-aircraft rows 1313 (spawn weights) and 1315 (auto-filled / set in
+// 2.8) are written only for X-Plane 12.5 and the Gateway. An export aimed at an
+// older X-Plane gets the format that X-Plane was built for: 1301 alone, its size
+// letter still the largest class with a weight (WED_RampPosition::Export). Only
+// the file is affected - the stands keep their weights and marks, and the
+// Liveries tab, validation and Moderation Mode work the same for every target.
+static void	strip_static_aircraft_rows(AptVector & apts)
+{
+	if (gExportTarget >= wet_xplane_1250) return;		// wet_gateway is above it
+	for (AptVector::iterator a = apts.begin(); a != apts.end(); ++a)
+		for (AptGateVector::iterator g = a->gates.begin(); g != a->gates.end(); ++g)
+		{
+			g->class_weights.clear();
+			g->livery_origin = 0;
+		}
+}
+
 void	WED_AptExport(WED_Thing * container, const char * file_path, bool DockingJetways)
 {
 	AptVector	apts;
 	vector<WED_TaxiRoute *> edges;
 	AptExportRecursive(container, apts, edges, DockingJetways);
+	strip_static_aircraft_rows(apts);
 	WriteAptFile(file_path,apts, get_apt_export_version());
 }
 
@@ -478,6 +497,7 @@ void	WED_AptExport(
 	AptVector	apts;
 	vector<WED_TaxiRoute *> edges;
 	AptExportRecursive(container, apts, edges, true);
+	strip_static_aircraft_rows(apts);
 	WriteAptFileProcs(print_func, ref, apts, get_apt_export_version());
 }
 

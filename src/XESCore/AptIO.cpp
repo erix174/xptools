@@ -1450,8 +1450,9 @@ bool	WriteAptFileProcs(int (* fprintf)(void * fi, const char * fmt, ...), void *
 	bool has_atc2 = (version >= 1050);
 	// Row 1313 rides in a 1200 file - the sim ignores rows it does not know, so
 	// no version bump is needed for compatibility (spec §7.2, and §9 recommends
-	// against one). The gate exists so an export deliberately aimed at an older
-	// X-Plane still writes 1301 alone.
+	// against one). WED leaves 1313/1315 out of the gates itself for any target
+	// before X-Plane 12.5 (WED_AptIE.cpp); this gate only keeps them out of a
+	// pre-1200 file.
 	bool has_class_weights = (version >= 1200);
 	bool has_atc3 = (version >= 1100);
 
