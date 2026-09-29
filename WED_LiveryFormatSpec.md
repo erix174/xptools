@@ -264,7 +264,8 @@ code that was valid under R10 stays valid.
   types exclude it, judging the livery by the first folder of its `path`:
   `heavy` = heavies, `jet` = jets, `turboprop` = turboprops, `prop` = props,
   `helo` = helicopters, `fighter` = fighters; any other folder, or a stand with
-  no equipment set, passes. If the sim does not apply the same test in
+  no equipment set, passes. A `jet` livery of class D or larger (the B752 and
+  B763 freighters) also counts as `heavy`, so a heavy-only stand takes it. If the sim does not apply the same test in
   `eligible()`, WED's previews, coverage readout and R14 warnings will disagree
   with what parks (R18), and WED must drop it instead. Recommendation: the sim
   applies it, with exactly this mapping.
