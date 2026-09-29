@@ -176,7 +176,8 @@ private:
 	// The button toggles a MODE, it does not delete data. Going to simple mode
 	// stashes the stand's weights in mWeightCache first, so coming back restores
 	// what the author had rather than re-seeding from the size range and losing
-	// their distribution. Keyed by the persistent ID, not by pointer: an undo
+	// their distribution - unless the author changed the size letter while in
+	// simple mode, in which case it reseeds from the new letter. Keyed by the persistent ID, not by pointer: an undo
 	// can destroy and rebuild the object, and a pointer key would then either
 	// miss or, worse, hit a recycled address.
 	//

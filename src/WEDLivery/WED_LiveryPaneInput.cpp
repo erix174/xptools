@@ -41,10 +41,19 @@ void	WED_LiveryPane::AbortWeightDrag(void)
 	mDragWeightBar = -1;
 }
 
-// The ONLY path that gives a stand a 1313 row. Restores what the author had if
-// they have been here before this session, otherwise seeds one unit per class
-// inside the size range they already set - which reads as "any of these,
-// equally", and is exactly what that range meant before weights existed.
+// The largest class with a weight, as an index 0-5: the size letter the
+// weights stand for (R23). -1 for six zeros, which say nothing about size.
+static int	TopWeightedClass(const int w[6])
+{
+	for (int i = 5; i >= 0; --i)
+		if (w[i] > 0) return i;
+	return -1;
+}
+
+// The ONLY path that gives a stand a 1313 row. Brings back the weights the
+// stand already holds if its size letter is still the one they stand for;
+// otherwise - a new stand, or one whose letter the author changed in Simple
+// Mode (Eric, 2026-09-28) - writes today's step-down from the letter it has now.
 void	WED_LiveryPane::SeedWeightsFromSizeRange(void)
 {
 	if (mSelectedRamps.empty()) return;
@@ -60,8 +69,12 @@ void	WED_LiveryPane::SeedWeightsFromSizeRange(void)
 		int stored[6];
 		if (r->HasStoredWeights(stored))
 		{
-			r->SetWeightsInUse(true);
-			continue;
+			const int top = TopWeightedClass(stored);
+			if (top < 0 || IndexToWidthEnum(top) == r->GetWidth())
+			{
+				r->SetWeightsInUse(true);
+				continue;
+			}
 		}
 
 		// UPDATE from the legacy format: today's step-down, written out as weights
@@ -93,7 +106,20 @@ void	WED_LiveryPane::SwitchToSimpleMode(void)
 
 	mArchive->StartCommand("Use Simple Size Range");
 	for (size_t i = 0; i < mSelectedRamps.size(); ++i)
-		mSelectedRamps[i]->SetWeightsInUse(false);
+	{
+		WED_RampPosition * r = mSelectedRamps[i];
+		// The letter becomes the one the weights stood for, which is also what
+		// the stand exported as (R23). Set Spawn Weights compares against it to
+		// tell a round trip from a size the author changed in between.
+		int w[6];
+		if (r->GetClassWeights(w))
+		{
+			const int top = TopWeightedClass(w);
+			if (top >= 0 && IndexToWidthEnum(top) != r->GetWidth())
+				r->SetWidth(IndexToWidthEnum(top));
+		}
+		r->SetWeightsInUse(false);
+	}
 	mArchive->CommitCommand();
 
 	mCoverageDirty = true;
