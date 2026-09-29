@@ -60,6 +60,10 @@ static std::set<int>	sIssueIDs;			// Moderation View, last frame: the stands to 
 bool	WED_ModerationViewOn(void)			{ return sModerationView; }
 void	WED_SetModerationView(bool on)		{ sModerationView = on; }
 
+static bool				sCalloutsShown = true;
+bool	WED_ModerationCalloutsShown(void)		{ return sCalloutsShown; }
+void	WED_SetModerationCallouts(bool shown)	{ sCalloutsShown = shown; }
+
 bool	WED_ModerationTintFor(const WED_RampPosition * ramp, float out_rgb[3], float * alpha_scale)
 {
 	if (!ramp || !WED_ModerationEnabled()) return false;
@@ -1482,7 +1486,7 @@ void	WED_ModerationLayer::DrawSelected(bool inCurrent, GUI_GraphState * g)
 
 void	WED_ModerationLayer::DrawOverlays(GUI_GraphState * g)
 {
-	if (!WED_ModerationEnabled()) { mHits.clear(); return; }
+	if (!WED_ModerationEnabled() || !sCalloutsShown) { mHits.clear(); return; }
 
 	// What the mouse was over last frame decides what is open this frame.
 	int mx, my;
@@ -1605,7 +1609,7 @@ void	WED_ModerationLayer::HandleClickUp(int inX, int inY, int inButton, GUI_KeyF
 int		WED_ModerationLayer::HandleClickDown(int inX, int inY, int inButton, GUI_KeyFlags modifiers)
 {
 	{ Point2 sp = GetZoomer()->MapPixelToScreen(Point2(inX, inY)); inX = (int) floor(sp.x() + 0.5); inY = (int) floor(sp.y() + 0.5); }
-	if (!WED_ModerationEnabled() || inButton != 0) return 0;
+	if (!WED_ModerationEnabled() || !sCalloutsShown || inButton != 0) return 0;
 	const float x = (float) inX, y = (float) inY;
 
 	// Most specific first: a search mark or a pin sits on a card or a tray.

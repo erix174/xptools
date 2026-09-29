@@ -201,6 +201,7 @@ enum {
 	wed_autoOpenPropPane,
 	wed_autoClosePane,
 	wed_CenterSelection,	// no menu item: centre the map on the selection, keeping the zoom
+	wed_ToggleModerationCallouts,	// no menu item: show or hide Moderation Mode's stand callouts
 	// Help Menu
 	wed_HelpManual,
 	wed_HelpScenery,

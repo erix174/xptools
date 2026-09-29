@@ -654,6 +654,14 @@ bool	WED_PropertyTable::ModeratorFocusFolder(WED_Thing * folder)
 	string name;
 	folder->GetName(name);
 
+	// Ramp Starts: show or hide the stand callouts on the map (Julian), so the
+	// apron can be checked without them in the way. Nothing else changes.
+	if (name == "Ramp Starts")
+	{
+		DispatchHandleCommand(wed_ToggleModerationCallouts);
+		return true;
+	}
+
 	set<string> keep;
 	int tab_cmd = 0;
 	if (!ModeratorFocusKeeps(name, keep, tab_cmd)) return false;
@@ -710,7 +718,7 @@ int		WED_PropertyTable::ClickSelectedCell(
 	{
 		string name; set<string> keep; int tab_cmd;
 		t->GetName(name);
-		return ModeratorFocusKeeps(name, keep, tab_cmd) ? 1 : 0;
+		return (ModeratorFocusKeeps(name, keep, tab_cmd) || name == "Ramp Starts") ? 1 : 0;
 	}
 
 	WED_Airport * apt = SAFE_CAST(WED_Airport, t);
