@@ -106,10 +106,7 @@ WED_LiveryAllow	WED_LiveryFitsStand(const WED_LiveryIndexEntry & e,
 									const std::set<int> & equipment)
 {
 	int eq = WED_LiveryEquipment(e);
-	// A jet of class D or larger (the B752 and B763 freighters, filed under jet/)
-	// is also a heavy: a stand marked heavy-only takes it (Eric, 2026-09-29).
-	const bool heavy_jet = eq == atc_Jets && e.size_class >= 'D' && e.size_class <= 'F' && equipment.count(atc_Heavies);
-	if (eq != -1 && !equipment.empty() && !equipment.count(eq) && !heavy_jet) return livery_allow_Equipment;
+	if (eq != -1 && !equipment.empty() && !equipment.count(eq)) return livery_allow_Equipment;
 	return WED_LiveryAllowedAt(e, directory, airport_country, stand_lat, stand_lon);
 }
 

@@ -95,7 +95,6 @@ bool			WED_LiveryOperatorFitsRampOp(const std::string & code_uc, int ramp_op,
 // The ramp Equipment Type a livery needs, from the folder X-Plane ships it in
 // (apt_aircraft/<jet|heavy|turboprop|prop|helo|fighter>/...): one of the
 // atc_Heavies / atc_Jets / ... enum values, or -1 when the folder says nothing.
-// WED_LiveryFitsStand also lets a jet of class D or larger onto a heavy stand.
 int				WED_LiveryEquipment(const WED_LiveryIndexEntry & e);
 
 // TODAY'S STEP-DOWN, as weights. A stand with no 1313 row is the legacy format:
