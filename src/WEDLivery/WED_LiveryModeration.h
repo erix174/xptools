@@ -184,6 +184,9 @@ bool	WED_LiveryParksNothingFixable(WED_RampPosition * ramp, WED_Airport * apt);
 // letter (WED_LegacyStepDownWeights) with the fall-through folded in, so it parks
 // what it parked before. Before the update, the stand must still be legacy.
 void	WED_LiveryLegacyUpdateWeights(WED_RampPosition * ramp, WED_Airport * apt, int out_w[6]);
+// The same for a size range lo..hi (class indices 0-5), what the Liveries tab's size slider writes: the step-down
+// within the range, a class nothing parks at handing its share to the next fitting class below - never below lo.
+void	WED_LiveryRangeUpdateWeights(WED_RampPosition * ramp, WED_Airport * apt, int lo, int hi, int out_w[6]);
 bool	WED_LiveryFixParksNothing(WED_RampPosition * ramp, WED_Airport * apt, std::string * out_what);
 
 // The Moderation View's report, as plain text for the clipboard: airport,

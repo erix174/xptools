@@ -141,6 +141,23 @@ int		WED_LiveryEquipment(const WED_LiveryIndexEntry & e)
 	return -1;
 }
 
+void	WED_RangeStepDownWeights(int lo_class, int hi_class, int out_w[6])
+{
+	if (hi_class < 0 || hi_class > 5) hi_class = 2;
+	if (lo_class < 0) lo_class = 0;
+	if (lo_class > hi_class) lo_class = hi_class;
+	for (int k = 0; k < 6; ++k) out_w[k] = 0;
+	double left = 1.0;
+	int sum = 0;
+	for (int k = hi_class; k > lo_class; --k)
+	{
+		out_w[k] = (int) (left * 0.75 * 1000.0 + 0.5);
+		sum += out_w[k];
+		left *= 0.25;
+	}
+	out_w[lo_class] = 1000 - sum;			// the lowest class of the range takes the remainder
+}
+
 void	WED_LegacyStepDownWeights(int top_class, int out_w[6])
 {
 	if (top_class < 0 || top_class > 5) top_class = 2;

@@ -162,6 +162,12 @@ private:
 	bool				SelectionWeights(int out_w[6]) const;	// false if none, or if the selection disagrees
 	bool				SelectionHasWeights(void) const;
 	bool				SelectionAllWeights(void) const;	// every selected stand has weights in use
+	// The weight bars show only when the selection has weights AND the author has not asked for Simple Mode,
+	// which is a view of the same data as a size range - not a way back to the legacy format.
+	bool				ShowWeightBars(void) const;
+	// The size slider's two balls, as class indices: a legacy stand from A (the step-down reaches it) to its
+	// letter, a stand with weights from its smallest to its largest weighted class.
+	void				SliderRange(int & lo, int & hi) const;
 	int					WeightBarForXY(int bounds[4], int x, int y) const;	// -1 if not on one
 	int					WeightValueForY(int bounds[4], int y) const;		// snapped to an integer, clamped
 	int					WeightTrackMax(void) const;			// 10, or higher if an imported file needs it
@@ -185,7 +191,6 @@ private:
 	// while editing, not a second place where weights live - the entity property
 	// remains the single source of truth, and nothing here reaches apt.dat.
 	void				SeedWeightsFromSizeRange(void);
-	void				SwitchToSimpleMode(void);
 	void				WeightButtonRect(int bounds[4], float b_out[4]) const;
 	// "Populate This Ramp", right-aligned on the ramp name's row, single selection only.
 	void				PopulateButtonRect(int bounds[4], float b_out[4]) const;
@@ -497,7 +502,8 @@ private:
 	int							mDragHandle;		// -1 when not dragging
 	int							mDragAnchorIndex;
 	int							mDragCurrentIndex;
-	int							mDragStartIndex;	// the letter when the press began; unchanged -> no undo entry
+	int							mDragStartIndex;	// the grabbed ball's class when the press began; unchanged -> no undo entry
+	bool						mSimpleView;		// Simple Mode: the size range, not the bars, for a stand with weights
 
 	// Weight-bar drag. mDragWeightBar is the grabbed bar, -1 when idle; the
 	// gesture is locked to it, so sliding sideways never paints across its

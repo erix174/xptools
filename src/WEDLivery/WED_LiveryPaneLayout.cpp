@@ -145,7 +145,7 @@ void	WED_LiveryPane::WeightButtonRect(int bounds[4], float b_out[4]) const
 	// author is when they decide this stand needs a distribution rather than a
 	// range. Same derive-from-the-section idiom as SortButtonRect().
 	float top, bot;
-	if (SelectionHasWeights()) WeightsYRange(bounds, top, bot);	// the slider has collapsed - see SliderHeight()
+	if (ShowWeightBars()) WeightsYRange(bounds, top, bot);	// the slider has collapsed - see SliderHeight()
 	else                       SliderYRange(bounds, top, bot);
 	const float pad = 4;
 	const float w   = 124;
@@ -199,7 +199,7 @@ float	WED_LiveryPane::SliderHeight(void) const
 	// then, and a greyed slider saying "derived from the weights below" was a row
 	// of dead space explaining its own absence. The Simple Mode button moves onto
 	// the weights section's title row - see WeightButtonRect().
-	if (SelectionHasWeights()) return 0;
+	if (ShowWeightBars()) return 0;
 	// title row + A-F label row + step-down share row + track/ball row, plus padding
 	return GUI_GetLineHeight(font_UI_Basic) * 4 + 16 + kSliderButtonClear;
 }
@@ -209,7 +209,7 @@ float	WED_LiveryPane::WeightsHeight(void) const
 	// Collapses to nothing when there is nothing to show. A stand with no 1313
 	// row keeps today's behaviour (R17) and should not be carrying an empty
 	// control that implies otherwise.
-	if (!SelectionHasWeights()) return 0;
+	if (!ShowWeightBars()) return 0;
 
 	// title row + bar track + the A-F label row + the percentage row
 	return GUI_GetLineHeight(font_UI_Basic) * 3 + 44;
@@ -600,13 +600,16 @@ int		WED_LiveryPane::SliderHandleForXY(int bounds[4], int x, int y) const
 	float track_x0  = bounds[0] + 4 + handle_r;
 	float track_x1  = bounds[2] - 4 - handle_r;
 
-	// Legacy format: the letter is the one ball (the step-down reaches A by itself).
-	int maxIdx = WidthEnumToIndex(mSelectedRamps[0]->GetWidth());
+	// Two balls: the range's top (the 1301 letter, blue) and its bottom (orange).
+	int minIdx, maxIdx;
+	SliderRange(minIdx, maxIdx);
 	float max_x = track_x0 + (track_x1 - track_x0) * maxIdx / 5.0f;
+	float min_x = track_x0 + (track_x1 - track_x0) * minIdx / 5.0f;
 
 	if (y < track_y - handle_r*1.5f || y > track_y + handle_r*1.5f) return -1;
-	if (fabs((double)(x - max_x)) <= handle_r*1.5) return 1;
-	// Anywhere else along the track: MouseDown moves the ball there first.
+	if (fabs((double)(x - max_x)) <= handle_r*1.5) return 1;	// on top of each other: the top ball wins
+	if (fabs((double)(x - min_x)) <= handle_r*1.5) return 2;
+	// Anywhere else along the track: MouseDown moves the nearer ball there first.
 	if (x >= track_x0 - handle_r && x <= track_x1 + handle_r) return 0;
 	return -1;
 }

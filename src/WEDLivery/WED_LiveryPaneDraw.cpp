@@ -1251,14 +1251,20 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		float track_x0 = b[0] + pad + handle_r;
 		float track_x1 = b[2] - pad - handle_r;
 
-		// LEGACY FORMAT (no 1313): one control, the letter. The sim steps down
-		// from it to A, so the bar always starts at A, and the row under the
-		// letters shows the share each class gets (0.75 x 0.25^k).
+		// Two balls, orange at the bottom of the range and blue at its top (the 1301 letter). A legacy stand
+		// (no 1313) runs from A - the sim's step-down reaches it - and the row under the letters shows the
+		// share each class gets (0.75 x 0.25^k); moving a ball updates the stand to weights. A stand with
+		// weights shows its weighted range and its own shares.
 		int minIdx = 0, maxIdx = 5;
-		if (!mSelectedRamps.empty())
-			maxIdx = WidthEnumToIndex(mSelectedRamps[0]->GetWidth());
+		SliderRange(minIdx, maxIdx);
+		const bool legacy = !SelectionHasWeights();
 		int legacy_w[6];
-		WED_LegacyStepDownWeights(maxIdx, legacy_w);
+		if (legacy)
+			WED_LegacyStepDownWeights(maxIdx, legacy_w);
+		else if (!SelectionWeights(legacy_w))
+			for (int k = 0; k < 6; ++k) legacy_w[k] = 0;
+		int share_sum = 0;
+		for (int k = 0; k < 6; ++k) share_sum += legacy_w[k];
 
 		float * lbl_col    = WED_Color_RGBA(wed_Table_Text);
 		float * track_col  = WED_Color_RGBA(wed_Table_Gridlines);
@@ -1284,7 +1290,8 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		// title, so it's unmistakable what this control is. The rows under it sit
 		// kSliderButtonClear lower so Set Spawn Weights, right-aligned on the title
 		// row, does not cover the E and F letters.
-		GUI_FontDraw(state, font_UI_Basic, header_col2, b[0] + pad, slider_top - line_h * 0.9f, "Size (legacy step-down)");
+		GUI_FontDraw(state, font_UI_Basic, header_col2, b[0] + pad, slider_top - line_h * 0.9f,
+					 legacy ? "Size (legacy step-down) - move a ball to update" : "Size range (spawn weights)");
 
 		for (int i = 0; i < 6; ++i)
 		{
@@ -1299,10 +1306,10 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			GUI_FontDraw(state, font_UI_Basic, lbl_col, lx, slider_top - line_h * 1.9f - kSliderButtonClear, kWidthLabels[i]);
 
 			// the step-down share, under its letter
-			if (i <= maxIdx)
+			if (i >= minIdx && i <= maxIdx && share_sum > 0)
 			{
 				char pct[16];
-				const double share = legacy_w[i] / 10.0;
+				const double share = legacy_w[i] * 100.0 / share_sum;
 				if (share >= 9.95)	snprintf(pct, sizeof(pct), "%.0f%%", share);
 				else				snprintf(pct, sizeof(pct), "%.1f%%", share);
 				float pw = GUI_MeasureRange(font_UI_Basic, pct, pct + strlen(pct));
@@ -1355,46 +1362,26 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		// balls overlap, hit-testing reports "2" for either - light up both
 		// (they're at the same spot, so this draws once in practice) so an
 		// overlapped pair doesn't look unresponsive.
-		bool ring_max = (mHoverSliderHandle >= 0 || mDragHandle >= 0);
-		if (ring_max)
-		{
-			glColor4f(1.0f, 0.85f, 0.3f, 1.0f);
-			DrawCircleOutline(max_x, track_y, handle_r + 3);
-		}
+		bool ring_max = (mDragHandle == 1 || mDragHandle == 2 || (mDragHandle < 0 && (mHoverSliderHandle == 1 || mHoverSliderHandle == 0)));
+		bool ring_min = (mDragHandle == 0 || (mDragHandle < 0 && mHoverSliderHandle == 2));
+		glColor4f(1.0f, 0.85f, 0.3f, 1.0f);
+		if (ring_max) DrawCircleOutline(max_x, track_y, handle_r + 3);
+		if (ring_min) DrawCircleOutline(min_x, track_y, handle_r + 3);
 
 		// min ball (orange), max ball (blue), each with a dark outline for contrast -
 		// min drawn first so the max ball wins on top when the two happen to overlap
+		glColor4f(0.95f, 0.55f, 0.15f, 1.0f);
+		DrawFilledCircle(min_x, track_y, handle_r);
+		glColor4f(0.05f, 0.05f, 0.05f, 1.0f);
+		DrawCircleOutline(min_x, track_y, handle_r);
+		DrawGrabberDashes(min_x, track_y, handle_r);
+
 		glColor4f(0.3f, 0.6f, 0.9f, 1.0f);
 		DrawFilledCircle(max_x, track_y, handle_r);
 		glColor4f(0.05f, 0.05f, 0.05f, 1.0f);
 		DrawCircleOutline(max_x, track_y, handle_r);
 		DrawGrabberDashes(max_x, track_y, handle_r);
 
-		// Once weights exist the size letter is DERIVED from them (R23), so
-		// this control is a readout. Mask it the way the disabled Recommend
-		// button is masked - the hit tests already refuse it, and this is the
-		// half that says so.
-		if (SelectionHasWeights())
-		{
-			state->SetState(0,0,0,0,1,0,0);
-			glColor4f(0.0f, 0.0f, 0.0f, 0.55f);
-			glBegin(GL_QUADS);
-				glVertex2f((float) b[0] + 1, slider_bot);
-				glVertex2f((float) b[2] - 1, slider_bot);
-				glVertex2f((float) b[2] - 1, slider_top);
-				glVertex2f((float) b[0] + 1, slider_top);
-			glEnd();
-			// Centred in the zone rather than jammed against its bottom edge,
-			// where it landed on the track and the A-F labels and was
-			// unreadable through the mask.
-			state->SetState(0,0,0,0,0,0,0);
-			const char * drv = "Size is derived from the weights below";
-			float dw = GUI_MeasureRange(font_UI_Basic, drv, drv + strlen(drv));
-			float dcol[4] = { 0.92f, 0.92f, 0.94f, 1.0f };
-			GUI_FontDraw(state, font_UI_Basic, dcol,
-						 ((float) b[0] + (float) b[2]) * 0.5f - dw * 0.5f,
-						 (slider_bot + slider_top) * 0.5f - line_h * 0.35f, drv);
-		}
 	}
 
 	// --- spawn weight bars (apt.dat row 1313) ---
@@ -1502,7 +1489,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		WeightButtonRect(b, wb);
 		// "Simple Mode" only when every stand has weights: in a mixed selection
 		// the button adds them to the rest, the one step that makes it uniform.
-		const bool has = SelectionAllWeights();
+		const bool has = ShowWeightBars();
 
 		state->SetState(0,0,0,0,0,0,0);
 		float k = mTrackWeightButton ? 0.82f : (mHoverWeightButton ? 1.15f : 1.0f);

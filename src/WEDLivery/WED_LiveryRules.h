@@ -106,5 +106,8 @@ int				WED_LiveryEquipment(const WED_LiveryIndexEntry & e);
 // judging a legacy stand, "parks nothing" means nothing fits at the letter or
 // ANY class below it.
 void			WED_LegacyStepDownWeights(int top_class, int out_w[6]);
+// The same step-down within a size range: the top class 75%, each class below 75% of what is left, the range's
+// lowest class the remainder, nothing below it. lo = 0 is exactly WED_LegacyStepDownWeights.
+void			WED_RangeStepDownWeights(int lo_class, int hi_class, int out_w[6]);
 
 #endif /* WED_LIVERYRULES_H */

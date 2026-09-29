@@ -90,41 +90,6 @@ void	WED_LiveryPane::SeedWeightsFromSizeRange(void)
 	Refresh();
 }
 
-// Back to the plain size range, and back to "no 1313 row on this stand" - which
-// is NOT six zeros. Six zeros is the author saying nothing parks here (§4.2); no
-// row at all is the author not having said anything, which keeps today's
-// step-down (R17). Conflating the two would put one of them out of reach.
-//
-// This is a MODE SWITCH, not a delete, and the mode lives on the stand: the
-// weights stay in the document, flagged out of use, so they survive a save and
-// a reload and come straight back when the author returns. Export follows the
-// mode - a stand left in simple mode writes no 1313 row, whatever it holds.
-// (A pane-side cache did this before, and lost the distribution on every save.)
-void	WED_LiveryPane::SwitchToSimpleMode(void)
-{
-	if (mSelectedRamps.empty()) return;
-
-	mArchive->StartCommand("Use Simple Size Range");
-	for (size_t i = 0; i < mSelectedRamps.size(); ++i)
-	{
-		WED_RampPosition * r = mSelectedRamps[i];
-		// The letter becomes the one the weights stood for, which is also what
-		// the stand exported as (R23). Set Spawn Weights compares against it to
-		// tell a round trip from a size the author changed in between.
-		int w[6];
-		if (r->GetClassWeights(w))
-		{
-			const int top = TopWeightedClass(w);
-			if (top >= 0 && IndexToWidthEnum(top) != r->GetWidth())
-				r->SetWidth(IndexToWidthEnum(top));
-		}
-		r->SetWeightsInUse(false);
-	}
-	mArchive->CommitCommand();
-
-	mCoverageDirty = true;
-	Refresh();
-}
 
 // Fill this one stand from the database against the sizes it allows NOW - its
 // weights, or its size range if it has none - without touching either. Same
@@ -234,6 +199,11 @@ void	WED_LiveryPane::SetRampOpFilter(int wed_ramp_op_enum)
 	Refresh();
 }
 
+// Moving either ball is the author setting the stand, so it UPDATES the stand to spawn weights (Eric,
+// 2026-09-29): the step-down within the new range, with the fall-through folded in, written as 1313 and
+// marked as set by hand (1315 M). The lower end now reaches the sim, which a legacy stand never did - its
+// step-down always runs to A. A stand that already had weights is rewritten the same way: dragging the
+// range is an override of whatever distribution it held.
 void	WED_LiveryPane::ApplyDragRange(void)
 {
 	if (mSelectedRamps.empty()) return;
@@ -247,9 +217,13 @@ void	WED_LiveryPane::ApplyDragRange(void)
 
 	for (size_t i = 0; i < mSelectedRamps.size(); ++i)
 	{
-		mSelectedRamps[i]->SetWidthMin(IndexToWidthEnum(lo));
-		mSelectedRamps[i]->SetWidth(IndexToWidthEnum(hi));
-		mSelectedRamps[i]->MarkLiverySet();
+		WED_RampPosition * r = mSelectedRamps[i];
+		r->SetWidthMin(IndexToWidthEnum(lo));
+		r->SetWidth(IndexToWidthEnum(hi));
+		int w[6];
+		WED_LiveryRangeUpdateWeights(r, WED_GetParentAirport(r), lo, hi, w);
+		r->SetClassWeights(w);
+		r->MarkLiverySet();
 	}
 
 	// Live during the drag, not just on mouse-up: watching the covered-class
@@ -618,31 +592,29 @@ int		WED_LiveryPane::MouseDown(int x, int y, int button)
 	// slider is a readout, not a control. Refusing the hit here is the other
 	// half of drawing it greyed - a visual-only disable that still responds to
 	// clicks is exactly the bug that two-part idiom exists to prevent.
-	int handle = SelectionHasWeights() ? -1 : SliderHandleForXY(b, x, y);
+	int handle = ShowWeightBars() ? -1 : SliderHandleForXY(b, x, y);
 	if (handle >= 0)
 	{
-		// Legacy format: one control, the letter. The step-down reaches A from
-		// wherever it is, so the range's lower end is pinned there.
-		int maxIdx = WidthEnumToIndex(mSelectedRamps[0]->GetWidth());
-		mDragAnchorIndex  = 0;
-		mDragCurrentIndex = maxIdx;
-		mDragStartIndex   = maxIdx;
-		mDragHandle = 1;
+		// Two balls: blue is the top of the range (the 1301 letter), orange its bottom. The one not grabbed
+		// is the anchor. A press on the track away from both moves the nearer one there.
+		int lo, hi;
+		SliderRange(lo, hi);
+		int idx = (int) (SliderContinuousIndexForX(b, x) + 0.5f);
+		if (idx < 0) idx = 0;
+		if (idx > 5) idx = 5;
+		bool grab_min = (handle == 2) || (handle == 0 && (idx < lo || (idx < hi && idx - lo < hi - idx)));
 
-		mArchive->StartCommand("Set Ramp Start Size");
+		mDragAnchorIndex  = grab_min ? hi : lo;
+		mDragCurrentIndex = grab_min ? lo : hi;
+		mDragStartIndex   = mDragCurrentIndex;
+		mDragHandle       = grab_min ? 0 : 1;
 
-		// A press on the track away from the ball jumps the ball there. Only
-		// the ball itself used to respond, so a click beside it did nothing.
-		if (handle == 0)
+		mArchive->StartCommand("Set Ramp Start Size Range");
+
+		if (handle == 0 && idx != mDragCurrentIndex)
 		{
-			int idx = (int) (SliderContinuousIndexForX(b, x) + 0.5f);
-			if (idx < 0) idx = 0;
-			if (idx > 5) idx = 5;
-			if (idx != mDragCurrentIndex)
-			{
-				mDragCurrentIndex = idx;
-				ApplyDragRange();
-			}
+			mDragCurrentIndex = idx;
+			ApplyDragRange();
 		}
 		Refresh();
 		return 1;
@@ -817,8 +789,14 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 		WeightButtonRect(b, wb);
 		if (x >= wb[0] && x <= wb[2] && y >= wb[1] && y <= wb[3])
 		{
-			if (SelectionAllWeights())	SwitchToSimpleMode();
-			else						SeedWeightsFromSizeRange();	// keeps the stands that already have them
+			// Simple Mode and back only change the view. A legacy stand in the selection is updated to weights
+			// first (the step-down it parks today), which keeps the stands that already have them.
+			if (ShowWeightBars())				mSimpleView = true;
+			else
+			{
+				if (!SelectionAllWeights())		SeedWeightsFromSizeRange();
+				mSimpleView = false;
+			}
 		}
 		Refresh();
 		return;

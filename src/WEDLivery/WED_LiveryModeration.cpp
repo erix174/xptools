@@ -714,14 +714,19 @@ bool	WED_LiveryCodeParksHere(WED_RampPosition * ramp, WED_Airport * apt, const s
 // either. So the stand parks exactly what it parked before the update.
 void	WED_LiveryLegacyUpdateWeights(WED_RampPosition * ramp, WED_Airport * apt, int out_w[6])
 {
-	const int top = ramp ? ENUM_Export(ramp->GetWidth()) : 2;
-	WED_LegacyStepDownWeights(top, out_w);
+	WED_LiveryRangeUpdateWeights(ramp, apt, 0, ramp ? ENUM_Export(ramp->GetWidth()) : 2, out_w);
+}
+
+void	WED_LiveryRangeUpdateWeights(WED_RampPosition * ramp, WED_Airport * apt, int lo, int hi, int out_w[6])
+{
+	const int top = hi;
+	WED_RangeStepDownWeights(lo, hi, out_w);
 	StandAnalysis a;
 	AnalyseStand(ramp, apt, a);
 	if (!a.checked) return;				// nothing to judge against: the plain step-down
-	for (int k = top; k >= 1; --k)
+	for (int k = top; k >= lo + 1; --k)
 		if (out_w[k] > 0 && !a.fits[k])
-			for (int j = k - 1; j >= 0; --j)
+			for (int j = k - 1; j >= lo; --j)
 				if (a.fits[j])
 				{
 					// The top class keeps a token 1: under R23 the 1301 letter is the

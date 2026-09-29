@@ -52,6 +52,7 @@ WED_LiveryPane::WED_LiveryPane(
 	mDragAnchorIndex(-1),
 	mDragStartIndex(-1),
 	mDragCurrentIndex(-1),
+	mSimpleView(false),
 	mFlagTexId(0),
 	mFlagTexW(0),
 	mFlagTexH(0),
@@ -696,6 +697,28 @@ bool	WED_LiveryPane::SelectionAllWeights(void) const
 	for (size_t i = 0; i < mSelectedRamps.size(); ++i)
 		if (!mSelectedRamps[i]->GetClassWeights(w)) return false;
 	return !mSelectedRamps.empty();
+}
+
+bool	WED_LiveryPane::ShowWeightBars(void) const
+{
+	return SelectionHasWeights() && !mSimpleView;
+}
+
+void	WED_LiveryPane::SliderRange(int & lo, int & hi) const
+{
+	lo = 0;
+	hi = 2;
+	if (mSelectedRamps.empty()) return;
+	WED_RampPosition * r = mSelectedRamps[0];
+	hi = WidthEnumToIndex(r->GetWidth());
+	int w[6];
+	if (!r->GetClassWeights(w)) return;			// legacy: A to the letter
+	int first = -1, last = -1;
+	for (int k = 0; k < 6; ++k)
+		if (w[k] > 0) { if (first < 0) first = k; last = k; }
+	if (last < 0) { lo = hi; return; }			// six zeros: nothing parks - both balls on the letter
+	lo = first;
+	hi = last;
 }
 
 // The weights to draw, or false when the selection disagrees about them. A
