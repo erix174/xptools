@@ -197,6 +197,7 @@ enum validate_error_t
 	warn_taxiway_texture_heading_not_set,	// paved taxiway left at heading 0 while it runs another way
 	warn_ramp_airline_unknown_operator,	// an airline code with no OPERATOR record and no livery
 	warn_airport_legacy_ramp_starts,	// one per airport: ramp starts still in the legacy static-aircraft format
+	warn_ramp_start_op_type_none,		// Gateway: a gate or tie-down set to None parks no static aircraft
 };
 
 // The validation error record stores a single validation problem for reporting.
