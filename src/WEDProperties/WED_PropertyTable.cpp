@@ -609,7 +609,10 @@ static void	ModCollectGroups(WED_Thing * t, vector<WED_Thing *>& out)
 	}
 }
 
-// Single click on an airport: open all its folders, show them all, ESRI imagery.
+// Single click on an airport: list its folders, show them all, ESRI imagery.
+// The airport opens and every folder in it stays closed, so the hierarchy reads
+// as one line per folder (Julian: "explode just the folder names, not the
+// contents"). Opening every folder buried the list under thousands of rows.
 // (The Selection tab and the zoom come from SelectionEnd, as for any selection.)
 void	WED_PropertyTable::ModeratorShowAirport(WED_Airport * apt)
 {
@@ -618,7 +621,7 @@ void	WED_PropertyTable::ModeratorShowAirport(WED_Airport * apt)
 
 	SetOpen(apt->GetID(), 1);
 	for (auto g : groups)
-		SetOpen(g->GetID(), 1);
+		SetOpen(g->GetID(), 0);
 
 	WED_Thing * started = NULL;
 	ModSetHidden(apt, 0, started, "Show All Folders");
