@@ -104,6 +104,27 @@ int					WED_ApplyLiveryAutoFill(const WED_AutoFillPlan & plan, bool own_command 
 // One line per changed ramp and a summary - for the log and a confirmation.
 std::string			WED_DescribeAutoFill(const WED_AutoFillPlan & plan);
 
+// THE EXPORT-TIME UPGRADE (Eric's D1-D7, 2026-09-29). Every legacy ramp start
+// nobody has set in 2.8, and every one this upgrade marked before (1315 A), is
+// brought to the 12.5 format - hands off, for 30,000 Gateway airports:
+//   - unknown codes are dropped, if at least two good ones remain (never down
+//     to one, which would mean "only this operator");
+//   - a stand that parks nothing gets the airport's operators, as Auto-Populate
+//     adds them - but a one-code list is never extended;
+//   - the size letter becomes today's step-down as weights, so a stand that
+//     parked keeps parking the same aircraft;
+//   - and only if the stand then parks something is any of it kept; otherwise
+//     the stand is put back exactly as it was (legacy: today's behaviour).
+// Upgraded stands carry the auto-fill mark (1315 A). Call inside a command, and
+// never for a moderator (they may be overriding the database on purpose).
+struct WED_LegacyUpgradeStats {
+	int converted = 0;		// legacy stands now in the 12.5 format
+	int filled = 0;			// ...of any kind, given operators because nothing parked
+	int cleaned = 0;		// unknown codes dropped
+	int kept_legacy = 0;	// would have parked nothing: left as they were
+};
+void				WED_LiveryExportUpgrade(WED_Airport * apt, WED_LegacyUpgradeStats & st);
+
 // Airport > Auto-Populate Static Aircraft (Selected Ramps Only): the selected
 // ramp starts, grouped by airport, shown and applied on confirmation as one
 // undo step. Enabled only while ramp starts are selected.

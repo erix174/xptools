@@ -23,6 +23,7 @@
 
 #include "WED_SceneryPackExport.h"
 #include "WED_LiveryModeration.h"		// WED_ModerationConfirmHidden
+#include "WED_LiveryAutoFill.h"			// WED_LiveryExportUpgrade
 
 #include "DSFLib.h"
 #include "IResolver.h"
@@ -258,11 +259,12 @@ namespace
 void dummyPrintf(void * ref, const char * fmt, ...) { return; }
 
 // Returns how many static aircraft objects were removed for overlapping a
-// ramp start where X-Plane parks its own; out_filled, how many legacy airline
-// stands were given the airport's recommended operators.
-static int	DoHueristicAnalysisAndAutoUpgrade(IResolver* resolver, int * out_filled = NULL)
+// ramp start where X-Plane parks its own; out_upgrade, what the export-time
+// upgrade of legacy ramp starts did (WED_LiveryExportUpgrade).
+static int	DoHueristicAnalysisAndAutoUpgrade(IResolver* resolver, WED_LegacyUpgradeStats * out_upgrade = NULL)
 {
-	int removed_statics = 0, filled_stands = 0;
+	int removed_statics = 0;
+	WED_LegacyUpgradeStats upgrade;
 	LOG_MSG("I/exp Starting upgrade heuristics\n");
 	WED_Thing * wrl = WED_GetWorld(resolver);
 	vector<WED_Airport*> apts;
@@ -361,7 +363,7 @@ static int	DoHueristicAnalysisAndAutoUpgrade(IResolver* resolver, int * out_fill
 		added_country_codes += add_iso3166_country_metadata(**apt_itr);
 
 		//-- upgrade Ramp Positions with XP10.45 data to get parked A/C -------------
-		wed_upgrade_ramps(*apt_itr, &removed_statics, &filled_stands);
+		wed_upgrade_ramps(*apt_itr, &removed_statics, &upgrade);
 
 #if 0  // this was good in 10.45, but not needed any for gateway airports as of 2022
 		//-- Agp and obj upgrades to create more ground traffic --------------------------------
@@ -689,10 +691,27 @@ static int	DoHueristicAnalysisAndAutoUpgrade(IResolver* resolver, int * out_fill
 	std::chrono::duration<double> elapsed = t1 - t0;
 	LOG_MSG("I/exp Done with upgrade heuristics on %d apts, took %lf sec\n", (int) apts.size(), elapsed.count());
 	LOG_MSG("I/exp Removed %d static aircraft objects on ramp starts that park aircraft\n", removed_statics);
-	LOG_MSG("I/exp Filled %d legacy airline stands with the airport's recommended operators\n", filled_stands);
+	LOG_MSG("I/exp Ramp starts to the 12.5 format: %d converted, %d given operators, %d cleaned of unknown codes, %d left legacy (would park nothing)\n",
+			upgrade.converted, upgrade.filled, upgrade.cleaned, upgrade.kept_legacy);
 	LOG_FLUSH();
-	if (out_filled) *out_filled = filled_stands;
+	if (out_upgrade) *out_upgrade = upgrade;
 	return removed_statics;
+}
+
+// The same upgrade of legacy ramp starts for an export aimed at X-Plane 12.5,
+// without the Gateway's other heuristics. The caller undoes it after writing.
+static void	DoLiveryExportUpgrade(IResolver* resolver, WED_LegacyUpgradeStats & st)
+{
+	WED_Thing * wrl = WED_GetWorld(resolver);
+	vector<WED_Airport*> apts;
+	CollectRecursive(wrl, back_inserter(apts), WED_Airport::sClass);
+	wrl->StartCommand("Static aircraft format upgrade");
+	for (auto a : apts)
+		WED_LiveryExportUpgrade(a, st);
+	wrl->CommitCommand();
+	LOG_MSG("I/exp Ramp starts to the 12.5 format: %d converted, %d given operators, %d cleaned of unknown codes, %d left legacy (would park nothing)\n",
+			st.converted, st.filled, st.cleaned, st.kept_legacy);
+	LOG_FLUSH();
 }
 
 int		WED_CanExportPack(IResolver* resolver, string& ioname)
@@ -719,12 +738,18 @@ void	WED_DoExportPack(WED_Document * resolver, WED_MapPane * pane)
 		return;
 
 	auto uMgr = resolver->GetUndoMgr();
-	int removed_statics = 0, filled_stands = 0;
-	if (gExportTarget == wet_gateway)
-	{
+	int removed_statics = 0;
+	WED_LegacyUpgradeStats upgrade;
+	// The ramp start upgrade writes the 12.5 format, so it runs for the targets
+	// that write it; never for a moderator, who may be overriding the airport
+	// database on purpose (Eric, 2026-09-29).
+	const bool upgrade_12_5 = gExportTarget == wet_xplane_1250 && !WED_ModerationEnabled();
+	if (gExportTarget == wet_gateway || upgrade_12_5)
 		uMgr->MarkUndo();
-		removed_statics = DoHueristicAnalysisAndAutoUpgrade(resolver, &filled_stands);
-	}
+	if (gExportTarget == wet_gateway)
+		removed_statics = DoHueristicAnalysisAndAutoUpgrade(resolver, &upgrade);
+	else if (upgrade_12_5)
+		DoLiveryExportUpgrade(resolver, upgrade);
 #endif
 	ILibrarian * l = WED_GetLibrarian(resolver);
 	WED_Thing * w = WED_GetWorld(resolver);
@@ -738,11 +763,15 @@ void	WED_DoExportPack(WED_Document * resolver, WED_MapPane * pane)
 	WED_ExportPackToPath(g, resolver, pack_base, problem_children);
 
 #if !GATEWAY_IMPORT_MODE
-	if (gExportTarget == wet_gateway)
+	if (gExportTarget == wet_gateway || upgrade_12_5)
 	{
+		// The format change alone is silent (Eric, D5): the stand parks what it
+		// parked. Said aloud are the changes to what parks - operators added,
+		// unknown codes dropped - and the static objects left out.
+		const int filled_stands = upgrade.filled, cleaned_stands = upgrade.cleaned;
 		if (uMgr->UndoToMark())
 			DoUserAlert("Some of the upgrade heuristics applied during export could not be undone. Scenery was permanently altered by export.");
-		else if (removed_statics > 0 || filled_stands > 0)
+		else if (removed_statics > 0 || filled_stands > 0 || cleaned_stands > 0)
 		{
 			// Silent until 2.8 - a forum thread spent weeks on "5 of my 13 static
 			// aircraft are missing". Both changes are in the exported files only;
@@ -751,9 +780,15 @@ void	WED_DoExportPack(WED_Document * resolver, WED_MapPane * pane)
 			char buf[400];
 			if (filled_stands > 0)
 			{
-				snprintf(buf, sizeof(buf), "\n\n- %d airline ramp start%s listed no airline that has a static aircraft there, so X-Plane would have parked any airline at all. "
-						 "The export lists the airport's recommended operators on %s and marks %s auto-filled. Use Auto-Populate to see and keep this in your project.",
+				snprintf(buf, sizeof(buf), "\n\n- %d ramp start%s would have parked no static aircraft under X-Plane 12.5. "
+						 "The export lists the airport's operators on %s and marks %s auto-filled. Use Auto-Populate to see and keep this in your project.",
 						 filled_stands, filled_stands == 1 ? "" : "s", filled_stands == 1 ? "it" : "them", filled_stands == 1 ? "it" : "them");
+				msg += buf;
+			}
+			if (cleaned_stands > 0)
+			{
+				snprintf(buf, sizeof(buf), "\n\n- %d ramp start%s listed airline codes X-Plane does not know (see Validate); the export leaves them out.",
+						 cleaned_stands, cleaned_stands == 1 ? "" : "s");
 				msg += buf;
 			}
 			if (removed_statics > 0)

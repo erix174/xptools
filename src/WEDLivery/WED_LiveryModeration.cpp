@@ -37,6 +37,7 @@
 #include "WED_EnumSystem.h"
 #include "PlatformUtils.h"		// ConfirmMessage
 #include "GUI_Help.h"			// GUI_LaunchURL
+#include "WED_LiveryAutoFill.h"	// the Fix that adds operators
 #if !IBM
 	#include <unistd.h>				// access()
 #endif
@@ -317,6 +318,7 @@ struct StandAnalysis {
 	bool	listed_at_allowed = false;	// a candidate has a livery at an open class, range/equipment aside
 	bool	library_at_allowed = false;	// X-Plane has ANY livery at an open class
 	bool	pool = false;
+	bool	empty_list = false;		// an airline or cargo stand with weights and no operator
 	int		op = 0;
 	string	country;
 };
@@ -339,7 +341,18 @@ static void	AnalyseStand(WED_RampPosition * ramp, WED_Airport * apt, StandAnalys
 	a.op = ramp->GetRampOperationType();
 	if (a.op == ramp_operation_None) return;				// parks nothing by definition (R29)
 	a.pool = a.op == ramp_operation_GeneralAviation || (a.op == ramp_operation_Military && airlines.empty());
-	if (!a.pool && airlines.empty()) return;				// an airline stand with no list: nothing was asked for
+	if (!a.pool && airlines.empty())
+	{
+		// Legacy: nothing was asked for, and X-Plane keeps today's behaviour (a
+		// random airline, R17). With weights the three-stage selection applies,
+		// and it parks only listed operators (spec 4.1): nothing, every time.
+		if (!a.weighted) return;
+		bool any = false;
+		for (int k = 0; k < 6; ++k) { a.allowed[k] = a.wts[k] > 0; any |= a.allowed[k]; }
+		if (!any) return;				// all zero says so on purpose (V2)
+		a.checked = a.empty_list = true;
+		return;
+	}
 
 	// The same data and the same rule as the Liveries tab - range (R26) and the
 	// stand's equipment type included - so the two never disagree about a stand.
@@ -469,6 +482,23 @@ static bool	FixableAnalysis(const StandAnalysis & a)
 	return false;
 }
 
+// The other Fix, for a stand no weight move can help - its operators do not
+// fly here at all: add the airport's operators that do, as Auto-Populate would
+// (a legacy stand is converted on the way). A one-code list means "only this
+// operator" and is not extended - except by a moderator, who may override it
+// (Eric, 2026-09-29).
+static bool	PopulatePlan(WED_RampPosition * ramp, WED_Airport * apt, WED_AutoFillPlan & plan)
+{
+	std::istringstream ss(ramp->GetAirlines());
+	string c;
+	int n = 0;
+	while (ss >> c) ++n;
+	if (n == 1 && !WED_ModerationEnabled()) return false;
+	vector<WED_RampPosition *> one(1, ramp);
+	plan = WED_PlanLiveryAutoFill(apt, &one, true);
+	return plan.error.empty() && !plan.ramps.empty() && !plan.ramps[0].added.empty();
+}
+
 string	WED_LiveryConformanceReport(WED_Airport * apt)
 {
 	if (!apt) return string();
@@ -586,7 +616,9 @@ bool	WED_LiveryParksNothing(WED_RampPosition * ramp, WED_Airport * apt, string &
 
 	// R14's cases, which must not read alike.
 	string why;
-	if (!a.library_at_allowed)
+	if (a.empty_list)
+		why = "it lists no operator, and a stand with spawn weights parks only the operators it lists";
+	else if (!a.library_at_allowed)
 		// ahead of the art: nothing to fix - it starts working the day one ships
 		why = string("X-Plane has no static aircraft at size ") + classes + " yet - nothing can park here until one ships";
 	else if (a.pool)
@@ -621,7 +653,58 @@ bool	WED_LiveryParksNothing(WED_RampPosition * ramp, WED_Airport * apt, string &
 			out_msg += string(", and the stand's size becomes ") + (char) ('A' + new_top) + " (was " + (char) ('A' + top) + "; AI and ATC follow it)";
 		out_msg += ".";
 	}
+	else
+	{
+		WED_AutoFillPlan plan;
+		if (PopulatePlan(ramp, apt, plan))
+		{
+			string add;
+			for (size_t k = 0; k < plan.ramps[0].added.size(); ++k) add += (k ? " " : "") + plan.ramps[0].added[k];
+			out_msg += " Fixable: select it and press Fix - adds the airport's operators that park here (" + add + ")" +
+					   (a.weighted ? "." : " and updates the stand to spawn weights.");
+		}
+	}
 	return true;
+}
+
+bool	WED_LiveryParksSomething(WED_RampPosition * ramp, WED_Airport * apt)
+{
+	StandAnalysis a;
+	AnalyseStand(ramp, apt, a);
+	if (!a.checked) return false;
+	for (int k = 0; k < 6; ++k) if (a.allowed[k] && a.fits[k]) return true;
+	return false;
+}
+
+bool	WED_LiveryCodeParksHere(WED_RampPosition * ramp, WED_Airport * apt, const string & code)
+{
+	WED_LiveryData * d = WED_GetLiveryData(false);
+	if (!d || !ramp || !apt) return false;
+	const int op = ramp->GetRampOperationType();
+	const string uc = Upper(code);
+	if (!WED_LiveryOperatorFitsRampOp(uc, op, d->directory)) return false;
+	const vector<const WED_LiveryIndexEntry *> * all = d->index.GetForAirline(uc);
+	if (!all) return false;
+
+	bool allowed[6];
+	int w[6];
+	if (ramp->GetClassWeights(w))	for (int k = 0; k < 6; ++k) allowed[k] = w[k] > 0;
+	else							for (int k = 0; k < 6; ++k) allowed[k] = k <= ENUM_Export(ramp->GetWidth());
+	string country, icao, meta;
+	apt->GetICAO(icao);
+	meta = apt->ContainsMetaDataKey("icao_code") ? apt->GetMetaDataValue("icao_code") : string();
+	if (!d->airports.GetCountry(Upper(!meta.empty() ? meta : icao), country)) d->airports.GetCountry(Upper(icao), country);
+	Point2 here;
+	ramp->GetLocation(gis_Geo, here);
+	set<int> equipment;
+	ramp->GetEquipment(equipment);
+	for (size_t i = 0; i < all->size(); ++i)
+	{
+		const WED_LiveryIndexEntry & e = *(*all)[i];
+		if (e.size_class < 'A' || e.size_class > 'F' || !allowed[e.size_class - 'A']) continue;
+		if (WED_LiveryFitsStand(e, d->directory, country, here.y(), here.x(), equipment) == livery_allow_Yes) return true;
+	}
+	return false;
 }
 
 // Updating a legacy stand to weights: today's step-down, with its fall-through
@@ -655,7 +738,10 @@ bool	WED_LiveryParksNothingFixable(WED_RampPosition * ramp, WED_Airport * apt)
 {
 	StandAnalysis a;
 	AnalyseStand(ramp, apt, a);
-	return FixableAnalysis(a);
+	if (FixableAnalysis(a)) return true;
+	if (!ParksNothing(a)) return false;
+	WED_AutoFillPlan plan;
+	return PopulatePlan(ramp, apt, plan);
 }
 
 // Inside the caller's command. Weights: each weight on a class nothing fits here
@@ -666,10 +752,23 @@ bool	WED_LiveryFixParksNothing(WED_RampPosition * ramp, WED_Airport * apt, strin
 {
 	StandAnalysis a;
 	AnalyseStand(ramp, apt, a);
-	if (!FixableAnalysis(a)) return false;
-
 	string name;
 	ramp->GetName(name);
+	if (!FixableAnalysis(a))
+	{
+		WED_AutoFillPlan plan;
+		if (!ParksNothing(a) || !PopulatePlan(ramp, apt, plan)) return false;
+		const bool legacy = !a.weighted;
+		WED_ApplyLiveryAutoFill(plan, false);
+		if (out_what)
+		{
+			string add;
+			for (size_t k = 0; k < plan.ramps[0].added.size(); ++k) add += (k ? " " : "") + plan.ramps[0].added[k];
+			*out_what = "Ramp start '" + name + "': added " + add + (legacy ? ", updated to spawn weights" : "");
+		}
+		return true;
+	}
+
 	char buf[256];
 	const int old_top = StandTop(a);
 	{
@@ -803,8 +902,14 @@ void	WED_ModerationDescribe(WED_RampPosition * ramp, WED_Airport * apt, WED_Mode
 
 		switch (out.verify) {
 		case WED_ModerationEntry::verify_Assumed:
+			// Relaxed (Eric, 2026-09-29): the export-time upgrade marks every stand
+			// it converts, and keeps the codes the stand already listed - tens of
+			// thousands of them, all approved long ago. A code that is not auto-
+			// fill's but parks here is taken as the author's; only one that cannot
+			// park (unknown, out of range, no livery at these sizes) is checked.
 			if (pseudo)							c.verdict = WED_ModerationCode::v_Plain;
 			else if (known && served_set.count(c.code))	c.verdict = WED_ModerationCode::v_Assumed;
+			else if (known && WED_LiveryCodeParksHere(ramp, apt, c.code))	c.verdict = WED_ModerationCode::v_Plain;
 			else
 			{
 				c.verdict    = WED_ModerationCode::v_Check;		// not auto-fill's: check it
@@ -1077,13 +1182,14 @@ string	WED_ModerationReport(WED_Airport * apt, const std::set<string> & reviewed
 	vector<string> parks;			// the validator's message for each stand, in its own words
 	vector<Setup> setups;
 	std::map<string, size_t> at;
-	int n_issue = 0, n_auto = 0, n_none = 0, n_rev = 0;
+	int n_issue = 0, n_auto = 0, n_none = 0, n_rev = 0, n_legacy = 0;
 	for (size_t i = 0; i < ramps.size(); ++i)
 	{
 		WED_ModerationEntry e;
 		WED_ModerationDescribe(ramps[i], apt, e);
 		if (e.auto_filled) ++n_auto;
 		if (e.op_type == ramp_operation_None) ++n_none;
+		else if (!ramps[i]->HasLiveryFingerprint()) ++n_legacy;
 		{	string um;											// Validate's unknown-operator warning, word for word
 			if (WED_LiveryUnknownOperators(ramps[i], um)) parks.push_back(um); }
 		const bool rev = reviewed.count(e.signature) > 0;
@@ -1103,8 +1209,8 @@ string	WED_ModerationReport(WED_Airport * apt, const std::set<string> & reviewed
 	WED_LiveryData * d = WED_GetLiveryData(false);
 	r += string("Checked with WED ") + WED_VERSION_STRING + ", livery index " + (d ? d->index.DescribeVersion() : string("(none)")) +
 		 ". The same WED on the same X-Plane reproduces every line below." + NL + NL;
-	snprintf(buf, sizeof(buf), "%d ramp starts, %d to check, %d unique setups, %d auto-filled, %d \"None\", %d reviewed this session.",
-		(int) ramps.size(), n_issue, (int) all_setups.size(), n_auto, n_none, n_rev);
+	snprintf(buf, sizeof(buf), "%d ramp starts, %d to check, %d unique setups, %d auto-filled or upgraded (1315 A), %d still legacy, %d \"None\", %d reviewed this session.",
+		(int) ramps.size(), n_issue, (int) all_setups.size(), n_auto, n_legacy, n_none, n_rev);
 	r += buf + NL;
 
 	// what Validate lists for this airport's liveries - the same functions

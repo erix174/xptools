@@ -4663,7 +4663,7 @@ static bool parks_static_aircraft(WED_RampPosition * r)
 	return true;
 }
 
-int wed_upgrade_ramps(WED_Thing* who, int * out_removed_statics, int * out_filled_stands)
+int wed_upgrade_ramps(WED_Thing* who, int * out_removed_statics, WED_LegacyUpgradeStats * out_upgrade)
 {
 	auto rmgr = WED_GetResourceMgr(who->GetArchive()->GetResolver());
 	auto sel  = WED_GetSelect(who->GetArchive()->GetResolver());
@@ -4675,7 +4675,6 @@ int wed_upgrade_ramps(WED_Thing* who, int * out_removed_statics, int * out_fille
 
 	WED_Airport * apt = dynamic_cast<WED_Airport*>(who);
 	if (!apt) return 0;
-	vector<WED_RampPosition *> to_fill;		// legacy airline stands that would park at random
 
 	for (auto r : ramps)
 	{
@@ -4708,32 +4707,28 @@ int wed_upgrade_ramps(WED_Thing* who, int * out_removed_statics, int * out_fille
 				}
 			}
 		}
-		// Airline codes for a legacy airline stand that would otherwise park at
-		// random (WED 2.8, replacing get_regional_codes). A legacy stand (no 1313)
-		// parks by today's library buckets: with no listed airline that has a
-		// livery there, X-Plane picks any airline in the world. 2.7 appended a
-		// hard-coded "regional" list by longitude and latitude; now the airport's
-		// recommended operators are added, the same as Auto-Populate - airport
-		// database, range and equipment checked, extend-only, within the length
-		// cap - and the stand is marked auto-filled (1315 A), so moderators see
-		// it and later exports leave it alone. A list that already parks is kept.
-		if (r->GetRampOperationType() == ramp_operation_Airline)
-		{
-			string why;
-			if (r->GetAirlines().empty() || WED_LiveryParksNothing(r, apt, why))
-				to_fill.push_back(r);
-		}
 	}
-	if (!to_fill.empty())
+	// Legacy stands to the 12.5 format (WED 2.8; replaces get_regional_codes,
+	// which appended a hard-coded "regional" airline list by longitude and
+	// latitude). See WED_LiveryExportUpgrade: converted only where the stand then
+	// parks something, operators added only where nothing parked, marked 1315 A.
+	// Not for a moderator, who may be overriding the airport database on
+	// purpose - except the Gateway's own bulk export, which is the point of it.
+	// Needs the livery index; without one (an X-Plane before 12.5) nothing
+	// changes and the Gateway's own export upgrades these stands later.
+#if !GATEWAY_IMPORT_MODE
+	if (!WED_ModerationEnabled())
+#endif
 	{
-		// needs the livery index; without one (an X-Plane before 12.5) the plan is
-		// empty and the Gateway's own export fills these stands later
-		WED_AutoFillPlan plan = WED_PlanLiveryAutoFill(apt, &to_fill, false);
-		if (plan.error.empty())
+		WED_LegacyUpgradeStats st;
+		WED_LiveryExportUpgrade(apt, st);
+		if (st.converted || st.filled || st.cleaned) did_work = 1;
+		if (out_upgrade)
 		{
-			const int n = WED_ApplyLiveryAutoFill(plan, false);
-			if (n > 0) did_work = 1;
-			if (out_filled_stands) *out_filled_stands += n;
+			out_upgrade->converted   += st.converted;
+			out_upgrade->filled      += st.filled;
+			out_upgrade->cleaned     += st.cleaned;
+			out_upgrade->kept_legacy += st.kept_legacy;
 		}
 	}
 	// nuke static aircraft objects near ramps

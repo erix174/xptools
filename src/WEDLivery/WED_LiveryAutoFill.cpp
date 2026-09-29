@@ -135,6 +135,10 @@ WED_AutoFillPlan	WED_PlanLiveryAutoFill(WED_Airport * apt, const vector<WED_Ramp
 				here[i]->op_class == WED_AirlineDirectoryEntry::op_Gov)
 				home_forces.push_back(Upper(here[i]->code));
 	}
+	// ...and the generic military pool, the only other source a military stand
+	// draws from (Eric, 2026-09-29): with the country's forces alone, a list
+	// that used to reach the generic pool through being empty would lose it.
+	home_forces.push_back("XPMI");
 
 	vector<WED_RampPosition *> ramps;
 	if (only)	ramps = *only;
@@ -251,6 +255,106 @@ int		WED_ApplyLiveryAutoFill(const WED_AutoFillPlan & plan, bool own_command)
 	}
 	if (own_command) archive->CommitCommand();
 	return n;
+}
+
+// Known to X-Plane's livery index: an OPERATOR record or a livery, or one of the
+// pseudo-operators. Anything else parks nothing anywhere - a typo or filler.
+static bool IsKnownCode(AutoFillData & d, const string & uc)
+{
+	if (uc == "XPGA" || uc == "XPMI" || WED_IsGenericAirlinerCode(uc)) return true;
+	WED_AirlineDirectoryEntry e;
+	if (d.directory.Lookup(uc, e)) return true;
+	const vector<const WED_LiveryIndexEntry *> * rows = d.index.GetForAirline(uc);
+	return rows && !rows->empty();
+}
+
+void	WED_LiveryExportUpgrade(WED_Airport * apt, WED_LegacyUpgradeStats & st)
+{
+	if (!apt) return;
+	WED_LiveryData * pd = WED_GetLiveryData(true);
+	if (!pd) return;					// no 12.5 livery index: nothing to judge against
+	AutoFillData & d = *pd;
+
+	vector<WED_RampPosition *> ramps;
+	CollectRamps(apt, ramps);
+	for (size_t i = 0; i < ramps.size(); ++i)
+	{
+		WED_RampPosition * r = ramps[i];
+		const int type = r->GetType(), op = r->GetRampOperationType();
+		if (type != atc_Ramp_Gate && type != atc_Ramp_TieDown) continue;
+		if (op == ramp_operation_None) continue;
+		// An author's stand (weights or 1315 M) is never the automation's to
+		// change; one it upgraded before (1315 A, nobody has touched it since)
+		// is re-planned against today's data (D6).
+		const bool owned = r->IsAutoFilled();
+		if (r->HasLiveryFingerprint() && !owned) continue;
+
+		WED_RampPosition::LiveryState before;
+		r->GetLiveryState(before);
+		const bool had_weights = r->WeightsInUse() && !before.weights.empty();
+		const bool parked = WED_LiveryParksSomething(r, apt);
+
+		vector<string> codes, valid;
+		{
+			std::istringstream ss(before.airlines);
+			string c;
+			while (ss >> c) codes.push_back(c);
+		}
+		for (size_t k = 0; k < codes.size(); ++k)
+			if (IsKnownCode(d, Upper(codes[k]))) valid.push_back(codes[k]);
+
+		// D4: drop codes X-Plane cannot know - but never down to one code, which
+		// in 2.8 means "only this operator" and was not what the author wrote.
+		bool cleaned = false;
+		if (valid.size() < codes.size() && valid.size() >= 2)
+		{
+			string list;
+			for (size_t k = 0; k < valid.size(); ++k) list += (k ? " " : "") + valid[k];
+			r->SetAirlines(list);
+			cleaned = true;
+		}
+
+		// D3/D4: operators are added only where nothing parks, and never to a
+		// one-code list. The plan converts a legacy stand and folds its step-down
+		// against the list it ends with.
+		bool filled = false;
+		if (!parked && codes.size() != 1)
+		{
+			vector<WED_RampPosition *> one(1, r);
+			WED_AutoFillPlan plan = WED_PlanLiveryAutoFill(apt, &one, true);
+			if (plan.error.empty() && plan.changed > 0)
+			{
+				WED_ApplyLiveryAutoFill(plan, false);
+				filled = !plan.ramps.empty() && !plan.ramps[0].added.empty();
+			}
+		}
+		// D5: the format update - today's step-down, as it parks today.
+		int w[6];
+		if (!r->GetClassWeights(w))
+		{
+			WED_LiveryLegacyUpdateWeights(r, apt, w);
+			r->SetClassWeights(w);
+		}
+
+		// D2: only a stand that parks something afterwards is upgraded. Anything
+		// else goes back exactly as it was - a legacy stand keeps today's
+		// behaviour (a random airline where it lists none), an upgraded one its
+		// last good state.
+		WED_RampPosition::LiveryState after;
+		r->GetLiveryState(after);
+		const bool same = after.airlines == before.airlines && after.weights == before.weights &&
+						  after.weights_mode == before.weights_mode;
+		if (same || !WED_LiveryParksSomething(r, apt))
+		{
+			r->SetLiveryState(before);
+			if (!same) ++st.kept_legacy;
+			continue;
+		}
+		r->MarkAutoOwned();
+		if (!had_weights) ++st.converted;
+		if (filled)  ++st.filled;
+		if (cleaned) ++st.cleaned;
+	}
 }
 
 string	WED_DescribeAutoFill(const WED_AutoFillPlan & plan)

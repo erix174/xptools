@@ -105,6 +105,20 @@ public:
 	void	SetWeightsInUse(bool in_use);
 	bool	HasStoredWeights(int out_w[6]) const;
 
+	// Everything static-aircraft about the stand, copied raw - no watermark rules.
+	// For the export-time upgrade, which tries a change and puts the stand back
+	// exactly as it was if the result would park nothing; the setters would
+	// leave the set-in-2.8 mark behind and turn a legacy stand into a 2.8 one.
+	struct LiveryState {
+		std::string	airlines, weights;
+		int			weights_mode = 0, auto_filled = 0, livery_set = 0;
+	};
+	void	GetLiveryState(LiveryState & out) const;
+	void	SetLiveryState(const LiveryState & in);
+	// The auto-fill watermark alone, clearing the set-in-2.8 mark the setters
+	// left: the stand is the automation's, not an author's (1315 A, not M).
+	void	MarkAutoOwned(void);
+
 	virtual void	SetNthProperty(int n, const PropertyVal_t& val);
 
 	static string CorrectAirlinesString(const string &a);

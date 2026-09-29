@@ -300,7 +300,7 @@ void WED_ValidateDialog::ReceiveMessage(
 					if (WED_RampPosition * r = dynamic_cast<WED_RampPosition *>(t))
 						if (WED_LiveryParksNothingFixable(r, msgs_orig[i].airport))
 						{
-							if (!started) { wrl->StartCommand("Fix Static Aircraft Size"); started = true; }
+							if (!started) { wrl->StartCommand("Fix Static Aircraft"); started = true; }
 							string what;
 							if (WED_LiveryFixParksNothing(r, msgs_orig[i].airport, &what))
 								mMsgs[i].name = "Fixed: " + what;

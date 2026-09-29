@@ -196,6 +196,7 @@ enum validate_error_t
 	warn_ramp_livery_parks_nothing,		// R14: no listed operator has a livery the stand's sizes/weights allow
 	warn_taxiway_texture_heading_not_set,	// paved taxiway left at heading 0 while it runs another way
 	warn_ramp_airline_unknown_operator,	// an airline code with no OPERATOR record and no livery
+	warn_airport_legacy_ramp_starts,	// one per airport: ramp starts still in the legacy static-aircraft format
 };
 
 // The validation error record stores a single validation problem for reporting.

@@ -150,6 +150,16 @@ bool	WED_ModerationConfirmHidden(WED_Thing * root);
 // on the same X-Plane reproduces it - on the Gateway too.
 bool	WED_LiveryParksNothing(WED_RampPosition * ramp, WED_Airport * apt, std::string & out_msg);
 
+// The other side of the same rule, strictly: true only when X-Plane 12.5 parks
+// something here. A legacy airline or cargo stand with no list is false (today
+// it parks a random airline, which is not WED's to promise), as is one with
+// weights and no list, or six zero weights.
+bool	WED_LiveryParksSomething(WED_RampPosition * ramp, WED_Airport * apt);
+
+// Whether one code, on this stand, has a livery that may park here: the stand's
+// operation type, a class it opens, its equipment, range and home soil.
+bool	WED_LiveryCodeParksHere(WED_RampPosition * ramp, WED_Airport * apt, const std::string & code);
+
 // Codes in the stand's airline list that are no operator at all: no OPERATOR
 // record in the livery index and no livery. Usually a typo ("dla" for "dal"),
 // sometimes filler. The pseudo-operators (XPGA, XPMI, XPZZ_*) are known by

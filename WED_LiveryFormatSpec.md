@@ -579,11 +579,17 @@ correctly.
   (`GATEWAY_IMPORT_MODE`) - turns `none` into airline or GA and removes static
   aircraft objects on ramp starts. Until WED 2.8 it also appended hard-coded
   "regional" airline codes (by longitude and latitude) to airline stands; 2.8
-  instead gives a legacy airline stand whose list parks nothing (empty, or no
-  listed airline with a livery there - X-Plane would otherwise park any airline
-  at all) the airport's recommended operators, exactly as Auto-Populate does
-  (range and equipment checked, extend-only, length cap), and marks it `1315 A`,
-  so the stand is fingerprinted and moderators see it. It skips 2.8 stands
+  instead upgrades legacy stands to this format, on Gateway exports and on
+  exports for X-Plane 12.5 (never for a moderator). Per stand: unknown codes are
+  dropped if at least two good ones remain; a stand that parks nothing gets the
+  airport's operators as Auto-Populate adds them (military: the country's own
+  forces and XPMI), except a one-code list, which means "only this operator";
+  the letter becomes today's step-down as weights. Only a stand that then parks
+  something keeps any of it, marked `1315 A`; any other stays legacy, exactly as
+  it was. A `1315 A` stand stays the automation's and is re-planned on later
+  exports. Measured on the Global Airports apt.dat, the "keep only if it parks"
+  rule is what stops 6,767 empty-list airline and cargo stands from going from a
+  random airline today to nothing. It skips 2.8 stands
   entirely, and near a 2.8 stand that parks nothing (None, or all-zero weights)
   it removes no object. A new stand placed with the tool and never set keeps no
   mark and is upgraded as before. **The Gateway's bulk export must run WED 2.8

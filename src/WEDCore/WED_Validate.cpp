@@ -2848,6 +2848,26 @@ static void ValidateOneAirport(WED_Airport* apt, validation_error_vector& msgs, 
 		ValidateRampLiveries(r, g, msgs, apt);
 	}
 
+	// One line per airport, not one per stand: how much of it is still in the
+	// legacy static-aircraft format (Eric, 2026-09-29 - 12.5 should retire it
+	// step by step). Only with a 12.5 livery index, which the upgrade needs.
+	if (WED_GetLiveryData(false))
+	{
+		vector<WED_RampPosition *> legacy;
+		for (auto r : ramps)
+			if ((r->GetType() == atc_Ramp_Gate || r->GetType() == atc_Ramp_TieDown) &&
+				r->GetRampOperationType() != ramp_operation_None && !r->HasLiveryFingerprint())
+				legacy.push_back(r);
+		if (!legacy.empty())
+		{
+			char buf[400];
+			snprintf(buf, sizeof(buf), "%d ramp start%s still use%s the legacy static-aircraft format. Exporting for X-Plane 12.5.0 or the "
+					 "Airport Scenery Gateway updates each one that will then park aircraft; Airport > Update Legacy Stands to Spawn Weights "
+					 "does it in your project.", (int) legacy.size(), legacy.size() == 1 ? "" : "s", legacy.size() == 1 ? "s" : "");
+			msgs.push_back(validation_error_t(buf, warn_airport_legacy_ramp_starts, legacy, apt));
+		}
+	}
+
 	// Rows the import could not read. A warning, not an error: the file loaded
 	// the way X-Plane loads it. It stays listed for the rest of the session.
 	if (WED_Document * doc = dynamic_cast<WED_Document *>(apt->GetArchive()->GetResolver()))

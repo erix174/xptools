@@ -464,6 +464,30 @@ void	WED_RampPosition::SetClassWeights(const int w[6])
 	MarkLiverySet();
 }
 
+void	WED_RampPosition::GetLiveryState(LiveryState & out) const
+{
+	out.airlines     = airlines.value;
+	out.weights      = class_weights.value;
+	out.weights_mode = weights_mode.value;
+	out.auto_filled  = auto_filled.value;
+	out.livery_set   = livery_set.value;
+}
+
+void	WED_RampPosition::SetLiveryState(const LiveryState & in)
+{
+	airlines      = in.airlines;
+	class_weights = in.weights;
+	weights_mode  = in.weights_mode;
+	auto_filled   = in.auto_filled;
+	livery_set    = in.livery_set;
+}
+
+void	WED_RampPosition::MarkAutoOwned(void)
+{
+	auto_filled = 1;
+	livery_set  = 0;
+}
+
 bool	WED_RampPosition::WeightsInUse(void) const		{ return weights_mode.value != 0; }
 void	WED_RampPosition::SetWeightsInUse(bool in_use)	{ weights_mode = in_use; MarkLiverySet(); }
 
