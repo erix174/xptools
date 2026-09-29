@@ -107,8 +107,8 @@ std::string			WED_DescribeAutoFill(const WED_AutoFillPlan & plan);
 // THE EXPORT-TIME UPGRADE (Eric's D1-D7, 2026-09-29). Every legacy ramp start
 // nobody has set in 2.8, and every one this upgrade marked before (1315 A), is
 // brought to the 12.5 format - hands off, for 30,000 Gateway airports:
-//   - unknown codes are dropped, if at least two good ones remain (never down
-//     to one, which would mean "only this operator");
+//   - every code the stand lists is kept, known to the index or not (Validate
+//     and Moderation Mode flag unknown ones for a person to check);
 //   - a stand that parks nothing gets the airport's operators, as Auto-Populate
 //     adds them - but a one-code list is never extended;
 //   - the size letter becomes today's step-down as weights, so a stand that
@@ -120,7 +120,6 @@ std::string			WED_DescribeAutoFill(const WED_AutoFillPlan & plan);
 struct WED_LegacyUpgradeStats {
 	int converted = 0;		// legacy stands now in the 12.5 format
 	int filled = 0;			// ...of any kind, given operators because nothing parked
-	int cleaned = 0;		// unknown codes dropped
 	int kept_legacy = 0;	// would have parked nothing: left as they were
 };
 void				WED_LiveryExportUpgrade(WED_Airport * apt, WED_LegacyUpgradeStats & st);

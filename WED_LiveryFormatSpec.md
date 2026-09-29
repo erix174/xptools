@@ -580,8 +580,8 @@ correctly.
   aircraft objects on ramp starts. Until WED 2.8 it also appended hard-coded
   "regional" airline codes (by longitude and latitude) to airline stands; 2.8
   instead upgrades legacy stands to this format, on Gateway exports and on
-  exports for X-Plane 12.5 (never for a moderator). Per stand: unknown codes are
-  dropped if at least two good ones remain; a stand that parks nothing gets the
+  exports for X-Plane 12.5 (never for a moderator). Per stand: every listed code
+  is kept (Validate flags unknown ones); a stand that parks nothing gets the
   airport's operators as Auto-Populate adds them (military: the country's own
   forces and XPMI), except a one-code list, which means "only this operator";
   the letter becomes today's step-down as weights. Only a stand that then parks

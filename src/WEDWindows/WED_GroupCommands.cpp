@@ -4722,12 +4722,11 @@ int wed_upgrade_ramps(WED_Thing* who, int * out_removed_statics, WED_LegacyUpgra
 	{
 		WED_LegacyUpgradeStats st;
 		WED_LiveryExportUpgrade(apt, st);
-		if (st.converted || st.filled || st.cleaned) did_work = 1;
+		if (st.converted || st.filled) did_work = 1;
 		if (out_upgrade)
 		{
 			out_upgrade->converted   += st.converted;
 			out_upgrade->filled      += st.filled;
-			out_upgrade->cleaned     += st.cleaned;
 			out_upgrade->kept_legacy += st.kept_legacy;
 		}
 	}

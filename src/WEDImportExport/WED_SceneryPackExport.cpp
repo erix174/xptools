@@ -691,8 +691,8 @@ static int	DoHueristicAnalysisAndAutoUpgrade(IResolver* resolver, WED_LegacyUpgr
 	std::chrono::duration<double> elapsed = t1 - t0;
 	LOG_MSG("I/exp Done with upgrade heuristics on %d apts, took %lf sec\n", (int) apts.size(), elapsed.count());
 	LOG_MSG("I/exp Removed %d static aircraft objects on ramp starts that park aircraft\n", removed_statics);
-	LOG_MSG("I/exp Ramp starts to the 12.5 format: %d converted, %d given operators, %d cleaned of unknown codes, %d left legacy (would park nothing)\n",
-			upgrade.converted, upgrade.filled, upgrade.cleaned, upgrade.kept_legacy);
+	LOG_MSG("I/exp Ramp starts to the 12.5 format: %d converted, %d given operators, %d left legacy (would park nothing)\n",
+			upgrade.converted, upgrade.filled, upgrade.kept_legacy);
 	LOG_FLUSH();
 	if (out_upgrade) *out_upgrade = upgrade;
 	return removed_statics;
@@ -709,8 +709,8 @@ static void	DoLiveryExportUpgrade(IResolver* resolver, WED_LegacyUpgradeStats & 
 	for (auto a : apts)
 		WED_LiveryExportUpgrade(a, st);
 	wrl->CommitCommand();
-	LOG_MSG("I/exp Ramp starts to the 12.5 format: %d converted, %d given operators, %d cleaned of unknown codes, %d left legacy (would park nothing)\n",
-			st.converted, st.filled, st.cleaned, st.kept_legacy);
+	LOG_MSG("I/exp Ramp starts to the 12.5 format: %d converted, %d given operators, %d left legacy (would park nothing)\n",
+			st.converted, st.filled, st.kept_legacy);
 	LOG_FLUSH();
 }
 
@@ -766,12 +766,12 @@ void	WED_DoExportPack(WED_Document * resolver, WED_MapPane * pane)
 	if (gExportTarget == wet_gateway || upgrade_12_5)
 	{
 		// The format change alone is silent (Eric, D5): the stand parks what it
-		// parked. Said aloud are the changes to what parks - operators added,
-		// unknown codes dropped - and the static objects left out.
-		const int filled_stands = upgrade.filled, cleaned_stands = upgrade.cleaned;
+		// parked. Said aloud are the changes to what parks - operators added -
+		// and the static objects left out.
+		const int filled_stands = upgrade.filled;
 		if (uMgr->UndoToMark())
 			DoUserAlert("Some of the upgrade heuristics applied during export could not be undone. Scenery was permanently altered by export.");
-		else if (removed_statics > 0 || filled_stands > 0 || cleaned_stands > 0)
+		else if (removed_statics > 0 || filled_stands > 0)
 		{
 			// Silent until 2.8 - a forum thread spent weeks on "5 of my 13 static
 			// aircraft are missing". Both changes are in the exported files only;
@@ -783,12 +783,6 @@ void	WED_DoExportPack(WED_Document * resolver, WED_MapPane * pane)
 				snprintf(buf, sizeof(buf), "\n\n- %d ramp start%s would have parked no static aircraft under X-Plane 12.5. "
 						 "The export lists the airport's operators on %s and marks %s auto-filled. Use Auto-Populate to see and keep this in your project.",
 						 filled_stands, filled_stands == 1 ? "" : "s", filled_stands == 1 ? "it" : "them", filled_stands == 1 ? "it" : "them");
-				msg += buf;
-			}
-			if (cleaned_stands > 0)
-			{
-				snprintf(buf, sizeof(buf), "\n\n- %d ramp start%s listed airline codes X-Plane does not know (see Validate); the export leaves them out.",
-						 cleaned_stands, cleaned_stands == 1 ? "" : "s");
 				msg += buf;
 			}
 			if (removed_statics > 0)

@@ -257,23 +257,10 @@ int		WED_ApplyLiveryAutoFill(const WED_AutoFillPlan & plan, bool own_command)
 	return n;
 }
 
-// Known to X-Plane's livery index: an OPERATOR record or a livery, or one of the
-// pseudo-operators. Anything else parks nothing anywhere - a typo or filler.
-static bool IsKnownCode(AutoFillData & d, const string & uc)
-{
-	if (uc == "XPGA" || uc == "XPMI" || WED_IsGenericAirlinerCode(uc)) return true;
-	WED_AirlineDirectoryEntry e;
-	if (d.directory.Lookup(uc, e)) return true;
-	const vector<const WED_LiveryIndexEntry *> * rows = d.index.GetForAirline(uc);
-	return rows && !rows->empty();
-}
-
 void	WED_LiveryExportUpgrade(WED_Airport * apt, WED_LegacyUpgradeStats & st)
 {
 	if (!apt) return;
-	WED_LiveryData * pd = WED_GetLiveryData(true);
-	if (!pd) return;					// no 12.5 livery index: nothing to judge against
-	AutoFillData & d = *pd;
+	if (!WED_GetLiveryData(true)) return;	// no 12.5 livery index: nothing to judge against
 
 	vector<WED_RampPosition *> ramps;
 	CollectRamps(apt, ramps);
@@ -294,31 +281,22 @@ void	WED_LiveryExportUpgrade(WED_Airport * apt, WED_LegacyUpgradeStats & st)
 		const bool had_weights = r->WeightsInUse() && !before.weights.empty();
 		const bool parked = WED_LiveryParksSomething(r, apt);
 
-		vector<string> codes, valid;
+		// Codes X-Plane does not know are kept (Eric, 2026-09-29): many are real
+		// military designators missing from the index (HAF, ICG, CAP), some an
+		// author's own (usn). Validate flags them and Moderation Mode lists them
+		// to check, so the author or the moderator looks at each one.
+		int n_codes = 0;
 		{
 			std::istringstream ss(before.airlines);
 			string c;
-			while (ss >> c) codes.push_back(c);
-		}
-		for (size_t k = 0; k < codes.size(); ++k)
-			if (IsKnownCode(d, Upper(codes[k]))) valid.push_back(codes[k]);
-
-		// D4: drop codes X-Plane cannot know - but never down to one code, which
-		// in 2.8 means "only this operator" and was not what the author wrote.
-		bool cleaned = false;
-		if (valid.size() < codes.size() && valid.size() >= 2)
-		{
-			string list;
-			for (size_t k = 0; k < valid.size(); ++k) list += (k ? " " : "") + valid[k];
-			r->SetAirlines(list);
-			cleaned = true;
+			while (ss >> c) ++n_codes;
 		}
 
 		// D3/D4: operators are added only where nothing parks, and never to a
 		// one-code list. The plan converts a legacy stand and folds its step-down
 		// against the list it ends with.
 		bool filled = false;
-		if (!parked && codes.size() != 1)
+		if (!parked && n_codes != 1)
 		{
 			vector<WED_RampPosition *> one(1, r);
 			WED_AutoFillPlan plan = WED_PlanLiveryAutoFill(apt, &one, true);
@@ -353,7 +331,6 @@ void	WED_LiveryExportUpgrade(WED_Airport * apt, WED_LegacyUpgradeStats & st)
 		r->MarkAutoOwned();
 		if (!had_weights) ++st.converted;
 		if (filled)  ++st.filled;
-		if (cleaned) ++st.cleaned;
 	}
 }
 
