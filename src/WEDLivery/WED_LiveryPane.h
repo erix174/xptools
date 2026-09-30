@@ -261,6 +261,8 @@ private:
 		int		op_type;			// ramp_operation_*, single stand
 		int		pool_models;
 		int		pool_home;
+		int		pool_refused_equip;		// pool liveries at these sizes the equipment type turns away
+		int		pool_refused_home;		// ... that may park only in their own country (R27)
 		std::set<std::string>	countries;
 	};
 	void				RecomputeCoverage(void);
@@ -299,6 +301,13 @@ private:
 	// True while the cards are grouped by aircraft type (GA stands) rather than
 	// by operator. Ticking and the lock are disabled in that mode.
 	bool								mCardsByType;
+	// Liveries of this stand's operation type and sizes that RebuildAirlineCards
+	// left out, by reason - so an empty list can say why it is empty instead of
+	// suggesting an operator that is not there to tick (Dellanie, EGLF).
+	int									mCardsRefusedEquip;
+	int									mCardsRefusedHome;
+	int									mCardsRefusedRange;
+	std::string							EmptyListReason(int ramp_op) const;
 	// Whether an operator may appear on a stand of this operation type.
 	bool								OperatorMatchesRampOp(const std::string & code_uc, int ramp_op) const;
 	// Whether one livery may appear at this stand, and if not, why - see the .cpp.
@@ -476,6 +485,14 @@ private:
 	// past the new end), and RowForY() reads it to keep hit-testing in sync
 	// with whatever Draw() last actually painted.
 	float						mScrollOffset;
+	// How far the whole top of the tab (flag, stand name, operation types, size,
+	// readout) has rolled up out of view, 0 = not at all. The wheel over the list
+	// rolls this first and then the list, and back the other way - so on a short
+	// pane (1080p) the list can take the whole tab. Every section's Y range is
+	// chained off AirportInfoYRange, which is the only place that reads it.
+	float						mPageScroll;
+	float						PageScrollMax(int bounds[4]) const;
+	float						FlagBannerWidth(int bounds[4]) const;
 
 	// The airline code actually feeding the country/flag lookup this Draw()
 	// call (already the metadata-preferred, fallback-resolved code - see the

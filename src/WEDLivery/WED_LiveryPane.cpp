@@ -60,12 +60,16 @@ WED_LiveryPane::WED_LiveryPane(
 	mHoverClearButton(false),
 	mTrackClearButton(false),
 	mScrollOffset(0),
+	mPageScroll(0),
 	mContentDragStartY(-1),
 	mContentDragStartX(-1),		// declared later in the header (after mCachedStatusLines) -
 	mContentDragStartOffset(0),	// listed here anyway so all the "simple scalar" inits stay together
 	mCycleShow(0),
 	mRowsDirty(true),
 	mCardsByType(false),
+	mCardsRefusedEquip(0),
+	mCardsRefusedHome(0),
+	mCardsRefusedRange(0),
 	mCoverageLineCount(3),
 	mCoverageHasDetail(false),
 	mHoverCoverageToggle(false),
@@ -311,6 +315,7 @@ void	WED_LiveryPane::RebuildSelection(void)
 	if (mSelectedRamps != old_selection)
 	{
 		mScrollOffset = 0;
+		mPageScroll   = 0;
 
 		// The lock, the open tray and the running slideshow are all statements
 		// about the stand being edited, not about the document. Carrying them to a
@@ -531,8 +536,15 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 	// and paints behind it. And nothing on a GA card is a picker - the sim draws
 	// GA from the library by size, not from a 1301 list - so ticking and the lock
 	// are switched off for them (see MouseUp), and the card is a preview only.
-	const bool by_type = (ramp_op == ramp_operation_GeneralAviation || ramp_op == ramp_operation_Military);
+	//
+	// MILITARY IS NOT GA: its 1301 list is read (a listed force is drawn from, an
+	// empty list draws from every force that may park here), so its cards are
+	// per operator and can be ticked, like Passenger and Cargo. Grouping it by
+	// type as well (2026-09-18) made it preview-only by accident - an author
+	// could not place the USAF's C-32 at a US base by hand (Dellanie, 2026-09-30).
+	const bool by_type = (ramp_op == ramp_operation_GeneralAviation);
 	mCardsByType = by_type;
+	mCardsRefusedEquip = mCardsRefusedHome = mCardsRefusedRange = 0;
 
 	for (size_t i = 0; i < codes.size(); ++i)
 	{
@@ -583,7 +595,9 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 				Allow a = LiveryAllowedHere(*e, here, equipment);
 				if (a != allow_Yes)
 				{
-					if (a == allow_OutOfRange) mRangeHidden[code_uc].push_back(e->type);
+					if (a == allow_OutOfRange) { mRangeHidden[code_uc].push_back(e->type); ++mCardsRefusedRange; }
+					if (a == allow_Equipment)       ++mCardsRefusedEquip;
+					if (a == allow_ForeignMilitary) ++mCardsRefusedHome;
 					continue;
 				}
 
@@ -653,6 +667,44 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 			key[ci] = (char) tolower((unsigned char) key[ci]);
 		mAirlineCards[key] = card;
 	}
+}
+
+// Why a stand with a real operation type has no card at all. Names the rule that
+// turned the liveries away, and what the author can change about it; "tick an
+// operator" is never the answer here, since there is none to tick.
+string	WED_LiveryPane::EmptyListReason(int ramp_op) const
+{
+	const char * what = ramp_op == ramp_operation_Military        ? "military or government"
+					  : ramp_op == ramp_operation_Cargo           ? "cargo"
+					  : ramp_op == ramp_operation_GeneralAviation ? "GA"
+					  :                                             "passenger";
+	string s;
+	char buf[160];
+	if (mCardsRefusedEquip + mCardsRefusedHome + mCardsRefusedRange == 0)
+	{
+		snprintf(buf, sizeof(buf), "X-Plane has no %s livery at this stand's sizes. Try a larger size.", what);
+		return buf;
+	}
+	snprintf(buf, sizeof(buf), "Nothing fits:");
+	s = buf;
+	const char * sep = " ";
+	if (mCardsRefusedEquip)
+	{
+		snprintf(buf, sizeof(buf), "%s%d need another Equipment Type", sep, mCardsRefusedEquip);
+		s += buf; sep = ", ";
+	}
+	if (mCardsRefusedHome)
+	{
+		snprintf(buf, sizeof(buf), "%s%d park only in their own country", sep, mCardsRefusedHome);
+		s += buf; sep = ", ";
+	}
+	if (mCardsRefusedRange)
+	{
+		snprintf(buf, sizeof(buf), "%s%d are out of their operator's range", sep, mCardsRefusedRange);
+		s += buf;
+	}
+	s += ".";			// one line under the toolbar: what to change is in the readout above
+	return s;
 }
 
 // Rows carry a lowercase icao; cards are keyed by the same string, so this cannot
@@ -779,6 +831,8 @@ void	WED_LiveryPane::RecomputeCoverage(void)
 	c.op_type           = ramp_operation_None;
 	c.pool_models       = 0;
 	c.pool_home         = 0;
+	c.pool_refused_equip = 0;
+	c.pool_refused_home  = 0;
 
 	// EnsureLoaded() is a no-op for a path it has already tried, success or
 	// failure, so this is safe to call as often as the readout is refreshed - and
@@ -1006,7 +1060,13 @@ void	WED_LiveryPane::RecomputeCoverage(void)
 						mLiveryIndex.GetForAirlineAndClass(uc, (char) ('A' + k), hits);
 						for (size_t h = 0; h < hits.size(); ++h)
 						{
-							if (LiveryAllowedHere(*hits[h], here, equipment) != allow_Yes) continue;
+							const Allow a = LiveryAllowedHere(*hits[h], here, equipment);
+							if (a != allow_Yes)
+							{
+								if (c.pool_mode && a == allow_Equipment)       ++c.pool_refused_equip;
+								if (c.pool_mode && a == allow_ForeignMilitary) ++c.pool_refused_home;
+								continue;
+							}
 							class_has = true;
 							if (!c.pool_mode) { c.countries.insert(OperatorCountry(uc)); continue; }
 							++c.pool_models;

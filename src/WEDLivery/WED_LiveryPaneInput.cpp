@@ -258,25 +258,45 @@ int		WED_LiveryPane::ScrollWheel(int x, int y, int dist, int axis)
 	// a list whose content (602px) is shorter than its viewport (636px), i.e. one
 	// that cannot scroll at all. That is the jerk: a repaint per notch, changing
 	// nothing.
-	float  max_scroll = 0.0f;
+	float content_h = 0.0f;
 	if (!mSelectedRamps.empty())
 	{
 		EnsureRows();
 
 		vector<float> tray_h;  TrayHeights(mRowIcaos, tray_h);
 		vector<RowSlot> slots;
-		float content_h = LayoutRows(b, mRowIsCard, tray_h, slots);
-		float visible_h = ContentTop(b) - (float) b[1];
-		if (content_h > visible_h) max_scroll = content_h - visible_h;
+		content_h = LayoutRows(b, mRowIsCard, tray_h, slots);
 	}
 
-	float want = mScrollOffset - dist * row_h * 3;
-	if (want < 0)          want = 0;
-	if (want > max_scroll) want = max_scroll;
+	// ONE SCROLL, TWO PARTS (Dellanie, 2026-09-30: on a 1080p screen the list got
+	// a sliver under the flag, size controls and readout). Down: the top of the
+	// tab rolls away first, then the list moves. Up: the list returns to its
+	// start first, then the top rolls back in. The top rolls only as far as the
+	// list needs - a list that already fits leaves the tab as it is.
+	const float page_before = mPageScroll, list_before = mScrollOffset;
+	float step = -dist * row_h * 3;			// > 0 = further down
+	if (step > 0)
+	{
+		const float overflow = content_h - (ContentTop(b) - (float) b[1]) - mScrollOffset;
+		const float room     = PageScrollMax(b) - mPageScroll;
+		const float to_page  = (std::min)(step, (std::min)(room, overflow));
+		if (to_page > 0) { mPageScroll += to_page; step -= to_page; }
 
-	if (want == mScrollOffset) return 0;	// nowhere to go - let whoever is behind us have it
+		// the list is taller now by what the top gave up, so measure again
+		float list_max = content_h - (ContentTop(b) - (float) b[1]);
+		if (list_max < 0) list_max = 0;
+		if (mScrollOffset < list_max) mScrollOffset = (std::min)(mScrollOffset + step, list_max);
+	}
+	else
+	{
+		float up = -step;
+		const float from_list = (std::min)(up, mScrollOffset);
+		mScrollOffset -= from_list;  up -= from_list;
+		if (up > 0) mPageScroll = (std::max)(0.0f, mPageScroll - up);
+	}
 
-	mScrollOffset = want;
+	if (mPageScroll == page_before && mScrollOffset == list_before)
+		return 0;							// nowhere to go - let whoever is behind us have it
 	Refresh();
 	return 1;
 }

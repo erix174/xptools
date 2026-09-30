@@ -36,7 +36,7 @@
 void	WED_LiveryPane::FlagBannerRect(int bounds[4], float strip_top, float strip_bot,
 						float & out_x, float & out_y, float & out_w, float & out_h) const
 {
-	out_w = (bounds[2] - bounds[0]) * 0.5f;
+	out_w = FlagBannerWidth(bounds);
 	out_h = out_w * ((float) mFlagTexH / (float) mFlagTexW);
 	out_x = (float) bounds[0];
 	out_y = strip_top - out_h;
@@ -176,11 +176,37 @@ float	WED_LiveryPane::AirportInfoHeight(int bounds[4]) const
 
 	if (mFlagTexId != 0)
 	{
-		float banner_w = (bounds[2] - bounds[0]) * 0.5f;
+		float banner_w = FlagBannerWidth(bounds);
 		float banner_h = banner_w * ((float) mFlagTexH / (float) mFlagTexW);
 		return (std::max)(banner_h + 4, text_h);
 	}
 	return text_h;
+}
+
+// Half the tab's width, as before, but never taller than kFlagBannerMaxH: on a
+// wide panel the banner grew with the width and took a third of a 1080p tab
+// from the list (Dellanie, 2026-09-30). The aspect is kept, so it only shrinks.
+static const float kFlagBannerMaxH = 64.0f;
+
+float	WED_LiveryPane::FlagBannerWidth(int bounds[4]) const
+{
+	float w = (bounds[2] - bounds[0]) * 0.5f;
+	if (mFlagTexW > 0 && mFlagTexH > 0)
+	{
+		const float w_cap = kFlagBannerMaxH * (float) mFlagTexW / (float) mFlagTexH;
+		if (w > w_cap) w = w_cap;
+	}
+	return w;
+}
+
+// Far enough to roll everything above the list toolbar out of view; the
+// toolbar (search, recommendations, A-Z) stays, as the list's own header.
+float	WED_LiveryPane::PageScrollMax(int bounds[4]) const
+{
+	float ttop, tbot;
+	ListToolbarYRange(bounds, ttop, tbot);
+	const float m = (float) bounds[3] - (ttop - mPageScroll);
+	return m > 0 ? m : 0;
 }
 
 float	WED_LiveryPane::HeaderHeight(void) const
@@ -242,7 +268,7 @@ float	WED_LiveryPane::GapHeight(void) const
 
 void	WED_LiveryPane::AirportInfoYRange(int bounds[4], float & top, float & bot) const
 {
-	top = (float) bounds[3];
+	top = (float) bounds[3] + mPageScroll;		// rolled up by the wheel - see mPageScroll
 	bot = top - AirportInfoHeight(bounds);
 }
 

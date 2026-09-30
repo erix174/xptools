@@ -710,6 +710,9 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 	// offset-slab shadow the card itself uses, standing in until there is an icon.
 	// Deliberately drawn even when unlocked, at low contrast, because a control
 	// that only appears once you have used it cannot be discovered. ---
+	// Not on a GA card: nothing there can be ticked or held (R28), and a box
+	// that does nothing when clicked reads as a broken checkbox (Dellanie).
+	if (!mCardsByType)
 	{
 		float lr[4];
 		lr[2] = card_x1 - 5.0f;  lr[0] = lr[2] - kLockSize;
@@ -766,6 +769,13 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 {
 	int b[4];
 	GetBounds(b);
+
+	// A taller pane, or a shorter top section, needs less roll-up than before.
+	{
+		const float page_max = PageScrollMax(b);
+		if (mPageScroll > page_max) mPageScroll = page_max;
+		if (mPageScroll < 0)        mPageScroll = 0;
+	}
 
 	// ============================================================================================
 	// IF YOU ARE HERE BECAUSE SOMETHING ISN'T DRAWING, read this before spending a debugging
@@ -991,7 +1001,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		// since FlagBannerRect() needs them for the actual draw position,
 		// but its WIDTH component alone (needed here) never depends on them.
 		{
-			float banner_w_only = (mFlagTexId != 0) ? (b[2] - b[0]) * 0.5f : 0.0f;
+			float banner_w_only = (mFlagTexId != 0) ? FlagBannerWidth(b) : 0.0f;
 			float avail_text_w = (b[2] - b[0]) - banner_w_only - pad * (mFlagTexId != 0 ? 3 : 2);
 			mCachedInfoLines   = WrapText(font_UI_Basic, info_text,   avail_text_w);
 			mCachedStatusLines = WrapText(font_UI_Basic, status_text, avail_text_w);
@@ -1594,8 +1604,22 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 					else
 					{
 						snprintf(head,   sizeof(head),   "This stand parks nothing - no military aircraft at size %s may park here", range);
-						snprintf(detail, sizeof(detail),
-							"Every military livery at this size is marked for its own country only. List an operator, or change the size.");
+						// The actual reasons, and what the author can change. It used
+						// to say "list an operator" - with no operator there to list.
+						if (mCoverage.pool_refused_equip > 0 && mCoverage.pool_refused_home > 0)
+							snprintf(detail, sizeof(detail),
+								"%d military liveries at this size need another Equipment Type, %d park only in their own country. Add equipment types in the Selection tab, or change the size.",
+								mCoverage.pool_refused_equip, mCoverage.pool_refused_home);
+						else if (mCoverage.pool_refused_equip > 0)
+							snprintf(detail, sizeof(detail),
+								"%d military liveries at this size need another Equipment Type. Add it in the Selection tab, or change the size.",
+								mCoverage.pool_refused_equip);
+						else if (mCoverage.pool_refused_home > 0)
+							snprintf(detail, sizeof(detail),
+								"The %d military liveries at this size park only in their own country. Change the size.",
+								mCoverage.pool_refused_home);
+						else
+							snprintf(detail, sizeof(detail), "X-Plane ships no military livery at this size. Change the size.");
 					}
 				}
 				else if (ga)
@@ -1603,15 +1627,20 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 					snprintf(head, sizeof(head), "GA aircraft from all over the world, size %s%s", range, when);
 					head_col = pct >= 95 ? col_good : col_warn;
 					const string & cty = mAirportCountry;
+					// Said outright: the cards below are a preview. X-Plane draws GA
+					// by size (R28), so there is nothing to tick, and without this a
+					// card that ignores clicks looks broken (Dellanie, EGLF).
 					if (cty.empty())
-						snprintf(detail, sizeof(detail), "%d GA models fit this stand.", mCoverage.pool_models);
+						snprintf(detail, sizeof(detail),
+							"%d GA models fit this stand. X-Plane picks one by size; the cards below are a preview.",
+							mCoverage.pool_models);
 					else if (mCoverage.pool_home > 0)
 						snprintf(detail, sizeof(detail),
-							"%d GA models fit. About 70%% of the time it is one of the %d registered in %s.",
+							"%d GA models fit. X-Plane picks one by size, about 70%% of the time one of the %d registered in %s. The cards below are a preview.",
 							mCoverage.pool_models, mCoverage.pool_home, cty.c_str());
 					else
 						snprintf(detail, sizeof(detail),
-							"%d GA models fit. None is registered in %s, so every one comes from abroad.",
+							"%d GA models fit. X-Plane picks one by size; none is registered in %s. The cards below are a preview.",
 							mCoverage.pool_models, cty.c_str());
 				}
 				else
@@ -2542,7 +2571,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 				else if (cur_op_enum == ramp_operation_None)
 					why = "No static aircraft at this stand (operation type None).";
 				else
-					why = "No operators are tagged for this operation type yet.";
+					why = EmptyListReason(cur_op_enum);
 
 				// Drawn BELOW the card strip, not at ContentTop - that is where the
 				// cards themselves start, so this text used to be painted on top of
