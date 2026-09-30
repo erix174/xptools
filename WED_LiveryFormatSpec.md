@@ -492,7 +492,7 @@ correctly.
   WED's own lower size bound never reaches apt.dat and plays no part while
   the stand stays legacy.
 
-  **Update.** "Set Spawn Weights" on the Liveries tab, or Airport > Update
+  **Update.** "Set Weightings" on the Liveries tab, or Airport > Update
   Legacy Stands to Spawn Weights, writes that step-down out as a `1313`, with
   the fall-through folded in: a class nothing can park at hands its share to
   the next class below that something can, and a share with nothing below it
@@ -1965,7 +1965,7 @@ clipboard. None of it puts anything in the file.
 
 The Liveries tab shows a stand's size two ways: a **size range** (two balls,
 orange at the bottom, blue at the top - the `1301` letter) and the six
-**weight bars**. "Simple Mode" and "Set Spawn Weights" switch between the two
+**weight bars**. "Simple Mode" and "Set Weightings" switch between the two
 views; neither changes the stand.
 
 A legacy stand shows its range from A to its letter, which is what the sim's
@@ -1977,14 +1977,14 @@ R17's update, written as `1313` and marked `1315 M`. The lower bound reaches
 the sim only this way; a legacy stand's step-down always runs to A. On a stand
 that already has weights the range shows its smallest to largest weighted
 class, and moving a ball rewrites the weights the same way - an override of
-the distribution it held. "Set Spawn Weights" on a legacy stand updates it
+the distribution it held. "Set Weightings" on a legacy stand updates it
 with the plain step-down (R17) and shows the bars.
 
 WED still keeps, per stand, whether its weights are in use (`weights_mode`, a
 WED-side XML attribute): export writes a `1313` row only for a stand whose
 weights are in use. Documents saved by earlier 2.8 builds can hold stands
 whose weights were set aside with the old Simple Mode; they stay legacy until
-"Set Spawn Weights" brings the weights back, or a ball is moved. An imported
+"Set Weightings" brings the weights back, or a ball is moved. An imported
 `1313` row puts the stand in weights mode, since data present is data in use.
 
 ---

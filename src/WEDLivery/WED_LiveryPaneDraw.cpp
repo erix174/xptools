@@ -1288,7 +1288,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		glEnd();
 
 		// title, so it's unmistakable what this control is. The rows under it sit
-		// kSliderButtonClear lower so Set Spawn Weights, right-aligned on the title
+		// kSliderButtonClear lower so Set Weightings, right-aligned on the title
 		// row, does not cover the E and F letters.
 		GUI_FontDraw(state, font_UI_Basic, header_col2, b[0] + pad, slider_top - line_h * 0.9f,
 					 legacy ? "Size (legacy step-down) - move a ball to update" : "Size range (spawn weights)");
@@ -1506,7 +1506,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 
 		// "Simple Mode", not "Clear": the weights are stashed, not destroyed,
 		// and the button's job is to say which of the two controls is in charge.
-		const char * cap = has ? "Simple Mode" : "Set Spawn Weights";
+		const char * cap = has ? "Simple Mode" : "Set Weightings";
 		float cw = GUI_MeasureRange(font_UI_Basic, cap, cap + strlen(cap));
 		GUI_FontDraw(state, font_UI_Basic, WED_Color_RGBA(wed_Table_Text),
 					 (wb[0] + wb[2]) * 0.5f - cw * 0.5f, wb[1] + 4, cap);
@@ -1700,8 +1700,8 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 					mCoverage.airlines_eligible, mCoverage.airlines_listed);
 				head_col = col_good;
 				// legacy format: a class with nothing to park steps on down, so the
-				// stand always finds something - Set Spawn Weights updates it to 1313
-				snprintf(detail, sizeof(detail), "Legacy step-down %s: %d of %d sizes can be filled, the rest step down. Set Spawn Weights updates it.",
+				// stand always finds something - Set Weightings updates it to 1313
+				snprintf(detail, sizeof(detail), "Legacy step-down %s: %d of %d sizes can be filled, the rest step down. Set Weightings updates it.",
 					range, mCoverage.classes_filled, mCoverage.classes_in_range);
 			}
 		}

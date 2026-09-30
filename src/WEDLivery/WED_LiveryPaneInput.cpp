@@ -58,7 +58,7 @@ void	WED_LiveryPane::SeedWeightsFromSizeRange(void)
 {
 	if (mSelectedRamps.empty()) return;
 
-	mArchive->StartCommand("Add Spawn Weights");
+	mArchive->StartCommand("Set Weightings");
 	for (size_t i = 0; i < mSelectedRamps.size(); ++i)
 	{
 		WED_RampPosition * r = mSelectedRamps[i];
@@ -580,7 +580,7 @@ int		WED_LiveryPane::MouseDown(int x, int y, int button)
 
 		mDragTrackMax  = WeightTrackMax();		// before mDragWeightBar is set: the live scale
 		mDragWeightBar = wbar;
-		mArchive->StartCommand("Set Spawn Weights");
+		mArchive->StartCommand("Set Weightings");
 
 		mDragWeights[wbar] = WeightValueForY(b, y);
 		ApplyWeightDrag();

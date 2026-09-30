@@ -87,9 +87,9 @@ bool	WED_ModerationTintFor(const WED_RampPosition * ramp, float out_rgb[3], floa
 bool	WED_ModerationViewOn(void);
 void	WED_SetModerationView(bool on);
 
-// The stand callouts themselves, on by default. A moderator hides them to see
-// the apron underneath (Julian: double click on Ramp Starts toggles them); the
-// stands keep their tint, and the Moderation View keeps working.
+// The stand callouts themselves, OFF by default (Julian: they cover the apron);
+// a double click on Ramp Starts shows or hides them. The stands keep their tint,
+// and the Moderation View keeps working.
 bool	WED_ModerationCalloutsShown(void);
 void	WED_SetModerationCallouts(bool shown);
 

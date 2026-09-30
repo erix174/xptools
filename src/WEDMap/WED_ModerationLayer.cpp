@@ -60,7 +60,7 @@ static std::set<int>	sIssueIDs;			// Moderation View, last frame: the stands to 
 bool	WED_ModerationViewOn(void)			{ return sModerationView; }
 void	WED_SetModerationView(bool on)		{ sModerationView = on; }
 
-static bool				sCalloutsShown = true;
+static bool				sCalloutsShown = false;	// off until a double click on Ramp Starts (Julian)
 bool	WED_ModerationCalloutsShown(void)		{ return sCalloutsShown; }
 void	WED_SetModerationCallouts(bool shown)	{ sCalloutsShown = shown; }
 
