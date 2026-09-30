@@ -425,6 +425,7 @@ void	WED_LiveryPane::EnsureRows(void)
 	DropCardless(mRows, have_cards);
 	PruneEmptySections(mRows);
 	PinSelected(mRows, ParseCodes(mSelectedRamps[0]->GetAirlines()), have_cards);
+	GatherPoolPreview();
 	ApplyCollapse(mRows, mCollapsedSections);
 
 	CardFlags(mRows, mRowIsCard);
@@ -537,13 +538,15 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 	// GA from the library by size, not from a 1301 list - so ticking and the lock
 	// are switched off for them (see MouseUp), and the card is a preview only.
 	//
-	// MILITARY IS NOT GA: its 1301 list is read (a listed force is drawn from, an
-	// empty list draws from every force that may park here), so its cards are
-	// per operator and can be ticked, like Passenger and Cargo. Grouping it by
-	// type as well (2026-09-18) made it preview-only by accident - an author
-	// could not place the USAF's C-32 at a US base by hand (Dellanie, 2026-09-30).
-	const bool by_type = (ramp_op == ramp_operation_GeneralAviation);
-	mCardsByType = by_type;
+	// MILITARY IS HALF OF EACH (Eric, 2026-09-30). Its 1301 list is read - a
+	// listed force is drawn from, an empty list draws from every force that may
+	// park here - so the airport country's own forces get operator cards that
+	// can be ticked, as does anything already listed (so it can be unticked).
+	// Everything else - the generic XPMI airframes, other countries' forces - is
+	// the pool: shown by type, as a preview, like GA.
+	const bool is_mil = (ramp_op == ramp_operation_Military);
+	mCardsByType = (ramp_op == ramp_operation_GeneralAviation) || is_mil;
+	const set<string> listed_lc = ParseCodes(ramp->GetAirlines());
 	mCardsRefusedEquip = mCardsRefusedHome = mCardsRefusedRange = 0;
 
 	for (size_t i = 0; i < codes.size(); ++i)
@@ -553,6 +556,14 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 			code_uc[ci] = (char) toupper((unsigned char) code_uc[ci]);
 
 		if (!OperatorMatchesRampOp(code_uc, ramp_op)) continue;
+
+		string code_lc = code_uc;
+		for (size_t ci = 0; ci < code_lc.size(); ++ci)
+			code_lc[ci] = (char) tolower((unsigned char) code_lc[ci]);
+		const bool by_type = ramp_op == ramp_operation_GeneralAviation
+						  || (is_mil && !listed_lc.count(code_lc)
+									 && (code_uc == "XPMI" || mAirportCountry.empty()
+										 || OperatorCountry(code_uc) != mAirportCountry));
 
 		// BIGGEST CLASS FIRST, and reverse-alphabetically inside a class. Index 0 is
 		// what the card shows at rest, so at rest a card shows the largest aircraft
@@ -608,6 +619,7 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 					AirlineCard & tc = mAirlineCards[tkey];
 					tc.icao = e->type;
 					tc.name = e->type;
+					tc.preview = true;
 					if (tc.ioc_country.empty()) tc.ioc_country = e->reg_country;
 					tc.abs_paths.push_back(abs_path);
 					tc.types.push_back(e->type);
@@ -667,6 +679,43 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 			key[ci] = (char) tolower((unsigned char) key[ci]);
 		mAirlineCards[key] = card;
 	}
+}
+
+// POOL CARDS GET THEIR OWN SECTION, last and open. Filed with the operators they
+// landed in "All Airlines" - collapsed by default and the only section a GA
+// stand had - so Dellanie saw a closed "All Airlines 3" and no aircraft at all,
+// and cards that could not be ticked beside ones that could. The title says
+// what the section is, and for military whether the pool is in use.
+void	WED_LiveryPane::GatherPoolPreview(void)
+{
+	vector<WED_LiveryDisplayRow> pool, rest;
+	set<string> seen;
+	for (size_t i = 0; i < mRows.size(); ++i)
+	{
+		const WED_LiveryDisplayRow & r = mRows[i];
+		const AirlineCard * c = r.kind == wed_Row_Airline ? CardFor(r.icao) : NULL;
+		if (c && c->preview) { if (seen.insert(r.icao).second) pool.push_back(r); }
+		else rest.push_back(r);
+	}
+	if (pool.empty()) return;
+	PruneEmptySections(rest);
+
+	const bool ga = mSelectedRamps[0]->GetRampOperationType() == ramp_operation_GeneralAviation;
+	const bool listed = !ParseCodes(mSelectedRamps[0]->GetAirlines()).empty();
+	WED_LiveryDisplayRow h;
+	h.kind = wed_Row_Header;
+	h.header_text = ga      ? "GA pool - X-Plane picks one by size (preview)"
+				  : listed  ? "Military pool - not used while an operator is ticked (preview)"
+				  :           "Military pool - X-Plane picks one by size (preview)";
+	if (!rest.empty())
+	{
+		WED_LiveryDisplayRow gap;	gap.kind = wed_Row_Gap;		rest.push_back(gap);
+		WED_LiveryDisplayRow div;	div.kind = wed_Row_Divider;	rest.push_back(div);
+	}
+	rest.push_back(h);
+	WED_LiveryDisplayRow gap2; gap2.kind = wed_Row_Gap; rest.push_back(gap2);
+	rest.insert(rest.end(), pool.begin(), pool.end());
+	mRows.swap(rest);
 }
 
 // Why a stand with a real operation type has no card at all. Names the rule that

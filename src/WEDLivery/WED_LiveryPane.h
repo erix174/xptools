@@ -293,13 +293,17 @@ private:
 		std::vector<std::string>	labels;
 		// Ordered biggest wingspan class first, and within a class reverse
 		// alphabetically, so index 0 is the one a card shows at rest.
+		// A pool card: one aircraft type from the library X-Plane draws from by
+		// size (GA always, military with no operator listed). Shown so the author
+		// sees what may park, but it is not an operator - nothing to tick or hold.
+		bool						preview = false;
 	};
 	std::map<std::string, AirlineCard>	mAirlineCards;		// key: LOWERCASE icao, as rows carry it
 	// Liveries the range rule removed from a card at this stand, by UPPERCASE
 	// operator code - so the readout can name what will not spawn and why.
 	std::map<std::string, std::vector<std::string> >	mRangeHidden;
-	// True while the cards are grouped by aircraft type (GA stands) rather than
-	// by operator. Ticking and the lock are disabled in that mode.
+	// True while some cards are pool previews (GA and military stands), which
+	// EnsureRows gathers into their own section; see AirlineCard::preview.
 	bool								mCardsByType;
 	// Liveries of this stand's operation type and sizes that RebuildAirlineCards
 	// left out, by reason - so an empty list can say why it is empty instead of
@@ -308,6 +312,7 @@ private:
 	int									mCardsRefusedHome;
 	int									mCardsRefusedRange;
 	std::string							EmptyListReason(int ramp_op) const;
+	void								GatherPoolPreview(void);
 	// Whether an operator may appear on a stand of this operation type.
 	bool								OperatorMatchesRampOp(const std::string & code_uc, int ramp_op) const;
 	// Whether one livery may appear at this stand, and if not, why - see the .cpp.

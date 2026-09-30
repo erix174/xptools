@@ -610,7 +610,7 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 	// A per-type card (GA, military) is one type by construction, so its face is
 	// the type and the count - "PC12 (+11)". What differs between its entries is
 	// the paint, and that is what the tray is for.
-	string head = mCardsByType ? card.icao : card.icao + " - " + type_str;
+	string head = card.preview ? card.icao : card.icao + " - " + type_str;
 	string tail, tail_short;
 	if (card.abs_paths.size() > 1)
 	{
@@ -712,7 +712,7 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 	// that only appears once you have used it cannot be discovered. ---
 	// Not on a GA card: nothing there can be ticked or held (R28), and a box
 	// that does nothing when clicked reads as a broken checkbox (Dellanie).
-	if (!mCardsByType)
+	if (!card.preview)
 	{
 		float lr[4];
 		lr[2] = card_x1 - 5.0f;  lr[0] = lr[2] - kLockSize;

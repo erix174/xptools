@@ -971,7 +971,7 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 
 		if (x >= lr[0] && x <= lr[2] && y >= lr[1] && y <= lr[3])
 		{
-			if (mCardsByType) { mTrackRow = -1; return; }		// GA cards are previews - no lock
+			if (tc && tc->preview) { mTrackRow = -1; return; }	// pool cards are previews - no lock
 			// Exclusive by construction: holding the lock is a single string, so
 			// taking it necessarily releases whoever had it.
 			mLockedAirline = (mLockedAirline == icao) ? string() : icao;
@@ -1009,7 +1009,7 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 	}
 
 	if (RowForXY(b, mRowIsCard, tray_h, x, y) == mTrackRow && mTrackRow < (int) mRows.size() && mRows[mTrackRow].kind == wed_Row_Airline
-		&& !mCardsByType)		// GA cards are previews, not a picker - see RebuildAirlineCards
+		&& !(CardFor(mRows[mTrackRow].icao) && CardFor(mRows[mTrackRow].icao)->preview))	// pool previews are not a picker
 	{
 		// SCROLL ANCHORING. Ticking a card can create or grow the "Selected"
 		// section ABOVE the viewport, and every row below it then slides down by
