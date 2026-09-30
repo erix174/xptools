@@ -29,6 +29,7 @@
 #include "PlatformUtils.h"
 #include "MemFileUtils.h"		// MF_GetFileType, for the X-Plane root check
 #include "WED_LibraryMgr.h"		// WED_clean_rpath - separator normalisation, see WED_LiveryObjectPath()
+#include "FileUtils.h"			// FILE_exists - rows whose object is not installed, see below
 
 #include <fstream>
 #include <sstream>
@@ -254,6 +255,8 @@ bool	WED_LiveryIndex::EnsureLoaded(const string & index_path, bool place_hubs)
 	vector<string> cells;
 	string line;
 	vector<WED_LiveryIndexEntry> parsed;
+	int not_installed = 0;
+	const bool can_check = !WED_LiveryAssetDir().empty();
 	std::map<string, vector<string> > op_hubs;		// operator code -> hub ICAOs
 
 	while (std::getline(f, line))
@@ -315,6 +318,13 @@ bool	WED_LiveryIndex::EnsureLoaded(const string & index_path, bool place_hubs)
 
 		if (e.note.empty()) e.note = kDefaultNote;
 
+		// NOT INSTALLED, NOT A LIVERY. An index newer than the install it sits in
+		// (the 12.4.4 file in a 12.4.3 X-Plane: A350s and Phenoms with no .obj on
+		// disk) otherwise gave cards with no picture, and auto-fill and Validate
+		// counted aircraft that X-Plane cannot draw. With no X-Plane root there is
+		// nothing to check against, and every row is kept.
+		if (can_check && !FILE_exists(WED_LiveryObjectPath(e.obj_path).c_str())) { ++not_installed; continue; }
+
 		parsed.push_back(e);
 	}
 
@@ -343,6 +353,8 @@ bool	WED_LiveryIndex::EnsureLoaded(const string & index_path, bool place_hubs)
 	// entries by value, so pointers taken during the parse loop would dangle on
 	// the next reallocation.
 	mEntries.swap(parsed);
+	if (not_installed > 0)
+		LOG_MSG("I/LiveryIndex %d row(s) skipped: object not installed in this X-Plane (index newer than the install?)\n", not_installed);
 	mUsable = 0;
 	for (int k = 0; k < 6; ++k) mAtClass[k] = 0;
 	for (size_t i = 0; i < mEntries.size(); ++i)
