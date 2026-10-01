@@ -630,6 +630,8 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 		else if (pp > 0.0f)  snprintf(pc, sizeof(pc), "  %.1f%%", pp);
 		else                 snprintf(pc, sizeof(pc), "  0%%");
 		tail += pc;  tail_short += pc;
+		// A stack: the number is the whole collection's, not each aircraft's (Eric).
+		if (card.abs_paths.size() > 1) { tail += " (Total)";  tail_short += " (Total)"; }
 	}
 
 	// THE SUFFIX ALWAYS SURVIVES. It is the only thing on the face that says the
