@@ -37,14 +37,16 @@ WED_RampPosition::WED_RampPosition(WED_Archive * a, int i) : WED_GISPoint_Headin
 	// Size is edited on the "Liveries" tab (WED_LiveryPane) - it is a range with
 	// optional class weights now, which one letter in the grid cannot show. The
 	// leading "." hides it from the generic property grid (see
-	// WED_PropertyTable::RecalculateColumns). Ramp Operation Type and Airlines stay
-	// in the grid as well: 1301's airline list also drives ATC and AI parking, so
-	// it must be typeable without an index, and for an operator with no livery.
+	// WED_PropertyTable::RecalculateColumns). Ramp Operation Type stays in the
+	// grid. Airlines left it on 2026-09-30 (Eric): typed codes were where most
+	// bad data came from (unknown codes, airline lists on GA stands), and the
+	// Static Liveries tab and Populate now set it. The list itself is unchanged -
+	// read, written, exported and validated as before; only the grid hides it.
 	// XML tag names are unchanged, so old documents still round-trip.
 	width		(this,PROP_Name(".Size",                XML_Name("ramp_start","width")), ATCIcaoWidth, width_C),
 	width_min	(this,PROP_Name(".Size Min",             XML_Name("ramp_start","width_min")), ATCIcaoWidth, width_A),
 	ramp_op_type(this,PROP_Name("Ramp Operation Type",  XML_Name("ramp_start","ramp_op_type")), RampOperationType, ramp_operation_None),
-	airlines	(this,PROP_Name("Airlines",             XML_Name("ramp_start","airlines")),""),
+	airlines	(this,PROP_Name(".Airlines",            XML_Name("ramp_start","airlines")),""),
 	class_weights(this,PROP_Name(".Class Weights",      XML_Name("ramp_start","weights")),""),
 	weights_mode (this,PROP_Name(".Weights Mode",       XML_Name("ramp_start","weights_mode")), 0),
 	auto_filled  (this,PROP_Name(".Auto Filled",        XML_Name("ramp_start","auto_filled")), 0),

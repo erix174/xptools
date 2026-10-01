@@ -410,7 +410,7 @@ void	WED_LiveryPane::EnsureRows(void)
 		n.kind = wed_Row_Note;
 		n.header_text = "Operators are picked one ramp start at a time.";
 		mRows.push_back(n);
-		n.header_text = "For several at once: Populate, or Airlines on the Selection tab.";
+		n.header_text = "For several at once: Populate This Ramp fills them all.";
 		mRows.push_back(n);
 		CardFlags(mRows, mRowIsCard);
 		RowIcaos(mRows, mRowIcaos);

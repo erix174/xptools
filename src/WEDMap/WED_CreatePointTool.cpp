@@ -93,7 +93,7 @@ WED_CreatePointTool::WED_CreatePointTool(
 		equip_type		(tool==create_RampStart		?this:NULL,PROP_Name("Equipment Type",XML_Name("","")), ATCTrafficType, 0),
 		width			(tool==create_RampStart		?this:NULL,PROP_Name("Size",	    XML_Name("","")),   ATCIcaoWidth, width_E),
 		ramp_op_type	(tool==create_RampStart		?this:NULL,PROP_Name("Ramp Operation Type",XML_Name("","")), RampOperationType, ramp_operation_None),
-		airlines		(tool==create_RampStart		?this:NULL,PROP_Name("Airlines",    XML_Name("","")),""),
+		airlines		(tool==create_RampStart		?this:NULL,PROP_Name(".Airlines",   XML_Name("","")),""),
 		truck_type		(tool==create_TruckParking	?this:NULL,PROP_Name("Truck Type",  XML_Name("","")),  ATCServiceTruckType, atc_ServiceTruck_FuelTruck_Prop),
 		baggage_car_count(tool==create_TruckParking	?this:NULL,PROP_Name("Baggage Cars",XML_Name("","")), 3, 1),
 		truck_types		(tool==create_TruckDestination?this:NULL,PROP_Name("Truck Types",XML_Name("","")),  ATCServiceTruckType, 0)
