@@ -692,7 +692,8 @@ int		WED_LiveryPane::MouseDown(int x, int y, int button)
 
 	int row = RowForXY(b, mRowIsCard, tray_h, x, y);
 	mTrackRow = (row >= 0 && row < (int) mRows.size() &&
-				(mRows[row].kind == wed_Row_Airline || mRows[row].kind == wed_Row_Header)) ? row : -1;
+				(mRows[row].kind == wed_Row_Airline || mRows[row].kind == wed_Row_Header ||
+				 mRows[row].kind == wed_Row_PoolClass || mRows[row].kind == wed_Row_PoolItem)) ? row : -1;
 	Refresh();
 	return 1;
 }
@@ -934,6 +935,22 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 
 	EnsureRows();
 	vector<float> tray_h;  TrayHeights(mRowIcaos, tray_h);
+
+	// Pool table: a class group opens and shuts; a type opens to its liveries.
+	if (RowForXY(b, mRowIsCard, tray_h, x, y) == mTrackRow &&
+		mTrackRow >= 0 && mTrackRow < (int) mRows.size() &&
+		(mRows[mTrackRow].kind == wed_Row_PoolClass || mRows[mTrackRow].kind == wed_Row_PoolItem))
+	{
+		const WED_LiveryDisplayRow & r = mRows[mTrackRow];
+		if (r.kind == wed_Row_PoolClass)
+			mPoolClassOpen[r.hidden_count] = !PoolClassIsOpen(r.hidden_count);
+		else if (mPoolExpanded.count(r.icao)) mPoolExpanded.erase(r.icao);
+		else                                  mPoolExpanded.insert(r.icao);
+		SetRowsDirty();
+		mTrackRow = -1;
+		Refresh();
+		return;
+	}
 
 	if (RowForXY(b, mRowIsCard, tray_h, x, y) == mTrackRow &&
 		mTrackRow >= 0 && mTrackRow < (int) mRows.size() && mRows[mTrackRow].kind == wed_Row_Header)

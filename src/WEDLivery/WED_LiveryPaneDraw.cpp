@@ -344,6 +344,207 @@ void	WED_LiveryPane::DrawHoverTip(GUI_GraphState * state, int b[4])
 // once per airline row, rather than from a block of its own above the checklist.
 // `show` picks which of the operator's liveries is on the face - see AirlineCard
 // in the .h for the ordering, and why index 0 is what a card shows at rest.
+// ---------------------------------------------------------------------------------------------
+// The GA / military pool as an odds table (Eric, 2026-09-30): it is not a
+// picker, so it is not cards - a composition bar, then size classes, types, liveries
+// ---------------------------------------------------------------------------------------------
+static void	PoolPct(char * buf, size_t n, double p)
+{
+	if (p >= 0.095)     snprintf(buf, n, "%.0f%%", p * 100.0);
+	else if (p > 0.0)   snprintf(buf, n, "%.1f%%", p * 100.0);
+	else                snprintf(buf, n, "0%%");
+}
+
+static void	PoolQuad(float x0, float y0, float x1, float y1)
+{
+	glBegin(GL_QUADS);
+		glVertex2f(x0, y0); glVertex2f(x1, y0); glVertex2f(x1, y1); glVertex2f(x0, y1);
+	glEnd();
+}
+
+// Eight steady hues for the composition bar; a type keeps its hue in the bar and
+// on its row's swatch, so the two can be read against each other.
+static const float kPoolHue[8][3] = {
+	{0.29f,0.56f,0.89f}, {0.95f,0.61f,0.23f}, {0.40f,0.73f,0.42f}, {0.85f,0.37f,0.42f},
+	{0.62f,0.48f,0.85f}, {0.30f,0.75f,0.78f}, {0.85f,0.75f,0.30f}, {0.65f,0.65f,0.68f} };
+
+void	WED_LiveryPane::DrawPoolRow(GUI_GraphState * state, int b[4], const RowSlot & slot,
+									const WED_LiveryDisplayRow & row, int & renders_this_frame,
+									std::set<std::string> & keep_alive)
+{
+	const float line_h = GUI_GetLineHeight(font_UI_Basic);
+	const float pad = 6.0f;
+	const float x0 = (float) b[0] + kCardGap, x1 = (float) b[2] - kCardGap;
+	float white[4] = { 0.92f, 0.92f, 0.94f, 1.0f }, muted[4] = { 0.62f, 0.62f, 0.64f, 1.0f };
+	char pc[24];
+
+	// Every pool type in bar order (class desc, odds desc) - the hue index.
+	vector<pair<pair<int, float>, string> > order;
+	for (map<string, AirlineCard>::const_iterator c = mAirlineCards.begin(); c != mAirlineCards.end(); ++c)
+		if (c->second.preview && c->second.prob > 0)
+			order.push_back(make_pair(make_pair(-c->second.cls, -c->second.prob), c->first));
+	std::sort(order.begin(), order.end());
+	auto hue_of = [&](const string & key) -> int {
+		for (size_t i = 0; i < order.size(); ++i) if (order[i].second == key) return (int) (i % 8);
+		return 7;
+	};
+
+	if (row.kind == wed_Row_PoolBar)
+	{
+		// ONE BAR, 100% wide: what this stand parks, at a glance.
+		const float by0 = slot.bot + 6, by1 = slot.top - 4;
+		float x = x0;
+		state->SetState(0,0,0,0,1,0,0);
+		glColor4f(0.15f, 0.15f, 0.17f, 1.0f); PoolQuad(x0, by0, x1, by1);
+		double nothing = 1.0;
+		for (size_t i = 0; i < order.size(); ++i)
+		{
+			const AirlineCard * c = CardFor(order[i].second);
+			const float w = (x1 - x0) * c->prob;
+			nothing -= c->prob;
+			const float * h = kPoolHue[i % 8];
+			state->SetState(0,0,0,0,1,0,0);
+			glColor4f(h[0], h[1], h[2], 0.85f); PoolQuad(x, by0, x + w - 1, by1);
+			PoolPct(pc, sizeof(pc), c->prob);
+			string t = c->icao + " " + pc;
+			float tw = GUI_MeasureRange(font_UI_Basic, t.c_str(), t.c_str() + t.size());
+			if (tw + 6 > w) { t = c->icao; tw = GUI_MeasureRange(font_UI_Basic, t.c_str(), t.c_str() + t.size()); }
+			float black[4] = { 0.05f, 0.05f, 0.07f, 1.0f };
+			if (tw + 6 <= w) GUI_FontDraw(state, font_UI_Basic, black, x + 3, (by0 + by1) * 0.5f - line_h * 0.35f, t.c_str());
+			x += w;
+		}
+		if (nothing > 0.005)		// a weighted class with nothing to park: the stand stays empty
+		{
+			PoolPct(pc, sizeof(pc), nothing);
+			string t = string("empty ") + pc;
+			GUI_FontDraw(state, font_UI_Basic, muted, x + 4, (by0 + by1) * 0.5f - line_h * 0.35f, t.c_str());
+		}
+		return;
+	}
+
+	if (row.kind == wed_Row_PoolClass)
+	{
+		const int k = row.hidden_count;
+		const bool open = PoolClassIsOpen(k);
+		state->SetState(0,0,0,0,1,0,0);
+		glColor4f(1, 1, 1, (int) (&row - &mRows[0]) == mHoverRow ? 0.14f : 0.07f);
+		PoolQuad(x0, slot.bot + 1, x1, slot.top - 1);
+		char head[64];
+		PoolPct(pc, sizeof(pc), mPoolClassP[k]);
+		snprintf(head, sizeof(head), "%s  Class %c   %s", open ? "\xE2\x96\xBC" : "\xE2\x96\xB6", 'A' + k, pc);
+		const float ty = (slot.bot + slot.top) * 0.5f - line_h * 0.35f;
+		GUI_FontDraw(state, font_UI_Basic, white, x0 + pad, ty, head);
+		if (!open)		// shut: the class in one line
+		{
+			string sum;
+			for (size_t i = 0; i < order.size(); ++i)
+			{
+				const AirlineCard * c = CardFor(order[i].second);
+				if (c->cls != k) continue;
+				PoolPct(pc, sizeof(pc), c->prob);
+				sum += (sum.empty() ? "" : "  \xC2\xB7  ") + c->icao + " " + pc;
+			}
+			float hx = x0 + pad + GUI_MeasureRange(font_UI_Basic, head, head + strlen(head)) + 24;
+			GUI_FontDraw(state, font_UI_Basic, muted, hx, ty, ElideToWidth(font_UI_Basic, sum, x1 - pad - hx).c_str());
+		}
+		return;
+	}
+
+	const AirlineCard * c = CardFor(row.icao);
+	if (!c) return;
+
+	if (row.kind == wed_Row_PoolItem)
+	{
+		const bool open = mPoolExpanded.count(row.icao) != 0;
+		const float * h = kPoolHue[hue_of(row.icao)];
+		if ((int) (&row - &mRows[0]) == mHoverRow)
+		{
+			state->SetState(0,0,0,0,1,0,0);
+			glColor4f(1, 1, 1, 0.05f); PoolQuad(x0, slot.bot, x1, slot.top);
+		}
+		// swatch, thumbnail, type, count, odds bar + number
+		state->SetState(0,0,0,0,1,0,0);
+		glColor4f(h[0], h[1], h[2], 0.9f); PoolQuad(x0 + 4, slot.bot + 6, x0 + 8, slot.top - 6);
+		const float th = slot.top - slot.bot - 4, tw = th * 512.0f / 144.0f;
+		const float tx0 = x0 + 14, ty0 = slot.bot + 2;
+		if (!c->abs_paths.empty())
+		{
+			const string & p = c->abs_paths[0];
+			keep_alive.insert(p);
+			WED_ResourceMgr * res_mgr = WED_GetResourceMgr(mResolver);
+			ITexMgr *         tex_mgr = WED_GetTexMgr(mResolver);
+			const bool will_render = !mThumbCache.IsCached(p) && mThumbCache.IsReady(p);
+			const WED_LiveryThumbnail * t = NULL;
+			if (!will_render || renders_this_frame < kMaxRendersPerFrame)
+			{
+				t = mThumbCache.GetThumbnail(res_mgr, tex_mgr, state, p);
+				if (will_render) ++renders_this_frame;
+			}
+			if (t && t->tex)
+			{
+				state->SetState(0,1,0,0,1,0,0);
+				glColor4f(1,1,1,1);
+				state->BindTex((int) t->tex, 0);
+				glBegin(GL_QUADS);
+					glTexCoord2f(0,0); glVertex2f(tx0, ty0);
+					glTexCoord2f(1,0); glVertex2f(tx0 + tw, ty0);
+					glTexCoord2f(1,1); glVertex2f(tx0 + tw, ty0 + th);
+					glTexCoord2f(0,1); glVertex2f(tx0, ty0 + th);
+				glEnd();
+				state->SetState(0,0,0,0,0,0,0);
+			}
+		}
+		const float ty = (slot.bot + slot.top) * 0.5f - line_h * 0.35f;
+		float lx = tx0 + tw + 10;
+		string name = string(open ? "\xE2\x96\xBC " : "\xE2\x96\xB6 ") + c->icao;
+		GUI_FontDraw(state, font_UI_Basic, white, lx, ty + line_h * 0.45f, name.c_str());
+		char cnt[48];
+		snprintf(cnt, sizeof(cnt), c->abs_paths.size() == 1 ? "1 livery" : "%d liveries", (int) c->abs_paths.size());
+		GUI_FontDraw(state, font_UI_Basic, muted, lx + 14, ty - line_h * 0.55f, cnt);
+		// the odds: number right-aligned, bar to its left on a 0-100% scale
+		PoolPct(pc, sizeof(pc), c->prob);
+		string ps = string(pc) + (c->abs_paths.size() > 1 ? " (Total)" : "");
+		const float pw = GUI_MeasureRange(font_UI_Basic, ps.c_str(), ps.c_str() + ps.size());
+		GUI_FontDraw(state, font_UI_Basic, white, x1 - pad - pw, ty, ps.c_str());
+		const float bx1 = x1 - pad - 96, bx0 = (std::max)(lx + 120.0f, bx1 - 220.0f);
+		if (bx1 > bx0 + 20)
+		{
+			state->SetState(0,0,0,0,1,0,0);
+			glColor4f(0.18f, 0.18f, 0.20f, 1.0f); PoolQuad(bx0, ty, bx1, ty + line_h * 0.7f);
+			glColor4f(h[0], h[1], h[2], 0.9f);    PoolQuad(bx0, ty, bx0 + (bx1 - bx0) * c->prob, ty + line_h * 0.7f);
+		}
+		return;
+	}
+
+	if (row.kind == wed_Row_PoolLivery)
+	{
+		const int m = row.hidden_count;
+		if (m < 0 || m >= (int) c->labels.size()) return;
+		const float ty = (slot.bot + slot.top) * 0.5f - line_h * 0.35f;
+		float lx = x0 + 14 + (slot.top - slot.bot) * 0 + 60;
+		const string cty = m < (int) c->ctys.size() ? c->ctys[m] : string();
+		const WED_LiveryThumbnail * flag = cty.empty() ? NULL : EnsureRawFlagTexture(cty);
+		if (flag && flag->tex && flag->w > 0 && flag->h > 0)
+		{
+			const float fh = line_h * 0.8f, fw = fh * flag->w / flag->h;
+			state->SetState(0,1,0,0,1,0,0);
+			glColor4f(1,1,1,1);
+			state->BindTex((int) flag->tex, 0);
+			glBegin(GL_QUADS);
+				glTexCoord2f(0,1); glVertex2f(lx, ty);
+				glTexCoord2f(1,1); glVertex2f(lx + fw, ty);
+				glTexCoord2f(1,0); glVertex2f(lx + fw, ty + fh);
+				glTexCoord2f(0,0); glVertex2f(lx, ty + fh);
+			glEnd();
+			state->SetState(0,0,0,0,0,0,0);
+		}
+		lx += line_h * 1.6f;
+		string lab = c->labels[m];
+		GUI_FontDraw(state, font_UI_Basic, muted, lx, ty, (cty.empty() ? lab : cty + "  " + lab).c_str());
+		return;
+	}
+}
+
 void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slot,
 										const AirlineCard & card, int show,
 										bool is_selected, bool is_hover, bool is_pressed,
@@ -2301,7 +2502,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 
 				for (size_t vi = 0; vi < mRows.size(); ++vi)
 				{
-					if (mRows[vi].kind != wed_Row_Airline)  continue;
+					if (mRows[vi].kind != wed_Row_Airline && mRows[vi].kind != wed_Row_PoolItem)  continue;
 					if (slots[vi].bot > keep_hi)           continue;
 					if (slots[vi].top < keep_lo)           break;		// everything below is further away
 					const AirlineCard * ac = CardFor(mRows[vi].icao);
@@ -2357,6 +2558,12 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 
 				if (row.kind == wed_Row_Gap)
 					continue;
+
+				if (row.kind >= wed_Row_PoolBar)		// the pool table
+				{
+					DrawPoolRow(state, b, slots[vi], row, renders_this_frame, keep_alive_paths);
+					continue;
+				}
 
 				if (row.kind == wed_Row_Airline)
 				{

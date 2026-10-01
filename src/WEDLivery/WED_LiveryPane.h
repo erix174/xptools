@@ -68,7 +68,9 @@
 // namespace so the pane can CACHE the assembled list: rebuilding it - 150-odd
 // operators, filtered, sorted and shuffled - was happening on every Draw, and
 // Draw runs every frame for as long as a card is animating under the cursor.
-enum WED_LiveryRowKind { wed_Row_Airline, wed_Row_Header, wed_Row_Gap, wed_Row_Divider, wed_Row_Note };
+enum WED_LiveryRowKind { wed_Row_Airline, wed_Row_Header, wed_Row_Gap, wed_Row_Divider, wed_Row_Note,
+						 // the GA / military pool as an odds table
+						 wed_Row_PoolBar, wed_Row_PoolClass, wed_Row_PoolItem, wed_Row_PoolLivery };
 
 struct WED_LiveryDisplayRow
 {
@@ -305,6 +307,8 @@ private:
 		// the pool; -1 when it does not (an operator card, or a military stand with
 		// an operator listed). Each label carries its own livery's share too.
 		float						prob = -1.0f;
+		int							cls = -1;		// pool cards: the type's size class, 0 = A
+		std::vector<std::string>	ctys;			// pool cards: each livery's registration country
 	};
 	std::map<std::string, AirlineCard>	mAirlineCards;		// key: LOWERCASE icao, as rows carry it
 	// Liveries the range rule removed from a card at this stand, by UPPERCASE
@@ -321,6 +325,14 @@ private:
 	int									mCardsRefusedRange;
 	std::string							EmptyListReason(int ramp_op) const;
 	void								GatherPoolPreview(void);
+	// The pool table. Class odds from RebuildAirlineCards; which
+	// classes the user opened or shut (default: open when >= 5%); which types
+	// are expanded to their liveries; per-row heights for LayoutRows.
+	double								mPoolClassP[6];
+	std::map<int, bool>					mPoolClassOpen;
+	std::set<std::string>				mPoolExpanded;
+	std::vector<float>					mRowH;
+	bool								PoolClassIsOpen(int k) const;
 	// Whether an operator may appear on a stand of this operation type.
 	bool								OperatorMatchesRampOp(const std::string & code_uc, int ramp_op) const;
 	// Whether one livery may appear at this stand, and if not, why - see the .cpp.
@@ -373,6 +385,9 @@ private:
 		float	x0, x1;			// horizontal extent - the card's own, or the full row
 		bool	is_card;
 	};
+	void								DrawPoolRow(GUI_GraphState * state, int b[4], const RowSlot & slot,
+													const WED_LiveryDisplayRow & row, int & renders_this_frame,
+													std::set<std::string> & keep_alive);
 	// Fills one slot per row, and returns the total content height so the caller can
 	// clamp mScrollOffset. Takes only "is this row a card", not the rows themselves:
 	// WED_LiveryDisplayRow is private to the .cpp, and the layout genuinely needs

@@ -412,12 +412,13 @@ float	WED_LiveryPane::LayoutRows(int bounds[4], const vector<bool> & is_card,
 			// card sitting under column 0 with whitespace beside it, rather than
 			// centred or stretched.
 			if (col != 0) { y -= card_h + line_extra; col = 0; line_extra = 0.0f; }
+			const float h = (i < mRowH.size() && mRowH[i] > 0) ? mRowH[i] : row_h;	// pool rows are taller
 			s.top      = y;
-			s.bot      = y - row_h;
+			s.bot      = y - h;
 			s.slot_bot = s.bot;
 			s.x0  = (float) bounds[0];
 			s.x1  = (float) bounds[2];
-			y -= row_h;
+			y -= h;
 		}
 	}
 	if (col != 0) y -= card_h + line_extra;			// trailing partial line still takes its height

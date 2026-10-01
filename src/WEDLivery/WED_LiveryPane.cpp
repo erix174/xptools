@@ -430,6 +430,14 @@ void	WED_LiveryPane::EnsureRows(void)
 
 	CardFlags(mRows, mRowIsCard);
 	RowIcaos(mRows, mRowIcaos);
+	mRowH.assign(mRows.size(), 0.0f);
+	for (size_t i = 0; i < mRows.size(); ++i)
+		switch (mRows[i].kind) {
+		case wed_Row_PoolBar:	mRowH[i] = 30.0f;	break;
+		case wed_Row_PoolClass:	mRowH[i] = GUI_GetLineHeight(font_UI_Basic) + 10;	break;
+		case wed_Row_PoolItem:	mRowH[i] = 46.0f;	break;
+		default: break;
+		}
 }
 
 
@@ -642,6 +650,8 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 					if (code_uc != "XPGA" && code_uc != "XPMI")
 						lab += "  " + code_uc;
 					tc.labels.push_back(lab);
+					tc.ctys.push_back(e->reg_country);
+					if (tc.cls < 0) tc.cls = k;
 					if (pool_draw)
 					{
 						PoolHit ph = { k, !mAirportCountry.empty() && e->reg_country == mAirportCountry, tkey, (int) tc.labels.size() - 1 };
@@ -724,6 +734,7 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 		weighted = true;
 	}
 	else if (!weighted) WED_LegacyStepDownWeights(WidthEnumToIndex(ramp->GetWidth()), cw);
+	for (int k = 0; k < 6; ++k) mPoolClassP[k] = 0;
 	double total = 0, p_class[6] = { 0, 0, 0, 0, 0, 0 };
 	for (int k = 0; k < 6; ++k) total += cw[k];
 	if (total <= 0) return;
@@ -734,6 +745,7 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 		if (j >= 0 && n_at[j] > 0) p_class[j] += cw[k] / total;
 	}
 
+	for (int k = 0; k < 6; ++k) mPoolClassP[k] = p_class[k];
 	const bool ga = ramp_op == ramp_operation_GeneralAviation;
 	for (map<string, AirlineCard>::iterator c = mAirlineCards.begin(); c != mAirlineCards.end(); ++c)
 		if (c->second.preview) c->second.prob = 0.0f;
@@ -788,9 +800,50 @@ void	WED_LiveryPane::GatherPoolPreview(void)
 		WED_LiveryDisplayRow div;	div.kind = wed_Row_Divider;	rest.push_back(div);
 	}
 	rest.push_back(h);
-	WED_LiveryDisplayRow gap2; gap2.kind = wed_Row_Gap; rest.push_back(gap2);
-	rest.insert(rest.end(), pool.begin(), pool.end());
+
+	// The table: bar, then one group per size class, biggest first, each type a
+	// row sorted by odds, an expanded type followed by its liveries.
+	bool any_odds = false;
+	for (size_t i = 0; i < pool.size(); ++i)
+	{
+		const AirlineCard * c = CardFor(pool[i].icao);
+		if (c && c->prob > 0) any_odds = true;
+	}
+	if (any_odds) { WED_LiveryDisplayRow bar; bar.kind = wed_Row_PoolBar; rest.push_back(bar); }
+	for (int k = 5; k >= 0; --k)
+	{
+		vector<pair<float, string> > at;
+		for (size_t i = 0; i < pool.size(); ++i)
+		{
+			const AirlineCard * c = CardFor(pool[i].icao);
+			if (c && c->cls == k) at.push_back(make_pair(-(c->prob), pool[i].icao));
+		}
+		if (at.empty()) continue;
+		std::sort(at.begin(), at.end());
+		WED_LiveryDisplayRow cr; cr.kind = wed_Row_PoolClass; cr.hidden_count = k; rest.push_back(cr);
+		if (!PoolClassIsOpen(k)) continue;
+		for (size_t j = 0; j < at.size(); ++j)
+		{
+			WED_LiveryDisplayRow it; it.kind = wed_Row_PoolItem; it.icao = at[j].second; rest.push_back(it);
+			if (!mPoolExpanded.count(it.icao)) continue;
+			const AirlineCard * c = CardFor(it.icao);
+			for (size_t m = 0; c && m < c->labels.size(); ++m)
+			{
+				WED_LiveryDisplayRow lv; lv.kind = wed_Row_PoolLivery; lv.icao = it.icao; lv.hidden_count = (int) m;
+				rest.push_back(lv);
+			}
+		}
+	}
 	mRows.swap(rest);
+}
+
+// Open by default when the class parks something at least 5% of the time; the
+// rest show as a one-line summary until clicked.
+bool	WED_LiveryPane::PoolClassIsOpen(int k) const
+{
+	map<int, bool>::const_iterator i = mPoolClassOpen.find(k);
+	if (i != mPoolClassOpen.end()) return i->second;
+	return mPoolClassP[k] >= 0.05 || mPoolClassP[k] == 0;
 }
 
 // Why a stand with a real operation type has no card at all. Names the rule that
