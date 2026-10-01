@@ -321,7 +321,6 @@ void	WED_LiveryPane::RebuildSelection(void)
 		// about the stand being edited, not about the document. Carrying them to a
 		// different stand would dim a list the user has not touched yet, and the
 		// lock in particular would arrive with no indication of where it came from.
-		mLockedAirline.clear();
 		mTrayAirline.clear();   mTrayOpen = 0.0f;
 		mTrayClosing.clear();   mTrayClosingOpen = 0.0f;
 		mCycleAirline.clear();  mCycleShow = 0;  mCycleAccum = 0.0f;
@@ -425,6 +424,13 @@ void	WED_LiveryPane::EnsureRows(void)
 	DropCardless(mRows, have_cards);
 	PruneEmptySections(mRows);
 	PinSelected(mRows, ParseCodes(mSelectedRamps[0]->GetAirlines()), have_cards);
+	// A GA stand's listed code has no operator card - GA is shown by type - so
+	// "nothing to show at this stand" would be wrong. Say what the list does.
+	if (mSelectedRamps[0]->GetRampOperationType() == ramp_operation_GeneralAviation)
+		for (size_t i = 0; i < mRows.size(); ++i)
+			if (mRows[i].kind == wed_Row_Note && mRows[i].header_text.compare(0, 13, "Also listed, ") == 0)
+				mRows[i].header_text = "Listed: " + mRows[i].header_text.substr(mRows[i].header_text.find(':') + 2) +
+									   " - X-Plane 12.5 draws GA by size and does not read the list yet (R28)";
 	GatherPoolPreview();
 	ApplyCollapse(mRows, mCollapsedSections);
 
@@ -658,6 +664,7 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 						lab += "  " + code_uc;
 					tc.labels.push_back(lab);
 					tc.ctys.push_back(e->reg_country);
+					tc.codes.push_back(code_lc);
 					if (tc.cls < 0) tc.cls = k;
 					if (pool_draw)
 					{
@@ -742,6 +749,7 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 	}
 	else if (!weighted) WED_LegacyStepDownWeights(WidthEnumToIndex(ramp->GetWidth()), cw);
 	for (int k = 0; k < 6; ++k) mPoolClassP[k] = 0;
+	mPoolHomeShare = 0;
 	double total = 0, p_class[6] = { 0, 0, 0, 0, 0, 0 };
 	for (int k = 0; k < 6; ++k) total += cw[k];
 	if (total <= 0) return;
@@ -759,7 +767,11 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 	for (size_t i = 0; i < pool_hits.size(); ++i)
 	{
 		const PoolHit & h = pool_hits[i];
-		if (h.card.empty()) continue;
+		if (h.card.empty())				// a home force's livery: on its own card, counted here
+		{
+			if (n_at[h.cls] > 0) mPoolHomeShare += p_class[h.cls] / n_at[h.cls];
+			continue;
+		}
 		const int k = h.cls;
 		double p_in = 1.0 / n_at[k];
 		if (ga && home_at[k] > 0)
@@ -876,6 +888,41 @@ string	WED_LiveryPane::EquipmentSuggestion(void) const
 		s += buf;
 	}
 	return s;
+}
+
+string	WED_LiveryPane::LockedCode(void) const
+{
+	if (mSelectedRamps.size() != 1) return string();
+	set<string> c = ParseCodes(mSelectedRamps[0]->GetAirlines());
+	return c.size() == 1 ? *c.begin() : string();
+}
+
+void	WED_LiveryPane::ToggleLock(const string & code_lc)
+{
+	if (mSelectedRamps.size() != 1 || code_lc.empty()) return;
+	WED_RampPosition * r = mSelectedRamps[0];
+	const bool locked = LockedCode() == code_lc;
+	if (locked && r->GetAirlinesBeforeLock().empty()) return;	// nothing to go back to - the tip says so
+
+	mArchive->StartCommand(locked ? "Spawn Every Listed Operator" : "Spawn This Operator Only");
+	if (locked)
+	{
+		r->SetAirlines(r->GetAirlinesBeforeLock());
+		r->SetAirlinesBeforeLock(string());
+	}
+	else
+	{
+		// Keep what the stand listed before - unless it already listed just one
+		// code, which is the lock of another operator: then the list from before
+		// THAT lock is still the one to come back to.
+		if (LockedCode().empty()) r->SetAirlinesBeforeLock(r->GetAirlines());
+		r->SetAirlines(code_lc);
+	}
+	r->MarkLiverySet();
+	mArchive->CommitCommand();
+	SetRowsDirty();
+	mCoverageDirty = true;
+	Refresh();
 }
 
 // Why a stand with a real operation type has no card at all. Names the rule that

@@ -348,6 +348,28 @@ void	WED_LiveryPane::DrawHoverTip(GUI_GraphState * state, int b[4])
 // The GA / military pool as an odds table (Eric, 2026-09-30): it is not a
 // picker, so it is not cards - a composition bar, then size classes, types, liveries
 // ---------------------------------------------------------------------------------------------
+string	WED_LiveryPane::PoolLockCode(const WED_LiveryDisplayRow & row) const
+{
+	const AirlineCard * c = CardFor(row.icao);
+	if (!c || c->codes.empty()) return string();
+	if (row.kind == wed_Row_PoolLivery)
+		return (row.hidden_count >= 0 && row.hidden_count < (int) c->codes.size()) ? c->codes[row.hidden_count] : string();
+	if (row.kind != wed_Row_PoolItem) return string();
+	for (size_t i = 1; i < c->codes.size(); ++i) if (c->codes[i] != c->codes[0]) return string();
+	return c->codes[0];
+}
+
+// At the row's right edge, past the odds - the same square badge the cards carry.
+bool	WED_LiveryPane::PoolLockRect(int b[4], const RowSlot & slot, float r_out[4]) const
+{
+	r_out[2] = (float) b[2] - kCardGap - 6.0f;
+	r_out[0] = r_out[2] - kLockSize;
+	const float cy = (slot.top + slot.bot) * 0.5f;
+	r_out[1] = cy - kLockSize * 0.5f;
+	r_out[3] = cy + kLockSize * 0.5f;
+	return true;
+}
+
 static void	PoolPct(char * buf, size_t n, double p)
 {
 	if (p >= 0.095)     snprintf(buf, n, "%.0f%%", p * 100.0);
@@ -413,6 +435,20 @@ void	WED_LiveryPane::DrawPoolRow(GUI_GraphState * state, int b[4], const RowSlot
 			if (tw + 6 <= w) GUI_FontDraw(state, font_UI_Basic, black, x + 3, (by0 + by1) * 0.5f - line_h * 0.35f, t.c_str());
 			x += w;
 		}
+		if (mPoolHomeShare > 0.005)	// the home forces, whose cards sit above the table
+		{
+			const float w = (x1 - x0) * (float) mPoolHomeShare;
+			nothing -= mPoolHomeShare;
+			state->SetState(0,0,0,0,1,0,0);
+			glColor4f(0.55f, 0.55f, 0.58f, 0.85f); PoolQuad(x, by0, x + w - 1, by1);
+			PoolPct(pc, sizeof(pc), mPoolHomeShare);
+			string t = string("home forces ") + pc;
+			float tw = GUI_MeasureRange(font_UI_Basic, t.c_str(), t.c_str() + t.size());
+			if (tw + 6 > w) { t = "home"; tw = GUI_MeasureRange(font_UI_Basic, t.c_str(), t.c_str() + t.size()); }
+			float black[4] = { 0.05f, 0.05f, 0.07f, 1.0f };
+			if (tw + 6 <= w) GUI_FontDraw(state, font_UI_Basic, black, x + 3, (by0 + by1) * 0.5f - line_h * 0.35f, t.c_str());
+			x += w;
+		}
 		if (nothing > 0.005)		// a weighted class with nothing to park: the stand stays empty
 		{
 			PoolPct(pc, sizeof(pc), nothing);
@@ -452,6 +488,52 @@ void	WED_LiveryPane::DrawPoolRow(GUI_GraphState * state, int b[4], const RowSlot
 
 	const AirlineCard * c = CardFor(row.icao);
 	if (!c) return;
+
+	// THE LOCK BADGE, on every row that stands for one operator. Amber when the
+	// stand lists only that code; the rows of every other operator are dimmed.
+	const string lock_code = PoolLockCode(row);
+	const bool   row_locked = !lock_code.empty() && lock_code == mLockedAirline;
+	bool row_dimmed = false;
+	if (!mLockedAirline.empty())
+	{
+		row_dimmed = true;
+		for (size_t i = 0; i < c->codes.size(); ++i) if (c->codes[i] == mLockedAirline) row_dimmed = false;
+		if (row.kind == wed_Row_PoolLivery && row.hidden_count >= 0 && row.hidden_count < (int) c->codes.size())
+			row_dimmed = c->codes[row.hidden_count] != mLockedAirline;
+	}
+	const float right_x1 = lock_code.empty() ? x1 : x1 - kLockSize - 10.0f;	// odds stop short of the badge
+	if (!lock_code.empty())
+	{
+		float lr[4];
+		PoolLockRect(b, slot, lr);
+		const bool hover = (int) (&row - &mRows[0]) == mHoverRow &&
+						   mHoverX >= lr[0] - 3 && mHoverX <= lr[2] + 3 && mHoverY >= lr[1] - 3 && mHoverY <= lr[3] + 3;
+		state->SetState(0,0,0,0,1,0,0);
+		if (row_locked)  glColor4f(0.98f, 0.80f, 0.25f, 1.00f);
+		else             glColor4f(0.72f, 0.72f, 0.76f, hover ? 0.95f : 0.55f);
+		PoolQuad(lr[0], lr[1], lr[2], lr[3]);
+		glColor4f(0.08f, 0.08f, 0.10f, 0.85f);
+		glBegin(GL_LINE_LOOP);
+			glVertex2f(lr[0]+0.5f, lr[1]+0.5f);  glVertex2f(lr[2]-0.5f, lr[1]+0.5f);
+			glVertex2f(lr[2]-0.5f, lr[3]-0.5f);  glVertex2f(lr[0]+0.5f, lr[3]-0.5f);
+		glEnd();
+		if (hover)
+		{
+			string who = lock_code;
+			for (size_t i = 0; i < who.size(); ++i) who[i] = (char) toupper((unsigned char) who[i]);
+			const bool ga = mSelectedRamps.size() == 1 &&
+							mSelectedRamps[0]->GetRampOperationType() == ramp_operation_GeneralAviation;
+			if (row_locked)
+				mHoverTipText = !mSelectedRamps[0]->GetAirlinesBeforeLock().empty()
+								? "Spawn every listed operator again"
+								: "This stand lists only " + who + " - tick others to add them";
+			else
+				mHoverTipText = "Spawn " + who + " only - the stand lists just this code; click again to undo" +
+								string(ga ? ". X-Plane 12.5 picks GA by size and does not read the list yet (R28)" : "");
+		}
+	}
+	float dim = row_dimmed ? 0.45f : 1.0f;
+	white[3] = dim; muted[3] = dim;
 
 	if (row.kind == wed_Row_PoolItem)
 	{
@@ -505,8 +587,8 @@ void	WED_LiveryPane::DrawPoolRow(GUI_GraphState * state, int b[4], const RowSlot
 		PoolPct(pc, sizeof(pc), c->prob);
 		string ps = string(pc) + (c->abs_paths.size() > 1 ? " (Total)" : "");
 		const float pw = GUI_MeasureRange(font_UI_Basic, ps.c_str(), ps.c_str() + ps.size());
-		GUI_FontDraw(state, font_UI_Basic, white, x1 - pad - pw, ty, ps.c_str());
-		const float bx1 = x1 - pad - 96, bx0 = (std::max)(lx + 120.0f, bx1 - 220.0f);
+		GUI_FontDraw(state, font_UI_Basic, white, right_x1 - pad - pw, ty, ps.c_str());
+		const float bx1 = right_x1 - pad - 96, bx0 = (std::max)(lx + 120.0f, bx1 - 220.0f);
 		if (bx1 > bx0 + 20)
 		{
 			state->SetState(0,0,0,0,1,0,0);
@@ -2434,7 +2516,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 			// a weight drag that removes its class, a different X-Plane folder -
 			// every other card stays dimmed forever with nothing left to click. The
 			// same goes for a tray left open on a card that is no longer drawn.
-			if (!mLockedAirline.empty() && !CardFor(mLockedAirline))  mLockedAirline.clear();
+			mLockedAirline = LockedCode();		// the lock is the data: one listed code
 			if (!mTrayAirline.empty()   && !CardFor(mTrayAirline))    { mTrayAirline.clear();  mTrayOpen = 0.0f; }
 			if (!mTrayClosing.empty()   && !CardFor(mTrayClosing))    { mTrayClosing.clear();  mTrayClosingOpen = 0.0f; }
 			if (!mCycleAirline.empty()  && !CardFor(mCycleAirline))   mCycleAirline.clear();
@@ -2614,8 +2696,9 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 						if (mHoverX >= lr[0] - grow && mHoverX <= lr[2] + grow &&
 							mHoverY >= lr[1] - grow && mHoverY <= lr[3] + grow)
 						{
-							mHoverTipText = locked ? "Show every operator again"
-												   : "Focus on this operator - the others are dimmed; what parks is unchanged";
+							mHoverTipText = !locked ? "Spawn this operator only - the stand lists just this code; click again to undo"
+										  : !mSelectedRamps[0]->GetAirlinesBeforeLock().empty() ? "Spawn every listed operator again"
+										  : "This stand lists only this operator - tick others to add them";
 						}
 						else if (mHoverX >= tr[0] && mHoverX <= tr[2] &&
 								 mHoverY >= tr[1] && mHoverY <= tr[3] &&

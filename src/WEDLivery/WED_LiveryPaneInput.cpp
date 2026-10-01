@@ -707,7 +707,8 @@ int		WED_LiveryPane::MouseDown(int x, int y, int button)
 	int row = RowForXY(b, mRowIsCard, tray_h, x, y);
 	mTrackRow = (row >= 0 && row < (int) mRows.size() &&
 				(mRows[row].kind == wed_Row_Airline || mRows[row].kind == wed_Row_Header ||
-				 mRows[row].kind == wed_Row_PoolClass || mRows[row].kind == wed_Row_PoolItem)) ? row : -1;
+				 mRows[row].kind == wed_Row_PoolClass || mRows[row].kind == wed_Row_PoolItem ||
+				 mRows[row].kind == wed_Row_PoolLivery)) ? row : -1;
 	Refresh();
 	return 1;
 }
@@ -953,9 +954,24 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 	// Pool table: a class group opens and shuts; a type opens to its liveries.
 	if (RowForXY(b, mRowIsCard, tray_h, x, y) == mTrackRow &&
 		mTrackRow >= 0 && mTrackRow < (int) mRows.size() &&
-		(mRows[mTrackRow].kind == wed_Row_PoolClass || mRows[mTrackRow].kind == wed_Row_PoolItem))
+		(mRows[mTrackRow].kind == wed_Row_PoolClass || mRows[mTrackRow].kind == wed_Row_PoolItem ||
+		 mRows[mTrackRow].kind == wed_Row_PoolLivery))
 	{
 		const WED_LiveryDisplayRow & r = mRows[mTrackRow];
+		// The lock badge on a livery row - or on a type row whose liveries all
+		// belong to one operator - locks the stand to that operator.
+		vector<RowSlot> slots;
+		LayoutRows(b, mRowIsCard, tray_h, slots);
+		float lr[4];
+		const string code = PoolLockCode(r);
+		if (!code.empty() && PoolLockRect(b, slots[mTrackRow], lr) &&
+			x >= lr[0] - 3 && x <= lr[2] + 3 && y >= lr[1] - 3 && y <= lr[3] + 3)
+		{
+			mTrackRow = -1;
+			ToggleLock(code);
+			return;
+		}
+		if (r.kind == wed_Row_PoolLivery) { mTrackRow = -1; Refresh(); return; }
 		if (r.kind == wed_Row_PoolClass)
 			mPoolClassOpen[r.hidden_count] = !PoolClassIsOpen(r.hidden_count);
 		else if (mPoolExpanded.count(r.icao)) mPoolExpanded.erase(r.icao);
@@ -1003,11 +1019,8 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 		if (x >= lr[0] && x <= lr[2] && y >= lr[1] && y <= lr[3])
 		{
 			if (tc && tc->preview) { mTrackRow = -1; return; }	// pool cards are previews - no lock
-			// Exclusive by construction: holding the lock is a single string, so
-			// taking it necessarily releases whoever had it.
-			mLockedAirline = (mLockedAirline == icao) ? string() : icao;
 			mTrackRow = -1;
-			Refresh();
+			ToggleLock(icao);		// writes the stand's 1301 - see ToggleLock
 			return;
 		}
 		// THE WHOLE CAPTION ROW IS THE TRAY'S, not just the arrow's gutter, and the

@@ -49,6 +49,10 @@ public:
 	void	SetAirlines(const string& airlines);
 
 	string  GetAirlines() const;
+	// The airline list as it was before the Liveries tab's lock cut it to one
+	// code; unlocking restores it. WED-only (earth.wed.xml), never in apt.dat.
+	string  GetAirlinesBeforeLock() const;
+	void	SetAirlinesBeforeLock(const string& airlines);
 	int		GetType() const;
 	int		GetWidth() const;
 	int		GetWidthMin() const;
@@ -158,6 +162,7 @@ private:
 	WED_PropBoolText		weights_mode;	// weights in use (1) or parked while the size range rules (0)
 	WED_PropBoolText		auto_filled;	// the auto-fill watermark - see IsAutoFilled()
 	WED_PropBoolText		livery_set;		// set by an author in 2.8 - see MarkLiverySet()
+	WED_PropStringText		airlines_before_lock;	// see GetAirlinesBeforeLock()
 
 	bool					mLegacyWidthOnly;	// true while parsing an XML element that had no width_min attribute
 

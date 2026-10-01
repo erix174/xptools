@@ -303,6 +303,7 @@ private:
 		// size (GA always, military with no operator listed). Shown so the author
 		// sees what may park, but it is not an operator - nothing to tick or hold.
 		bool						preview = false;
+		std::vector<std::string>	codes;			// pool cards: each livery's operator, lowercase
 		// How often X-Plane parks this type here, 0..1, when the stand draws from
 		// the pool; -1 when it does not (an operator card, or a military stand with
 		// an operator listed). Each label carries its own livery's share too.
@@ -334,10 +335,14 @@ private:
 	// classes the user opened or shut (default: open when >= 5%); which types
 	// are expanded to their liveries; per-row heights for LayoutRows.
 	double								mPoolClassP[6];
+	double								mPoolHomeShare = 0;	// military: the home forces' (tickable cards') share of the pool
 	std::map<int, bool>					mPoolClassOpen;
 	std::set<std::string>				mPoolExpanded;
 	std::vector<float>					mRowH;
 	bool								PoolClassIsOpen(int k) const;
+	// The operator a pool row's lock stands for: a livery row's own, a type row's
+	// when all its liveries share one; "" for none (no badge then).
+	std::string							PoolLockCode(const WED_LiveryDisplayRow & row) const;
 	// Whether an operator may appear on a stand of this operation type.
 	bool								OperatorMatchesRampOp(const std::string & code_uc, int ramp_op) const;
 	// Whether one livery may appear at this stand, and if not, why - see the .cpp.
@@ -390,6 +395,7 @@ private:
 		float	x0, x1;			// horizontal extent - the card's own, or the full row
 		bool	is_card;
 	};
+	bool								PoolLockRect(int b[4], const RowSlot & slot, float r_out[4]) const;
 	void								DrawPoolRow(GUI_GraphState * state, int b[4], const RowSlot & slot,
 													const WED_LiveryDisplayRow & row, int & renders_this_frame,
 													std::set<std::string> & keep_alive);
@@ -704,7 +710,14 @@ private:
 	// does every other card is drawn dimmed, because the lock has taken them out of
 	// the running - see the format spec on why this is UI-only and never reaches
 	// apt.dat as a row of its own.
-	std::string					mLockedAirline;		// empty when no card holds the lock
+	std::string					mLockedAirline;		// the stand's only listed code, lowercase; "" if it lists 0 or 2+
+public:
+	// THE LOCK IS DATA (Eric, 2026-09-30): a stand whose 1301 lists one code is
+	// locked to it. Locking cuts the list to that code (the old list kept on the
+	// stand, see GetAirlinesBeforeLock); unlocking puts the old list back.
+	void						ToggleLock(const std::string & code_lc);
+	std::string					LockedCode(void) const;
+private:
 
 	// Section headers that are collapsed. Only "All Airlines" starts collapsed: it
 	// is the tier with no filter behind it, so expanding it can mean hundreds of

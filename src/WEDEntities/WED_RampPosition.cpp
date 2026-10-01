@@ -51,6 +51,7 @@ WED_RampPosition::WED_RampPosition(WED_Archive * a, int i) : WED_GISPoint_Headin
 	weights_mode (this,PROP_Name(".Weights Mode",       XML_Name("ramp_start","weights_mode")), 0),
 	auto_filled  (this,PROP_Name(".Auto Filled",        XML_Name("ramp_start","auto_filled")), 0),
 	livery_set   (this,PROP_Name(".Livery Set",         XML_Name("ramp_start","livery_set")), 0),
+	airlines_before_lock(this,PROP_Name(".Airlines Before Lock", XML_Name("ramp_start","airlines_before_lock")), ""),
 	mLegacyWidthOnly(false)
 {
 }
@@ -499,6 +500,13 @@ void	WED_RampPosition::ClearClassWeights(void)
 	class_weights = string();
 	weights_mode  = false;
 	MarkLiverySet();
+}
+
+string  WED_RampPosition::GetAirlinesBeforeLock() const	{ return airlines_before_lock.value; }
+void	WED_RampPosition::SetAirlinesBeforeLock(const string & a)
+{
+	const string c = CorrectAirlinesString(a);
+	if (c != airlines_before_lock.value) airlines_before_lock = c;
 }
 
 string  WED_RampPosition::GetAirlines() const
