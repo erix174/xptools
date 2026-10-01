@@ -1935,7 +1935,7 @@ name):
 | operation type | what auto-fill does |
 |---|---|
 | None | nothing - None means no static aircraft (R29) |
-| any, no weights | updates the stand to weights as R17's Update does (2026-09-27): today's step-down from its letter, the fall-through folded in against the operators it lists after the fill, a token 1 kept on the top class. It parks what it parked; the author tunes from there. (Before 2026-09-27 a fixed table was used - D: B10 C40 D50 - which changed what legacy stands parked.) |
+| any, no weights | updates the stand to weights as R17's Update does (2026-09-27): today's step-down from its letter, the fall-through folded in against the operators it lists after the fill, a token 1 kept on the top class. It parks what it parked; the author tunes from there. (Before 2026-09-27 a fixed table was used - D: B10 C40 D50 - which changed what legacy stands parked.) **General Aviation and Military** (2026-09-30): equal weights on every class from A to the letter, empty classes included - their pool is drawn by size, and the step-down's 75% on the letter made a GA ramp mostly its largest types. This is WED's conversion only; how the sim reads an unconverted legacy stand is unchanged (§4.1). |
 | Passenger (Airline) / Cargo | adds the airport's recommended operators of that operation class that have an eligible livery at a weighted class (range R26 included) and fit the stand's equipment type; never `XPZZ_*`; stops at the last whole code before the Gateway's 299-character cap (R10) |
 | Military/Gov (Military) | adds the airport country's own military and government operators with such a livery; if there are none, nothing is added and the sim draws military by size |
 | Private/BizJet (General Aviation) | weights only (R28) |
