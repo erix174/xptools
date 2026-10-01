@@ -719,6 +719,21 @@ void	WED_LiveryLegacyUpdateWeights(WED_RampPosition * ramp, WED_Airport * apt, i
 
 void	WED_LiveryRangeUpdateWeights(WED_RampPosition * ramp, WED_Airport * apt, int lo, int hi, int out_w[6])
 {
+	// GA AND MILITARY: EVERY CLASS OF THE RANGE THE SAME (Eric, 2026-09-30).
+	// Their pool is drawn by size, and carrying today's step-down over put 75%
+	// on the letter - a legacy C bizjet ramp became three parts GLF6 and B738.
+	// Classes with nothing to park get their share too: an aircraft added to the
+	// index later is used at once, and the 1313 row never skips a class.
+	if (ramp && (ramp->GetRampOperationType() == ramp_operation_GeneralAviation ||
+				 ramp->GetRampOperationType() == ramp_operation_Military))
+	{
+		if (hi < 0 || hi > 5) hi = 2;
+		if (lo < 0) lo = 0;
+		if (lo > hi) lo = hi;
+		for (int k = 0; k < 6; ++k) out_w[k] = (k >= lo && k <= hi) ? 10 : 0;
+		return;
+	}
+
 	const int top = hi;
 	WED_RangeStepDownWeights(lo, hi, out_w);
 	StandAnalysis a;
