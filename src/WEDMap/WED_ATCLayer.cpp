@@ -7,6 +7,9 @@
 //
 
 #include "WED_Airport.h"
+#include <map>
+#include <string>
+#include <vector>
 #include "WED_ATCLayer.h"
 #include "WED_ModerationLayer.h"
 #include "WED_RampPosition.h"
@@ -19,6 +22,7 @@
 #include "GISUtils.h"
 #include "MathUtils.h"
 #include "TexUtils.h"
+#include "BitmapUtils.h"
 #include "XESConstants.h"
 #include "GUI_DrawUtils.h"
 #include "GUI_Fonts.h"
@@ -198,24 +202,66 @@ static void make_arrow_line(Point2 p[5])
 	p[3] += v1to3;
 }
 
+// The RIM of a silhouette: the shape grown by a few texels, minus the shape
+// itself - a ring that lies wholly outside it (Eric, 2026-10-01). Drawing the
+// shape again in black, offset, sat UNDER the half-transparent fill and showed
+// through it, so the stands turned into dark shadows instead of outlined ones.
+// Built once per texture from the same PNG (single channel = alpha).
+static int	SilhouetteRim(const char * res)
+{
+	static std::map<std::string, int> cache;
+	std::map<std::string, int>::iterator i = cache.find(res);
+	if (i != cache.end()) return i->second;
+	int & out = cache[res];
+	out = 0;
+
+	ImageInfo im;
+	if (GUI_GetImageResource(res, &im) != 0) return 0;
+	if (im.channels != 1) { DestroyBitmap(&im); return 0; }
+	const int W = (int) im.width, H = (int) im.height, row = W + (int) im.pad;
+	const int r = W >= 256 ? 4 : 2;					// ~1.5% of the image either way
+	std::vector<unsigned char> ring((size_t) row * H, 0);
+	for (int y = 0; y < H; ++y)
+		for (int x = 0; x < W; ++x)
+		{
+			int m = 0;
+			for (int dy = -r; dy <= r; ++dy)
+				for (int dx = -r; dx <= r; ++dx)
+				{
+					if (dx * dx + dy * dy > r * r) continue;
+					const int xx = x + dx, yy = y + dy;
+					if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
+					const int v = im.data[yy * row + xx];
+					if (v > m) m = v;
+				}
+			const int a = im.data[y * row + x];
+			ring[y * row + x] = (unsigned char) (m > a ? m - a : 0);
+		}
+	ImageInfo rim = im;
+	rim.data = &ring[0];
+	GLuint tex = 0;
+	glGenTextures(1, &tex);
+	int tw, th; float ts, tt;
+	if (LoadTextureFromImage(rim, tex, tex_Linear | tex_Mipmap, &tw, &th, &ts, &tt)) out = (int) tex;
+	DestroyBitmap(&im);
+	return out;
+}
+
 void WED_ATCLayer_DrawAircraft(WED_RampPosition * pos, GUI_GraphState * g, WED_MapZoomerNew * z)
 {
-		int id = 0;
-
+		const char * res = NULL;
 		switch(pos->GetWidth()) {
-		case width_A:	id = GUI_GetTextureResource("ClassA.png",tex_Linear|tex_Mipmap,NULL);	break;
-		case width_B:	id = GUI_GetTextureResource("ClassB.png",tex_Linear|tex_Mipmap,NULL);	break;
-		case width_C:	id = GUI_GetTextureResource("ClassC.png",tex_Linear|tex_Mipmap,NULL);	break;
-		case width_D:	id = GUI_GetTextureResource("ClassD.png",tex_Linear|tex_Mipmap,NULL);	break;
-		case width_E:	id = GUI_GetTextureResource("ClassE.png",tex_Linear|tex_Mipmap,NULL);	break;
-		case width_F:	id = GUI_GetTextureResource("ClassF.png",tex_Linear|tex_Mipmap,NULL);	break;
+		case width_A:	res = "ClassA.png";	break;
+		case width_B:	res = "ClassB.png";	break;
+		case width_C:	res = "ClassC.png";	break;
+		case width_D:	res = "ClassD.png";	break;
+		case width_E:	res = "ClassE.png";	break;
+		case width_F:	res = "ClassF.png";	break;
 		}
+		const int id = res ? GUI_GetTextureResource(res,tex_Linear|tex_Mipmap,NULL) : 0;
 
 		if (id)
 		{
-			g->BindTex(id, 0);
-			g->SetTexUnits(1);
-
 			Point2 tips[4];
 			pos->GetTips(tips);
 			Point2	c[4];
@@ -227,27 +273,27 @@ void WED_ATCLayer_DrawAircraft(WED_RampPosition * pos, GUI_GraphState * g, WED_M
 
 			z->LLToPixelv(c,c,4);
 
-			// A 40% dark rim first (Eric, 2026-10-01): the silhouette is drawn in
-			// its callout's colour at a low alpha, and teal or pink on dark
-			// apron simply vanished. The same texture in black, nudged a pixel
-			// and a half each way, outlines the shape whatever it sits on.
-			float fill[4];
-			glGetFloatv(GL_CURRENT_COLOR, fill);
-			const float d = 1.5f;
-			const float off[4][2] = { { d, 0 }, { -d, 0 }, { 0, d }, { 0, -d } };
-			glColor4f(0, 0, 0, 0.2f);		// at the rim one or two of the four passes overlap: ~20-40%
-			glBegin(GL_QUADS);
-			for (int k = 0; k < 4; ++k)
+			// a 40% dark rim around the shape, so a tint that matches the ground
+			// still has an edge - outside the shape only, see SilhouetteRim
+			const int rim = SilhouetteRim(res);
+			if (rim)
 			{
-				const Vector2 o(off[k][0], off[k][1]);
-				glTexCoord2f(0,0);	glVertex2(c[0] + o);
-				glTexCoord2f(0,1);	glVertex2(c[1] + o);
-				glTexCoord2f(1,1);	glVertex2(c[2] + o);
-				glTexCoord2f(1,0);	glVertex2(c[3] + o);
+				float fill[4];
+				glGetFloatv(GL_CURRENT_COLOR, fill);
+				g->BindTex(rim, 0);
+				g->SetTexUnits(1);
+				glColor4f(0, 0, 0, 0.4f);
+				glBegin(GL_QUADS);
+				glTexCoord2f(0,0);	glVertex2(c[0]);
+				glTexCoord2f(0,1);	glVertex2(c[1]);
+				glTexCoord2f(1,1);	glVertex2(c[2]);
+				glTexCoord2f(1,0);	glVertex2(c[3]);
+				glEnd();
+				glColor4fv(fill);
 			}
-			glEnd();
-			glColor4fv(fill);
 
+			g->BindTex(id, 0);
+			g->SetTexUnits(1);
 			glBegin(GL_QUADS);
 			glTexCoord2f(0,0);	glVertex2(c[0]);
 			glTexCoord2f(0,1);	glVertex2(c[1]);
