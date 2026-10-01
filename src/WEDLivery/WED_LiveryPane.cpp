@@ -872,7 +872,7 @@ string	WED_LiveryPane::EquipmentSuggestion(void) const
 						  : g[i].second == atc_Helicopters ? "Helicopters"
 						  : g[i].second == atc_Fighters    ? "Fighters" : "?";
 		char buf[48];
-		snprintf(buf, sizeof(buf), "%s %s +%d", i ? " Â·" : "", name, -g[i].first);
+		snprintf(buf, sizeof(buf), "%s %s +%d", i ? "," : "", name, -g[i].first);
 		s += buf;
 	}
 	return s;
@@ -914,7 +914,7 @@ string	WED_LiveryPane::EmptyListReason(int ramp_op) const
 	}
 	s += ".";
 	const string try_eq = EquipmentSuggestion();
-	if (!try_eq.empty()) s += "  " + try_eq;
+	if (!try_eq.empty()) s += "\n" + try_eq;
 	return s;
 }
 

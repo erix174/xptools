@@ -2812,8 +2812,18 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 				// cards themselves start, so this text used to be painted on top of
 				// card one.
 				float msg_y = top + mScrollOffset - line_h;
-				string msg = ElideToWidth(font_UI_Basic, why, (float) b[2] - pad - (b[0] + pad));
-				GUI_FontDraw(state, font_UI_Basic, row_col, b[0] + pad, msg_y, msg.c_str());
+				// one line each: the reason, then what to try (EmptyListReason splits them)
+				size_t from = 0;
+				while (from <= why.size())
+				{
+					size_t nl = why.find('\n', from);
+					const string one = why.substr(from, nl == string::npos ? string::npos : nl - from);
+					string msg = ElideToWidth(font_UI_Basic, one, (float) b[2] - pad - (b[0] + pad));
+					GUI_FontDraw(state, font_UI_Basic, row_col, b[0] + pad, msg_y, msg.c_str());
+					msg_y -= line_h * 1.2f;
+					if (nl == string::npos) break;
+					from = nl + 1;
+				}
 			}
 
 			// Thin scrollbar affordance, drawn only once there's actually more to see
