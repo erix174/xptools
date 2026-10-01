@@ -519,6 +519,11 @@ void	WED_ModerationLayer::Group(vector<Callout> & cs, vector<Callout> & out) con
 		if (v.empty()) order.push_back(cs[i].e.signature);
 		v.push_back(i);
 	}
+	// Which names are used by stands of more than one setup: a single card whose
+	// name is one of them says so, since its namesakes are on cards of their own.
+	std::map<string, std::set<string> > name_sigs;
+	for (size_t i = 0; i < cs.size(); ++i)
+		if (cs[i].on_screen) name_sigs[cs[i].e.ramp_name].insert(cs[i].e.signature);
 	for (size_t o = 0; o < order.size(); ++o)
 	{
 		vector<size_t> & m = by_sig[order[o]];
@@ -541,8 +546,13 @@ void	WED_ModerationLayer::Group(vector<Callout> & cs, vector<Callout> & out) con
 		}
 		if (m.size() > 1)
 		{
-			char buf[32];
-			snprintf(buf, sizeof(buf), same_name ? " x%d" : " +%d", same_name ? (int) m.size() : (int) m.size() - 1);
+			// Always the TOTAL, and in words which kind of group it is (Eric,
+			// 2026-10-01): "x2" counted every stand and "+44" only the others, so
+			// two numbers side by side meant different things. A group is one
+			// setup by construction, so only the names can differ.
+			char buf[64];
+			snprintf(buf, sizeof(buf), " - %d stands %s", (int) m.size(),
+					 same_name ? "(Identical)" : "(Same specs, various names)");
 			c.label = c.e.ramp_name + buf;
 
 			// Say it in words too, and name them when the names differ.
@@ -559,6 +569,10 @@ void	WED_ModerationLayer::Group(vector<Callout> & cs, vector<Callout> & out) con
 			c.diff.insert(c.diff.begin(), line);
 			c.diff_kind.insert(c.diff_kind.begin(), 3);
 		}
+		// A card of its own whose name other stands share with another setup.
+		// (Different names AND setups are never grouped, so there is no "various" case.)
+		if (m.size() == 1 && name_sigs[c.e.ramp_name].size() > 1)
+			c.label += " (Various specs, same name)";
 		out.push_back(c);
 	}
 }
@@ -892,7 +906,7 @@ void	WED_ModerationLayer::DrawChips(GUI_GraphState * g, vector<Callout> & cs)
 			order.push_back(i);
 			chip_w = Max(chip_w, TextW(cs[i].e.icao) + TextW(cs[i].label) + lh * 1.6f + 110);
 		}
-	chip_w = Min(chip_w, 340.0f);
+	chip_w = Min(chip_w, 460.0f);	// room for "- 45 stands (Same specs, various names)"
 
 
 	// The column hides whatever it sits on, so it goes on the side where it
