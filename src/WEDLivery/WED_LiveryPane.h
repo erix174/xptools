@@ -161,6 +161,10 @@ private:
 	// multi-value numeric control anywhere to reuse.
 	bool				SelectionWeights(int out_w[6]) const;	// false if none, or if the selection disagrees
 	bool				SelectionHasWeights(void) const;
+	// Every selected stand is a legacy GA or military one: the tab shows it as it
+	// will be after the 12.5 export (equal weights from A to the letter), not the
+	// step-down an older X-Plane still uses for it (Eric, 2026-09-30).
+	bool				SelectionLegacyEqualOnExport(void) const;
 	bool				SelectionAllWeights(void) const;	// every selected stand has weights in use
 	// The weight bars show only when the selection has weights AND the author has not asked for Simple Mode,
 	// which is a view of the same data as a size range - not a way back to the legacy format.

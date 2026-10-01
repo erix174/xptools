@@ -1281,8 +1281,11 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		int minIdx = 0, maxIdx = 5;
 		SliderRange(minIdx, maxIdx);
 		const bool legacy = !SelectionHasWeights();
+		const bool equal_on_export = legacy && SelectionLegacyEqualOnExport();
 		int legacy_w[6];
-		if (legacy)
+		if (equal_on_export)
+			for (int k = 0; k < 6; ++k) legacy_w[k] = k <= maxIdx ? 10 : 0;
+		else if (legacy)
 			WED_LegacyStepDownWeights(maxIdx, legacy_w);
 		else if (!SelectionWeights(legacy_w))
 			for (int k = 0; k < 6; ++k) legacy_w[k] = 0;
@@ -1314,7 +1317,8 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		// kSliderButtonClear lower so Set Weightings, right-aligned on the title
 		// row, does not cover the E and F letters.
 		GUI_FontDraw(state, font_UI_Basic, header_col2, b[0] + pad, slider_top - line_h * 0.9f,
-					 legacy ? "Size (legacy step-down) - move a ball to update" : "Size range (spawn weights)");
+					 equal_on_export ? "Size (legacy - equal weights on export) - move a ball to update"
+					 : legacy ? "Size (legacy step-down) - move a ball to update" : "Size range (spawn weights)");
 
 		for (int i = 0; i < 6; ++i)
 		{
@@ -1664,6 +1668,14 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 					snprintf(detail, sizeof(detail),
 						"No operator is listed, so any of the %d military liveries at size %s that may park here can appear.",
 						mCoverage.pool_models, range);
+				}
+				// What the tab shows is the 12.5 export's equal weights; say what an
+				// older X-Plane does with the stand until it is exported.
+				if (SelectionLegacyEqualOnExport())
+				{
+					const size_t n = strlen(detail);
+					snprintf(detail + n, sizeof(detail) - n,
+						" Shown as exported for 12.5 (equal per size); X-Plane 12.4 and older park 75%% at the letter.");
 				}
 			}
 			else if (mCoverage.airlines_listed == 0)

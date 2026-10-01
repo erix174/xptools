@@ -714,8 +714,16 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 		if (pool_hits[i].home) ++home_at[pool_hits[i].cls];
 	}
 	int  cw[6];
-	const bool weighted = ramp->GetClassWeights(cw);
-	if (!weighted) WED_LegacyStepDownWeights(WidthEnumToIndex(ramp->GetWidth()), cw);
+	bool weighted = ramp->GetClassWeights(cw);
+	if (!weighted && (ramp_op == ramp_operation_GeneralAviation || ramp_op == ramp_operation_Military))
+	{
+		// shown as the 12.5 export will write it: equal from A to the letter, and
+		// like any weight a share with nothing to park stays empty
+		const int top = WidthEnumToIndex(ramp->GetWidth());
+		for (int k = 0; k < 6; ++k) cw[k] = k <= top ? 10 : 0;
+		weighted = true;
+	}
+	else if (!weighted) WED_LegacyStepDownWeights(WidthEnumToIndex(ramp->GetWidth()), cw);
 	double total = 0, p_class[6] = { 0, 0, 0, 0, 0, 0 };
 	for (int k = 0; k < 6; ++k) total += cw[k];
 	if (total <= 0) return;
@@ -850,6 +858,20 @@ const WED_LiveryPane::AirlineCard *	WED_LiveryPane::CardFor(const string & icao_
 // ---------------------------------------------------------------------------------------------
 // spawn weight bars  (apt.dat row 1313)
 // ---------------------------------------------------------------------------------------------
+
+bool	WED_LiveryPane::SelectionLegacyEqualOnExport(void) const
+{
+	if (mSelectedRamps.empty()) return false;
+	int w[6];
+	for (size_t i = 0; i < mSelectedRamps.size(); ++i)
+	{
+		WED_RampPosition * r = mSelectedRamps[i];
+		const int op = r->GetRampOperationType();
+		if (r->GetClassWeights(w)) return false;
+		if (op != ramp_operation_GeneralAviation && op != ramp_operation_Military) return false;
+	}
+	return true;
+}
 
 bool	WED_LiveryPane::SelectionHasWeights(void) const
 {
