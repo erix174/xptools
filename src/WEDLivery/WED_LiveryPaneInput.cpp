@@ -199,11 +199,12 @@ void	WED_LiveryPane::SetRampOpFilter(int wed_ramp_op_enum)
 	Refresh();
 }
 
-// Moving either ball is the author setting the stand, so it UPDATES the stand to spawn weights (Eric,
-// 2026-09-29): the step-down within the new range, with the fall-through folded in, written as 1313 and
-// marked as set by hand (1315 M). The lower end now reaches the sim, which a legacy stand never did - its
-// step-down always runs to A. A stand that already had weights is rewritten the same way: dragging the
-// range is an override of whatever distribution it held.
+// The slider is the LEGACY stand's control (a stand with weights shows the bars instead), and dragging it
+// changes only the size letter: the stand stays legacy, nothing is written as 1313, no M mark (Eric,
+// 2026-09-30). It used to convert the stand to weights on the first pixel of a drag (2026-09-29), which
+// swapped the slider for the weight bars under the cursor mid-drag, and turned any touch of a ball into an
+// author-owned 1313 stand the export upgrade would never re-plan. Converting is Set Weightings' job, or the
+// 12.5 export's. The lower end stays at A: a legacy stand's step-down always runs there.
 void	WED_LiveryPane::ApplyDragRange(void)
 {
 	if (mSelectedRamps.empty()) return;
@@ -218,9 +219,14 @@ void	WED_LiveryPane::ApplyDragRange(void)
 	for (size_t i = 0; i < mSelectedRamps.size(); ++i)
 	{
 		WED_RampPosition * r = mSelectedRamps[i];
+		int w[6];
+		if (!r->GetClassWeights(w))
+		{
+			r->SetWidth(IndexToWidthEnum(hi));
+			continue;
+		}
 		r->SetWidthMin(IndexToWidthEnum(lo));
 		r->SetWidth(IndexToWidthEnum(hi));
-		int w[6];
 		WED_LiveryRangeUpdateWeights(r, WED_GetParentAirport(r), lo, hi, w);
 		r->SetClassWeights(w);
 		r->MarkLiverySet();
@@ -623,6 +629,14 @@ int		WED_LiveryPane::MouseDown(int x, int y, int button)
 		if (idx < 0) idx = 0;
 		if (idx > 5) idx = 5;
 		bool grab_min = (handle == 2) || (handle == 0 && (idx < lo || (idx < hi && idx - lo < hi - idx)));
+		// Legacy: only the letter moves. The orange ball is pinned to A, and a press
+		// on the track moves the letter there.
+		if (!SelectionHasWeights())
+		{
+			if (handle == 2) { Refresh(); return 1; }
+			grab_min = false;
+			lo = 0;
+		}
 
 		mDragAnchorIndex  = grab_min ? hi : lo;
 		mDragCurrentIndex = grab_min ? lo : hi;

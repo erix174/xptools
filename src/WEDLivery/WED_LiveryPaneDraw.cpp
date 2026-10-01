@@ -1518,8 +1518,8 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		// kSliderButtonClear lower so Set Weightings, right-aligned on the title
 		// row, does not cover the E and F letters.
 		GUI_FontDraw(state, font_UI_Basic, header_col2, b[0] + pad, slider_top - line_h * 0.9f,
-					 equal_on_export ? "Size (legacy - equal weights on export) - move a ball to update"
-					 : legacy ? "Size (legacy step-down) - move a ball to update" : "Size range (spawn weights)");
+					 equal_on_export ? "Size (legacy - equal weights on export) - drag the letter"
+					 : legacy ? "Size (legacy step-down) - drag the letter; Set Weightings to narrow" : "Size range (spawn weights)");
 
 		for (int i = 0; i < 6; ++i)
 		{
