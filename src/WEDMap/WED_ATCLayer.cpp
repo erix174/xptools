@@ -227,6 +227,27 @@ void WED_ATCLayer_DrawAircraft(WED_RampPosition * pos, GUI_GraphState * g, WED_M
 
 			z->LLToPixelv(c,c,4);
 
+			// A 40% dark rim first (Eric, 2026-10-01): the silhouette is drawn in
+			// its callout's colour at a low alpha, and teal or pink on dark
+			// apron simply vanished. The same texture in black, nudged a pixel
+			// and a half each way, outlines the shape whatever it sits on.
+			float fill[4];
+			glGetFloatv(GL_CURRENT_COLOR, fill);
+			const float d = 1.5f;
+			const float off[4][2] = { { d, 0 }, { -d, 0 }, { 0, d }, { 0, -d } };
+			glColor4f(0, 0, 0, 0.2f);		// at the rim one or two of the four passes overlap: ~20-40%
+			glBegin(GL_QUADS);
+			for (int k = 0; k < 4; ++k)
+			{
+				const Vector2 o(off[k][0], off[k][1]);
+				glTexCoord2f(0,0);	glVertex2(c[0] + o);
+				glTexCoord2f(0,1);	glVertex2(c[1] + o);
+				glTexCoord2f(1,1);	glVertex2(c[2] + o);
+				glTexCoord2f(1,0);	glVertex2(c[3] + o);
+			}
+			glEnd();
+			glColor4fv(fill);
+
 			glBegin(GL_QUADS);
 			glTexCoord2f(0,0);	glVertex2(c[0]);
 			glTexCoord2f(0,1);	glVertex2(c[1]);
