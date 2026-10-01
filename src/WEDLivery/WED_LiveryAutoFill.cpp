@@ -313,6 +313,15 @@ void	WED_LiveryExportUpgrade(WED_Airport * apt, WED_LegacyUpgradeStats & st)
 			WED_LiveryLegacyUpdateWeights(r, apt, w);
 			r->SetClassWeights(w);
 		}
+		// A GA or military stand the automation converted before carries the old
+		// step-down (75% on its letter); it moves to equal weights from A to its
+		// letter like a fresh conversion (Eric, 2026-09-30). An author's weights
+		// (1315 M) never reach here.
+		else if (owned && (op == ramp_operation_GeneralAviation || op == ramp_operation_Military))
+		{
+			WED_LiveryLegacyUpdateWeights(r, apt, w);
+			r->SetClassWeights(w);
+		}
 
 		// D2: only a stand that parks something afterwards is upgraded. Anything
 		// else goes back exactly as it was - a legacy stand keeps today's
