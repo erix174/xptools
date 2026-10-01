@@ -556,6 +556,7 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 	mCardsByType = (ramp_op == ramp_operation_GeneralAviation) || is_mil;
 	const set<string> listed_lc = ParseCodes(ramp->GetAirlines());
 	mCardsRefusedEquip = mCardsRefusedHome = mCardsRefusedRange = 0;
+	mEquipGain.clear();
 
 	// Every livery the pool draw can land on, for the odds on the preview cards:
 	// GA always (R28), military while no operator is listed (§4.1). Military
@@ -623,7 +624,13 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 				if (a != allow_Yes)
 				{
 					if (a == allow_OutOfRange) { mRangeHidden[code_uc].push_back(e->type); ++mCardsRefusedRange; }
-					if (a == allow_Equipment)       ++mCardsRefusedEquip;
+					if (a == allow_Equipment)
+					{
+						++mCardsRefusedEquip;
+						// would it park with its equipment added? (an empty set passes any)
+						if (LiveryAllowedHere(*e, here, set<int>()) == allow_Yes)
+							++mEquipGain[WED_LiveryEquipment(*e)];
+					}
 					if (a == allow_ForeignMilitary) ++mCardsRefusedHome;
 					continue;
 				}
@@ -846,6 +853,31 @@ bool	WED_LiveryPane::PoolClassIsOpen(int k) const
 	return mPoolClassP[k] >= 0.05 || mPoolClassP[k] == 0;
 }
 
+// "Try another Equipment Type? Fighters +7 · Turboprops +5", most first. Counts
+// liveries, at this stand's sizes, that only the equipment type turns away.
+string	WED_LiveryPane::EquipmentSuggestion(void) const
+{
+	vector<pair<int, int> > g;
+	for (map<int, int>::const_iterator i = mEquipGain.begin(); i != mEquipGain.end(); ++i)
+		if (i->first >= 0 && i->second > 0) g.push_back(make_pair(-i->second, i->first));
+	if (g.empty()) return string();
+	std::sort(g.begin(), g.end());
+	string s = "Try another Equipment Type?";
+	for (size_t i = 0; i < g.size(); ++i)
+	{
+		const char * name = g[i].second == atc_Heavies     ? "Heavy Jets"
+						  : g[i].second == atc_Jets        ? "Jets"
+						  : g[i].second == atc_Turbos      ? "Turboprops"
+						  : g[i].second == atc_Props       ? "Props"
+						  : g[i].second == atc_Helicopters ? "Helicopters"
+						  : g[i].second == atc_Fighters    ? "Fighters" : "?";
+		char buf[48];
+		snprintf(buf, sizeof(buf), "%s %s +%d", i ? " Â·" : "", name, -g[i].first);
+		s += buf;
+	}
+	return s;
+}
+
 // Why a stand with a real operation type has no card at all. Names the rule that
 // turned the liveries away, and what the author can change about it; "tick an
 // operator" is never the answer here, since there is none to tick.
@@ -880,7 +912,9 @@ string	WED_LiveryPane::EmptyListReason(int ramp_op) const
 		snprintf(buf, sizeof(buf), "%s%d are out of their operator's range", sep, mCardsRefusedRange);
 		s += buf;
 	}
-	s += ".";			// one line under the toolbar: what to change is in the readout above
+	s += ".";
+	const string try_eq = EquipmentSuggestion();
+	if (!try_eq.empty()) s += "  " + try_eq;
 	return s;
 }
 

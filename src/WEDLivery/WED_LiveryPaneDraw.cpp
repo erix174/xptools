@@ -1824,7 +1824,10 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 						snprintf(head,   sizeof(head),   "This stand parks nothing - no military aircraft at size %s may park here", range);
 						// The actual reasons, and what the author can change. It used
 						// to say "list an operator" - with no operator there to list.
-						if (mCoverage.pool_refused_equip > 0 && mCoverage.pool_refused_home > 0)
+						const string try_eq = EquipmentSuggestion();
+						if (!try_eq.empty())
+							snprintf(detail, sizeof(detail), "%s (Selection tab)", try_eq.c_str());
+						else if (mCoverage.pool_refused_equip > 0 && mCoverage.pool_refused_home > 0)
 							snprintf(detail, sizeof(detail),
 								"%d military liveries at this size need another Equipment Type, %d park only in their own country. Add equipment types in the Selection tab, or change the size.",
 								mCoverage.pool_refused_equip, mCoverage.pool_refused_home);

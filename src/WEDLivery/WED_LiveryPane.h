@@ -324,6 +324,11 @@ private:
 	int									mCardsRefusedHome;
 	int									mCardsRefusedRange;
 	std::string							EmptyListReason(int ramp_op) const;
+	// Liveries the equipment type alone keeps out, by the equipment that would
+	// let each in (atc_Heavies ... atc_Fighters) - only ones every other rule
+	// already allows. Feeds "Try another Equipment Type?" (Eric, 2026-09-30).
+	std::map<int, int>					mEquipGain;
+	std::string							EquipmentSuggestion(void) const;
 	void								GatherPoolPreview(void);
 	// The pool table. Class odds from RebuildAirlineCards; which
 	// classes the user opened or shut (default: open when >= 5%); which types
