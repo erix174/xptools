@@ -156,8 +156,10 @@ refinement was really being used for was working around retired aircraft, one
 stand at a time, worldwide.
 
 - **"Only this operator" needs no format support.** A one-element airline list on
-  `1301` has always meant it. It becomes a UI assertion in WED — a lock on the
-  card, greying out the rest — and costs a reader nothing.
+  `1301` has always meant it. In WED the lock on a card (or on a pool row)
+  writes exactly that: the stand's list cut to the one code, the previous list
+  kept in `earth.wed.xml` only, so unlocking restores it (2026-09-30; until then
+  the lock only greyed out the other cards). It costs a reader nothing.
 - **`Obsolete` is new, and is where refinement's real work moves to** (R25,
   §6.6). A marked index row never enters the spawn pool while its `.obj` stays on
   disk for hard-path scenery. This is also what §4.4 needed and could not do: the
