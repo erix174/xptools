@@ -941,6 +941,41 @@ void	WED_LiveryPane::ToggleLock(const string & code_lc)
 	Refresh();
 }
 
+string	WED_LiveryPane::SizeSuggestion(void) const
+{
+	if (mSelectedRamps.size() != 1 || !mLiveryIndex.IsLoaded()) return string();
+	WED_RampPosition * r = mSelectedRamps[0];
+	const int op = r->GetRampOperationType();
+	int top = WidthEnumToIndex(r->GetWidth());
+	int w[6];
+	if (r->GetClassWeights(w)) for (int k = 0; k < 6; ++k) if (w[k] > 0) top = k;
+	set<string> codes = ParseCodes(r->GetAirlines());
+	if (codes.empty()) return string();
+	Point2 here;  r->GetLocation(gis_Geo, here);
+	set<int> equipment;  r->GetEquipment(equipment);
+	for (int k = top + 1; k < 6; ++k)
+	{
+		string who;
+		for (set<string>::const_iterator c = codes.begin(); c != codes.end(); ++c)
+		{
+			string uc = *c;
+			for (size_t i = 0; i < uc.size(); ++i) uc[i] = (char) toupper((unsigned char) uc[i]);
+			if (!OperatorMatchesRampOp(uc, op)) continue;
+			vector<const WED_LiveryIndexEntry *> hits;
+			mLiveryIndex.GetForAirlineAndClass(uc, (char) ('A' + k), hits);
+			for (size_t h = 0; h < hits.size(); ++h)
+				if (LiveryAllowedHere(*hits[h], here, equipment) == allow_Yes) { who += (who.empty() ? "" : ", ") + uc; break; }
+		}
+		if (!who.empty())
+		{
+			char buf[32];
+			snprintf(buf, sizeof(buf), "Try a larger size? %c: ", 'A' + k);
+			return buf + who + " can park there.";
+		}
+	}
+	return string();
+}
+
 // Why a stand with a real operation type has no card at all. Names the rule that
 // turned the liveries away, and what the author can change about it; "tick an
 // operator" is never the answer here, since there is none to tick.

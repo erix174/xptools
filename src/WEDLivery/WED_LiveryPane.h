@@ -330,6 +330,9 @@ private:
 	// already allows. Feeds "Try another Equipment Type?" (Eric, 2026-09-30).
 	std::map<int, int>					mEquipGain;
 	std::string							EquipmentSuggestion(void) const;
+	// "Try a larger size? C: AAL, DAL, UAL" - the first size above the stand's at
+	// which listed operators have an aircraft that may park here (Eric, KBTV).
+	std::string							SizeSuggestion(void) const;
 	void								GatherPoolPreview(void);
 	// The pool table. Class odds from RebuildAirlineCards; which
 	// classes the user opened or shut (default: open when >= 5%); which types

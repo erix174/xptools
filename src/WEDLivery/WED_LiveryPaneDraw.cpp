@@ -447,10 +447,15 @@ void	WED_LiveryPane::DrawPoolRow(GUI_GraphState * state, int b[4], const RowSlot
 			nothing -= mPoolHomeShare;
 			state->SetState(0,0,0,0,1,0,0);
 			glColor4f(0.55f, 0.55f, 0.58f, 0.85f); PoolQuad(x, by0, x + w - 1, by1);
+			// The airport country's own forces - the cards under "Same Country"
+			// above, which can be ticked. Named by country: "home forces" read as
+			// jargon (Eric, 2026-10-01).
 			PoolPct(pc, sizeof(pc), mPoolHomeShare);
-			string t = string("home forces ") + pc;
+			const string cty = mAirportCountry.empty() ? string("Same Country") : mAirportCountry;
+			string t = cty + " forces (above) " + pc;
 			float tw = GUI_MeasureRange(font_UI_Basic, t.c_str(), t.c_str() + t.size());
-			if (tw + 6 > w) { t = "home"; tw = GUI_MeasureRange(font_UI_Basic, t.c_str(), t.c_str() + t.size()); }
+			if (tw + 6 > w) { t = cty + " " + pc; tw = GUI_MeasureRange(font_UI_Basic, t.c_str(), t.c_str() + t.size()); }
+			if (tw + 6 > w) { t = cty; tw = GUI_MeasureRange(font_UI_Basic, t.c_str(), t.c_str() + t.size()); }
 			float black[4] = { 0.05f, 0.05f, 0.07f, 1.0f };
 			if (tw + 6 <= w) GUI_FontDraw(state, font_UI_Basic, black, x + 3, (by0 + by1) * 0.5f - line_h * 0.35f, t.c_str());
 			x += w;
@@ -2052,6 +2057,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 						snprintf(detail, sizeof(detail),
 							"None of the %d listed operators has an aircraft at size %s, though other operators do. Widen the size range, or list one that flies it.",
 							mCoverage.airlines_listed, range);
+						if (!SizeSuggestion().empty()) snprintf(detail, sizeof(detail), "%s", SizeSuggestion().c_str());
 						break;
 					}
 				}
@@ -2072,6 +2078,8 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 				snprintf(detail, sizeof(detail),
 					"Legacy step-down %s: none of the %d listed operators has a model at any of these sizes. List an operator that flies one.",
 					range, mCoverage.airlines_listed);
+				// what WOULD work, when a bigger stand would (KBTV: DAL, UAL and AAL fly nothing at B)
+				if (!SizeSuggestion().empty()) snprintf(detail, sizeof(detail), "%s", SizeSuggestion().c_str());
 			}
 			else
 			{
