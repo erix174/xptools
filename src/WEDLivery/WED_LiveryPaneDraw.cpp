@@ -620,6 +620,17 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 		snprintf(m, sizeof(m), "  (+%d)", (int) card.abs_paths.size() - 1);
 		tail_short = m;
 	}
+	// A pool card's odds ride on the suffix, which is what survives a narrow
+	// card - the one number that says how often this type actually parks here.
+	if (card.prob >= 0.0f)
+	{
+		char pc[24];
+		const float pp = card.prob * 100.0f;
+		if (pp >= 9.5f)      snprintf(pc, sizeof(pc), "  %.0f%%", pp);
+		else if (pp > 0.0f)  snprintf(pc, sizeof(pc), "  %.1f%%", pp);
+		else                 snprintf(pc, sizeof(pc), "  0%%");
+		tail += pc;  tail_short += pc;
+	}
 
 	// THE SUFFIX ALWAYS SURVIVES. It is the only thing on the face that says the
 	// card opens; a user who cannot see "(+8)" has no way to know eight more

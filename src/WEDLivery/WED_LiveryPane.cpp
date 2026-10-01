@@ -549,6 +549,14 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 	const set<string> listed_lc = ParseCodes(ramp->GetAirlines());
 	mCardsRefusedEquip = mCardsRefusedHome = mCardsRefusedRange = 0;
 
+	// Every livery the pool draw can land on, for the odds on the preview cards:
+	// GA always (R28), military while no operator is listed (§4.1). Military
+	// home forces are tickable cards but still part of an unlisted stand's pool,
+	// so they count in the shares even though their own cards show none.
+	const bool pool_draw = ramp_op == ramp_operation_GeneralAviation || (is_mil && listed_lc.empty());
+	struct PoolHit { int cls; bool home; string card; int label; };
+	vector<PoolHit> pool_hits;
+
 	for (size_t i = 0; i < codes.size(); ++i)
 	{
 		string code_uc = codes[i];
@@ -634,7 +642,17 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 					if (code_uc != "XPGA" && code_uc != "XPMI")
 						lab += "  " + code_uc;
 					tc.labels.push_back(lab);
+					if (pool_draw)
+					{
+						PoolHit ph = { k, !mAirportCountry.empty() && e->reg_country == mAirportCountry, tkey, (int) tc.labels.size() - 1 };
+						pool_hits.push_back(ph);
+					}
 					continue;
+				}
+				if (pool_draw)
+				{
+					PoolHit ph = { k, false, string(), -1 };
+					pool_hits.push_back(ph);
 				}
 
 				card.abs_paths.push_back(abs_path);
@@ -678,6 +696,55 @@ void	WED_LiveryPane::RebuildAirlineCards(void)
 		for (size_t ci = 0; ci < key.size(); ++ci)
 			key[ci] = (char) tolower((unsigned char) key[ci]);
 		mAirlineCards[key] = card;
+	}
+
+	if (pool_hits.empty()) return;
+
+	// THE ODDS, the way the sim draws them. Class first: the weights, or for a
+	// legacy stand today's step-down, where a class with nothing to park passes
+	// its share down to the next class that has something (a weight does not -
+	// its share simply parks nothing, R18). Then the livery within the class:
+	// GA takes one registered in the airport's country 70% of the time when
+	// there is one, any GA livery of the class otherwise (R28); military is a
+	// uniform pick (§4.1). Card odds are the sum over its liveries.
+	int n_at[6] = { 0, 0, 0, 0, 0, 0 }, home_at[6] = { 0, 0, 0, 0, 0, 0 };
+	for (size_t i = 0; i < pool_hits.size(); ++i)
+	{
+		++n_at[pool_hits[i].cls];
+		if (pool_hits[i].home) ++home_at[pool_hits[i].cls];
+	}
+	int  cw[6];
+	const bool weighted = ramp->GetClassWeights(cw);
+	if (!weighted) WED_LegacyStepDownWeights(WidthEnumToIndex(ramp->GetWidth()), cw);
+	double total = 0, p_class[6] = { 0, 0, 0, 0, 0, 0 };
+	for (int k = 0; k < 6; ++k) total += cw[k];
+	if (total <= 0) return;
+	for (int k = 0; k < 6; ++k)
+	{
+		int j = k;
+		if (!weighted) while (j >= 0 && n_at[j] == 0) --j;
+		if (j >= 0 && n_at[j] > 0) p_class[j] += cw[k] / total;
+	}
+
+	const bool ga = ramp_op == ramp_operation_GeneralAviation;
+	for (map<string, AirlineCard>::iterator c = mAirlineCards.begin(); c != mAirlineCards.end(); ++c)
+		if (c->second.preview) c->second.prob = 0.0f;
+	for (size_t i = 0; i < pool_hits.size(); ++i)
+	{
+		const PoolHit & h = pool_hits[i];
+		if (h.card.empty()) continue;
+		const int k = h.cls;
+		double p_in = 1.0 / n_at[k];
+		if (ga && home_at[k] > 0)
+			p_in = (h.home ? 0.7 / home_at[k] : 0.0) + 0.3 / n_at[k];
+		const double p = p_class[k] * p_in;
+		AirlineCard & card = mAirlineCards[h.card];
+		card.prob += (float) p;
+		char pct[24];
+		if (p >= 0.095)     snprintf(pct, sizeof(pct), "  %.0f%%", p * 100.0);
+		else if (p > 0.0)   snprintf(pct, sizeof(pct), "  %.1f%%", p * 100.0);
+		else                snprintf(pct, sizeof(pct), "  0%%");
+		if (h.label >= 0 && h.label < (int) card.labels.size()) card.labels[h.label] += pct;
 	}
 }
 

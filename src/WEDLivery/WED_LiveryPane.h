@@ -297,6 +297,10 @@ private:
 		// size (GA always, military with no operator listed). Shown so the author
 		// sees what may park, but it is not an operator - nothing to tick or hold.
 		bool						preview = false;
+		// How often X-Plane parks this type here, 0..1, when the stand draws from
+		// the pool; -1 when it does not (an operator card, or a military stand with
+		// an operator listed). Each label carries its own livery's share too.
+		float						prob = -1.0f;
 	};
 	std::map<std::string, AirlineCard>	mAirlineCards;		// key: LOWERCASE icao, as rows carry it
 	// Liveries the range rule removed from a card at this stand, by UPPERCASE
