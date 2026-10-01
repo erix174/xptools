@@ -424,13 +424,19 @@ void	WED_LiveryPane::EnsureRows(void)
 	DropCardless(mRows, have_cards);
 	PruneEmptySections(mRows);
 	PinSelected(mRows, ParseCodes(mSelectedRamps[0]->GetAirlines()), have_cards);
-	// A GA stand's listed code has no operator card - GA is shown by type - so
-	// "nothing to show at this stand" would be wrong. Say what the list does.
+	// A GA stand has no operator cards - GA is shown by type - so the "Selected"
+	// section would hold only a note, and adding or dropping it on every lock
+	// slid the table under the cursor: the click to undo landed on another row.
+	// The readout says what the stand lists instead (Eric, 2026-09-30).
 	if (mSelectedRamps[0]->GetRampOperationType() == ramp_operation_GeneralAviation)
 		for (size_t i = 0; i < mRows.size(); ++i)
-			if (mRows[i].kind == wed_Row_Note && mRows[i].header_text.compare(0, 13, "Also listed, ") == 0)
-				mRows[i].header_text = "Listed: " + mRows[i].header_text.substr(mRows[i].header_text.find(':') + 2) +
-									   " - X-Plane 12.5 draws GA by size and does not read the list yet (R28)";
+			if (mRows[i].kind == wed_Row_Header && mRows[i].header_text == "Selected")
+			{
+				size_t j = i + 1;
+				while (j < mRows.size() && mRows[j].kind != wed_Row_Header) ++j;
+				mRows.erase(mRows.begin() + i, mRows.begin() + j);
+				break;
+			}
 	GatherPoolPreview();
 	ApplyCollapse(mRows, mCollapsedSections);
 
@@ -902,12 +908,21 @@ void	WED_LiveryPane::ToggleLock(const string & code_lc)
 	if (mSelectedRamps.size() != 1 || code_lc.empty()) return;
 	WED_RampPosition * r = mSelectedRamps[0];
 	const bool locked = LockedCode() == code_lc;
-	if (locked && r->GetAirlinesBeforeLock().empty()) return;	// nothing to go back to - the tip says so
+	const int  op = r->GetRampOperationType();
+	// A one-code list WED did not make (an imported stand): nothing stored to go
+	// back to. A GA or military stand goes back to an empty list - the pool; an
+	// airline or cargo stand keeps its operator, and the tip says to tick others.
+	const bool pool_stand = op == ramp_operation_GeneralAviation || op == ramp_operation_Military;
+	if (locked && r->GetAirlinesBeforeLock().empty() && !pool_stand) return;
 
 	mArchive->StartCommand(locked ? "Spawn Every Listed Operator" : "Spawn This Operator Only");
 	if (locked)
 	{
-		r->SetAirlines(r->GetAirlinesBeforeLock());
+		// "-" is how an EMPTY list before the lock is kept: an empty property
+		// means "nothing stored", and read that way the lock of a new stand -
+		// which lists nothing - could never be undone (Eric, 2026-09-30).
+		const string before = r->GetAirlinesBeforeLock();
+		r->SetAirlines(before == "-" ? string() : before);
 		r->SetAirlinesBeforeLock(string());
 	}
 	else
@@ -915,7 +930,8 @@ void	WED_LiveryPane::ToggleLock(const string & code_lc)
 		// Keep what the stand listed before - unless it already listed just one
 		// code, which is the lock of another operator: then the list from before
 		// THAT lock is still the one to come back to.
-		if (LockedCode().empty()) r->SetAirlinesBeforeLock(r->GetAirlines());
+		if (LockedCode().empty())
+			r->SetAirlinesBeforeLock(r->GetAirlines().empty() ? string("-") : r->GetAirlines());
 		r->SetAirlines(code_lc);
 	}
 	r->MarkLiverySet();

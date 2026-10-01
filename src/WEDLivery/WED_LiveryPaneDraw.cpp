@@ -352,11 +352,17 @@ string	WED_LiveryPane::PoolLockCode(const WED_LiveryDisplayRow & row) const
 {
 	const AirlineCard * c = CardFor(row.icao);
 	if (!c || c->codes.empty()) return string();
+	// XPGA is not an operator but the generic GA pool itself - locking it would
+	// light up every generic aircraft at once (Eric, 2026-09-30), so it has no badge.
 	if (row.kind == wed_Row_PoolLivery)
-		return (row.hidden_count >= 0 && row.hidden_count < (int) c->codes.size()) ? c->codes[row.hidden_count] : string();
+	{
+		if (row.hidden_count < 0 || row.hidden_count >= (int) c->codes.size()) return string();
+		const string & k = c->codes[row.hidden_count];
+		return (k == "xpga" && k != mLockedAirline) ? string() : k;		// a stand already locked to it can still unlock
+	}
 	if (row.kind != wed_Row_PoolItem) return string();
 	for (size_t i = 1; i < c->codes.size(); ++i) if (c->codes[i] != c->codes[0]) return string();
-	return c->codes[0];
+	return (c->codes[0] == "xpga" && c->codes[0] != mLockedAirline) ? string() : c->codes[0];
 }
 
 // At the row's right edge, past the odds - the same square badge the cards carry.
@@ -501,7 +507,7 @@ void	WED_LiveryPane::DrawPoolRow(GUI_GraphState * state, int b[4], const RowSlot
 		if (row.kind == wed_Row_PoolLivery && row.hidden_count >= 0 && row.hidden_count < (int) c->codes.size())
 			row_dimmed = c->codes[row.hidden_count] != mLockedAirline;
 	}
-	const float right_x1 = lock_code.empty() ? x1 : x1 - kLockSize - 10.0f;	// odds stop short of the badge
+	const float right_x1 = x1 - kLockSize - 10.0f;	// odds stop short of the badge column, badge or not
 	if (!lock_code.empty())
 	{
 		float lr[4];
@@ -531,6 +537,30 @@ void	WED_LiveryPane::DrawPoolRow(GUI_GraphState * state, int b[4], const RowSlot
 				mHoverTipText = "Spawn " + who + " only - the stand lists just this code; click again to undo" +
 								string(ga ? ". X-Plane 12.5 picks GA by size and does not read the list yet (R28)" : "");
 		}
+	}
+	// A TYPE ROW WITH SEVERAL OPERATORS has no one code to lock, so its badge is
+	// drawn hollow: the lock is there, one level down, on each livery row - a click
+	// opens the row. All-generic types (XPGA) have nothing to lock and say so.
+	if (lock_code.empty() && row.kind == wed_Row_PoolItem)
+	{
+		bool any_real = false;
+		for (size_t i = 0; i < c->codes.size(); ++i) if (c->codes[i] != "xpga") any_real = true;
+		float lr[4];
+		PoolLockRect(b, slot, lr);
+		const bool over = (int) (&row - &mRows[0]) == mHoverRow;
+		const bool on_badge = over && mHoverX >= lr[0] - 3 && mHoverX <= lr[2] + 3 && mHoverY >= lr[1] - 3 && mHoverY <= lr[3] + 3;
+		if (any_real)
+		{
+			state->SetState(0,0,0,0,0,0,0);
+			glColor4f(0.72f, 0.72f, 0.76f, on_badge ? 0.95f : 0.55f);
+			glBegin(GL_LINE_LOOP);
+				glVertex2f(lr[0]+0.5f, lr[1]+0.5f);  glVertex2f(lr[2]-0.5f, lr[1]+0.5f);
+				glVertex2f(lr[2]-0.5f, lr[3]-0.5f);  glVertex2f(lr[0]+0.5f, lr[3]-0.5f);
+			glEnd();
+		}
+		if (over)
+			mHoverTipText = any_real ? "Several operators fly this type - open the row to lock one of them"
+									 : "Generic GA aircraft (XPGA) - X-Plane picks these by size; there is no operator to lock";
 	}
 	float dim = row_dimmed ? 0.45f : 1.0f;
 	white[3] = dim; muted[3] = dim;
@@ -1945,6 +1975,15 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 						snprintf(detail, sizeof(detail),
 							"%d GA models fit. X-Plane picks one by size; none is registered in %s. The cards below are a preview.",
 							mCoverage.pool_models, cty.c_str());
+					// What the stand lists - a lock, or codes from an import - said
+					// here rather than in a section above the table (see EnsureRows).
+					if (mSelectedRamps.size() == 1 && !mSelectedRamps[0]->GetAirlines().empty())
+					{
+						string codes = mSelectedRamps[0]->GetAirlines();
+						for (size_t i = 0; i < codes.size(); ++i) codes[i] = (char) toupper((unsigned char) codes[i]);
+						snprintf(detail, sizeof(detail), "%s %s: X-Plane 12.5 picks GA by size and does not read the list yet (R28).",
+								 LockedCode().empty() ? "Lists" : "Locked to", codes.c_str());
+					}
 				}
 				else
 				{

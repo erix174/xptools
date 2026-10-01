@@ -967,8 +967,26 @@ void	WED_LiveryPane::MouseUp(int x, int y, int button)
 		if (!code.empty() && PoolLockRect(b, slots[mTrackRow], lr) &&
 			x >= lr[0] - 3 && x <= lr[2] + 3 && y >= lr[1] - 3 && y <= lr[3] + 3)
 		{
+			// SCROLL ANCHORING, as for a card tick: locking adds the "Selected"
+			// section above the table (unlocking removes it), and the badge just
+			// clicked would slide out from under the cursor - a second click to
+			// undo landed on another row. Keep this row where it was.
+			const WED_LiveryDisplayRow anchor = r;
+			const float anchor_y = slots[mTrackRow].top;
 			mTrackRow = -1;
 			ToggleLock(code);
+			EnsureRows();
+			vector<float> th2;  TrayHeights(mRowIcaos, th2);
+			vector<RowSlot> after;
+			LayoutRows(b, mRowIsCard, th2, after);
+			for (size_t i = 0; i < mRows.size() && i < after.size(); ++i)
+				if (mRows[i].kind == anchor.kind && mRows[i].icao == anchor.icao && mRows[i].hidden_count == anchor.hidden_count)
+				{
+					mScrollOffset += anchor_y - after[i].top;
+					if (mScrollOffset < 0) mScrollOffset = 0;		// Draw() owns the upper clamp
+					break;
+				}
+			Refresh();
 			return;
 		}
 		if (r.kind == wed_Row_PoolLivery) { mTrackRow = -1; Refresh(); return; }
