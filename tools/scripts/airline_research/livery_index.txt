@@ -1,7 +1,7 @@
 I
 1 WED Aviation Database
 # schema 4
-# data 20261005-r4
+# data 20261005-r5
 # source sim_objects branch static_acf_update, commit bd8bb90757
 # assets 500 liveries under apt_aircraft/
 #
@@ -1729,6 +1729,8 @@ OPERATOR	***	RTAF		***	Royal Thai Air Force							***	THA	***	Military	***	0		**
 OPERATOR	***	XPZZ_CRJ2	***	Generic - unpainted CRJ2						***		***	Pax			***	0		***
 OPERATOR	***	RAC_A		***	Icar Air										***	BIH	***	Cargo		***	1		***	LQTZ
 OPERATOR	***	XPC5		***	Global Airlift Solutions						***	FIN	***	GA			***	2		***	EDRZ
+OPERATOR	***	URG_A		***	AirIdea											***	ITA	***	Pax			***	1		***	LIMJ
+OPERATOR	***	URG_B		***	HelloFly										***	MLT	***	Pax			***	1		***	LIRZ LICD
 
 # ---- liveries --------------------------------------------------------------
 # -- Pax -----------------------------------------------------------------------
@@ -1991,7 +1993,7 @@ CRJ2 *** B *** VTE       ***           ***     *** Default    *** 3000  ***     
 D328 *** B *** LPV       *** OELKF     *** AUT *** Obsolete   *** 1850  ***      *** Pax      *** turboprop/D328_LPV/D328_LPV_static.obj
 D328 *** B *** LPV       *** OELKF     *** AUT *** Obsolete   *** 1850  ***      *** Pax      *** turboprop/D328_LPV/Dornier_328_prop_Air_Alps.obj
 DC10 *** D *** XPZZ_DC10 ***           ***     *** Unpainted  *** 9600  ***      *** Pax      *** heavy/DC10_white/DC10_white_static.obj
-H500 *** A *** AIO       ***           ***     *** Default    *** 600   *** HOME *** Military *** helo/H500/H500_US_Army.obj
+H500 *** A *** AIO       ***           ***     *** Universal  *** 600   *** HOME *** Military *** helo/H500/H500_US_Army.obj
 J328 *** B *** RUS       *** DBAGQ     *** GER *** Obsolete   *** 1665  ***      *** Pax      *** jet/J328_RUS/Dornier_328_jet_Cirrus_Airlines.obj
 J328 *** B *** RUS       *** DBAGQ     *** GER *** Obsolete   *** 1665  ***      *** Pax      *** jet/J328_RUS/J328_RUS_static.obj
 J328 *** B *** WLC       *** OELJR     *** AUT *** Obsolete   *** 1665  ***      *** Pax      *** jet/J328_WLC/Dornier_328_jet_Welcome_Air.obj
@@ -2028,7 +2030,7 @@ SF34 *** B *** RAC_A     *** E7NEL     *** BIH *** Default    *** 1700  ***     
 SF34 *** B *** RAR       *** E5SMW     *** COK *** Default    *** 1700  ***      *** Pax      *** turboprop/SF34/Air_Rarotonga.obj
 SF34 *** B *** RXA       ***           ***     *** Default    *** 1700  ***      *** Pax      *** turboprop/SF34/Rex_Airlines.obj
 SF34 *** B *** SCT       *** SELRD     *** SWE *** Default    *** 1700  ***      *** GA       *** turboprop/SF34/Saab.obj
-SF34 *** B *** SVF       ***           ***     *** Default    *** 1700  *** HOME *** Military *** turboprop/SF34/Swedish_Air_Force.obj
+SF34 *** B *** SVF       ***           ***     *** Universal  *** 1700  *** HOME *** Military *** turboprop/SF34/Swedish_Air_Force.obj
 SF34 *** B *** TGU       ***           ***     *** Default    *** 1700  ***      *** Pax      *** turboprop/SF34/TAG_Airlines.obj
 SF34 *** B *** URG       *** URELZ     *** UKR *** UN         *** 1700  ***      *** Pax      *** turboprop/SF34/Air_Urga_UN.obj
 # -- Cargo ---------------------------------------------------------------------
@@ -2188,50 +2190,50 @@ R22  *** A *** XPGA      *** N8403L    *** USA *** Default    *** 400   ***     
 R22  *** A *** XPGA      *** VHISL     *** AUS *** Default    *** 400   ***      *** GA       *** helo/R22/R22_VHISL.obj
 S76  *** A *** XPGA      *** N7ER      *** USA *** Default    *** 760   ***      *** GA       *** helo/S76/S76_static.obj
 SF34 *** B *** LXC       *** N441FF    *** USA *** Default    *** 1700  ***      *** GA       *** turboprop/SF34/CAE_Aviation.obj
-SF34 *** B *** URG       *** URELJ     *** UKR *** AirIdea    *** 1700  ***      *** Pax      *** turboprop/SF34/Airdea.obj
-SF34 *** B *** URG       *** URELV     *** UKR *** HelloFly   *** 1700  ***      *** Pax      *** turboprop/SF34/HelloFly.obj
+SF34 *** B *** URG_A     *** URELJ     *** UKR *** Default    *** 1700  ***      *** Pax      *** turboprop/SF34/Airdea.obj
+SF34 *** B *** URG_B     *** URELV     *** UKR *** Default    *** 1700  ***      *** Pax      *** turboprop/SF34/HelloFly.obj
 SF34 *** B *** XPGA      ***           ***     *** Default    *** 1700  ***      *** GA       *** turboprop/SF34/Napleton_Aviation_Group.obj
 SF50 *** A *** XPGA      *** N163MV    *** USA *** Blue       *** 1800  ***      *** GA       *** jet/SF50_blue/SF50_blue_static.obj
 SF50 *** A *** XPGA      *** N163MV    *** USA *** Gold       *** 1800  ***      *** GA       *** jet/SF50_gold/SF50_gold_static.obj
 # -- Military ------------------------------------------------------------------
 A359 *** E *** GAF       ***           ***     *** Default    *** 15000 *** HOME *** Gov      *** heavy/A359/A359_Luftwaffe.obj
-B738 *** C *** CKJ       *** B4000     *** CHN *** Default    *** 5700  *** HOME *** Military *** jet/B738_PLAAF_Mil/738_PLAAF_B4000.obj
-B738 *** C *** PLF       *** 0111      *** POL *** Default    *** 5700  *** HOME *** Military *** jet/B738_PAF_Mil/738_PAF_0111.obj
-B752 *** D *** AIO       ***           *** USA *** Default    *** 7200  *** HOME *** Military *** jet/B752/757_C32A.obj
-B752 *** D *** FAG       *** ARG01     *** ARG *** Default    *** 7200  *** HOME *** Military *** jet/B752/757_FAA_ARG01.obj
-B752 *** D *** KAF       *** 5701      *** KAZ *** Default    *** 7200  *** HOME *** Military *** jet/B752/757_KAF_5701.obj
-B752 *** D *** KRC       *** NZ7571    *** NZL *** Default    *** 7200  *** HOME *** Military *** jet/B752/757_RNZAF_NZ7571.obj
+B738 *** C *** CKJ       *** B4000     *** CHN *** Universal  *** 5700  *** HOME *** Military *** jet/B738_PLAAF_Mil/738_PLAAF_B4000.obj
+B738 *** C *** PLF       *** 0111      *** POL *** Universal  *** 5700  *** HOME *** Military *** jet/B738_PAF_Mil/738_PAF_0111.obj
+B752 *** D *** AIO       ***           *** USA *** Universal  *** 7200  *** HOME *** Military *** jet/B752/757_C32A.obj
+B752 *** D *** FAG       *** ARG01     *** ARG *** Universal  *** 7200  *** HOME *** Military *** jet/B752/757_FAA_ARG01.obj
+B752 *** D *** KAF       *** 5701      *** KAZ *** Universal  *** 7200  *** HOME *** Military *** jet/B752/757_KAF_5701.obj
+B752 *** D *** KRC       *** NZ7571    *** NZL *** Universal  *** 7200  *** HOME *** Military *** jet/B752/757_RNZAF_NZ7571.obj
 BE9L *** A *** CNV       *** 1058      *** USA *** Training   *** 2400  *** HOME *** Military *** turboprop/BE9L_navy/BE9L_navy_static.obj
 C172 *** A *** XPMI      ***           ***     *** Training   *** 1270  ***      *** Military *** prop/C172_olive/C172_olive_static.obj
-C30J *** D *** AIO       ***           ***     *** Default    *** 5200  *** HOME *** Military *** turboprop/C30J/C30J_USAF.obj
-C30J *** D *** ASY       ***           ***     *** Default    *** 5200  *** HOME *** Military *** turboprop/C30J/C30J_RAAF.obj
-C30J *** D *** CFC       ***           ***     *** Default    *** 5200  *** HOME *** Military *** turboprop/C30J/C30J_RCAF.obj
-C30J *** D *** IAM       ***           ***     *** Default    *** 5200  *** HOME *** Military *** turboprop/C30J/C30J_AM.obj
+C30J *** D *** AIO       ***           ***     *** Universal  *** 5200  *** HOME *** Military *** turboprop/C30J/C30J_USAF.obj
+C30J *** D *** ASY       ***           ***     *** Universal  *** 5200  *** HOME *** Military *** turboprop/C30J/C30J_RAAF.obj
+C30J *** D *** CFC       ***           ***     *** Universal  *** 5200  *** HOME *** Military *** turboprop/C30J/C30J_RCAF.obj
+C30J *** D *** IAM       ***           ***     *** Universal  *** 5200  *** HOME *** Military *** turboprop/C30J/C30J_AM.obj
 C30J *** D *** XPMI      ***           ***     *** Universal  *** 5200  ***      *** Military *** turboprop/C30J/C30J_generic.obj
-CL60 *** B *** AIO       *** N488CR    *** USA *** Default    *** 7400  *** HOME *** Military *** jet/CL60/CL60_N488CR.obj
+CL60 *** B *** AIO       *** N488CR    *** USA *** Universal  *** 7400  *** HOME *** Military *** jet/CL60/CL60_N488CR.obj
 DC10 *** D *** AIO       *** 392814    *** USA *** Obsolete   *** 9600  *** HOME *** Military *** heavy/DC10_AIO/DC10_AIO_static.obj
-E2   *** C *** CNV       ***           ***     *** Default    *** 2700  *** HOME *** Military *** turboprop/E2/E2_Hawkeye_CNV.obj
+E2   *** C *** CNV       ***           ***     *** Universal  *** 2700  *** HOME *** Military *** turboprop/E2/E2_Hawkeye_CNV.obj
 E2   *** C *** XPMI      ***           ***     *** Universal  *** 2700  ***      *** Military *** turboprop/E2/E2_Hawkeye_generic.obj
-EUFI *** A *** AME       ***           ***     *** Default    *** 2900  *** HOME *** Military *** fighter/EUFI/EUFI_AME.obj
-EUFI *** A *** GAF       ***           ***     *** Default    *** 2900  *** HOME *** Military *** fighter/EUFI/EUFI_GAF.obj
-EUFI *** A *** IAM       ***           ***     *** Default    *** 2900  *** HOME *** Military *** fighter/EUFI/EUFI_IAM.obj
-EUFI *** A *** RRR       ***           ***     *** Default    *** 2900  *** HOME *** Military *** fighter/EUFI/EUFI_RAF.obj
-EUFI *** A *** RSF       ***           ***     *** Default    *** 2900  *** HOME *** Military *** fighter/EUFI/EUFI_RSF.obj
-F15  *** A *** AIO       ***           ***     *** Default    *** 3900  *** HOME *** Military *** fighter/F15/F15EX_cft_usaf.obj
-F15  *** A *** AIO       ***           ***     *** Default    *** 3900  *** HOME *** Military *** fighter/F15/F15EX_usaf.obj
+EUFI *** A *** AME       ***           ***     *** Universal  *** 2900  *** HOME *** Military *** fighter/EUFI/EUFI_AME.obj
+EUFI *** A *** GAF       ***           ***     *** Universal  *** 2900  *** HOME *** Military *** fighter/EUFI/EUFI_GAF.obj
+EUFI *** A *** IAM       ***           ***     *** Universal  *** 2900  *** HOME *** Military *** fighter/EUFI/EUFI_IAM.obj
+EUFI *** A *** RRR       ***           ***     *** Universal  *** 2900  *** HOME *** Military *** fighter/EUFI/EUFI_RAF.obj
+EUFI *** A *** RSF       ***           ***     *** Universal  *** 2900  *** HOME *** Military *** fighter/EUFI/EUFI_RSF.obj
+F15  *** A *** AIO       ***           ***     *** Universal  *** 3900  *** HOME *** Military *** fighter/F15/F15EX_cft_usaf.obj
+F15  *** A *** AIO       ***           ***     *** Universal  *** 3900  *** HOME *** Military *** fighter/F15/F15EX_usaf.obj
 F15  *** A *** XPMI      ***           ***     *** Universal  *** 3900  ***      *** Military *** fighter/F15/F15EX_generic.obj
-F18S *** A *** CNV       ***           ***     *** Default    *** 2300  *** HOME *** Military *** fighter/F18/FA_18E_static.obj
+F18S *** A *** CNV       ***           ***     *** Universal  *** 2300  *** HOME *** Military *** fighter/F18/FA_18E_static.obj
 F4   *** A *** XPMI      ***           ***     *** Universal  *** 2600  ***      *** Military *** fighter/F4/F4_static.obj
 H500 *** A *** XPMI      ***           ***     *** Universal  *** 600   ***      *** Military *** helo/H500/H500_Military.obj
-H60  *** B *** CNV       ***           ***     *** Default    *** 830   *** HOME *** Military *** helo/H60/SH60_Seahawk_static.obj
-J328 *** B *** AIO       *** N3220U    *** USA *** Default    *** 1665  *** HOME *** Military *** jet/J328_AIO/J328_AIO_static.obj
-P180 *** A *** IAM       ***           ***     *** Default    *** 2800  *** HOME *** Military *** turboprop/P180_AM/P180_AM_static.obj
+H60  *** B *** CNV       ***           ***     *** Universal  *** 830   *** HOME *** Military *** helo/H60/SH60_Seahawk_static.obj
+J328 *** B *** AIO       *** N3220U    *** USA *** Universal  *** 1665  *** HOME *** Military *** jet/J328_AIO/J328_AIO_static.obj
+P180 *** A *** IAM       ***           ***     *** Universal  *** 2800  *** HOME *** Military *** turboprop/P180_AM/P180_AM_static.obj
 P46T *** A *** XPMI      ***           ***     *** Universal  *** 3300  ***      *** Military *** turboprop/P46T/M500_MIL.obj
-PC12 *** B *** AIO       *** 80519     *** USA *** Default    *** 3400  *** HOME *** Military *** turboprop/PC12/PC12_US_Army.obj
+PC12 *** B *** AIO       *** 80519     *** USA *** Universal  *** 3400  *** HOME *** Military *** turboprop/PC12/PC12_US_Army.obj
 PC12 *** B *** XPMI      ***           ***     *** Universal  *** 3400  ***      *** Military *** turboprop/PC12/PC12_Military.obj
 S76  *** A *** XPMI      ***           ***     *** Universal  *** 760   ***      *** Military *** helo/S76_coastguard/S76_coastguard_static.obj
-SF34 *** B *** FAG       *** T35       *** ARG *** Default    *** 1700  *** HOME *** Military *** turboprop/SF34/Argentine_Air_Force.obj
-SF34 *** B *** RTAF      *** 70206     *** THA *** Default    *** 1700  *** HOME *** Military *** turboprop/SF34/Royal_Thai_Air_Force.obj
+SF34 *** B *** FAG       *** T35       *** ARG *** Universal  *** 1700  *** HOME *** Military *** turboprop/SF34/Argentine_Air_Force.obj
+SF34 *** B *** RTAF      *** 70206     *** THA *** Universal  *** 1700  *** HOME *** Military *** turboprop/SF34/Royal_Thai_Air_Force.obj
 # -- Gov -----------------------------------------------------------------------
 B738 *** C *** DAH_V     *** 7TVKQ     *** ALG *** Government *** 5700  *** HOME *** Gov      *** jet/B738_DAH_Mil/738_AirAlgerie_VIP_7TVKQ.obj
 B744 *** E *** DUB       *** A6COM     *** UAE *** Default    *** 13450 *** HOME *** Gov      *** heavy/B744/B744_UAE.obj
