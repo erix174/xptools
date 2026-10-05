@@ -1,7 +1,7 @@
 I
 1 WED Aviation Database
 # schema 4
-# data 20261005-r1
+# data 20261005-r2
 # source sim_objects branch static_acf_update, commit bd8bb90757
 # assets 500 liveries under apt_aircraft/
 #
@@ -491,7 +491,7 @@ OPERATOR	***	EXP			***	Island Air Express								***	USA	***	Pax			***	5		***	PA
 OPERATOR	***	EXS			***	Jet2											***	GBR	***	Pax			***	139		***	EGCC EGNM EGSS
 OPERATOR	***	EXV			***	FitsAir											***	SRI	***	Pax			***	2		***	VCBI
 OPERATOR	***	EXZ			***	Eastafrican										***	KEN	***	Pax			***	2		***	HKJK
-OPERATOR	***	EZR			***	Z Air											***	NED	***	Pax			***	5		***	EHAM
+OPERATOR	***	EZR			***	Z Air											***	USA	***	Pax			***	5		***
 OPERATOR	***	EZS			***	easyJet Switzerland								***	SUI	***	Pax			***	31		***	LSGG LSZH LSZB
 OPERATOR	***	EZY			***	easyJet											***	GBR	***	Pax			***	197		***	EGKK EGGW
 OPERATOR	***	EZZ			***	ETF Airways										***	CRO	***	Pax			***	4		***	LDZA
@@ -1589,7 +1589,7 @@ OPERATOR	***	LUA			***	Luminair										***	GER	***	GA			***	8		***	EDDM
 OPERATOR	***	LUX			***	Luks Aviation									***	SMR	***	GA			***	1		***	LIPR
 OPERATOR	***	LVT			***	Elevate Jet										***	USA	***	GA			***	2		***	KBED
 OPERATOR	***	LWG			***	Luxwing											***	MLT	***	GA			***	5		***	LMML
-OPERATOR	***	LXC			***	CAE Aviation									***	LUX	***	GA			***	1		***	ELLX
+OPERATOR	***	LXC			***	CAE Aviation									***	USA	***	GA			***	1		***
 OPERATOR	***	LXE			***	Amelia Executive								***	AUT	***	GA			***	1		***	LOWW
 OPERATOR	***	LXJ			***	Flexjet											***	USA	***	GA			***	216		***	KCLE
 OPERATOR	***	MAT			***	MAC Jet Charter									***	USA	***	GA			***	1		***	KTEB
@@ -1727,6 +1727,7 @@ OPERATOR	***	YZR_F		***	Suparna Airlines Cargo							***	CHN	***	Cargo		***	0		*
 OPERATOR	***	ABD_F		***	Air Atlanta Icelandic Cargo						***	ISL	***	Cargo		***	0		***	BIKF
 OPERATOR	***	RTAF		***	Royal Thai Air Force							***	THA	***	Military	***	0		***
 OPERATOR	***	XPZZ_CRJ2	***	Generic - unpainted CRJ2						***		***	Pax			***	0		***
+OPERATOR	***	RAC_A		***	Icar Air										***	BIH	***	Pax			***	1		***	LQTZ
 
 # ---- liveries --------------------------------------------------------------
 # -- Pax -----------------------------------------------------------------------
@@ -2022,7 +2023,7 @@ SF34 *** B *** NYX       ***           ***     *** Vastflyg   *** 1700  ***     
 SF34 *** B *** OMT       ***           ***     *** Default    *** 1700  ***      *** Pax      *** turboprop/SF34/CM_Airlines.obj
 SF34 *** B *** PCO       *** CGPCJ     *** CAN *** Default    *** 1700  ***      *** Pax      *** turboprop/SF34/Pacific_Coastal.obj
 SF34 *** B *** PSC       *** CGQPC     *** CAN *** Default    *** 1700  ***      *** Pax      *** turboprop/SF34/Pascan_Aviation.obj
-SF34 *** B *** RAC       *** E7NEL     *** BIH *** Default    *** 1700  ***      *** Pax      *** turboprop/SF34/Icar_Air.obj
+SF34 *** B *** RAC_A     *** E7NEL     *** BIH *** Default    *** 1700  ***      *** Pax      *** turboprop/SF34/Icar_Air.obj
 SF34 *** B *** RAR       *** E5SMW     *** COK *** Default    *** 1700  ***      *** Pax      *** turboprop/SF34/Air_Rarotonga.obj
 SF34 *** B *** RXA       ***           ***     *** Default    *** 1700  ***      *** Pax      *** turboprop/SF34/Rex_Airlines.obj
 SF34 *** B *** SCT       *** SELRD     *** SWE *** Default    *** 1700  ***      *** GA       *** turboprop/SF34/Saab.obj
