@@ -4690,21 +4690,7 @@ static void collect_ramps_recursive(WED_Thing * who, vector<WED_RampPosition *>&
 	}
 }
 
-// Will X-Plane park its own static aircraft here? A stand set to None parks
-// nothing - export no longer turns None into Airline/GA - and neither does a 2.8
-// stand with all-zero weights, so a static the author placed on it is no double
-// and stays. Other legacy stands are judged as before: all of them.
-static bool parks_static_aircraft(WED_RampPosition * r)
-{
-	if (r->GetRampOperationType() == ramp_operation_None) return false;
-	if (!r->HasLiveryFingerprint()) return true;
-	int w[6];
-	if (r->GetClassWeights(w))
-		return w[0] + w[1] + w[2] + w[3] + w[4] + w[5] > 0;
-	return true;
-}
-
-int wed_upgrade_ramps(WED_Thing* who, int * out_removed_statics, WED_LegacyUpgradeStats * out_upgrade)
+int wed_upgrade_ramps(WED_Thing* who, bool fill_op_types, int * out_removed_statics, WED_LegacyUpgradeStats * out_upgrade)
 {
 	auto rmgr = WED_GetResourceMgr(who->GetArchive()->GetResolver());
 	auto sel  = WED_GetSelect(who->GetArchive()->GetResolver());
@@ -4717,13 +4703,31 @@ int wed_upgrade_ramps(WED_Thing* who, int * out_removed_statics, WED_LegacyUpgra
 	WED_Airport * apt = dynamic_cast<WED_Airport*>(who);
 	if (!apt) return 0;
 
-	// Operation type None is left alone (WED 2.7.2). This used to turn every None
-	// gate into Airline and every None tie-down into GA or Airline, which undid the
-	// stands artists set to None on purpose to keep parked aircraft away (float
-	// plane docks, lone helipads). Validation warns about None gates and tie-downs
-	// of legacy stands on Gateway exports instead, so a stand that was simply never
-	// set still gets noticed before it is submitted. On a 2.8 stand (1313 or 1315)
-	// None is the author's "no static aircraft" and was never touched.
+	// Only Airport > Upgrade Ramps fills in operation types, for pre-10.50 legacy
+	// ramps. Export leaves None alone, as an artist may have set it on purpose;
+	// Gateway validation warns about None gates and tie-downs of legacy stands
+	// instead. On a 2.8 stand (1313 or 1315) None is the author's "no static
+	// aircraft", which the menu command leaves alone too.
+	if (fill_op_types)
+		for (auto r : ramps)
+		{
+			if (r->GetRampOperationType() != ramp_operation_None || r->HasLiveryFingerprint()) continue;
+			switch(r->GetType())
+			{
+				case atc_Ramp_Gate:
+					r->SetRampOperationType(ramp_operation_Airline);
+					did_work = 1;
+					break;
+				case atc_Ramp_TieDown:
+				{
+					set<int> eq;
+					r->GetEquipment(eq);
+					r->SetRampOperationType(eq.count(atc_Heavies) ? ramp_operation_Airline : ramp_operation_GeneralAviation);
+					did_work = 1;
+					break;
+				}
+			}
+		}
 
 	// Legacy stands to the 12.5 format (WED 2.8; replaces get_regional_codes,
 	// which appended a hard-coded "regional" airline list by longitude and
@@ -4747,13 +4751,12 @@ int wed_upgrade_ramps(WED_Thing* who, int * out_removed_statics, WED_LegacyUpgra
 			out_upgrade->kept_legacy += st.kept_legacy;
 		}
 	}
-	// nuke static aircraft objects near ramps - but not near a None ramp: X-Plane
-	// parks nothing there, so a static placed on it is no double
+	// nuke static aircraft objects near ramps - every one, None, misc and hangar
+	// included: the user can start a flight on any of them
 	for(auto& o : objs)
 	{
 		for(auto r : ramps)
 		{
-			if (!parks_static_aircraft(r)) continue;
 			Point2 rp; double rs;
 			center_and_radius_for_ramp_start(r, rp, rs);
 
@@ -4777,7 +4780,7 @@ static int wed_upgrade_airports_recursive(WED_Thing * who, WED_ResourceMgr * rmg
 	int did_work = 0;
 	if(who->GetClass() == WED_Airport::sClass)
 	{
-		did_work = wed_upgrade_ramps(who);
+		did_work = wed_upgrade_ramps(who, true);
 	}
 	int nn = who->CountChildren();
 	for(int n = 0; n < nn; ++n)

@@ -162,7 +162,7 @@ int		WED_CanReplaceVehicleObj(WED_Airport* apt);
 void	WED_DoReplaceVehicleObj(IResolver* resolver, WED_Airport* apt = NULL);
 
 struct WED_LegacyUpgradeStats;
-int		wed_upgrade_ramps(WED_Thing* who, int * out_removed_statics = NULL, WED_LegacyUpgradeStats * out_upgrade = NULL);
+int		wed_upgrade_ramps(WED_Thing* who, bool fill_op_types, int * out_removed_statics = NULL, WED_LegacyUpgradeStats * out_upgrade = NULL);
 void	WED_UpgradeRampStarts(IResolver * resolver);
 void	WED_UpgradeJetways(IResolver* resolver);
 int		WED_DoConvertToJW(WED_Airport* apt, int statistics[4] = nullptr);

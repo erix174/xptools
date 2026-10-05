@@ -593,12 +593,15 @@ correctly.
   exports. Measured on the Global Airports apt.dat, the "keep only if it parks"
   rule is what stops 6,767 empty-list airline and cargo stands from going from a
   random airline today to nothing. It skips 2.8 stands
-  entirely, and near a 2.8 stand that parks nothing (None, or all-zero weights)
-  it removes no object. A new stand placed with the tool and never set keeps no
+  entirely, but removes static aircraft objects near every ramp start, 2.8,
+  None, misc and hangar included: the user can start a flight on any of them
+  (Marco, review of X-Plane/xptools#61, 2026-10-05). A new stand placed with the tool and never set keeps no
   mark and is upgraded as before. **The Gateway's bulk export must run WED 2.8
   or later** for the fingerprint to hold in the global apt.dat. WED 2.7.2
-  (X-Plane/xptools#61) stops turning `none` into anything at all, so after 2.8
-  is rebased on it no `none` is converted, fingerprinted or not.
+  (X-Plane/xptools#61) stops turning `none` into anything at all on export, so
+  after 2.8 is rebased on it no `none` is converted, fingerprinted or not. Only
+  Airport > Upgrade Ramps, which an author runs on purpose, still fills in
+  operation types - on legacy stands only.
 
 - **R31** — **A `1301` code is matched against the index's `AIRLINE` cell,
   without regard to case - never against a `library.txt` bucket's suffix.**
