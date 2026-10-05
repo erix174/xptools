@@ -259,7 +259,7 @@ namespace
 void dummyPrintf(void * ref, const char * fmt, ...) { return; }
 
 // Returns how many static aircraft objects were removed for overlapping a
-// ramp start where X-Plane parks its own; out_upgrade, what the export-time
+// ramp start, which the user can start a flight on; out_upgrade, what the export-time
 // upgrade of legacy ramp starts did (WED_LiveryExportUpgrade).
 static int	DoHueristicAnalysisAndAutoUpgrade(IResolver* resolver, WED_LegacyUpgradeStats * out_upgrade = NULL)
 {
@@ -787,8 +787,8 @@ void	WED_DoExportPack(WED_Document * resolver, WED_MapPane * pane)
 			}
 			if (removed_statics > 0)
 			{
-				snprintf(buf, sizeof(buf), "\n\n- %d static aircraft object%s placed on ramp starts where X-Plane parks its own aircraft %s left out - "
-						 "they would stand inside each other. To keep one, move it off the ramp start, or set that ramp start to None.",
+				snprintf(buf, sizeof(buf), "\n\n- %d static aircraft object%s placed on ramp starts %s left out - "
+						 "an aircraft starting or parked there would stand inside it. To keep one, move it off the ramp start.",
 						 removed_statics, removed_statics == 1 ? "" : "s", removed_statics == 1 ? "is" : "are");
 				msg += buf;
 			}
