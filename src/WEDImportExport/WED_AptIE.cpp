@@ -622,6 +622,11 @@ void LazyPrintf(void * ref, const char * fmt, ...)
 // The order of the folders an import makes inside an airport, top to bottom
 // (Julian, for Gateway moderation). apt.dat and DSF import both go by it, so the
 // order is the same whichever runs first. A folder not listed goes below them.
+// The DSF export follows the hierarchy, and of two overlapping draped items on
+// one layer the later one draws on top. So Draped Polygons stay below Lines, as
+// in the order before: zebra crossings (.lin) and hatched safety areas (.pol)
+// share a layer at 88 Gateway airports, and swapping the two folders would swap
+// which of them is on top on a moderator's re-export.
 static const char * k_import_folder_order[] = {
 	"ATC",
 	"Runways",
@@ -629,12 +634,12 @@ static const char * k_import_folder_order[] = {
 	"Taxiways",
 	"Tower, Beacon and Boundaries",
 	"Ramp Starts",
-	"Draped Polygons",
 	"Ground Vehicles",
 	"Ground Routes",
 	"Facades",
 	"Objects",
 	"Lines",
+	"Draped Polygons",
 	"Markings",
 	"Lights",
 	"Strings",
