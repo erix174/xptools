@@ -619,60 +619,69 @@ void LazyPrintf(void * ref, const char * fmt, ...)
 	va_end(arg);
 }
 
-//A set of values describing the desired hierarchy order
-// pair<Parent Group Name, Child Group Name>
-// "" can be used if the group is intended to be under the world root
-typedef set<string> hierarchy_order_set;
+// The order of the folders an import makes inside an airport, top to bottom
+// (Julian, for Gateway moderation). apt.dat and DSF import both go by it, so the
+// order is the same whichever runs first. A folder not listed goes below them.
+static const char * k_import_folder_order[] = {
+	"ATC",
+	"Runways",
+	"Taxi Routes",
+	"Taxiways",
+	"Tower, Beacon and Boundaries",
+	"Ramp Starts",
+	"Draped Polygons",
+	"Ground Vehicles",
+	"Ground Routes",
+	"Facades",
+	"Objects",
+	"Lines",
+	"Markings",
+	"Lights",
+	"Strings",
+	"Signs",
+	"Forests",
+	"Pavement FX",
+	"Terrain FX",
+	"Windsocks",
+	"Exclusion Zones",
+	"Orthophotos"
+};
 
-static hierarchy_order_set build_order_set()
+static int import_folder_rank(const string& name)
 {
-	hierarchy_order_set h_set;
-	//BEWARE: Stringified-data abounds!
-	//If this has to be editted more than twice a year, we'll create
-	//an enum + dictionary solution that is more type safe
-	//"/" is like a dir seperator
-	h_set.insert("/ATC");
-	h_set.insert("/Ground Vehicles");
-//	h_set.insert("/Ground Vehicles/Dynamic");
-//	h_set.insert("/Ground Vehicles/Static");
-	h_set.insert("/Lights");
-	h_set.insert("/Markings");
-	h_set.insert("/Ramp Starts");
-	h_set.insert("/Runways");
-	h_set.insert("/Signs");
-	h_set.insert("/Taxi Routes");
-	h_set.insert("/Ground Routes");
-	h_set.insert("/Taxiways");
-	h_set.insert("/Tower, Beacon and Boundaries");
-	h_set.insert("/Windsocks");
-	h_set.insert("/Facades");
-	return h_set;
+	for (int n = 0; n < (int) (sizeof(k_import_folder_order) / sizeof(k_import_folder_order[0])); ++n)
+		if (name == k_import_folder_order[n])
+			return n;
+	return -1;
 }
 
-static const hierarchy_order_set prefered_hierarchy_order = build_order_set();
-struct compare_bucket_order : public less<string>
+void	WED_InsertImportFolder(WED_Thing * folder, WED_Thing * parent)
 {
-	bool operator()(const string& lhs, const string& rhs)
+	string name;
+	folder->GetName(name);
+	int rank = import_folder_rank(name);
+
+	// A listed folder goes above the first listed one that comes later, else right
+	// below the last listed one - so unlisted folders stay at the bottom.
+	int pos = parent->CountChildren();
+	if (rank >= 0)
 	{
-		hierarchy_order_set::iterator lhs_pos = prefered_hierarchy_order.end();
-		hierarchy_order_set::iterator rhs_pos = prefered_hierarchy_order.end();
-		hierarchy_order_set::iterator pref_end = prefered_hierarchy_order.end();
-
-		hierarchy_order_set::iterator itr = prefered_hierarchy_order.begin();
-		
-		while(itr != pref_end && lhs_pos == pref_end && rhs_pos == pref_end)
+		int below_last = -1;
+		for (int n = 0; n < parent->CountChildren(); ++n)
 		{
-			lhs_pos = lhs == *itr ? itr : pref_end;
-			rhs_pos = rhs == *itr ? itr : pref_end;
-			++itr;
+			WED_Thing * c = parent->GetNthChild(n);
+			if (!SAFE_CAST(WED_Group, c)) continue;
+			string cn;
+			c->GetName(cn);
+			int cr = import_folder_rank(cn);
+			if (cr < 0) continue;
+			if (cr > rank) { below_last = n; break; }
+			below_last = n + 1;
 		}
-
-		DebugAssert(lhs_pos != pref_end);
-		DebugAssert(rhs_pos != pref_end);
-		
-		return std::distance(prefered_hierarchy_order.begin(), lhs_pos) < std::distance(prefered_hierarchy_order.begin(), rhs_pos);
+		if (below_last >= 0) pos = below_last;
 	}
-};
+	folder->SetParent(parent, pos);
+}
 
 typedef  map<string, WED_Thing *> hierarchy_bucket_map;
 
@@ -688,7 +697,7 @@ static hierarchy_bucket_map::iterator create_buckets(WED_Thing* apt, const strin
 	}
 	else
 	{
-		new_bucket->SetParent(apt, apt->CountChildren());
+		WED_InsertImportFolder(new_bucket, apt);
 	}
 	return io_buckets.insert(make_pair(name, new_bucket)).first;
 }

@@ -44,6 +44,10 @@ void	WED_AptImport(
 														// thousands of airports would raise one each; the
 														// document still collects them for the save warning
 				
+// Put a folder an import made into parent, at its place in the folder order
+// apt.dat and DSF import share (WED_AptIE.cpp).
+void	WED_InsertImportFolder(WED_Thing * folder, WED_Thing * parent);
+
 // Main apt export AIP - we can write to a file path or to a stream via a print func.
 
 void	WED_AptExport(WED_Thing * container, const char * file_path, bool DockingJetways = true);

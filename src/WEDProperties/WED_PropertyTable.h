@@ -223,6 +223,7 @@ private:
 	set<string>					mFilter;
 
 	vector<ISelectable *>		mSelSave;
+	bool						mSelAdding;		// Ctrl/Shift click kept what was selected
 
 };
 

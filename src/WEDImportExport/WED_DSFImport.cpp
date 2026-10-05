@@ -220,17 +220,7 @@ public:
 			{
 				bucket_parents[cat] = WED_Group::CreateTyped(archive);
 				bucket_parents[cat]->SetName(k_dsf_cat_names[cat]);
-
-				int pos = master_parent->CountChildren();
-				for (int i = cat - 1; i >= 0; i--)
-				{
-					if (auto g = master_parent->GetNamedChild(k_dsf_cat_names[i]))
-					{
-						pos = g->GetMyPosition() + 1;
-						break;
-					}
-				}
-				bucket_parents[cat]->SetParent(master_parent, pos);
+				WED_InsertImportFolder(bucket_parents[cat], master_parent);
 			}
 		}
 		return bucket_parents[cat];

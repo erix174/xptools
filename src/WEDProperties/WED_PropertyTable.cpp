@@ -94,7 +94,8 @@ WED_PropertyTable::WED_PropertyTable(
 	mDynamicCols(dynamic_cols),
 	mSelOnly(sel_only),
 	mResolver(resolver),
-	mCacheValid(false)
+	mCacheValid(false),
+	mSelAdding(false)
 {
 	RebuildCache();
 
@@ -480,6 +481,7 @@ void	WED_PropertyTable::SelectionStart(
 	if (clear) s->Clear();
 
 	s->GetSelectionVector(mSelSave);
+	mSelAdding = !mSelSave.empty();
 }
 
 int		WED_PropertyTable::SelectGetExtent(
@@ -736,7 +738,10 @@ void	WED_PropertyTable::SelectionEnd(void)
 	op->CommitOperation();
 	mSelSave.clear();
 
-   if(gModeratorMode) // special behavior requested by Julian
+   // A Ctrl or Shift click adds to what is on the map, so it keeps the tab and
+   // the view: a moderator selects the boundary, then Ctrl-clicks folders to
+   // check what lies inside it (Julian). The ATC tab would hide the boundary.
+   if(gModeratorMode && !mSelAdding) // special behavior requested by Julian
    {
       // Ramp starts are only brought to the middle of the map, at the current
       // zoom (Eric, 2026-09-28): fitting the view to a single stand zoomed right
