@@ -1,7 +1,7 @@
 I
 1 WED Aviation Database
 # schema 4
-# data 20261005-r3
+# data 20261005-r4
 # source sim_objects branch static_acf_update, commit bd8bb90757
 # assets 500 liveries under apt_aircraft/
 #
@@ -178,7 +178,7 @@ OPERATOR	***	ADY			***	Air Arabia Abu Dhabi							***	UAE	***	Pax			***	12		***	
 OPERATOR	***	AEA			***	Air Europa										***	ESP	***	Pax			***	47		***	LEMD
 OPERATOR	***	AEB			***	Avion Express Brasil							***	BRA	***	Pax			***	1		***	SBGR
 OPERATOR	***	AEE			***	Aegean Airlines									***	GRE	***	Pax			***	70		***	LGAV LGTS
-OPERATOR	***	AEG			***	Airest											***	EST	***	Pax			***	8		***	EETN
+OPERATOR	***	AEG			***	Airest											***	EST	***	Cargo		***	8		***	EETN
 OPERATOR	***	AEH			***	Amelia International							***	SLO	***	Pax			***	14		***	LJLJ LFBO
 OPERATOR	***	AEZ			***	Aeroitalia										***	ITA	***	Pax			***	18		***	LIRF LIME
 OPERATOR	***	AFE			***	Airfast Indonesia								***	INA	***	Pax			***	10		***	WIHH
@@ -446,7 +446,7 @@ OPERATOR	***	DTR			***	DAT												***	DEN	***	Pax			***	20		***	EKEB EKCH
 OPERATOR	***	DTR_1		***	DAT Volidellemarche								***	ITA	***	Pax			***	1		***	LIPY
 OPERATOR	***	DTR_2		***	DAT Volidisicilia								***	ITA	***	Pax			***	2		***	LICJ LICC
 OPERATOR	***	DVR			***	Divi Divi Air									***	NED	***	Pax			***	3		***	TNCC
-OPERATOR	***	DVY			***	Legends Airways									***	USA	***	Pax			***	2		***	KFLL
+OPERATOR	***	DVY			***	Legends Airways									***	USA	***	Cargo		***	2		***	KFLL
 OPERATOR	***	DWI			***	Arajet											***	DOM	***	Pax			***	16		***	MDSD
 OPERATOR	***	DZD			***	Yazd Airways									***	IRI	***	Pax			***	5		***	OIYY
 OPERATOR	***	EAF			***	Electra Airways									***	BUL	***	Pax			***	15		***	LBSF
@@ -1727,7 +1727,8 @@ OPERATOR	***	YZR_F		***	Suparna Airlines Cargo							***	CHN	***	Cargo		***	0		*
 OPERATOR	***	ABD_F		***	Air Atlanta Icelandic Cargo						***	ISL	***	Cargo		***	0		***	BIKF
 OPERATOR	***	RTAF		***	Royal Thai Air Force							***	THA	***	Military	***	0		***
 OPERATOR	***	XPZZ_CRJ2	***	Generic - unpainted CRJ2						***		***	Pax			***	0		***
-OPERATOR	***	RAC_A		***	Icar Air										***	BIH	***	Pax			***	1		***	LQTZ
+OPERATOR	***	RAC_A		***	Icar Air										***	BIH	***	Cargo		***	1		***	LQTZ
+OPERATOR	***	XPC5		***	Global Airlift Solutions						***	FIN	***	GA			***	2		***	EDRZ
 
 # ---- liveries --------------------------------------------------------------
 # -- Pax -----------------------------------------------------------------------
@@ -1774,8 +1775,8 @@ A359 *** E *** HVN       *** VNA894    *** VIE *** Default    *** 15000 ***     
 A359 *** E *** IBE       *** ECNIS     *** ESP *** Default    *** 15000 ***      *** Pax      *** heavy/A359/A359_Iberia.obj
 A359 *** E *** ITY       *** EIIFA     *** IRL *** Default    *** 15000 ***      *** Pax      *** heavy/A359/A359_ITA.obj
 A359 *** E *** JAL       *** JA10XJ    *** JPN *** Default    *** 15000 ***      *** Pax      *** heavy/A359/A359_JapanAirlines.obj
-A359 *** E *** KAL       ***           ***     *** Default    *** 15000 ***      *** Pax      *** heavy/A359/A359_Korean.obj
-A359 *** E *** KAL       *** HL8746    *** KOR *** Modern     *** 15000 ***      *** Pax      *** heavy/A359/A359_Korean_Modern.obj
+A359 *** E *** KAL       ***           ***     *** Legacy     *** 15000 ***      *** Pax      *** heavy/A359/A359_Korean.obj
+A359 *** E *** KAL       *** HL8746    *** KOR *** Default    *** 15000 ***      *** Pax      *** heavy/A359/A359_Korean_Modern.obj
 A359 *** E *** MAS       *** 9MMAB     *** MAS *** Default    *** 15000 ***      *** Pax      *** heavy/A359/A359_Malaysia.obj
 A359 *** E *** MAU       *** 3BNBQ     *** MRI *** Default    *** 15000 ***      *** Pax      *** heavy/A359/A359_AirMauritius.obj
 A359 *** E *** MSR       *** SUGGE     *** EGY *** Default    *** 15000 ***      *** Pax      *** heavy/A359/A359_EgyptAir.obj
@@ -1809,7 +1810,7 @@ AT72 *** C *** EGF       *** N260AE    *** USA *** Obsolete   *** 1500  ***     
 AT76 *** C *** ANZ       *** ZKMVK     *** NZL *** Default    *** 1500  ***      *** Pax      *** turboprop/AT76/AT76_ANZ.obj
 AT76 *** C *** AZU       ***           *** BRA *** Default    *** 1500  ***      *** Pax      *** turboprop/AT76/AT76_AZU.obj
 AT76 *** C *** CLH       *** DANFK     *** GER *** Default    *** 1500  ***      *** Pax      *** turboprop/AT76/AT76_DLH.obj
-AT76 *** C *** EGF       *** N447AM    *** USA *** Retro      *** 1500  ***      *** Pax      *** turboprop/AT76/AT76_EGF.obj
+AT76 *** C *** EGF       *** N447AM    *** USA *** Legacy     *** 1500  ***      *** Pax      *** turboprop/AT76/AT76_EGF.obj
 AT76 *** C *** EIN       *** EIHDK     *** IRL *** Default    *** 1500  ***      *** Pax      *** turboprop/AT76/AT76_EIN.obj
 AT76 *** C *** IGO       ***           ***     *** Default    *** 1500  ***      *** Pax      *** turboprop/AT76/AT76_IGO.obj
 AT76 *** C *** JAC       ***           *** JPN *** Default    *** 1500  ***      *** Pax      *** turboprop/AT76/AT76_JAC.obj
@@ -1885,12 +1886,12 @@ B738 *** C *** KNA       *** B1926     *** CHN *** Default    *** 5700  ***     
 B738 *** C *** LKE       *** B7989     *** CHN *** Default    *** 5700  ***      *** Pax      *** jet/B738_LKE/738_LuckyAir_B7989.obj
 B738 *** C *** LNI       *** PKLOR     *** INA *** Default    *** 5700  ***      *** Pax      *** jet/B738_LNI/738_LionAir_PKLOR.obj
 B738 *** C *** LOT       *** SPLWD     *** POL *** Default    *** 5700  ***      *** Pax      *** jet/B738_LOT/738_LOTPolishAirlines_SPLWD.obj
-B738 *** C *** MAS       *** 9MFFF     *** MAS *** Retro      *** 5700  ***      *** Pax      *** jet/B738_MAS_Legacy/738_Malaysia_Legacy_9MFFF.obj
+B738 *** C *** MAS       *** 9MFFF     *** MAS *** Legacy     *** 5700  ***      *** Pax      *** jet/B738_MAS_Legacy/738_Malaysia_Legacy_9MFFF.obj
 B738 *** C *** MAS       *** 9MMXH     *** MAS *** Default    *** 5700  ***      *** Pax      *** jet/B738_MAS_Modern/738_Malaysia_Modern_9MMXH.obj
 B738 *** C *** MAY       *** 9HQCG     *** MLT *** Default    *** 5700  ***      *** Pax      *** jet/B738_RYR_9H/738_RyanairMalta_9HQCG.obj
 B738 *** C *** MSR       *** SUGEK     *** EGY *** Default    *** 5700  ***      *** Pax      *** jet/B738_MSR/738_EgyptAir_SUGEK.obj
-B738 *** C *** MXD       *** 9MLDC     *** MAS *** Default    *** 5700  ***      *** Pax      *** jet/B738_MXD/738_BatikAirMalaysia_9MLDC.obj
-B738 *** C *** MXD       *** 9MLNY     *** MAS *** Plain Tail *** 5700  ***      *** Pax      *** jet/B738_MXD2/738_BatikAirMalaysia_9MLNY.obj
+B738 *** C *** MXD       *** 9MLDC     *** MAS *** Special    *** 5700  ***      *** Pax      *** jet/B738_MXD/738_BatikAirMalaysia_9MLDC.obj
+B738 *** C *** MXD       *** 9MLNY     *** MAS *** Default    *** 5700  ***      *** Pax      *** jet/B738_MXD2/738_BatikAirMalaysia_9MLNY.obj
 B738 *** C *** NOK       *** HSDBQ     *** THA *** Default    *** 5700  ***      *** Pax      *** jet/B738_NOK/738_NokAir_HSDBQ.obj
 B738 *** C *** NOZ       *** LRAUS     *** NOR *** Fictional  *** 5700  ***      *** Pax      *** jet/B738_Fiction1/738_FICTION_LRAUS.obj
 B738 *** C *** NOZ       *** LRXUT     *** NOR *** Fictional  *** 5700  ***      *** Pax      *** jet/B738_Fiction2/738_FICTION_LRXUT.obj
@@ -1925,7 +1926,7 @@ B738 *** C *** TUA       *** EZA020    *** TKM *** Default    *** 5700  ***     
 B738 *** C *** TVF       *** FHTVN     *** FRA *** Default    *** 5700  ***      *** Pax      *** jet/B738_TVF/738_Transavia_FHTVN.obj
 B738 *** C *** TVS       *** OKTVH     *** CZE *** Default    *** 5700  ***      *** Pax      *** jet/B738_TVS/738_SmartWings_OKTVH.obj
 B738 *** C *** TWB       *** HL8378    *** KOR *** Default    *** 5700  ***      *** Pax      *** jet/B738_TWB/738_TWayAir_HL8378.obj
-B738 *** C *** UAL       *** N78540    *** USA *** Retro      *** 5700  ***      *** Pax      *** jet/B738_UAL_Legacy/738_United_Legacy_N78540.obj
+B738 *** C *** UAL       *** N78540    *** USA *** Legacy     *** 5700  ***      *** Pax      *** jet/B738_UAL_Legacy/738_United_Legacy_N78540.obj
 B738 *** C *** UAL       *** N79521    *** USA *** Default    *** 5700  ***      *** Pax      *** jet/B738_UAL_Modern/738_United_Modern_N79521.obj
 B738 *** C *** UTA       *** RA73087   *** RUS *** Default    *** 5700  ***      *** Pax      *** jet/B738_UTA/738_UTair_RA73087.obj
 B738 *** C *** VOZ       *** VHYFW     *** AUS *** Default    *** 5700  ***      *** Pax      *** jet/B738_VOZ/738_VirginAus_VHYFW.obj
@@ -1960,7 +1961,7 @@ B752 *** D *** DAL       *** N695DL    *** USA *** Default    *** 7200  ***     
 B752 *** D *** EXS       *** GLSAJ     *** GBR *** Default    *** 7200  ***      *** Pax      *** jet/B752/757_Jet2_GLSAJ.obj
 B752 *** D *** ICE       *** TFFIV     *** ISL *** Default    *** 7200  ***      *** Pax      *** jet/B752/757_Icelandair_TFFIV.obj
 B752 *** D *** RVF       *** N628NP    *** USA *** Default    *** 7200  ***      *** Pax      *** jet/B752/757_NewPacific_N628NP.obj
-B752 *** D *** UAL       *** N14121    *** USA *** Retro      *** 7200  ***      *** Pax      *** jet/B752/757_United_Legacy_N14121.obj
+B752 *** D *** UAL       *** N14121    *** USA *** Default    *** 7200  ***      *** Pax      *** jet/B752/757_United_Legacy_N14121.obj
 B752 *** D *** UAL       *** N48127    *** USA *** Default    *** 7200  ***      *** Pax      *** jet/B752/757_United_Modern_N48127.obj
 B752 *** D *** XPZZ_B752 ***           ***     *** Unpainted  *** 7200  ***      *** Pax      *** jet/B752/757PW_static.obj
 B752 *** D *** XPZZ_B752 ***           ***     *** Unpainted  *** 7200  ***      *** Pax      *** jet/B752/757PW_winglet_static.obj
@@ -1986,7 +1987,7 @@ CRJ2 *** B *** AUA       ***           ***     *** Obsolete   *** 3000  ***     
 CRJ2 *** B *** DAL       ***           ***     *** Obsolete   *** 3000  ***      *** Pax      *** jet/CRJ2/CRJ2_DAL.obj
 CRJ2 *** B *** DAL       *** N8930E    *** USA *** Obsolete   *** 3000  ***      *** Pax      *** jet/CRJ2_DAL/CRJ2_DAL_static.obj
 CRJ2 *** B *** UAL       ***           ***     *** Default    *** 3000  ***      *** Pax      *** jet/CRJ2/CRJ2_UAL.obj
-CRJ2 *** B *** VTE       ***           ***     *** Obsolete   *** 3000  ***      *** Pax      *** jet/CRJ2/CRJ2_VTE.obj
+CRJ2 *** B *** VTE       ***           ***     *** Default    *** 3000  ***      *** Pax      *** jet/CRJ2/CRJ2_VTE.obj
 D328 *** B *** LPV       *** OELKF     *** AUT *** Obsolete   *** 1850  ***      *** Pax      *** turboprop/D328_LPV/D328_LPV_static.obj
 D328 *** B *** LPV       *** OELKF     *** AUT *** Obsolete   *** 1850  ***      *** Pax      *** turboprop/D328_LPV/Dornier_328_prop_Air_Alps.obj
 DC10 *** D *** XPZZ_DC10 ***           ***     *** Unpainted  *** 9600  ***      *** Pax      *** heavy/DC10_white/DC10_white_static.obj
@@ -2005,13 +2006,13 @@ PC12 *** B *** BTQ       *** N220JP    *** USA *** Default    *** 3400  ***     
 PC12 *** B *** GPD       *** N293TW    *** USA *** Default    *** 3400  ***      *** Pax      *** turboprop/PC12/PC12_N293TW.obj
 PC12 *** B *** STB       *** FONGX     *** FRA *** Default    *** 3400  ***      *** Pax      *** turboprop/PC12/PC12_FONGX.obj
 PC12 *** B *** URF       *** N821SA    *** USA *** Default    *** 3400  ***      *** Pax      *** turboprop/PC12/PC12_N821SA.obj
-SF34 *** B *** AEG       *** ESLSF     *** EST *** Default    *** 1700  ***      *** Pax      *** turboprop/SF34/Airest.obj
+SF34 *** B *** AEG       *** ESLSF     *** EST *** Default    *** 1700  ***      *** Cargo    *** turboprop/SF34/Airest.obj
 SF34 *** B *** AEG       *** ESLSF     *** EST *** Flyest     *** 1700  ***      *** Pax      *** turboprop/SF34/Flyest.obj
 SF34 *** B *** ARZ       *** N352CJ    *** USA *** Default    *** 1700  ***      *** Pax      *** turboprop/SF34/Airborne_Imaging.obj
 SF34 *** B *** CAY       ***           ***     *** Default    *** 1700  ***      *** Pax      *** turboprop/SF34/Cayman_Airways_Express.obj
 SF34 *** B *** CFD       *** GNFLB     *** GBR *** Default    *** 1700  ***      *** GA       *** turboprop/SF34/Cranfield_University.obj
 SF34 *** B *** CVA       *** ZKCIT     *** NZL *** Default    *** 1700  ***      *** Pax      *** turboprop/SF34/Air_Chathams.obj
-SF34 *** B *** DVY       *** N440CL    *** USA *** Default    *** 1700  ***      *** Pax      *** turboprop/SF34/Legends_Airways.obj
+SF34 *** B *** DVY       *** N440CL    *** USA *** Default    *** 1700  ***      *** Cargo    *** turboprop/SF34/Legends_Airways.obj
 SF34 *** B *** EZR       *** N304AG    *** USA *** Default    *** 1700  ***      *** Pax      *** turboprop/SF34/Z_Air.obj
 SF34 *** B *** FCA       ***           ***     *** Default    *** 1700  ***      *** Pax      *** turboprop/SF34/Link_Airways.obj
 SF34 *** B *** JCG       ***           ***     *** Default    *** 1700  *** HOME *** Gov      *** turboprop/SF34/Japan_Coast_Guard.obj
@@ -2023,7 +2024,7 @@ SF34 *** B *** NYX       ***           ***     *** Vastflyg   *** 1700  ***     
 SF34 *** B *** OMT       ***           ***     *** Default    *** 1700  ***      *** Pax      *** turboprop/SF34/CM_Airlines.obj
 SF34 *** B *** PCO       *** CGPCJ     *** CAN *** Default    *** 1700  ***      *** Pax      *** turboprop/SF34/Pacific_Coastal.obj
 SF34 *** B *** PSC       *** CGQPC     *** CAN *** Default    *** 1700  ***      *** Pax      *** turboprop/SF34/Pascan_Aviation.obj
-SF34 *** B *** RAC_A     *** E7NEL     *** BIH *** Default    *** 1700  ***      *** Pax      *** turboprop/SF34/Icar_Air.obj
+SF34 *** B *** RAC_A     *** E7NEL     *** BIH *** Default    *** 1700  ***      *** Cargo    *** turboprop/SF34/Icar_Air.obj
 SF34 *** B *** RAR       *** E5SMW     *** COK *** Default    *** 1700  ***      *** Pax      *** turboprop/SF34/Air_Rarotonga.obj
 SF34 *** B *** RXA       ***           ***     *** Default    *** 1700  ***      *** Pax      *** turboprop/SF34/Rex_Airlines.obj
 SF34 *** B *** SCT       *** SELRD     *** SWE *** Default    *** 1700  ***      *** GA       *** turboprop/SF34/Saab.obj
@@ -2046,7 +2047,7 @@ B744 *** E *** CSS       *** B2423     *** CHN *** Default    *** 13450 ***     
 B744 *** E *** GTI       *** N419MC    *** USA *** Default    *** 13450 ***      *** Cargo    *** heavy/B744/B744F_ApexLogistics.obj
 B744 *** E *** GTI       *** N450PA    *** USA *** Default    *** 13450 ***      *** Cargo    *** heavy/B744/B744F_AtlasAir.obj
 B744 *** E *** GTI       *** N485MC    *** USA *** Default    *** 13450 ***      *** Cargo    *** heavy/B744/B744F_Flexport.obj
-B744 *** E *** GTI       *** N263SG    *** USA *** Default    *** 13450 ***      *** Pax      *** heavy/B744/B744_AtlasAir.obj
+B744 *** E *** GTI       *** N263SG    *** USA *** Default    *** 13450 ***      *** Cargo    *** heavy/B744/B744_AtlasAir.obj
 B744 *** E *** HGO       *** GONEE     *** GBR *** Default    *** 13450 ***      *** Cargo    *** heavy/B744/B744BCF_OneAir.obj
 B744 *** E *** ICL       *** OOACE     *** BEL *** Default    *** 13450 ***      *** Cargo    *** heavy/B744/B744BCF_ChallengeAirlines.obj
 B744 *** E *** KYE       *** N903AR    *** USA *** Default    *** 13450 ***      *** Cargo    *** heavy/B744/B744F_SkyLeaseCargo.obj
@@ -2080,7 +2081,7 @@ B763 *** D *** FDX       *** N277FE    *** USA *** Default    *** 11000 ***     
 B763 *** D *** GTI       *** N645GT    *** USA *** Default    *** 11000 ***      *** Cargo    *** jet/B763_GTI/B763_GTI_static.obj
 B763 *** D *** UPS       *** N308UP    *** USA *** Default    *** 11000 ***      *** Cargo    *** jet/B763_UPS/B763_UPS_static.obj
 DC10 *** D *** FDX       *** N360FE    *** USA *** Obsolete   *** 9600  ***      *** Cargo    *** heavy/DC10_FDX/DC10_FDX_static.obj
-PC12 *** B *** FSF       *** OHZRH     *** FIN *** Default    *** 3400  ***      *** Cargo    *** turboprop/PC12/PC12_OHZRH.obj
+PC12 *** B *** XPC5      *** OHZRH     *** FIN *** Default    *** 3400  ***      *** GA       *** turboprop/PC12/PC12_OHZRH.obj
 SF34 *** B *** AMF       ***           ***     *** Default    *** 1700  ***      *** Cargo    *** turboprop/SF34/Ameriflight.obj
 SF34 *** B *** CSQ       *** N971BC    *** USA *** Default    *** 1700  ***      *** Cargo    *** turboprop/SF34/IBC_Airways.obj
 SF34 *** B *** FRF       *** HATAD     *** HUN *** Default    *** 1700  ***      *** Cargo    *** turboprop/SF34/Fleet_Air_International.obj
@@ -2088,7 +2089,7 @@ SF34 *** B *** RYA       ***           *** USA *** Default    *** 1700  ***     
 SF34 *** B *** SRN       *** SPKPV     *** POL *** Default    *** 1700  ***      *** Cargo    *** turboprop/SF34/SprintAir_Cargo.obj
 SF34 *** B *** SRN       *** SPKPL     *** POL *** Default    *** 1700  ***      *** Cargo    *** turboprop/SF34/SprintAir_Pax.obj
 # -- GA ------------------------------------------------------------------------
-A359 *** E *** AIB       *** FWWCF     *** FRA *** Default    *** 15000 ***      *** GA       *** heavy/A359/A359_Factory.obj
+A359 *** E *** AIB       *** FWWCF     *** FRA *** Factory    *** 15000 ***      *** GA       *** heavy/A359/A359_Factory.obj
 A359 *** E *** KAY       *** DAKAY     *** GER *** Default    *** 15000 ***      *** GA       *** heavy/A359/A359_K5Aviation.obj
 A35K *** E *** AIB       *** FWMIL     *** FRA *** Default    *** 16000 ***      *** GA       *** heavy/A35K/A35K_Factory.obj
 B06  *** A *** XPGA      ***           ***     *** Default    *** 700   ***      *** GA       *** helo/B06/B06_static.obj
@@ -2116,8 +2117,8 @@ CL60 *** B *** XPGA      *** N650CF    *** USA *** Default    *** 7400  ***     
 CL60 *** B *** XPGA      *** N702LV    *** USA *** Default    *** 7400  ***      *** GA       *** jet/CL60/CL60_N702LV.obj
 CRJ2 *** B *** AFR       ***           ***     *** Obsolete   *** 3000  ***      *** Pax      *** jet/CRJ2/CRJ2_AFR_leg.obj
 CRJ2 *** B *** AUA       ***           ***     *** Obsolete   *** 3000  ***      *** Pax      *** jet/CRJ2/CRJ2_AUA_leg.obj
-CRJ2 *** B *** SCW       ***           ***     *** Obsolete   *** 3000  ***      *** Pax      *** jet/CRJ2/CRJ2_SCW.obj
-CRJ2 *** B *** XPZZ_CRJ2 ***           ***     *** Obsolete   *** 3000  ***      *** Pax      *** jet/CRJ2/CRJ2_White.obj
+CRJ2 *** B *** SCW       ***           ***     *** Default    *** 3000  ***      *** Pax      *** jet/CRJ2/CRJ2_SCW.obj
+CRJ2 *** B *** XPZZ_CRJ2 ***           ***     *** Unpainted  *** 3000  ***      *** Pax      *** jet/CRJ2/CRJ2_White.obj
 E55P *** B *** EJA       *** N403QS    *** USA *** Default    *** 3650  ***      *** GA       *** jet/E55P/E55P_EJA.obj
 E55P *** B *** LXJ       *** N381FX    *** USA *** Default    *** 3650  ***      *** GA       *** jet/E55P/E55P_LXJ.obj
 E55P *** B *** WUP       *** N652UP    *** USA *** Default    *** 3650  ***      *** GA       *** jet/E55P/E55P_WUP.obj
@@ -2148,8 +2149,8 @@ HDJT *** A *** XPGA      *** N542MP    *** USA *** Default    *** 2260  ***     
 HDJT *** A *** XPGA      *** N820JL    *** USA *** Default    *** 2260  ***      *** GA       *** jet/HDJT/HDJT_N820JL.obj
 P180 *** A *** XPGA      *** ISERG     *** ITA *** Obsolete   *** 2800  ***      *** GA       *** turboprop/P180/P180_avanti_white.obj
 P180 *** A *** XPGA      *** ISERG     *** ITA *** Obsolete   *** 2800  ***      *** GA       *** turboprop/P180/P180_static.obj
-P180 *** A *** XPGA      *** IFXRB     *** ITA *** Obsolete   *** 2800  ***      *** GA       *** turboprop/P180_Ferrari/P180_avanti_ferrari.obj
-P180 *** A *** XPGA      *** IFXRB     *** ITA *** Obsolete   *** 2800  ***      *** GA       *** turboprop/P180_Ferrari/P180_ferrari_static.obj
+P180 *** A *** XPGA      *** IFXRB     *** ITA *** Default    *** 2800  ***      *** GA       *** turboprop/P180_Ferrari/P180_avanti_ferrari.obj
+P180 *** A *** XPGA      *** IFXRB     *** ITA *** Default    *** 2800  ***      *** GA       *** turboprop/P180_Ferrari/P180_ferrari_static.obj
 P28A *** A *** XPGA      *** N157WA    *** USA *** Default    *** 1200  ***      *** GA       *** prop/PA28/PA28_N157WA.obj
 P28A *** A *** XPGA      *** N2442S    *** USA *** Default    *** 1200  ***      *** GA       *** prop/PA28/PA28_N2442S.obj
 P28A *** A *** XPGA      *** N292JE    *** USA *** Default    *** 1200  ***      *** GA       *** prop/PA28/PA28_N292JE.obj
@@ -2206,11 +2207,11 @@ C30J *** D *** AIO       ***           ***     *** Default    *** 5200  *** HOME
 C30J *** D *** ASY       ***           ***     *** Default    *** 5200  *** HOME *** Military *** turboprop/C30J/C30J_RAAF.obj
 C30J *** D *** CFC       ***           ***     *** Default    *** 5200  *** HOME *** Military *** turboprop/C30J/C30J_RCAF.obj
 C30J *** D *** IAM       ***           ***     *** Default    *** 5200  *** HOME *** Military *** turboprop/C30J/C30J_AM.obj
-C30J *** D *** XPMI      ***           ***     *** Unpainted  *** 5200  ***      *** Military *** turboprop/C30J/C30J_generic.obj
+C30J *** D *** XPMI      ***           ***     *** Universal  *** 5200  ***      *** Military *** turboprop/C30J/C30J_generic.obj
 CL60 *** B *** AIO       *** N488CR    *** USA *** Default    *** 7400  *** HOME *** Military *** jet/CL60/CL60_N488CR.obj
 DC10 *** D *** AIO       *** 392814    *** USA *** Obsolete   *** 9600  *** HOME *** Military *** heavy/DC10_AIO/DC10_AIO_static.obj
 E2   *** C *** CNV       ***           ***     *** Default    *** 2700  *** HOME *** Military *** turboprop/E2/E2_Hawkeye_CNV.obj
-E2   *** C *** XPMI      ***           ***     *** Unpainted  *** 2700  ***      *** Military *** turboprop/E2/E2_Hawkeye_generic.obj
+E2   *** C *** XPMI      ***           ***     *** Universal  *** 2700  ***      *** Military *** turboprop/E2/E2_Hawkeye_generic.obj
 EUFI *** A *** AME       ***           ***     *** Default    *** 2900  *** HOME *** Military *** fighter/EUFI/EUFI_AME.obj
 EUFI *** A *** GAF       ***           ***     *** Default    *** 2900  *** HOME *** Military *** fighter/EUFI/EUFI_GAF.obj
 EUFI *** A *** IAM       ***           ***     *** Default    *** 2900  *** HOME *** Military *** fighter/EUFI/EUFI_IAM.obj
@@ -2218,17 +2219,17 @@ EUFI *** A *** RRR       ***           ***     *** Default    *** 2900  *** HOME
 EUFI *** A *** RSF       ***           ***     *** Default    *** 2900  *** HOME *** Military *** fighter/EUFI/EUFI_RSF.obj
 F15  *** A *** AIO       ***           ***     *** Default    *** 3900  *** HOME *** Military *** fighter/F15/F15EX_cft_usaf.obj
 F15  *** A *** AIO       ***           ***     *** Default    *** 3900  *** HOME *** Military *** fighter/F15/F15EX_usaf.obj
-F15  *** A *** XPMI      ***           ***     *** Unpainted  *** 3900  ***      *** Military *** fighter/F15/F15EX_generic.obj
+F15  *** A *** XPMI      ***           ***     *** Universal  *** 3900  ***      *** Military *** fighter/F15/F15EX_generic.obj
 F18S *** A *** CNV       ***           ***     *** Default    *** 2300  *** HOME *** Military *** fighter/F18/FA_18E_static.obj
-F4   *** A *** XPMI      ***           ***     *** Obsolete   *** 2600  ***      *** Military *** fighter/F4/F4_static.obj
-H500 *** A *** XPMI      ***           ***     *** Default    *** 600   ***      *** Military *** helo/H500/H500_Military.obj
+F4   *** A *** XPMI      ***           ***     *** Universal  *** 2600  ***      *** Military *** fighter/F4/F4_static.obj
+H500 *** A *** XPMI      ***           ***     *** Universal  *** 600   ***      *** Military *** helo/H500/H500_Military.obj
 H60  *** B *** CNV       ***           ***     *** Default    *** 830   *** HOME *** Military *** helo/H60/SH60_Seahawk_static.obj
 J328 *** B *** AIO       *** N3220U    *** USA *** Default    *** 1665  *** HOME *** Military *** jet/J328_AIO/J328_AIO_static.obj
-P180 *** A *** IAM       ***           ***     *** Obsolete   *** 2800  *** HOME *** Military *** turboprop/P180_AM/P180_AM_static.obj
-P46T *** A *** XPMI      ***           ***     *** Default    *** 3300  ***      *** Military *** turboprop/P46T/M500_MIL.obj
+P180 *** A *** IAM       ***           ***     *** Default    *** 2800  *** HOME *** Military *** turboprop/P180_AM/P180_AM_static.obj
+P46T *** A *** XPMI      ***           ***     *** Universal  *** 3300  ***      *** Military *** turboprop/P46T/M500_MIL.obj
 PC12 *** B *** AIO       *** 80519     *** USA *** Default    *** 3400  *** HOME *** Military *** turboprop/PC12/PC12_US_Army.obj
-PC12 *** B *** XPMI      ***           ***     *** Default    *** 3400  ***      *** Military *** turboprop/PC12/PC12_Military.obj
-S76  *** A *** XPMI      ***           ***     *** Default    *** 760   ***      *** Military *** helo/S76_coastguard/S76_coastguard_static.obj
+PC12 *** B *** XPMI      ***           ***     *** Universal  *** 3400  ***      *** Military *** turboprop/PC12/PC12_Military.obj
+S76  *** A *** XPMI      ***           ***     *** Universal  *** 760   ***      *** Military *** helo/S76_coastguard/S76_coastguard_static.obj
 SF34 *** B *** FAG       *** T35       *** ARG *** Default    *** 1700  *** HOME *** Military *** turboprop/SF34/Argentine_Air_Force.obj
 SF34 *** B *** RTAF      *** 70206     *** THA *** Default    *** 1700  *** HOME *** Military *** turboprop/SF34/Royal_Thai_Air_Force.obj
 # -- Gov -----------------------------------------------------------------------
