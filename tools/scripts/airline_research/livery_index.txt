@@ -1,7 +1,7 @@
 I
 1 WED Aviation Database
 # schema 4
-# data 20261005-r2
+# data 20261005-r3
 # source sim_objects branch static_acf_update, commit bd8bb90757
 # assets 500 liveries under apt_aircraft/
 #
@@ -1809,7 +1809,7 @@ AT72 *** C *** EGF       *** N260AE    *** USA *** Obsolete   *** 1500  ***     
 AT76 *** C *** ANZ       *** ZKMVK     *** NZL *** Default    *** 1500  ***      *** Pax      *** turboprop/AT76/AT76_ANZ.obj
 AT76 *** C *** AZU       ***           *** BRA *** Default    *** 1500  ***      *** Pax      *** turboprop/AT76/AT76_AZU.obj
 AT76 *** C *** CLH       *** DANFK     *** GER *** Default    *** 1500  ***      *** Pax      *** turboprop/AT76/AT76_DLH.obj
-AT76 *** C *** EGF       ***           ***     *** Default    *** 1500  ***      *** Pax      *** turboprop/AT76/AT76_EGF.obj
+AT76 *** C *** EGF       *** N447AM    *** USA *** Retro      *** 1500  ***      *** Pax      *** turboprop/AT76/AT76_EGF.obj
 AT76 *** C *** EIN       *** EIHDK     *** IRL *** Default    *** 1500  ***      *** Pax      *** turboprop/AT76/AT76_EIN.obj
 AT76 *** C *** IGO       ***           ***     *** Default    *** 1500  ***      *** Pax      *** turboprop/AT76/AT76_IGO.obj
 AT76 *** C *** JAC       ***           *** JPN *** Default    *** 1500  ***      *** Pax      *** turboprop/AT76/AT76_JAC.obj
@@ -1910,11 +1910,11 @@ B738 *** C *** RYS       *** SPRSQ     *** POL *** Default    *** 5700  ***     
 B738 *** C *** SBI       *** RA73668   *** RUS *** Default    *** 5700  ***      *** Pax      *** jet/B738_SBI/738_S7_RA73668.obj
 B738 *** C *** SCX       *** N850SY    *** USA *** Default    *** 5700  ***      *** Pax      *** jet/B738_SCX/738_SunCountry_N850SY.obj
 B738 *** C *** SFR       *** ZSSJT     *** RSA *** Default    *** 5700  ***      *** Pax      *** jet/B738_SFR/738_FlySafair_ZSSJT.obj
-B738 *** C *** SIA       *** 9VMGM     *** SGP *** Obsolete   *** 5700  ***      *** Pax      *** jet/B738_SIA/738_SingaporeAirlines_9VMGM.obj
+B738 *** C *** SIA       *** 9VMGM     *** SGP *** Default    *** 5700  ***      *** Pax      *** jet/B738_SIA/738_SingaporeAirlines_9VMGM.obj
 B738 *** C *** SKY       *** JA737T    *** JPN *** Default    *** 5700  ***      *** Pax      *** jet/B738_SKY/738_SkymarkAirlines_JA737T.obj
 B738 *** C *** SWA       *** N85292    *** USA *** Default    *** 5700  ***      *** Pax      *** jet/B738_SWA/B738_SWA_static.obj
 B738 *** C *** SWG       *** CGNCH     *** CAN *** Obsolete   *** 5700  ***      *** Pax      *** jet/B738_SWG/738_Sunwing_CGNCH.obj
-B738 *** C *** SWQ       *** N276EA    *** USA *** Obsolete   *** 5700  ***      *** Pax      *** jet/B738_SWQ/738_iAeroAirways_N276EA.obj
+B738 *** C *** SWQ       *** N276EA    *** USA *** Default    *** 5700  ***      *** Pax      *** jet/B738_SWQ/738_iAeroAirways_N276EA.obj
 B738 *** C *** SXS       *** TCSOP     *** TUR *** Default    *** 5700  ***      *** Pax      *** jet/B738_SXS/738_SunExpress_TCSOP.obj
 B738 *** C *** THY       *** TCJHP     *** TUR *** Default    *** 5700  ***      *** Pax      *** jet/B738_THY/738_Turkish_TCJHP.obj
 B738 *** C *** TKJ       *** TCJZL     *** TUR *** Default    *** 5700  ***      *** Pax      *** jet/B738_TKJ/738_Anadolujet_TCJZL.obj
@@ -1957,16 +1957,16 @@ B752 *** D *** AHY       *** 4KAZ11    *** AZE *** Default    *** 7200  ***     
 B752 *** D *** AZV       *** RA73076   *** RUS *** Default    *** 7200  ***      *** Pax      *** jet/B752/757_azurair_RA73076.obj
 B752 *** D *** DAL       *** N654DL    *** USA *** Default    *** 7200  ***      *** Pax      *** jet/B752/757_Delta_N654DL.obj
 B752 *** D *** DAL       *** N695DL    *** USA *** Default    *** 7200  ***      *** Pax      *** jet/B752/757_Delta_N695DL.obj
-B752 *** D *** EXS       *** GLSAJ     *** GBR *** Obsolete   *** 7200  ***      *** Pax      *** jet/B752/757_Jet2_GLSAJ.obj
+B752 *** D *** EXS       *** GLSAJ     *** GBR *** Default    *** 7200  ***      *** Pax      *** jet/B752/757_Jet2_GLSAJ.obj
 B752 *** D *** ICE       *** TFFIV     *** ISL *** Default    *** 7200  ***      *** Pax      *** jet/B752/757_Icelandair_TFFIV.obj
-B752 *** D *** RVF       *** N628NP    *** USA *** Obsolete   *** 7200  ***      *** Pax      *** jet/B752/757_NewPacific_N628NP.obj
+B752 *** D *** RVF       *** N628NP    *** USA *** Default    *** 7200  ***      *** Pax      *** jet/B752/757_NewPacific_N628NP.obj
 B752 *** D *** UAL       *** N14121    *** USA *** Retro      *** 7200  ***      *** Pax      *** jet/B752/757_United_Legacy_N14121.obj
 B752 *** D *** UAL       *** N48127    *** USA *** Default    *** 7200  ***      *** Pax      *** jet/B752/757_United_Modern_N48127.obj
-B752 *** D *** XPZZ_B752 ***           ***     *** Default    *** 7200  ***      *** Pax      *** jet/B752/757PW_static.obj
-B752 *** D *** XPZZ_B752 ***           ***     *** Default    *** 7200  ***      *** Pax      *** jet/B752/757PW_winglet_static.obj
-B752 *** D *** XPZZ_B752 ***           ***     *** Default    *** 7200  ***      *** Pax      *** jet/B752/757RR_static.obj
-B752 *** D *** XPZZ_B752 ***           ***     *** Default    *** 7200  ***      *** Pax      *** jet/B752/757RR_winglet_static.obj
-B752 *** D *** XPZZ_B752 *** N757A     *** USA *** Default    *** 7200  ***      *** Pax      *** jet/B752/757_N757A.obj
+B752 *** D *** XPZZ_B752 ***           ***     *** Unpainted  *** 7200  ***      *** Pax      *** jet/B752/757PW_static.obj
+B752 *** D *** XPZZ_B752 ***           ***     *** Unpainted  *** 7200  ***      *** Pax      *** jet/B752/757PW_winglet_static.obj
+B752 *** D *** XPZZ_B752 ***           ***     *** Unpainted  *** 7200  ***      *** Pax      *** jet/B752/757RR_static.obj
+B752 *** D *** XPZZ_B752 ***           ***     *** Unpainted  *** 7200  ***      *** Pax      *** jet/B752/757RR_winglet_static.obj
+B752 *** D *** XPZZ_B752 *** N757A     *** USA *** Factory    *** 7200  ***      *** Pax      *** jet/B752/757_N757A.obj
 B763 *** D *** ANA       *** JA627A    *** JPN *** Default    *** 11000 ***      *** Pax      *** jet/B763_ANA/B763_ANA_static.obj
 B763 *** D *** DAL       *** N178DZ    *** USA *** Default    *** 11000 ***      *** Pax      *** jet/B763_DAL/B763_DAL_static.obj
 B763 *** D *** JAL       ***           ***     *** Default    *** 11000 ***      *** Pax      *** jet/B763_JAL/B763_JAL_static.obj
@@ -1975,8 +1975,8 @@ B763 *** D *** UAL       *** N676UA    *** USA *** Default    *** 11000 ***     
 B772 *** E *** AAL       *** N770AN    *** USA *** Obsolete   *** 14000 ***      *** Pax      *** heavy/B772_AAL/B772_AAL_static.obj
 B772 *** E *** ANZ       *** ZKOKC     *** NZL *** Default    *** 14000 ***      *** Pax      *** heavy/B772_ANZ/B772_ANZ_static.obj
 B772 *** E *** BAW       *** GYMMU     *** GBR *** Default    *** 14000 ***      *** Pax      *** heavy/B772_BAW/B772_BAW_static.obj
-B772 *** E *** DAL       *** N864DA    *** USA *** Obsolete   *** 14000 ***      *** Pax      *** heavy/B772_DAL/B772_DAL_static.obj
-B772 *** E *** UAE       *** A6EMJ     *** UAE *** Obsolete   *** 14000 ***      *** Pax      *** heavy/B772_UAE/B772_UAE_static.obj
+B772 *** E *** DAL       *** N864DA    *** USA *** Default    *** 14000 ***      *** Pax      *** heavy/B772_DAL/B772_DAL_static.obj
+B772 *** E *** UAE       *** A6EMJ     *** UAE *** Default    *** 14000 ***      *** Pax      *** heavy/B772_UAE/B772_UAE_static.obj
 CRJ1 *** B *** AFR       *** FGRJC     *** FRA *** Obsolete   *** 3000  ***      *** Pax      *** jet/CRJ1_AFR/CRJ100_Air_France.obj
 CRJ1 *** B *** AFR       *** FGRJC     *** FRA *** Obsolete   *** 3000  ***      *** Pax      *** jet/CRJ1_AFR/CRJ1_AFR_static.obj
 CRJ1 *** B *** AUA       *** OELRH     *** AUT *** Obsolete   *** 3000  ***      *** Pax      *** jet/CRJ1_AUA/CRJ100_Austrian_Arrows.obj
@@ -1985,7 +1985,7 @@ CRJ2 *** B *** AFR       ***           ***     *** Obsolete   *** 3000  ***     
 CRJ2 *** B *** AUA       ***           ***     *** Obsolete   *** 3000  ***      *** Pax      *** jet/CRJ2/CRJ2_AUA.obj
 CRJ2 *** B *** DAL       ***           ***     *** Obsolete   *** 3000  ***      *** Pax      *** jet/CRJ2/CRJ2_DAL.obj
 CRJ2 *** B *** DAL       *** N8930E    *** USA *** Obsolete   *** 3000  ***      *** Pax      *** jet/CRJ2_DAL/CRJ2_DAL_static.obj
-CRJ2 *** B *** UAL       ***           ***     *** Obsolete   *** 3000  ***      *** Pax      *** jet/CRJ2/CRJ2_UAL.obj
+CRJ2 *** B *** UAL       ***           ***     *** Default    *** 3000  ***      *** Pax      *** jet/CRJ2/CRJ2_UAL.obj
 CRJ2 *** B *** VTE       ***           ***     *** Obsolete   *** 3000  ***      *** Pax      *** jet/CRJ2/CRJ2_VTE.obj
 D328 *** B *** LPV       *** OELKF     *** AUT *** Obsolete   *** 1850  ***      *** Pax      *** turboprop/D328_LPV/D328_LPV_static.obj
 D328 *** B *** LPV       *** OELKF     *** AUT *** Obsolete   *** 1850  ***      *** Pax      *** turboprop/D328_LPV/Dornier_328_prop_Air_Alps.obj
