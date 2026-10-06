@@ -1500,7 +1500,10 @@ void	WED_ModerationLayer::DrawSelected(bool inCurrent, GUI_GraphState * g)
 
 void	WED_ModerationLayer::DrawOverlays(GUI_GraphState * g)
 {
-	if (!WED_ModerationEnabled() || !sCalloutsShown) { mHits.clear(); return; }
+	// Hidden callouts (a double click on Ramp Starts) hide the stand cards only:
+	// the Moderation View summary stays. Hits come only from what was drawn, so
+	// hidden cards take no clicks.
+	if (!WED_ModerationEnabled()) { mHits.clear(); return; }
 
 	// What the mouse was over last frame decides what is open this frame.
 	int mx, my;
@@ -1543,7 +1546,7 @@ void	WED_ModerationLayer::DrawOverlays(GUI_GraphState * g)
 	else if (!sIssueIDs.empty())
 		sIssueIDs.clear();
 
-	if (cs.empty())
+	if (cs.empty() || !sCalloutsShown)
 	{
 		glEnable(GL_CULL_FACE);
 		g->SetState(0, 0, 0, 0, 0, 0, 0);
@@ -1623,7 +1626,7 @@ void	WED_ModerationLayer::HandleClickUp(int inX, int inY, int inButton, GUI_KeyF
 int		WED_ModerationLayer::HandleClickDown(int inX, int inY, int inButton, GUI_KeyFlags modifiers)
 {
 	{ Point2 sp = GetZoomer()->MapPixelToScreen(Point2(inX, inY)); inX = (int) floor(sp.x() + 0.5); inY = (int) floor(sp.y() + 0.5); }
-	if (!WED_ModerationEnabled() || !sCalloutsShown || inButton != 0) return 0;
+	if (!WED_ModerationEnabled() || inButton != 0) return 0;
 	const float x = (float) inX, y = (float) inY;
 
 	// Most specific first: a search mark or a pin sits on a card or a tray.
