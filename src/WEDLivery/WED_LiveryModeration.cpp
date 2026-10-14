@@ -319,6 +319,8 @@ struct StandAnalysis {
 	bool	library_at_allowed = false;	// X-Plane has ANY livery at an open class
 	bool	pool = false;
 	bool	empty_list = false;		// an airline or cargo stand with weights and no operator
+	int		listed = 0;				// codes on the stand (not a pool)
+	vector<string> wrong_op;		// listed codes of another operation class, "FDX (Cargo)"
 	int		op = 0;
 	string	country;
 };
@@ -331,6 +333,8 @@ struct StandTrace {
 	string	code, type, path, verdict;
 };
 }
+
+static const char * OpLabel(int op);
 
 static void	AnalyseStand(WED_RampPosition * ramp, WED_Airport * apt, StandAnalysis & a, vector<StandTrace> * trace = NULL)
 {
@@ -408,8 +412,15 @@ static void	AnalyseStand(WED_RampPosition * ramp, WED_Airport * apt, StandAnalys
 	for (size_t n = 0; n < candidates.size(); ++n)
 	{
 		const string & code = candidates[n];
+		if (!a.pool) ++a.listed;
 		if (!WED_LiveryOperatorFitsRampOp(code, a.op, d->directory))
 		{
+			if (!a.pool)
+			{
+				WED_AirlineDirectoryEntry de;
+				static const char * k_cls[] = { "Pax", "Cargo", "GA", "Military", "Gov" };
+				a.wrong_op.push_back(d->directory.Lookup(code, de) ? code + " (" + k_cls[de.op_class] + ")" : code);
+			}
 			if (trace && !a.pool) trace->push_back({ -1, code, "-", "-", "wrong_operation_class" });
 			continue;
 		}
@@ -612,7 +623,11 @@ bool	WED_LiveryParksNothing(WED_RampPosition * ramp, WED_Airport * apt, string &
 		if (a.fits[k] && k <= top) fit_classes += (char) ('A' + k);
 	}
 	const bool fixable = FixableAnalysis(a);
-	const char * weights_or_size = a.weighted ? "its spawn weights" : "its size (legacy format, stepping down to A)";
+	// the sizes the stand opens, and where they come from
+	const string sizes = a.weighted ? "the sizes its spawn weights open (" + classes + ")"
+									: string("its sizes (") + classes + ": legacy size " + (char) ('A' + a.hi) + ", stepping down to A)";
+	string wrong;
+	for (size_t k = 0; k < a.wrong_op.size(); ++k) wrong += (k ? ", " : "") + a.wrong_op[k];
 
 	// R14's cases, which must not read alike.
 	string why;
@@ -630,14 +645,18 @@ bool	WED_LiveryParksNothing(WED_RampPosition * ramp, WED_Airport * apt, string &
 				? " that may park in " + a.country + " and fits its equipment type"
 				: " and fits its equipment type";
 	}
+	else if (!a.wrong_op.empty() && (int) a.wrong_op.size() == a.listed)
+		// every listed operator is of another kind: a cargo airline on a passenger gate
+		why = string("it is a ") + OpLabel(a.op) + " stand and none of its operators may park on one: " + wrong;
 	else if (a.listed_at_allowed)
 		// they fly this size, but nothing reaches from a hub or fits the equipment
 		why = "none of its operators (" + airlines + ") has a static livery at size " + classes +
 			  " that can reach this airport and fits its equipment type";
 	else
 		// the weights (or the range) point where these operators do not fly: a mistake
-		why = string(weights_or_size) + " (" + classes + ") point where none of its operators (" + airlines +
-			  ") has a static livery";
+		why = "none of its operators (" + airlines + ") has a static livery at " + sizes;
+	if (!a.wrong_op.empty() && (int) a.wrong_op.size() < a.listed)
+		why += string(" (") + wrong + " may not park on a " + OpLabel(a.op) + " stand)";
 
 	out_msg = string("Ramp start '") + name + "': " + why +
 		", so X-Plane will park no static aircraft here. ATC and AI parking are unaffected.";
@@ -648,7 +667,8 @@ bool	WED_LiveryParksNothing(WED_RampPosition * ramp, WED_Airport * apt, string &
 		for (int k = 0; k < 6; ++k)
 			if (a.wts[k] > 0 && !a.fits[k]) { const int t = NearestFit(a, k); if (t >= 0) { w[t] += a.wts[k]; w[k] -= a.wts[k]; } }
 		for (int k = 5; k >= 0; --k) if (w[k] > 0) { new_top = k; break; }
-		out_msg += " Fixable: select it and press Fix - " + string(weights_or_size) + " move onto " + fit_classes;
+		out_msg += string(" Fixable: select it and press Fix - ") + (a.weighted ? "its spawn weights move" : "it gets spawn weights") +
+				   " onto " + fit_classes;
 		if (new_top >= 0 && new_top != top)
 			out_msg += string(", and the stand's size becomes ") + (char) ('A' + new_top) + " (was " + (char) ('A' + top) + "; AI and ATC follow it)";
 		out_msg += ".";
