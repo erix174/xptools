@@ -771,6 +771,10 @@ void	WED_DoExportPack(WED_Document * resolver, WED_MapPane * pane)
 		const int filled_stands = upgrade.filled;
 		if (uMgr->UndoToMark())
 			DoUserAlert("Some of the upgrade heuristics applied during export could not be undone. Scenery was permanently altered by export.");
+		else if (WED_ModerationEnabled())
+			// A moderator does not change the author's objects, so the alert is only
+			// noise (Julian, 2026-10-20); the log above still has both counts.
+			;
 		else if (removed_statics > 0 || filled_stands > 0)
 		{
 			// Silent until 2.8 - a forum thread spent weeks on "5 of my 13 static
