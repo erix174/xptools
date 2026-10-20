@@ -5,6 +5,11 @@ on:
     branches:
       - "wed_2*_release"
   workflow_dispatch:
+    inputs:
+      windows_only:
+        description: "Build Windows only (a ready-to-use zip, no Mac/Linux)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -50,8 +55,22 @@ jobs:
             vs_build/Release/WED.exe
             vs_build/Release/WED_AirportDatabase.txt
             vs_build/Release/flags
+      # Unzip and run: WED with its data files, the release notes and the livery
+      # index (it goes into X-Plane's sim objects/apt_aircraft folder).
+      - name: Stage ready-to-use build
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force wed_win | Out-Null
+          Copy-Item vs_build/Release/WED.exe, vs_build/Release/WED_AirportDatabase.txt, src/WEDCore/README.WorldEditor, tools/scripts/airline_research/livery_index.txt wed_win/
+          Copy-Item -Recurse vs_build/Release/flags wed_win/
+      - name: Archive ready-to-use build
+        uses: actions/upload-artifact@main
+        with:
+          name: wed_win_${{ github.sha }}
+          path: wed_win
 
   build-mac:
+    if: ${{ !inputs.windows_only }}
     runs-on: macos-15
     env:
       APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -101,6 +120,7 @@ jobs:
           path: artifact-mac.zip
 
   build-linux:
+    if: ${{ !inputs.windows_only }}
     runs-on: ubuntu-22.04
     # we need fltk-dev and python 2.7
     #container:
@@ -142,6 +162,7 @@ jobs:
             build_Release/flags
 
   create-zip-files:
+    if: ${{ !inputs.windows_only }}
     runs-on: ubuntu-latest
     needs: [build-windows, build-mac, build-linux]
     steps:
