@@ -644,6 +644,7 @@ static bool	ModeratorFocusKeeps(const string& name, set<string>& keep, int& tab_
 	if      (name == "Taxiways")		{ keep.insert(name); }
 	else if (name == "Draped Polygons")	{ keep.insert(name); }
 	else if (name == "Ground Vehicles")	{ keep.insert(name); keep.insert("Ground Routes"); tab_cmd = wed_MapATC; }
+	else if (name == "Roads")			{ keep.insert(name); keep.insert("Exclusion Zones"); }	// Julian, 2026-10-20
 	else return false;
 	return true;
 }
