@@ -13,24 +13,32 @@ menu to view it online.
 
 CHANGE HISTORY:
 
-WED 2.7.3-r1:
+WED 2.7.3-b1:
+  Features:
+   - Gateway validation warns about gates and tie-downs with operation type
+     None, as X-Plane parks no static aircraft there
+   - Gateway validation warns about static aircraft objects overlapping a ramp
+     start, which the Gateway export (and Global Airports) removes
   Bugfixes:
    - Fixed author-defined airline codes being erased on half of the wide-body
      (size D and larger) ramp starts when generating ATC flow / ramp data
+   - Fixed Gateway export changing ramp starts with operation type None to
+     Airline or General Aviation, so X-Plane parked aircraft there anyway
    - Runway ATC route segments are always size E, as in X-Plane: their "Size"
      can no longer be narrowed
    - Removed the minimum length check for ATC taxi and truck route segments
-     (7 to 20 m by aircraft size, 5 m for trucks); only a zero-length segment is
-     still an error
+     (7 to 20 m by aircraft size, 5 m for trucks); only a segment shorter than
+     1 m is still an error
    - Fixed "Match Bezier Handles" not working when more than one Bezier point
      (e.g. two .lin edge effects) was snapped to the same node
-   - Fixed facade wall width/height limits in the Library Preview pane showing
-     unreadable placeholder values (e.g. "1e+03", "0.2") instead of "any"/a
-     readable range
+   - Fixed facade wall widths in the Library Preview pane showing placeholder
+     limits as "1e+03" instead of "any" or a readable range, and single-floor
+     facades showing a part's height (e.g. "h=0.2m") instead of the roof's
    - Fixed Split not working on a closed .lin (Line) placement
    - Fixed a crash when Split failed to clone a chain's node
+   - Fixed building with Xcode 27 (macOS 27 SDK); libcurl updated to 8.23.0
 
-WED 2.7.2-r2:
+WED 2.7.2-r1:
   Bugfixes:
    - Fixed a crash on Linux when loading certain custom sceneries
 

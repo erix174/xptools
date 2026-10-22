@@ -95,20 +95,6 @@
 
 #define DEBUG_EDGE_CROSSING 0
 
-namespace std
-{
-	template <> struct less<Point2>
-	{
-		bool operator()(const Point2 & lhs, const Point2 & rhs) const
-		{
-			if (lhs.x() != rhs.x())
-				return lhs.x() < rhs.x();
-			else
-				return lhs.y() < rhs.y();
-		}
-	};
-}
-
 int		WED_CanGroup(IResolver * inResolver)
 {
 	ISelection * sel = WED_GetSelect(inResolver);
@@ -2375,7 +2361,7 @@ int		WED_CanMatchBezierHandles(IResolver * resolver)
 
 // Implementation helper for get_snapped_bezier_points().
 static void get_snapped_bezier_points_impl(WED_Thing * t, const set<WED_GISPoint_Bezier *> & ignore,
-	const set<Point2> & points, const Bbox2 & bounds, multimap<Point2, WED_GISPoint_Bezier *> & snapped)
+	const set<Point2, lesser_x_then_y> & points, const Bbox2 & bounds, multimap<Point2, WED_GISPoint_Bezier *, lesser_x_then_y> & snapped)
 {
 	IGISEntity * ent = dynamic_cast<IGISEntity *>(t);
 	if (!ent || !ent->IntersectsBox(gis_Geo, bounds))
@@ -2400,10 +2386,10 @@ static void get_snapped_bezier_points_impl(WED_Thing * t, const set<WED_GISPoint
 // points.
 static void get_snapped_bezier_points(WED_Thing * wrl,
 	const vector<WED_GISPoint_Bezier *> & points,
-	multimap<Point2, WED_GISPoint_Bezier *> & snapped)
+	multimap<Point2, WED_GISPoint_Bezier *, lesser_x_then_y> & snapped)
 {
 	set<WED_GISPoint_Bezier *> points_set;
-	set<Point2> locations;
+	set<Point2, lesser_x_then_y> locations;
 	Bbox2 bounds;
 	for (size_t i = 0; i < points.size(); ++i)
 	{
@@ -2550,7 +2536,7 @@ void	WED_DoMatchBezierHandles(IResolver * resolver)
 		get_bezier_points(t, points);
 	}
 
-	typedef multimap<Point2, WED_GISPoint_Bezier *> Snapped_t;
+	typedef multimap<Point2, WED_GISPoint_Bezier *, lesser_x_then_y> Snapped_t;
 	Snapped_t snapped;
 	get_snapped_bezier_points(wrl, points, snapped);
 
@@ -3266,7 +3252,7 @@ static bool ring_info_from_chains(const vector<ISelectable*> selected, vector<ri
 	}
 
 	// For all points in the first chain, create a map from location to index.
-	map<Point2, int> points_0;
+	map<Point2, int, lesser_x_then_y> points_0;
 	for (int i = 0; i < chains[0]->GetNumPoints(); ++i)
 	{
 		Point2 p;
@@ -3280,7 +3266,7 @@ static bool ring_info_from_chains(const vector<ISelectable*> selected, vector<ri
 	{
 		Point2 p;
 		chains[1]->GetNthPoint(i)->GetLocation(gis_Geo, p);
-		map<Point2, int>::iterator iter = points_0.find(p);
+		map<Point2, int, lesser_x_then_y>::iterator iter = points_0.find(p);
 		if (iter != points_0.end())
 		{
 			idx[0].insert(iter->second);
@@ -4689,6 +4675,35 @@ static void collect_ramps_recursive(WED_Thing * who, vector<WED_RampPosition *>&
 	}
 }
 
+// Pairs each static aircraft object with the first ramp start it overlaps
+static void find_static_aircraft_near_ramps(const vector<WED_RampPosition *>& ramps, const vector<obj_conflict_info>& objs,
+											vector<pair<WED_ObjPlacement *, WED_RampPosition *> >& out_conflicts)
+{
+	for(auto& o : objs)
+	{
+		for(auto r : ramps)
+		{
+			Point2 rp; double rs;
+			center_and_radius_for_ramp_start(r, rp, rs);
+
+			if(LonLatDistMeters(rp, o.loc_ll) < (o.approx_radius_m + rs))
+			{
+				//debug_mesh_line(rp, o.loc_ll, 1,0,0,1,0,0);
+				out_conflicts.push_back(make_pair(o.obj, r));
+				break;
+			}
+		}
+	}
+}
+
+void wed_static_aircraft_near_ramps(WED_Airport* apt, vector<pair<WED_ObjPlacement *, WED_RampPosition *> >& out_conflicts)
+{
+	vector<WED_RampPosition *> ramps;
+	vector<obj_conflict_info> objs;
+	collect_ramps_recursive(apt, ramps, objs, WED_GetResourceMgr(apt->GetArchive()->GetResolver()));
+	find_static_aircraft_near_ramps(ramps, objs, out_conflicts);
+}
+
 int wed_upgrade_ramps(WED_Thing* who, bool fill_op_types, int * out_removed_statics, WED_LegacyUpgradeStats * out_upgrade)
 {
 	auto rmgr = WED_GetResourceMgr(who->GetArchive()->GetResolver());
@@ -4751,25 +4766,17 @@ int wed_upgrade_ramps(WED_Thing* who, bool fill_op_types, int * out_removed_stat
 		}
 	}
 	// nuke static aircraft objects near ramps - every one, None, misc and hangar
-	// included: the user can start a flight on any of them
-	for(auto& o : objs)
+	// included: the user can start a flight on any of them. Gateway validation
+	// warns about these (wed_static_aircraft_near_ramps)
+	vector<pair<WED_ObjPlacement *, WED_RampPosition *> > conflicts;
+	find_static_aircraft_near_ramps(ramps, objs, conflicts);
+	for(auto& c : conflicts)
 	{
-		for(auto r : ramps)
-		{
-			Point2 rp; double rs;
-			center_and_radius_for_ramp_start(r, rp, rs);
-
-			if(LonLatDistMeters(rp, o.loc_ll) < (o.approx_radius_m + rs))
-			{
-				//debug_mesh_line(rp, o.loc_ll, 1,0,0,1,0,0);
-				sel->Erase(o.obj);
-				o.obj->SetParent(NULL, 0);
-				o.obj->Delete();
-				did_work = 1;
-				if (out_removed_statics) ++*out_removed_statics;
-				break;
-			}
-		}
+		sel->Erase(c.first);
+		c.first->SetParent(NULL, 0);
+		c.first->Delete();
+		did_work = 1;
+		if (out_removed_statics) ++*out_removed_statics;
 	}
 	return did_work;
 }
