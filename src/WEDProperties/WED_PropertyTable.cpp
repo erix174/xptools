@@ -56,6 +56,7 @@
 #include "WED_TruckDestination.h"
 #include "WED_TruckParkingLocation.h"
 #include "WED_Runway.h"
+#include "WED_AirportBoundary.h"
 
 inline int count_strs(const char ** p) { if (!p) return 0; int n = 0; while(*p) ++p, ++n; return n; }
 
@@ -641,7 +642,7 @@ void	WED_PropertyTable::ModeratorShowAirport(WED_Airport * apt)
 static bool	ModeratorFocusKeeps(const string& name, set<string>& keep, int& tab_cmd)
 {
 	tab_cmd = 0;
-	if      (name == "Taxiways")		{ keep.insert(name); }
+	if      (name == "Taxiways")		{ keep.insert(name); keep.insert("Runways"); }	// Julian, 2026-10-22
 	else if (name == "Draped Polygons")	{ keep.insert(name); }
 	else if (name == "Ground Vehicles")	{ keep.insert(name); keep.insert("Ground Routes"); tab_cmd = wed_MapATC; }
 	else if (name == "Roads")			{ keep.insert(name); keep.insert("Exclusion Zones"); }	// Julian, 2026-10-20
@@ -703,6 +704,61 @@ bool	WED_PropertyTable::ModeratorFocusFolder(WED_Thing * folder)
 	return true;
 }
 
+// The folders a double click on the airport boundary selects with it, so a
+// moderator sees what lies inside the boundary (Julian, 2026-10-22).
+static const char * k_boundary_check_folders[] = {
+	"Taxiways", "Ramp Starts", "Draped Polygons", "Ground Vehicles", "Facades",
+	"Objects", "Lines", "Markings", "Lights", "Strings", "Signs", "Forests",
+	"Pavement FX", "Terrain FX", "Windsocks", "Exclusion Zones", "Orthophotos"
+};
+
+// Double click on an airport boundary: select it and those folders of its
+// airport, shown, on the Selection tab. The imagery stays as it is.
+bool	WED_PropertyTable::ModeratorCheckBoundary(WED_AirportBoundary * bou)
+{
+	WED_Airport * apt = WED_GetParentAirport(bou);
+	if (!apt) return false;
+
+	set<string> wanted(std::begin(k_boundary_check_folders), std::end(k_boundary_check_folders));
+	vector<WED_Thing *> groups, folders;
+	ModCollectGroups(apt, groups);
+	for (auto g : groups)
+	{
+		string gn;
+		g->GetName(gn);
+		if (wanted.count(gn)) folders.push_back(g);
+	}
+
+	// a hidden folder would be selected but not seen, after a Show Only double click
+	const char * cmd_name = "Show Boundary Contents";
+	WED_Thing * started = NULL;
+	for (WED_Thing * p = bou; p; p = p->GetParent())
+		ModSetHidden(p, 0, started, cmd_name);
+	for (auto f : folders)
+	{
+		for (WED_Thing * p = f; p; p = p->GetParent())
+			ModSetHidden(p, 0, started, cmd_name);
+		vector<WED_Thing *> sub;
+		ModCollectGroups(f, sub);
+		for (auto s : sub)
+			ModSetHidden(s, 0, started, cmd_name);
+	}
+	if (started) started->CommitCommand();
+
+	ISelection * sel = WED_GetSelect(mResolver);
+	IOperation * op = dynamic_cast<IOperation *>(sel);
+	op->StartOperation("Select Boundary Contents");
+	sel->Clear();
+	sel->Insert(bou);
+	for (auto f : folders)
+		sel->Insert(f);
+	op->CommitOperation();
+
+	DispatchHandleCommand(wed_MapSelection);
+	DispatchHandleCommand(wed_ZoomSelection);
+	return true;
+}
+
 // The airport is often selected already - an import leaves it so - and a click
 // on a selected name would open it for renaming. In moderator mode it does the
 // single-click setup instead; the Selection tab still renames. The same goes for
@@ -715,8 +771,9 @@ int		WED_PropertyTable::ClickSelectedCell(
 	if (cell_x < 0 || cell_x >= (int) mColNames.size() || mColNames[cell_x] != "Name") return 0;
 	WED_Thing * t = FetchNth(cell_y);
 
-	// One of the double-click folders: its first click must not open the name
-	// for editing, or the second lands in the text field instead of here.
+	// One of the double-click folders or a boundary: its first click must not open
+	// the name for editing, or the second lands in the text field instead of here.
+	if (SAFE_CAST(WED_AirportBoundary, t)) return 1;
 	if (SAFE_CAST(WED_Group, t))
 	{
 		string name; set<string> keep; int tab_cmd;
@@ -885,8 +942,12 @@ int		WED_PropertyTable::DoubleClickCell(
 {
 	if (gModeratorMode && !mVertical && !mSelOnly && cell_x >= 0 && cell_x < (int) mColNames.size() && mColNames[cell_x] == "Name")
 		if (WED_Thing * t = FetchNth(cell_y))
+		{
+			if (WED_AirportBoundary * bou = SAFE_CAST(WED_AirportBoundary, t))
+				return ModeratorCheckBoundary(bou) ? 1 : 0;
 			if (SAFE_CAST(WED_Group, t))
 				return ModeratorFocusFolder(t) ? 1 : 0;
+		}
 	return 0;
 }
 

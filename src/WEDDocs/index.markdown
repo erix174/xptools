@@ -1184,9 +1184,11 @@ In Moderator Mode the hierarchy pane sets up the map for you:
 * Selecting something in the hierarchy zooms the map to it. Ramp starts, taxi routes, runways, and the "Runways", "Ramp Starts", "Taxi Routes", "Ground Vehicles" and "Ground Routes" folders switch to the Taxi Routes tab; anything else switches to the Selection tab.
 * The stand callouts on the map are off to start with; a double click on an airport's Ramp Starts folder shows or hides them.
 * A single click on an airport's name (also when it is already selected) lists all of its folders (each one closed, so you see one line per folder), makes them all visible and switches the imagery to ESRI. It does not open the name for renaming; rename airports in the Selection tab instead.
-* A double click on the **Taxiways** or **Draped Polygons** folder shows only that folder, hides its sibling folders and turns the imagery off.
+* A double click on the **Taxiways** folder shows it together with **Runways**, hides the other folders and turns the imagery off.
+* A double click on the **Draped Polygons** folder shows only that folder, hides its sibling folders and turns the imagery off.
 * A double click on the **Ground Vehicles** folder shows it together with **Ground Routes**, hides the other folders and switches to the Taxi Routes tab.
 * A double click on the **Roads** folder shows it together with **Exclusion Zones**, hides the other folders and turns the imagery off.
+* A double click on an **airport boundary** selects it together with the Taxiways, Ramp Starts, Draped Polygons, Ground Vehicles, Facades, Objects, Lines, Markings, Lights, Strings, Signs, Forests, Pavement FX, Terrain FX, Windsocks, Exclusion Zones and Orthophotos folders, shows them if they were hidden, and zooms to them on the Selection tab, so you can check what lies inside the boundary. The imagery stays as it is.
 
 Showing and hiding folders is an ordinary edit that can be undone. Hidden items are not exported, so in Moderator Mode **Export Scenery Pack** and **Submit to Airport Scenery Gateway** first list anything hidden and offer **Show All and Export** (one undo step), **Export As Is** or **Cancel**. Clicking the airport name also shows everything again.
 

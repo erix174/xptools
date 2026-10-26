@@ -33,6 +33,7 @@ class	ISelection;
 class	IResolver;
 class	WED_Thing;
 class	WED_Airport;
+class	WED_AirportBoundary;
 class	WED_Archive;
 class	WED_Select;
 class   GUI_Commander;
@@ -201,6 +202,7 @@ private:
 			// Moderator mode shortcuts (Gateway moderation)
 			void			ModeratorShowAirport(WED_Airport * apt);
 			bool			ModeratorFocusFolder(WED_Thing * folder);
+			bool			ModeratorCheckBoundary(WED_AirportBoundary * bou);
 
 			void	Resort();
 
