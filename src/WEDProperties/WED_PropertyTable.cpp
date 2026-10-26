@@ -713,7 +713,9 @@ static const char * k_boundary_check_folders[] = {
 };
 
 // Double click on an airport boundary: select it and those folders of its
-// airport, shown, on the Selection tab. The imagery stays as it is.
+// airport, shown, on the Selection tab. The imagery stays as it is. One undo
+// step. A Ctrl or Shift double click adds to the selection and keeps the map,
+// as a Ctrl or Shift click does (SelectionEnd).
 bool	WED_PropertyTable::ModeratorCheckBoundary(WED_AirportBoundary * bou)
 {
 	WED_Airport * apt = WED_GetParentAirport(bou);
@@ -729,33 +731,36 @@ bool	WED_PropertyTable::ModeratorCheckBoundary(WED_AirportBoundary * bou)
 		if (wanted.count(gn)) folders.push_back(g);
 	}
 
-	// a hidden folder would be selected but not seen, after a Show Only double click
-	const char * cmd_name = "Show Boundary Contents";
-	WED_Thing * started = NULL;
-	for (WED_Thing * p = bou; p; p = p->GetParent())
-		ModSetHidden(p, 0, started, cmd_name);
-	for (auto f : folders)
-	{
-		for (WED_Thing * p = f; p; p = p->GetParent())
-			ModSetHidden(p, 0, started, cmd_name);
-		vector<WED_Thing *> sub;
-		ModCollectGroups(f, sub);
-		for (auto s : sub)
-			ModSetHidden(s, 0, started, cmd_name);
-	}
-	if (started) started->CommitCommand();
-
 	ISelection * sel = WED_GetSelect(mResolver);
 	IOperation * op = dynamic_cast<IOperation *>(sel);
 	op->StartOperation("Select Boundary Contents");
-	sel->Clear();
+
+	// a hidden folder would be selected but not seen, after a Show Only double
+	// click; the command is open already, so ModSetHidden must not start one
+	WED_Thing * started = bou;
+	for (WED_Thing * p = bou; p; p = p->GetParent())
+		ModSetHidden(p, 0, started, NULL);
+	for (auto f : folders)
+	{
+		for (WED_Thing * p = f; p; p = p->GetParent())
+			ModSetHidden(p, 0, started, NULL);
+		vector<WED_Thing *> sub;
+		ModCollectGroups(f, sub);
+		for (auto s : sub)
+			ModSetHidden(s, 0, started, NULL);
+	}
+
+	if (!mSelAdding) sel->Clear();
 	sel->Insert(bou);
 	for (auto f : folders)
 		sel->Insert(f);
 	op->CommitOperation();
 
-	DispatchHandleCommand(wed_MapSelection);
-	DispatchHandleCommand(wed_ZoomSelection);
+	if (!mSelAdding)
+	{
+		DispatchHandleCommand(wed_MapSelection);
+		DispatchHandleCommand(wed_ZoomSelection);
+	}
 	return true;
 }
 
