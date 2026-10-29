@@ -135,8 +135,9 @@ public:
 
 	// The airport and its country, for the Selection tab to draw above the
 	// property grid. The height follows the width (a long warning wraps).
-	float				AirportStripHeight(int width);
-	void				DrawAirportStrip(GUI_GraphState * state, int bounds[4]);
+	// label_w is the grid's label column: the flag fills it, the text starts after.
+	float				AirportStripHeight(int width, int label_w);
+	void				DrawAirportStrip(GUI_GraphState * state, int bounds[4], int label_w);
 	// A section title bar in this pane's own style - its "Static aircraft" bar,
 	// and the Selection tab's "Ramp start" bar above the grid.
 	void				DrawSectionBar(GUI_GraphState * state, int bounds[4], const char * title);
@@ -624,7 +625,7 @@ private:
 
 	// The airport strip's facts (UpdateAirportInfo), kept for DrawAirportStrip.
 	void			UpdateAirportInfo(void);
-	void			AirportStripLines(float width, std::vector<std::string> & out_info, std::string & out_status, bool & out_status_own_line) const;
+	void			AirportStripLines(float width, float label_w, std::vector<std::string> & out_info, std::string & out_status, bool & out_status_own_line) const;
 	std::string		mInfoText;			// airport, ICAO and country - or why there is none
 	std::string		mStatusText;		// whether recommendations exist; "" = nothing to say
 	bool			mInfoWarn;

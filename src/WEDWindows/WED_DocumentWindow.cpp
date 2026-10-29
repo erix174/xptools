@@ -133,7 +133,7 @@ namespace
 			if (mLaidOutStrip > 0)
 			{
 				int sb[4] = { b[0], b[3] - mLaidOutStrip, b[2], b[3] };
-				mLivery->DrawAirportStrip(state, sb);
+				mLivery->DrawAirportStrip(state, sb, mProps->GetLabelWidth());
 			}
 			int hb[4] = { b[0], b[3] - mLaidOutStrip - HeaderHeight(), b[2], b[3] - mLaidOutStrip };
 			mLivery->DrawSectionBar(state, hb, mMultiple ? "Ramp starts" : "Ramp start");
@@ -169,7 +169,7 @@ namespace
 			int ramps = OnlyRampStarts();
 			if (ramps)
 			{
-				strip_h = (int) mLivery->AirportStripHeight(b[2] - b[0]);
+				strip_h = (int) mLivery->AirportStripHeight(b[2] - b[0], mProps->GetLabelWidth());
 				int room = max(b[3] - b[1] - strip_h - HeaderHeight(), 0);
 				props_h = max(min(mProps->GetContentHeight(), room / 2), min(60, room));
 			}

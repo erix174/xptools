@@ -83,6 +83,7 @@ public:
 	// stretched across the pane, no ramp operation type row for ramp starts.
 	void		SetSelectionTabStyle(void);
 	void		UpdateFillWidth(void);		// after a resize; refreshes if it changed
+	int			GetLabelWidth(void) const;	// the left column of property names, 0 if none
 
 	virtual int		MouseMove(int x, int y);
 	virtual	void	ReceiveMessage(

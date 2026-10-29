@@ -38,6 +38,9 @@ WED_PropertyPane::WED_PropertyPane(
 						int						pane_style,
 						const char **			filter) :
 	GUI_Commander(inCommander),
+	mHeader(NULL),
+	mSide(NULL),
+	mFilter(NULL),
 	mTextTable(this,12,0),
 	mPropertyTable(this, resolver, col_names, def_col_widths,
 			pane_style == propPane_Selection || pane_style == propPane_FilteredVertical,
@@ -205,6 +208,14 @@ void	WED_PropertyPane::UpdateFillWidth(void)
 		mScroller->ContentGeometryChanged();
 		Refresh();
 	}
+}
+
+int		WED_PropertyPane::GetLabelWidth(void) const
+{
+	if (!mSide) return 0;
+	int sb[4];
+	mSide->GetBounds(sb);
+	return sb[2] - sb[0];
 }
 
 int		WED_PropertyPane::GetContentHeight(void)

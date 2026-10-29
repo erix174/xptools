@@ -1097,8 +1097,8 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 // ---------------------------------------------------------------------------------------------
 
 // The projected flag banner is about 2048 x 768 (WED_FlagProjector), pole and
-// wave included. The strip keeps a box of that shape for it before the texture
-// exists, so the strip's height and text never wait on it.
+// wave included. The strip sizes itself from that shape before the texture
+// exists, so its height never waits on it.
 static const float kStripFlagAspect = 2.67f;
 
 // The facts behind the airport strip: which airport the selected stands are
@@ -1250,13 +1250,12 @@ void	WED_LiveryPane::UpdateAirportInfo(void)
 
 // One line or two: the airport and country in the header colour, then whether
 // recommendations exist, muted (yellow when they may not). A warning about the
-// airport's code wraps over as many lines as it needs.
-void	WED_LiveryPane::AirportStripLines(float width, vector<string> & out_info, string & out_status, bool & out_status_own_line) const
+// airport's code wraps over as many lines as it needs. The text starts where
+// the grid's values do, label_w in: the flag sits in the label column.
+void	WED_LiveryPane::AirportStripLines(float width, float label_w, vector<string> & out_info, string & out_status, bool & out_status_own_line) const
 {
 	const float pad = 4;
-	const float line_h = GUI_GetLineHeight(font_UI_Basic);
-	const float flag_w = mFlagCountry.empty() ? 0.0f : (line_h + 6) * kStripFlagAspect + pad;
-	const float text_w = width - flag_w - pad * 2;
+	const float text_w = width - label_w - pad * 2;
 	out_info = WrapText(font_UI_Basic, mInfoText, text_w);
 	out_status.clear();
 	out_status_own_line = false;
@@ -1270,16 +1269,22 @@ void	WED_LiveryPane::AirportStripLines(float width, vector<string> & out_info, s
 	out_status_own_line = used + need > text_w;
 }
 
-float	WED_LiveryPane::AirportStripHeight(int width)
+// The flag fills the label column's width, at the banner's own shape.
+static float	StripFlagHeight(float label_w)
+{
+	return (label_w - 2 * 4) / kStripFlagAspect;
+}
+
+float	WED_LiveryPane::AirportStripHeight(int width, int label_w)
 {
 	UpdateAirportInfo();
 	vector<string> info; string status; bool own_line;
-	AirportStripLines((float) width, info, status, own_line);
+	AirportStripLines((float) width, (float) label_w, info, status, own_line);
 	const float line_h = GUI_GetLineHeight(font_UI_Basic);
 	int lines = (int) info.size() + (own_line ? 1 : 0);
 	if (lines == 0) return 0;
 	float text_h = lines * line_h + 8;
-	float flag_h = mFlagCountry.empty() ? 0.0f : line_h + 6 + 8;
+	float flag_h = mFlagCountry.empty() ? 0.0f : StripFlagHeight((float) label_w) + 8;
 	return (std::max)(text_h, flag_h);
 }
 
@@ -1304,13 +1309,14 @@ void	WED_LiveryPane::DrawSectionBar(GUI_GraphState * state, int b[4], const char
 					 b[0] + 4.0f, b[3] - (b[3] - b[1]) * 0.5f - line_h * 0.4f, title);
 }
 
-void	WED_LiveryPane::DrawAirportStrip(GUI_GraphState * state, int b[4])
+void	WED_LiveryPane::DrawAirportStrip(GUI_GraphState * state, int b[4], int label_w)
 {
 	UpdateAirportInfo();
 	EnsureFlagTexture(mFlagCountry);
 
 	const float pad = 4;
 	const float line_h = GUI_GetLineHeight(font_UI_Basic);
+	const float col_x = (float) (b[0] + label_w);		// the grid's label / value border
 
 	glPushAttrib(GL_ENABLE_BIT);
 	glDisable(GL_CULL_FACE);		// called outside Draw() - see DrawSectionBar()
@@ -1322,38 +1328,34 @@ void	WED_LiveryPane::DrawAirportStrip(GUI_GraphState * state, int b[4])
 		glVertex2f((float) b[2], (float) b[3]);
 		glVertex2f((float) b[0], (float) b[3]);
 	glEnd();
+	// the same divider as between the grid's labels and values
+	glColor4fv(WED_Color_RGBA(wed_Table_Gridlines));
+	glBegin(GL_LINES);
+		glVertex2f(col_x + 0.5f, (float) b[1]);
+		glVertex2f(col_x + 0.5f, (float) b[3]);
+	glEnd();
+
+	if (mFlagTexId != 0 && mFlagTexW > 0 && mFlagTexH > 0)
+	{
+		// the waving banner across the label column, at its own aspect
+		float w = label_w - 2 * pad, h = w * (float) mFlagTexH / (float) mFlagTexW;
+		const float x0 = b[0] + pad, y0 = (b[1] + b[3]) * 0.5f - h * 0.5f;
+		state->SetState(0,1,0,0,1,0,0);
+		glColor4f(1,1,1,1);
+		state->BindTex((int) mFlagTexId, 0);
+		glBegin(GL_QUADS);
+			glTexCoord2f(0, 1); glVertex2f(x0,     y0);
+			glTexCoord2f(1, 1); glVertex2f(x0 + w, y0);
+			glTexCoord2f(1, 0); glVertex2f(x0 + w, y0 + h);
+			glTexCoord2f(0, 0); glVertex2f(x0,     y0 + h);
+		glEnd();
+		state->SetState(0,0,0,0,0,0,0);
+	}
 	glPopAttrib();
 
-	float text_x = b[0] + pad;
-	if (!mFlagCountry.empty())
-	{
-		// the waving banner, small, its own aspect inside the box
-		const float box_h = line_h + 6, box_w = box_h * kStripFlagAspect;
-		const float box_x = b[0] + pad, box_y = b[3] - pad - box_h;
-		if (mFlagTexId != 0 && mFlagTexW > 0 && mFlagTexH > 0)
-		{
-			float w = box_w, h = box_w * (float) mFlagTexH / (float) mFlagTexW;
-			if (h > box_h) { h = box_h; w = box_h * (float) mFlagTexW / (float) mFlagTexH; }
-			const float x0 = box_x, y0 = box_y + (box_h - h) * 0.5f;
-			glPushAttrib(GL_ENABLE_BIT);
-			glDisable(GL_CULL_FACE);
-			state->SetState(0,1,0,0,1,0,0);
-			glColor4f(1,1,1,1);
-			state->BindTex((int) mFlagTexId, 0);
-			glBegin(GL_QUADS);
-				glTexCoord2f(0, 1); glVertex2f(x0,     y0);
-				glTexCoord2f(1, 1); glVertex2f(x0 + w, y0);
-				glTexCoord2f(1, 0); glVertex2f(x0 + w, y0 + h);
-				glTexCoord2f(0, 0); glVertex2f(x0,     y0 + h);
-			glEnd();
-			state->SetState(0,0,0,0,0,0,0);
-			glPopAttrib();
-		}
-		text_x = box_x + box_w + pad * 2;
-	}
-
+	const float text_x = col_x + pad;
 	vector<string> info; string status; bool own_line;
-	AirportStripLines((float) (b[2] - b[0]), info, status, own_line);
+	AirportStripLines((float) (b[2] - b[0]), (float) label_w, info, status, own_line);
 
 	float warn_col[4] = { 1.0f, 0.75f, 0.25f, 1.0f };
 	float muted_col[4] = { 0.68f, 0.68f, 0.68f, 1.0f };
@@ -1429,7 +1431,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 	//    Windows build's texture upload.
 	//
 	// 4) THE FLAG IS DRAWN BY DrawAirportStrip(), which the Selection tab calls above the property
-	//    grid. Its strip is sized without the texture (a fixed kStripFlagAspect box), so the strip's height
+	//    grid, in the grid's label column. The strip is sized without the texture (kStripFlagAspect), so its height
 	//    never waits on EnsureFlagTexture(); the flag fits inside the box at its own aspect.
 	//
 	// 5) THIS PORT DELIBERATELY DEVIATES FROM THE CODEX HANDOFF SPEC IN A FEW PLACES - see
