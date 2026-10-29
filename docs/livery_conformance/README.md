@@ -2,7 +2,7 @@
 
 What WED 2.8's rule says can park at every ramp start, for comparing with what
 X-Plane 12.5 actually parks. The rule is the one in `WED_LiveryFormatSpec.md`
-(§4.1, R17-R33); WED's Liveries tab, auto-fill, Validate and Moderation View all
+(§4.1, R17-R33); WED's livery editor, auto-fill, Validate and Moderation View all
 use it, so this is also what authors and moderators are told.
 
 ## Files

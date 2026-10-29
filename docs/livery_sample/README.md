@@ -60,7 +60,7 @@ file.
 Computed by `tools/scripts/airline_research/livery_sample_expect.py` against the
 schema 4 index (data `20260926`, 42 `Obsolete` marks) and the Global Airports of
 X-Plane 12.4.3-r2 - op class, Obsolete (R25), range from the operator's nearest
-hub (R26) and HOME (R27) all applied, the same predicate WED's Liveries tab uses.
+hub (R26) and HOME (R27) all applied, the same predicate WED's livery editor uses.
 **Regenerate this table with that script whenever the index changes**; it takes a
 few seconds.
 

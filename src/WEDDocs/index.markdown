@@ -389,8 +389,6 @@ The Lights and Markings tab allows editing of non-sign details on top of base pa
 
 The 3D Objects tab allows you to edit 3D clutter and buildings, such as facades, forests, and objects. Underlying pavement is visible but locked again in this mode.
 
-The Static Liveries tab chooses which static aircraft park at the selected ramp starts: the operation type, the size (a size letter, or spawn weights per class), and the operators, with a picture of each operator's aircraft. Only ramp starts can be selected and edited in this mode; pavement, objects and lines stay visible but locked. It needs X-Plane 12.5 or later. See [Static Aircraft Liveries](#staticaircraftliveries).
-
 The Exclusion and Boundary tab allows fine editing of exclusion zones and airport boundaries, with most airport features visible but locked in this mode.
 
 The Texture tab is for texture mapping a custom draped polygon file named "Draped Orthophoto." To add these to the scenery, select a .pol file in the library pane, then select **Use Texture Map** in the tool defaults pane. Some .pol art assets (such as the DrapedRunwaySigns.pol) come with special pre-defined "subtextures" that can be pre-selected by a mouse click on the relevant part of the texture in the library preview pane.
@@ -415,7 +413,7 @@ WED has globalized preference settings that will apply to every scenery pack. Th
 
 Two checkboxes concern ramp starts and the Gateway:
 
-* **Prompt Up Static Liveries Tab** (under "When Selecting Ramp Start"): when you select ramp starts, and nothing but ramp starts, WED switches the attributes pane to the Static Liveries tab. It does this once for each new selection, so you can still switch to another tab afterwards. Off by default.
+* **Prompt Up Selection Tab** (under "When Selecting Ramp Start"): when you select ramp starts, and nothing but ramp starts, WED switches the attributes pane to the Selection tab, where their livery editor is. It does this once for each new selection, so you can still switch to another tab afterwards. Off by default.
 * **Moderator Mode**: turns on the tools for checking Gateway submissions, described in [Moderating Gateway Submissions][]. It takes effect immediately in every open scenery pack. The Import from Airport Scenery Gateway window reads it when it opens, so change it before opening that window. Off by default.
 
 Like the other preferences, both are remembered the next time WED starts.
@@ -637,17 +635,17 @@ Select your ramp start type: gate, tie down, or hangar. You can only have one of
 
 The equipment type field tells X-Plane what type of aircraft would use this ramp in the real world. This is mostly used for spawning the correct type of AI planes. Pick at least one type of plane from the list.
 
-Specifying the size, operation type, and airline fields will help X-Plane populate airports with the most accurate mix of AI aircraft and static objects. The operation type and airlines can be edited in the Selection tab; the size is set in the Static Liveries tab, described [below](#staticaircraftliveries). Note that changing the size will change the size of the yellow icon. This is to help visualize how much space will be taken up by the largest aircraft of that category. Be sure to provide plenty of clearance--if any part of the icon is covered, there will not be enough space there in X-Plane and taxiing aircraft will become stuck when trying to pass. Keep in mind that viewing the layout in the "Taxi Routes" editing tab will make these issues easier to spot.
+Specifying the size, operation type, and airline fields will help X-Plane populate airports with the most accurate mix of AI aircraft and static objects. The operation type and airlines can be edited in the Selection tab; the size is set in the livery editor below the Selection tab's properties, described [below](#staticaircraftliveries). Note that changing the size will change the size of the yellow icon. This is to help visualize how much space will be taken up by the largest aircraft of that category. Be sure to provide plenty of clearance--if any part of the icon is covered, there will not be enough space there in X-Plane and taxiing aircraft will become stuck when trying to pass. Keep in mind that viewing the layout in the "Taxi Routes" editing tab will make these issues easier to spot.
 
 If you are importing an airport from an earlier version of WED, use the "Upgrade Ramps" option under the airport menu to automatically convert old style ramps to the new format compatible with X-Plane 10.50.
 
 ##### Static Aircraft Liveries #####
 
-Starting with X-Plane 12.5, the static aircraft parked at gates and tie-downs wear the liveries of real operators, and you choose which operators and which sizes of aircraft park at each stand. This is done in the **Static Liveries** tab. Hangars and misc ramp starts never get static aircraft.
+Starting with X-Plane 12.5, the static aircraft parked at gates and tie-downs wear the liveries of real operators, and you choose which operators and which sizes of aircraft park at each stand. This is done in the livery editor, which the **Selection** tab shows below the properties whenever everything selected is a ramp start (select anything else as well and only the properties are shown). Hangars and misc ramp starts never get static aircraft.
 
 The tab needs the livery index that ships with X-Plane 12.5 and later, `livery_index.txt` in `Resources/default scenery/sim objects/apt_aircraft/` of the X-Plane folder WED is set to. It lists every livery X-Plane has, and every operator with its country, its kind of operation and its home airports. If the file is missing, as it is in older versions of X-Plane, the tab shows "Livery previews need X-Plane 12.5 or later. Airlines can still be typed in the Selection tab." There are then no previews and no coverage readout, the auto-populate commands refuse to run, and validation skips its static aircraft check.
 
-Select one or more ramp starts, then click the tab. To have WED switch to the tab whenever you select ramp starts, turn on **Prompt Up Static Liveries Tab** in the [Preferences][]. **Airport > Next Ramp Start** (Ctrl+Shift+. , Command+Shift+. on Macs) and **Previous Ramp Start** (Ctrl+Shift+,) step through the ramp starts of the current airport one at a time. Each one is selected, centered in the map at the current zoom, and shown in this tab.
+Select one or more ramp starts and open the Selection tab. To have WED switch to that tab whenever you select ramp starts, turn on **Prompt Up Selection Tab** in the [Preferences][]. **Airport > Next Ramp Start** (Ctrl+Shift+. , Command+Shift+. on Macs) and **Previous Ramp Start** (Ctrl+Shift+,) step through the ramp starts of the current airport one at a time. Each one is selected, centered in the map at the current zoom, and shown in the Selection tab.
 
 From top to bottom, the tab shows:
 
@@ -1181,7 +1179,7 @@ With Moderator Mode on, **File > Import from Airport Scenery Gateway** shows the
 
 In Moderator Mode the hierarchy pane sets up the map for you:
 
-* Selecting something in the hierarchy zooms the map to it. Ramp starts, taxi routes, runways, and the "Runways", "Ramp Starts", "Taxi Routes", "Ground Vehicles" and "Ground Routes" folders switch to the Taxi Routes tab; anything else switches to the Selection tab.
+* Selecting something in the hierarchy zooms the map to it. Ramp starts on their own switch to the Selection tab, where their livery editor is; taxi routes, runways, and the "Runways", "Ramp Starts", "Taxi Routes", "Ground Vehicles" and "Ground Routes" folders switch to the Taxi Routes tab; anything else switches to the Selection tab.
 * The stand callouts on the map are off to start with; a double click on an airport's Ramp Starts folder shows or hides them.
 * A single click on an airport's name (also when it is already selected) lists all of its folders (each one closed, so you see one line per folder), makes them all visible and switches the imagery to ESRI. It does not open the name for renaming; rename airports in the Selection tab instead.
 * A double click on the **Taxiways** folder shows it together with **Runways**, hides the other folders and turns the imagery off.
@@ -1213,7 +1211,7 @@ Click the pin on a card (or Shift+click a chip) to make that stand the base for 
 
 **The overview.** With Moderation View on, stands that need checking get a "!" badge, the rest are greyed, and an overview of the current airport appears in the top left of the map. It shows the number of ramp starts, how many of them you have reviewed, and a line such as "9 to check    7 unique setups    5 auto-filled    2 "None"". Below that is the list of stands to check. Filter it with the buttons "All", "Not listed", "No data", "Foreign" and "Parks nothing", and click "Sort: name" to sort by the number of operators to verify instead. Click a stand in the list to select it and center the map on it. A stand counts as reviewed once it has been the only selected stand while Moderation View is on, and reviewing one stand reviews every stand with the same setup. This is kept for the current session only. **Copy Summary to Clipboard** copies a plain text report: the airport, the counts, the WED and livery index versions it was checked with, rows the import skipped, and each stand that needs a look with the reason. **Shift+click** it instead to copy the conformance report: for every stand, each livery WED considers and whether it can park there, in a tab-separated form meant for comparing with what X-Plane parks (see `docs/livery_conformance/` in the source).
 
-**Stepping through stands.** **Airport > Next Stand to Check** (Shift+X while the map has the keyboard focus) and **Previous Stand to Check** (Ctrl+Shift+X) select the next or previous stand that needs checking, center the map on it and show the Static Liveries tab. **Next Ramp Start** and **Previous Ramp Start** step through all stands, and in Moderator Mode they also ask about any operator that needs checking and offer to open a web search for each one.
+**Stepping through stands.** **Airport > Next Stand to Check** (Shift+X while the map has the keyboard focus) and **Previous Stand to Check** (Ctrl+Shift+X) select the next or previous stand that needs checking, center the map on it and show the Selection tab. **Next Ramp Start** and **Previous Ramp Start** step through all stands, and in Moderator Mode they also ask about any operator that needs checking and offer to open a web search for each one.
 
 #### Rotating the Map ####
 
@@ -1353,7 +1351,7 @@ To file a bug report, please visit the [Airport Scenery Gateway][75] and create 
 | Update Metadata | Downloads new, missing metadata (if available) for the airport. |
 | Edit Airport *[airport]*  | Changes the current airport to the selected one.      |
 | Upgrade Ramps | Auto-update pre X-Plane 10.50 style ramp starts with useful defaults. |
-| Next Ramp Start, Previous Ramp Start | Select the next or previous ramp start of the current airport, center the map on it and show the Static Liveries tab (Ctrl+Shift+. and Ctrl+Shift+,). In Moderator Mode, also offers a web search for any operator that needs checking. See [Static Aircraft Liveries](#staticaircraftliveries). |
+| Next Ramp Start, Previous Ramp Start | Select the next or previous ramp start of the current airport, center the map on it and show the Selection tab (Ctrl+Shift+. and Ctrl+Shift+,). In Moderator Mode, also offers a web search for any operator that needs checking. See [Static Aircraft Liveries](#staticaircraftliveries). |
 | Next Stand to Check, Previous Stand to Check | Moderator Mode only. The same, but only for the stands that need checking (Shift+X on the map, Ctrl+Shift+X). See [Moderating Gateway Submissions][]. |
 | Auto-Populate Static Aircraft (Selected Ramps Only) | Adds the airport's operators to the selected ramp starts and gives stands without spawn weights a default set, after showing what would change. Never removes anything. Needs X-Plane 12.5 or later. See [Static Aircraft Liveries](#staticaircraftliveries). |
 | Upgrade Jetways | Auto-update pre X-Plane 11 style jetways using discrete objects to X-Plane 11/12 style jetway facades. This is a requirement to create animated, auto-docking jetways in X-Plane 12 |
@@ -1453,7 +1451,7 @@ The following is a list of object types with descriptions of the properties asso
 | Equipment      | Selects all airplane classes that can legally park at this spot (X-Plane 10+ only).  |
 | Ramp Operation Type | Types of aircraft that park to use the position (X-Plane 10.45+ only): None, General Aviation, Airline, Cargo or Military. None means no static aircraft. |
 | Airlines       | Operator codes, separated by spaces, for the liveries of parked aircraft (X-Plane 10.45+ only). A code is 3 or 4 letters or digits, optionally followed by `_` and up to 6 more (`dal`, `ryr_1`, `xpzz_b752`). Must be under 300 characters for the Gateway; a code listed twice is kept once. See [Static Aircraft Liveries](#staticaircraftliveries). |
-| Size, spawn weights | Not shown in the Selection tab: set them in the Static Liveries tab. The size is a range of ICAO classes; the largest is exported as the ramp's size. Spawn weights are written when exporting for X-Plane 12.5.0 or the Gateway, and used by X-Plane 12.5 and later. |
+| Size, spawn weights | Not in the property list: set them in the livery editor below it, which the Selection tab shows when only ramp starts are selected. The size is a range of ICAO classes; the largest is exported as the ramp's size. Spawn weights are written when exporting for X-Plane 12.5.0 or the Gateway, and used by X-Plane 12.5 and later. |
 |                             **Runway**                                          ||
 | Width          | Change the default width.                                       |
 | Surface        | The material the runway itself is built out of.                 |
