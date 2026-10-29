@@ -66,8 +66,8 @@ private:
 	WED_MapPreviewWindow *		mMapPreviewWindow;
 	WED_PropertyPane *			mPropPane;
 	WED_TCEPane *				mTCEPane;
-	GUI_TabPane *				mPropTabs;		// the tab strip the Liveries tab lives in
-	GUI_Pane *					mLiveryPane;
+	GUI_TabPane *				mPropTabs;
+	GUI_Pane *					mSelectionTab;	// properties, and the livery editor for ramp starts
 
 	GUI_Splitter *				mMainSplitter;
 	GUI_Splitter *				mMainSplitter2;

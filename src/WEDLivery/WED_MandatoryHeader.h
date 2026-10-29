@@ -71,7 +71,7 @@
 //                     with the application.
 //
 // Getting this wrong is silent: the loaders simply report LoadFailed() and the
-// Liveries tab comes up empty, which is exactly how these files went undeployed
+// livery editor comes up empty, which is exactly how these files went undeployed
 // on Mac and Linux for as long as they did.
 std::string	WedDataFileDir(void);
 

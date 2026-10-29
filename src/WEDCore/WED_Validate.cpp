@@ -1224,7 +1224,7 @@ static int ValidateOneRampPosition(WED_RampPosition* ramp, validation_error_vect
 		// Export no longer turns None into Airline or GA (wed_upgrade_ramps), so
 		// say it here: on purpose for a float plane dock, an oversight for a gate.
 		// Not for a 2.8 stand (1313/1315): there None is the author's explicit
-		// "no static aircraft", set on the Liveries tab.
+		// "no static aircraft", set on the livery editor.
 		if (gExportTarget == wet_gateway && (g.type == atc_ramp_gate || g.type == atc_ramp_tie_down) &&
 			g.ramp_op_type == ramp_operation_none && !ramp->HasLiveryFingerprint())
 			msgs.push_back(validation_error_t("Ramp start operation type is None, so X-Plane parks no static aircraft here. Set an operation type unless that is intended.",

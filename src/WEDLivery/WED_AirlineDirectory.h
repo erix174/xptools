@@ -71,7 +71,7 @@
 
 	The operation class (Pax, Cargo, GA, Military, Gov) is the authority for
 	which stands an operator may appear on - a cargo operator never parks at a
-	passenger gate - for the Liveries tab, auto-fill and the validator alike.
+	passenger gate - for the livery editor, auto-fill and the validator alike.
 	It is hand-maintained in the index with everything else about the
 	operator.
 */
@@ -159,7 +159,7 @@ private:
 
 	// uppercase IOC country -> indices into mEntries. Built once in EnsureLoaded() so
 	// GetByCountry() - called on every "Same Country" tier rebuild, i.e. every Draw() while the
-	// Static Liveries tab is open - is an O(1) average hash lookup instead of an O(n) scan over
+	// livery editor is open - is an O(1) average hash lookup instead of an O(n) scan over
 	// the whole directory each time.
 	std::unordered_map<std::string, std::vector<int>>	mByCountry;
 

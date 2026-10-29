@@ -78,6 +78,7 @@ public:
 	void		FromPrefs(IDocPrefs * prefs,int id);
 
 	void		SetClosed(set<int> id);
+	int			GetContentHeight(void);		// pane height that shows every row without scrolling
 
 	virtual int		MouseMove(int x, int y);
 	virtual	void	ReceiveMessage(

@@ -52,10 +52,10 @@ extern int gFontSize;
 /* Switch format for orthophoto tiles export */
 extern int gOrthoExport;
 /* When set, selecting a ramp start (or a selection of only ramp starts)
-   auto-switches the property panel to the Static Liveries tab once per new
+   auto-switches the property panel to the Selection tab once per new
    selection - see WED_LiveryPane::RebuildSelection(). Off by default. */
 extern int gPromptLiveriesOnRampSelect;
-/* "Show Recommendation" toggle in the Static Liveries tab's airline list
+/* "Show Recommendation" toggle in the livery editor's airline list
    toolbar - splits the list into up to several per-airport recommendation
    sections (manual pin, direct hit, same country, popular fleet - see
    WED_LiveryPane.cpp's BuildDisplayRows()) plus the full library below.

@@ -242,7 +242,7 @@ static const legacy_enum_desc_t kLegacyEnumDescs[] = {
 	// 2026-09-19 to 09-25 this branch wrote the ramp operation types under new
 	// names. The descriptions went back to the originals - earth.wed.xml stores
 	// the description, and WED 2.7 cannot read a name it has never seen - and the
-	// new names live on only as labels on the Liveries tab. These rows keep the
+	// new names live on only as labels on the livery editor. These rows keep the
 	// files saved in that week readable.
 	{ RampOperationType, "Private/BizJet",   ramp_operation_GeneralAviation },
 	{ RampOperationType, "Passenger",        ramp_operation_Airline         },

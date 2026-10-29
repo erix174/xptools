@@ -30,7 +30,7 @@
 struct	AptGate_t;
 
 // The longest airline string a Gateway submission may carry: validation refuses
-// more, auto-fill and the Liveries tab stop at the last whole code before it.
+// more, auto-fill and the livery editor stop at the last whole code before it.
 // Raised from 99 (WED 2.7) to 299 by Eric, 2026-09-27 - pending the Gateway team
 // and the sim side confirming neither the server nor the sim has a shorter limit.
 static const size_t kGatewayAirlinesMaxChars = 299;
@@ -49,7 +49,7 @@ public:
 	void	SetAirlines(const string& airlines);
 
 	string  GetAirlines() const;
-	// The airline list as it was before the Liveries tab's lock cut it to one
+	// The airline list as it was before the livery editor's lock cut it to one
 	// code; unlocking restores it. WED-only (earth.wed.xml), never in apt.dat.
 	string  GetAirlinesBeforeLock() const;
 	void	SetAirlinesBeforeLock(const string& airlines);

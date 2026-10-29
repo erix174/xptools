@@ -187,6 +187,16 @@ void	WED_PropertyPane::FromPrefs(IDocPrefs * prefs,int id)
 	SetClosed(mClosedList);
 }
 
+int		WED_PropertyPane::GetContentHeight(void)
+{
+	float total[4], vis[4];
+	mTable->GetScrollBounds(total, vis);
+	int b[4];
+	GetBounds(b);
+	int chrome = (b[3] - b[1]) - (int) (vis[3] - vis[1]);		// scroll bar, filter bar
+	return (int) (total[3] - total[1]) + max(chrome, 0);
+}
+
 void	WED_PropertyPane::ToPrefs(IDocPrefs * prefs,int id)
 {
 	char buf[256];

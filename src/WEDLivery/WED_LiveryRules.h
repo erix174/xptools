@@ -41,14 +41,14 @@
 //   livery_index.txt (the X-Plane install's) - the liveries, and the OPERATOR
 //                     records (WED_AirlineDirectory reads those)
 //   WED_AirportDatabase.txt (shipped beside WED) - who serves which airport
-// Every consumer, the Liveries tab included, reads this one instance. It is
+// Every consumer, the livery editor included, reads this one instance. It is
 // rebuilt whole when the X-Plane folder changes. WED_GetLiveryData returns NULL
 // when there is no livery index (an X-Plane before 12.5); need_hubs blocks
 // until R26's hub positions are placed. WED_SharedLiveryData hands out the
 // instance without loading anything, for callers that load lazily and report
 // load errors themselves (the tab). Never keep a reference across frames: a
 // folder change replaces the instance.
-// ONE livery index for the process: the Liveries tab and the whole-airport
+// ONE livery index for the process: the livery editor and the whole-airport
 // commands read the same instance, so its 380 MB hub scan runs once. A second
 // copy made the first "Populate This Ramp" block the UI for a scan the tab had
 // already finished.

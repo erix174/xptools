@@ -169,7 +169,7 @@ void	WED_CreatePointTool::AcceptPath(
 		// so a newly placed stand is that one class, min and max together. Setting
 		// only the max left width_min at its property default of width_A, giving
 		// every new stand a bogus [A .. E] range nobody asked for. Widening it is
-		// the Liveries tab's job.
+		// the livery editor's job.
 		ramp->SetWidthMin(width.value);
 		ramp->SetRampOperationType(ramp_op_type.value);
 		ramp->SetAirlines(airlines.value);

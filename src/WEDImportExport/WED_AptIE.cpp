@@ -468,7 +468,7 @@ void	AptExportRecursive(WED_Thing * what, AptVector& apts, vector<WED_TaxiRoute 
 // older X-Plane gets the format that X-Plane was built for: 1301 alone, its size
 // letter still the largest class with a weight (WED_RampPosition::Export). Only
 // the file is affected - the stands keep their weights and marks, and the
-// Liveries tab, validation and Moderation Mode work the same for every target.
+// livery editor, validation and Moderation Mode work the same for every target.
 static void	strip_static_aircraft_rows(AptVector & apts)
 {
 	if (gExportTarget >= wet_xplane_1250) return;		// wet_gateway is above it

@@ -24,7 +24,9 @@
 /*
 	WED_LiveryPane - THEORY OF OPERATION
 
-	Self-contained "Liveries" tab for the property-side GUI_TabPane. Hosts the
+	Self-contained livery editor, shown under the Selection tab's property grid when
+	only ramp starts are selected (its own "Static Liveries" tab until 2026-10-27,
+	see WED_SelectionTabPane in WED_DocumentWindow.cpp). Hosts the
 	three pillars of ramp-start livery selection, migrated off the generic
 	"Selection" property grid (see WED_RampPosition.cpp - properties prefixed
 	with "." are hidden from that grid by an existing WED convention):
@@ -95,7 +97,7 @@ class	GUI_TextField;
 // ends up as a child of GUI_ChangeView, and GUI_ChangeView::SetSubView()
 // dynamic_casts it to GUI_Commander so it can hand the tab keyboard focus
 // (GUI_ChangeView.cpp:47). Without that base this pane fired
-// DebugAssert(c != NULL) on every switch INTO the Liveries tab, and - past the
+// DebugAssert(c != NULL) on every switch INTO the livery editor, and - past the
 // assert - mSearchField could never join the focus chain, because the chain has
 // no route into a pane that is not a commander. WED_PropertyPane and WED_TCEPane
 // are both commanders for exactly this reason; this pane was the odd one out.

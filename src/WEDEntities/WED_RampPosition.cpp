@@ -40,7 +40,7 @@ WED_RampPosition::WED_RampPosition(WED_Archive * a, int i) : WED_GISPoint_Headin
 	// WED_PropertyTable::RecalculateColumns). Ramp Operation Type stays in the
 	// grid. Airlines left it on 2026-09-30 (Eric): typed codes were where most
 	// bad data came from (unknown codes, airline lists on GA stands), and the
-	// Static Liveries tab and Populate now set it. The list itself is unchanged -
+	// livery editor and Populate now set it. The list itself is unchanged -
 	// read, written, exported and validated as before; only the grid hides it.
 	// XML tag names are unchanged, so old documents still round-trip.
 	width		(this,PROP_Name(".Size",                XML_Name("ramp_start","width")), ATCIcaoWidth, width_C),
@@ -103,7 +103,7 @@ void	WED_RampPosition::Import(const AptGate_t& x, void (* print_func)(void *, co
 	// an imported stand is a single class, not a range - min and max are equal.
 	// Without this, width_min keeps its property default of width_A and every
 	// imported ramp reads as [A .. whatever], a range the author never wrote and
-	// which the Liveries tab then presents as a wide-open slider.
+	// which the livery editor then presents as a wide-open slider.
 	width_min = width.value;
 
 	ENUM_ImportSet(equip_type.domain,x.equipment,equip_type.value);
@@ -331,7 +331,7 @@ bool	WED_RampPosition::IsValidAirlineCode(const string &code)
 }
 
 // The grid writes the property directly; normalise it the same way SetAirlines
-// does, or a code typed as "DAL" reads as unchecked on the Liveries tab.
+// does, or a code typed as "DAL" reads as unchecked on the livery editor.
 static bool	SamePropVal(const PropertyVal_t & a, const PropertyVal_t & b)
 {
 	// Only the field the kind uses: the others are not initialised.
@@ -377,7 +377,7 @@ void	WED_RampPosition::SetAirlines(const string &a)
 {
 	// Normalize HERE, not only on export. apt.dat is case-insensitive about
 	// airline codes and files in the wild carry "AAL DAL", but everything that
-	// compares against this string - the Liveries tab's checkboxes, the
+	// compares against this string - the livery editor's checkboxes, the
 	// recommendation rows, WED_AirlineDirectory lookups - works in lower case.
 	// Storing what we were handed meant an uppercase import rendered every
 	// checkbox unchecked for a ramp that demonstrably had those airlines, and

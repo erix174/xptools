@@ -47,7 +47,7 @@
 #if APL
 	#include <OpenGL/gl.h>
 #else
-	#include "glew.h"		// GL_BGRA for the flag upload, as the Liveries tab does
+	#include "glew.h"		// GL_BGRA for the flag upload, as the livery editor does
 #endif
 
 using std::string;
@@ -402,7 +402,7 @@ WED_ModerationLayer::WED_ModerationLayer(GUI_Pane * host, WED_MapZoomerNew * zoo
 
 WED_ModerationLayer::~WED_ModerationLayer()
 {
-	// the flag textures FlagFor() made - the Liveries tab frees its own the same way
+	// the flag textures FlagFor() made - the livery editor frees its own the same way
 	for (std::map<string, Flag>::iterator i = mFlags.begin(); i != mFlags.end(); ++i)
 		if (i->second.tex) glDeleteTextures(1, &i->second.tex);
 	mFlags.clear();

@@ -358,7 +358,7 @@ static void	AnalyseStand(WED_RampPosition * ramp, WED_Airport * apt, StandAnalys
 		return;
 	}
 
-	// The same data and the same rule as the Liveries tab - range (R26) and the
+	// The same data and the same rule as the livery editor - range (R26) and the
 	// stand's equipment type included - so the two never disagree about a stand.
 	WED_LiveryData * d = WED_GetLiveryData(true);
 	if (!d) return;
@@ -860,7 +860,7 @@ string	WED_ModerationWeightsText(const int w[6])
 	return out;
 }
 
-// The Liveries tab's names for the operation types, so the callout and the tab
+// The livery editor's names for the operation types, so the callout and the tab
 // read the same. The file keeps the original enum names (see WED_Enums.h).
 static const char * OpLabel(int op)
 {

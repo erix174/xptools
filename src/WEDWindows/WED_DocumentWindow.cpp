@@ -80,6 +80,94 @@ namespace
 	{
 		return T::CreateTyped(parent);
 	}
+
+	// The Selection tab: the property grid, and below it the livery editor when
+	// everything selected is a ramp start (Julian, 2026-10-27 - it replaces the
+	// Static Liveries tab, where ramp start sizes were hard to find). The grid
+	// gets the height its rows need, up to half the tab; the editor the rest.
+	class WED_SelectionTabPane : public GUI_Pane, public GUI_Listener {
+	public:
+		WED_SelectionTabPane(IResolver * resolver, GUI_Broadcaster * archive) :
+			mResolver(resolver), mProps(NULL), mLivery(NULL), mLaidOut(-2)
+		{
+			archive->AddListener(this);
+		}
+
+		void	SetPanes(WED_PropertyPane * props, WED_LiveryPane * livery)
+		{
+			mProps = props;
+			mLivery = livery;
+			mProps->SetParent(this);
+			mProps->Show();
+			mLivery->SetParent(this);
+			mLivery->Hide();
+			Relayout(true);
+		}
+
+		virtual void	SetBounds(int x1, int y1, int x2, int y2)	{ GUI_Pane::SetBounds(x1, y1, x2, y2); Relayout(true); }
+		virtual void	SetBounds(int inBounds[4])					{ GUI_Pane::SetBounds(inBounds); Relayout(true); }
+		virtual void	Show(void)	{ GUI_Pane::Show(); Relayout(true); }
+		virtual void	Hide(void)
+		{
+			// the editor aborts any drag and stops its animations on Hide
+			if (mLivery) mLivery->Hide();
+			mLaidOut = -2;
+			GUI_Pane::Hide();
+		}
+		// The grid's row count is only known once it has caught up with the
+		// change, so the layout is checked here - and only redone when it moves.
+		virtual void	Draw(GUI_GraphState * state)	{ Relayout(false); }
+
+		virtual void	ReceiveMessage(GUI_Broadcaster * inSrc, intptr_t inMsg, intptr_t inParam)
+		{
+			if (inMsg == msg_ArchiveChanged || inMsg == msg_ArchiveChangedEphemerally)
+				Refresh();
+		}
+
+	private:
+		bool	OnlyRampStarts(void) const
+		{
+			ISelection * sel = WED_GetSelect(mResolver);
+			int n = sel ? sel->GetSelectionCount() : 0;
+			for (int i = 0; i < n; ++i)
+				if (!SAFE_CAST(WED_RampPosition, sel->GetNthSelection(i)))
+					return false;
+			return n > 0;
+		}
+
+		void	Relayout(bool force)
+		{
+			if (!mProps || !mLivery) return;
+			int b[4];
+			GetBounds(b);
+			int h = b[3] - b[1];
+
+			int props_h = -1;		// -1: the grid has the whole tab
+			if (OnlyRampStarts())
+				props_h = max(min(mProps->GetContentHeight(), h / 2), min(60, h));
+			if (!force && props_h == mLaidOut) return;
+			mLaidOut = props_h;
+
+			if (props_h < 0)
+			{
+				mLivery->Hide();
+				mProps->SetBounds(b);
+			}
+			else
+			{
+				const int gap = 4;
+				mProps->SetBounds(b[0], b[3] - props_h, b[2], b[3]);
+				mLivery->SetBounds(b[0], b[1], b[2], max(b[1], b[3] - props_h - gap));
+				if (IsVisible()) mLivery->Show();
+			}
+			Refresh();
+		}
+
+		IResolver *				mResolver;
+		WED_PropertyPane *		mProps;
+		WED_LiveryPane *		mLivery;
+		int						mLaidOut;	// props_h of the current layout, -2 = none yet
+	};
 }
 
 int kDefaultDocSize[4] = { 0, 0, 1024, 768 };
@@ -213,8 +301,18 @@ WED_DocumentWindow::WED_DocumentWindow(
 	static const char * sel_t[] = { "Name", "Type", NULL };
 	static		 int	sel_w[] = { 120, 120 };
 
+	WED_SelectionTabPane * sel_tab = new WED_SelectionTabPane(inDocument, inDocument->GetArchive());
+	prop_tabs->AddPane(sel_tab, "Selection");
+	mSelectionTab = sel_tab;
+
 	WED_PropertyPane * prop_pane1 = new WED_PropertyPane(prop_tabs->GetPaneOwner(), inDocument, sel_t, sel_w,inDocument->GetArchive(), propPane_Selection, 0);
-	prop_tabs->AddPane(prop_pane1, "Selection");
+	// Ramp start operation type, size and airlines, under the grid (the Static
+	// Liveries tab before 2.8.0-a1's moderation round, 2026-10-27)
+	WED_LiveryPane * livery_pane = new WED_LiveryPane(inDocument, inDocument->GetArchive(), prop_tabs);
+	sel_tab->SetPanes(prop_pane1, livery_pane);
+	// Its constructor synced to the selection before it had a parent: again,
+	// for a document saved with a ramp start selected.
+	livery_pane->RebuildSelection();
 
 	// --------------- Pavement Tab Mode ---------------
 
@@ -235,18 +333,6 @@ WED_DocumentWindow::WED_DocumentWindow(
 
 	WED_PropertyPane * prop_pane5 = new WED_PropertyPane(prop_tabs->GetPaneOwner(), inDocument, sel_t, sel_w,inDocument->GetArchive(), propPane_Selection, 0);
 	prop_tabs->AddPane(prop_pane5, "3D+Objects");
-
-	// ---------------- Liveries (ramp start operation type / size / airlines) ---------------
-
-	WED_LiveryPane * livery_pane = new WED_LiveryPane(inDocument, inDocument->GetArchive(), prop_tabs);
-	prop_tabs->AddPane(livery_pane, "Static+Liveries");
-	mPropTabs   = prop_tabs;
-	mLiveryPane = livery_pane;
-	// The constructor already tried to sync eligibility, but at that point the pane
-	// wasn't findable in the tab strip yet (AddPane hadn't run), so it silently no-op'd.
-	// Re-sync now that it's actually registered - matters when reopening a document
-	// that had a ramp start selected when it was last saved.
-	livery_pane->RebuildSelection();
 
 	// ---------------- Exclusions ------------------
 
@@ -494,16 +580,16 @@ int	WED_DocumentWindow::HandleCommand(int command)
 	case wed_NextRampStart:
 	case wed_PrevRampStart:
 		// Moderation's walk through the stands: select the next one, bring it to
-		// the middle of the map at the current zoom, show its Liveries tab, and -
+		// the middle of the map at the current zoom, show the Selection tab, and -
 		// for a moderator - ask about any operator that needs checking.
 		if (WED_RampPosition * r = WED_ModerationStep(mDocument, command == wed_NextRampStart ? 1 : -1))
 		{
 			Point2 ll;
 			r->GetLocation(gis_Geo, ll);
 			mMapPane->CenterOnPoint(ll);
-			if (mPropTabs && mLiveryPane)
+			if (mPropTabs && mSelectionTab)
 			{
-				int tab = mPropTabs->GetTabForPane(mLiveryPane);
+				int tab = mPropTabs->GetTabForPane(mSelectionTab);
 				if (tab >= 0) mPropTabs->SetTab(tab);
 			}
 			if (WED_ModerationEnabled())
@@ -519,9 +605,9 @@ int	WED_DocumentWindow::HandleCommand(int command)
 			Point2 ll;
 			r->GetLocation(gis_Geo, ll);
 			mMapPane->CenterOnPoint(ll);
-			if (mPropTabs && mLiveryPane)
+			if (mPropTabs && mSelectionTab)
 			{
-				int tab = mPropTabs->GetTabForPane(mLiveryPane);
+				int tab = mPropTabs->GetTabForPane(mSelectionTab);
 				if (tab >= 0) mPropTabs->SetTab(tab);
 			}
 		}
@@ -589,11 +675,6 @@ int	WED_DocumentWindow::HandleCommand(int command)
 	case wed_MapPavement:
 	case wed_MapATC:
 	case wed_Map3D:
-		// Moderator mode sends these on every hierarchy selection. The Static
-		// Liveries tab, once up (by hand or "Prompt Up Static Liveries Tab"),
-		// stays up: it has its own map filter, and pulling the moderator off it
-		// on each click would make it unusable.
-		if (mLiveryPane && mPropTabs->GetTab() == mPropTabs->GetTabForPane(mLiveryPane)) return 1;
 		mPropTabs->SetTab(command == wed_MapSelection ? 0 : command == wed_MapPavement ? 1 : command == wed_MapATC ? 2 : 4);
 		return mMapPane->Map_HandleCommand(command);
 	default: return mMapPane->Map_HandleCommand(command);	break;

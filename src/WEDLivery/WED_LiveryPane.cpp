@@ -351,7 +351,7 @@ void	WED_LiveryPane::RebuildSelection(void)
 	{
 
 		// Opt-in (WED Preferences > "When Selecting Ramp Start" > "Prompt Up
-		// Static Liveries Tab", off by default - see WED_Application.cpp).
+		// Selection Tab", off by default - see WED_Application.cpp).
 		// Only fires for a selection that's ENTIRELY ramp starts (no other
 		// entity types mixed in) - GetSelectionCount() covers everything
 		// selected, mSelectedRamps only what CollectRamps recognized, so
@@ -365,7 +365,10 @@ void	WED_LiveryPane::RebuildSelection(void)
 			mLastAutoSwitchedInRamps.clear();
 		else if (gPromptLiveriesOnRampSelect && mHostTabs && mSelectedRamps != mLastAutoSwitchedInRamps)
 		{
-			int my_tab = mHostTabs->GetTabForPane(this);
+			// this pane sits inside the Selection tab, not in the tab strip itself
+			int my_tab = -1;
+			for (GUI_Pane * p = this; p && my_tab < 0; p = p->GetParent())
+				my_tab = mHostTabs->GetTabForPane(p);
 			if (my_tab >= 0) mHostTabs->SetTab(my_tab);
 			mLastAutoSwitchedInRamps = mSelectedRamps;
 		}

@@ -819,7 +819,12 @@ void	WED_PropertyTable::SelectionEnd(void)
 		string grpnam;
 		if (grp) grp->GetName(grpnam);
 
-		if (SAFE_CAST(WED_RampPosition, sel0) || SAFE_CAST(WED_TaxiRoute, sel0) ||  SAFE_CAST(WED_TaxiRouteNode, sel0) ||
+		// Ramp starts alone go to the Selection tab, where their livery editor is
+		if (only_ramps)
+		{
+			DispatchHandleCommand(wed_MapSelection);
+		}
+		else if (SAFE_CAST(WED_RampPosition, sel0) || SAFE_CAST(WED_TaxiRoute, sel0) ||  SAFE_CAST(WED_TaxiRouteNode, sel0) ||
           SAFE_CAST(WED_TruckParkingLocation, sel0) || SAFE_CAST(WED_TruckDestination, sel0) ||
 			 SAFE_CAST(WED_Runway, sel0) || grpnam == "Runways" ||
 			 grpnam == "Ramp Starts" || grpnam == "Ground Vehicles" || grpnam == "Taxi Routes" || grpnam == "Ground Routes" )

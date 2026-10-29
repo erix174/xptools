@@ -107,7 +107,7 @@ struct WED_ModerationEntry {
 	std::string		country;		// the airport's IOC country, "" if unknown
 	std::string		ramp_name;
 	int				op_type;		// ramp_operation_*
-	std::string		op_label;		// "Passenger", "Military/Gov" - the Liveries tab's words
+	std::string		op_label;		// "Passenger", "Military/Gov" - the livery editor's words
 	std::string		equipment;		// "Heavy Jets, Jets"
 	std::string		ramp_type;		// "Gate"
 	bool			updated;		// carries 1313 weights; false = legacy size letter only
@@ -184,7 +184,7 @@ bool	WED_LiveryParksNothingFixable(WED_RampPosition * ramp, WED_Airport * apt);
 // letter (WED_LegacyStepDownWeights) with the fall-through folded in, so it parks
 // what it parked before. Before the update, the stand must still be legacy.
 void	WED_LiveryLegacyUpdateWeights(WED_RampPosition * ramp, WED_Airport * apt, int out_w[6]);
-// The same for a size range lo..hi (class indices 0-5), what the Liveries tab's size slider writes: the step-down
+// The same for a size range lo..hi (class indices 0-5), what the livery editor's size slider writes: the step-down
 // within the range, a class nothing parks at handing its share to the next fitting class below - never below lo.
 void	WED_LiveryRangeUpdateWeights(WED_RampPosition * ramp, WED_Airport * apt, int lo, int hi, int out_w[6]);
 bool	WED_LiveryFixParksNothing(WED_RampPosition * ramp, WED_Airport * apt, std::string * out_what);

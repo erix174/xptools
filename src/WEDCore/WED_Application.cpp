@@ -48,7 +48,7 @@ static int settings_bounds[4] = { 0, 0, 620, 434};	// +50px height / +108px widt
 													// section - everything else keeps its old x/y
 													// coordinates, so this just adds empty room
 													// above and to the right of it (the extra width
-													// specifically so "Prompt Up Static Liveries Tab"
+													// specifically so "Prompt Up Selection Tab"
 													// has room to not run off the window edge)
 
 enum { kMsg_Close = WED_PRIVATE_MSG_BASE };
@@ -225,12 +225,12 @@ WED_Settings::WED_Settings(GUI_Commander * cmdr) : GUI_Window("WED Preferences",
 	liveries_label->Show();
 
 	// Off by default: selecting a ramp start (or a selection that's ENTIRELY
-	// ramp starts) auto-switches the property panel to Static Liveries once
-	// per new ramp-start selection - see WED_LiveryPane::RebuildSelection().
+	// ramp starts) auto-switches the property panel to the Selection tab, where
+	// the livery editor is, once per new ramp-start selection - see WED_LiveryPane::RebuildSelection().
 	GUI_Button * liveries_btn = new GUI_Button("check_buttons.png",btn_Check,k_no, k_no, k_yes, k_yes);
 	liveries_btn->SetBounds(340,liveries_chk_y0,610,liveries_chk_y0+liveries_chk_h);
 	liveries_btn->Show();
-	liveries_btn->SetDescriptor("Prompt Up Static Liveries Tab");
+	liveries_btn->SetDescriptor("Prompt Up Selection Tab");
 	liveries_btn->SetParent(this);
 	liveries_btn->AddListener(this);
 	liveries_btn->SetValue(gPromptLiveriesOnRampSelect);
