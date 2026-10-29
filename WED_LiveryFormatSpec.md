@@ -104,7 +104,7 @@ format itself is still one row.
   known constraint. (Draft 9: WED 2.8 raises it to 299, R10.)
 - **Operation type `none` means no static aircraft (R29).** The sim reads it
   exactly as six zero weights. `earth.wed.xml` keeps operation types under their
-  original names (General Aviation, Airline, Cargo, Military); the Liveries tab
+  original names (General Aviation, Airline, Cargo, Military); the livery editor
   labels them Private/BizJet, Passenger, Cargo, Military/Gov, and nothing else
   changes.
 - **The index is schema 4 (§6.2).** Mandatory two-line header, OPERATOR records
@@ -242,7 +242,7 @@ marked **PENDING SIM** where they appear.
 - New index cells, where R32 allows them.
 - `WED_AirportDatabase.txt`: WED-only (recommendations, flags). The sim never
   reads it.
-- Everything WED does for authors and moderators: the Liveries tab, auto-fill,
+- Everything WED does for authors and moderators: the livery editor, auto-fill,
   validation, Moderation Mode, and how WED uses `1315`.
 
 **What the sim can rely on not changing under it:** a livery row's `path` stays
@@ -377,7 +377,7 @@ correctly.
   (75 three-letter codes; `kGatewayAirlinesMaxChars`, Eric 2026-09-27), pending
   the Gateway team and the sim side confirming that neither the server nor the sim's
   reader has a shorter limit - where the old 100 came from is not recorded.
-  Auto-fill and the Liveries tab stop at the last whole code before the cap, and
+  Auto-fill and the livery editor stop at the last whole code before the cap, and
   WED drops a code listed twice, silently.
 - **R11** — Weights are non-negative integers in `0..1000`.
 - **R14** — A writer SHOULD NOT emit weights (or a size range) pointing
@@ -400,7 +400,7 @@ correctly.
   parks nothing only when nothing fits at any of them. "Can fill" is
   the same `eligible()` the sim uses (§4.1), range (R26) and `HOME` (R27)
   included, plus the stand's equipment type - which the sim must apply too, or
-  WED must drop it (**PENDING SIM, P3** in §0). The Liveries tab's
+  WED must drop it (**PENDING SIM, P3** in §0). The livery editor's
   multi-stand count, the Moderation View and its report call the same function,
   so none of them disagrees with Validate. Without an index (an X-Plane before
   12.5) there is nothing to check against and the warning stays quiet.
@@ -410,7 +410,7 @@ correctly.
   at all** today, so an author building that gate writes a weight nothing can
   currently satisfy.
 
-  | the class is unfillable because… | what the author should be told | the Liveries tab's readout in 2.8 |
+  | the class is unfillable because… | what the author should be told | the livery editor's readout in 2.8 |
   |---|---|---|
   | the listed airlines have liveries at other classes, but none at this one | **the weights are wrong** for these operators, and one click fixes them | red: "This stand parks nothing - and that looks unintended", advising a wider size range or an operator that flies it |
   | they fly this class, but nothing reaches from a hub (R26) | the same, naming what was out of range | red: "This stand parks nothing - nothing listed can reach it", with the rows removed |
@@ -422,7 +422,7 @@ correctly.
 
   **What 2.8 implements of this.** One analysis (`AnalyseStand`,
   `WED_LiveryModeration.cpp`) feeds the warning, its wording and the fix, and
-  the Liveries tab's readout draws the same three distinctions
+  the livery editor's readout draws the same three distinctions
   (`empty_NoArtYet` / `empty_OutOfRange` / `empty_Unfillable`).
 
   - **Ahead of the art** - nothing in the library at an open class: "X-Plane has
@@ -490,11 +490,11 @@ correctly.
   (share 0.75 x 0.25^k, class A the remainder: D is A 1.5%, B 4.7%, C 19%,
   D 75%). A draw on a class with nothing to park steps on down, so a legacy
   stand parks nothing only when nothing fits at its letter or any class below
-  it (R14, the Liveries tab, auto-fill and the Moderation View all use this).
+  it (R14, the livery editor, auto-fill and the Moderation View all use this).
   WED's own lower size bound never reaches apt.dat and plays no part while
   the stand stays legacy.
 
-  **Update.** "Set Weightings" on the Liveries tab, or Airport > Update
+  **Update.** "Set Weightings" on the livery editor, or Airport > Update
   Legacy Stands to Spawn Weights, writes that step-down out as a `1313`, with
   the fall-through folded in: a class nothing can park at hands its share to
   the next class below that something can, and a share with nothing below it
@@ -548,7 +548,7 @@ correctly.
   nothing parks, whatever the `1301` letter, airline list or `1313` row say. The
   airline list, if any, still drives ATC and AI parking.
 
-  In WED this is the Liveries tab's "None" operation type. The tab relabels the
+  In WED this is the livery editor's "None" operation type. The editor relabels the
   other types — Private/BizJet for General Aviation, Passenger for Airline,
   Military/Gov for Military — but `earth.wed.xml` stores them under their
   original names, so a 2.7 WED still reads the document and nothing in apt.dat
@@ -560,7 +560,7 @@ correctly.
   an author is expected to do after a fill. `M`: an author set the stand in WED
   2.8 or later - the operation type (None included), the airline list, the
   size, the ramp type or equipment of an auto-filled stand, weights on a stand
-  that was not auto-filled, or Fix - on the Liveries tab or in the property
+  that was not auto-filled, or Fix - on the livery editor or in the property
   grid. Absent: nothing said - a stand no 2.8 tool has touched. It binds to the most recent `1300` like
   `1313` (R20), the first valid one wins (R24), and anything other than exactly
   one token `A` or `M` is discarded (R4). **It changes nothing about what
@@ -1526,7 +1526,7 @@ OPERATOR *** XPMI *** Generic - military      ***     *** Military *** 0    ***
 - The fifth cell is the **operation class**, one of five words, and is what the
   stand's operation type is matched against (§4.1).
 - `FLEET` is an approximate fleet size; `0` means not researched. WED reads it
-  for one thing, the order of the Liveries tab's "Popular Airlines" tier (the
+  for one thing, the order of the livery editor's "Popular Airlines" tier (the
   30 largest fleets); the sim need not read it at all. It is `0` on generic
   records and usually `0` on Military and Gov ones - five Gov records carry a
   figure (CPK, DUB, HMF, SRA, SWE) - and there it is informational only: nothing
@@ -1934,7 +1934,7 @@ from `WED_AirportDatabase` (which operators serve the airport) and this index.
 It **extends and never overwrites**: an author's airlines, weights and
 operation types stay as they are. Everything it writes is ordinary `1301` and
 `1313` content; a reader cannot tell a filled stand from a hand-authored one.
-Per gate or tie-down, by operation type (Liveries tab label, then the stored
+Per gate or tie-down, by operation type (livery editor label, then the stored
 name):
 
 | operation type | what auto-fill does |
@@ -1968,7 +1968,7 @@ clipboard. None of it puts anything in the file.
 
 ### 6.8 Authoring note — any edit of a stand's size updates it to weights
 
-The Liveries tab shows a stand's size two ways: a **size range** (two balls,
+The livery editor shows a stand's size two ways: a **size range** (two balls,
 orange at the bottom, blue at the top - the `1301` letter) and the six
 **weight bars**. "Simple Mode" and "Set Weightings" switch between the two
 views; neither changes the stand.
@@ -2466,10 +2466,10 @@ this table.
 | Legacy stands judged by today's step-down; Update to spawn weights (tab and Airport menu) | **done** (R17) |
 | `livery_index.txt` schema 4 — 298 liveries, 1,548 operator records, header, hubs | **done**; generator merges, never overwrites (§6.7b) |
 | Index reader (`WED_LiveryIndex`), hub placement from Global Airports | **done** — drives every livery feature below |
-| Liveries tab: operator cards with real aircraft previews, size range / weights, flags, recommendations | **done** |
+| Livery editor: operator cards with real aircraft previews, size range / weights, flags, recommendations | **done** |
 | Coverage readout: P(empty), per-operator share, "only X will ever park here" (§4.5) | **done** |
 | R25 `Obsolete`, R26 range, R27 `HOME` in WED's `eligible()` | **done** — same predicate for cards, coverage and validator |
-| One source and one rule for the Liveries tab, the validator and the moderation summary: R14 is `WED_LiveryParksNothing`, called by all three | **done** |
+| One source and one rule for the livery editor, the validator and the moderation summary: R14 is `WED_LiveryParksNothing`, called by all three | **done** |
 | Auto-fill (§6.7f) | **done** |
 | Moderation (§6.7f): stepping through stands (all, or only those to check), map callouts, notes, web search, a plain-text report to the clipboard | **done** — shown only in Moderator Mode: `WED_ModerationEnabled()` reads `gModeratorMode`, which the preferences save as `ModeratorMode` (`WED_Document.cpp`) |
 | Rotate view for moderation (a measuring arrow levels the map; 90-degree detents) | **done** — Moderator Mode only |

@@ -6,7 +6,7 @@
 Reads the stands (1300 + 1301 + 1313) of the first airport in the file and prints,
 per stand, the classes its weights open and the operators and types eligible at
 each - op class, Obsolete (R25), range from the nearest hub (R26) and HOME (R27)
-all applied, the same predicate the sim and WED's Liveries tab use. Hubs are
+all applied, the same predicate the sim and WED's livery editor use. Hubs are
 placed from the install's Global Airports, so run it against the install the
 index came from.
 

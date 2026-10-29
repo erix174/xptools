@@ -53,7 +53,7 @@ Inside `src/` (only WED-relevant entries shown here; see `src/README.txt` for th
 | `WEDTCE/`          | Texture coordinate editor (UV editor for orthophotos)             |
 | `WEDLibrary/`      | Library / asset browser pane                                       |
 | `WEDImportExport/` | apt.dat, DSF, gateway, scenery-pack import/export                  |
-| `WEDLivery/`       | Static-aircraft liveries (2.8): the Static Liveries tab, auto-fill, the moderation model (its map overlays live in `WEDMap/`) |
+| `WEDLivery/`       | Static-aircraft liveries (2.8): the livery editor (in the Selection tab), auto-fill, the moderation model (its map overlays live in `WEDMap/`) |
 | `WEDFileCache/`    | Disk cache for downloaded assets                                   |
 | `WEDNetwork/`      | Gateway client / live-collab server                                |
 | `WEDResources/`    | Icons, fonts, splash, line/pavement art                            |
@@ -428,7 +428,7 @@ path except through `WED_RampPosition` (`class_weights`, `auto_filled`) and
 | `WED_LiveryModeration` | The moderation model: one stand's entry and verdicts, the parks-nothing check the validator also uses, stepping, the report. See §12c. |
 | `WEDMap/WED_ModerationLayer`, `…Toolbar` | The moderator's map overlays and tool buttons. See §12c. |
 | `WED_LiveryThumbnailCache` | Renders a livery `.obj` to a card image on worker threads; LRU. |
-| `WED_LiveryPane*` | The Static Liveries tab, split by concern: `WED_LiveryPane.cpp` state, selection, cards and the coverage readout; `…Layout` rectangles and hit tests; `…Input` mouse and the edits it makes; `…Draw` drawing and animation; `…Rows` the airline list tiers. `WED_LiveryPaneInternal.h` is private to them. |
+| `WED_LiveryPane*` | The livery editor (shown in the Selection tab for ramp starts), split by concern: `WED_LiveryPane.cpp` state, selection, cards and the coverage readout; `…Layout` rectangles and hit tests; `…Input` mouse and the edits it makes; `…Draw` drawing and animation; `…Rows` the airline list tiers. `WED_LiveryPaneInternal.h` is private to them. |
 | `WED_Flag*`, `WED_IocCountryCodes` | The country flag banner, and apt.dat country → IOC code. |
 | `WED_MandatoryHeader` | The two-line stamp every hand-maintained data file in this family must start with. |
 
@@ -475,7 +475,7 @@ in open documents, no restart. (Older moderator code in `WED_PropertyTable` and
 | `WED_ModerationSignature(ramp)` | "The same setup": op type, sorted unique airline set, weights text (or size letter), equipment set. Two stands with equal signatures park the same thing; colour, grouping and "reviewed" all key on it. |
 | `WED_ModerationColour(sig, rgba)` | Signature → colour. Session-stable slots, golden-ratio hue steps from a random seed, shared by every layer. |
 | `WED_ModerationHasIssue(entry)` | Needs a look: an operator to check (`v_Check`/`v_Foreign`), `verify_NoData`, or `parks_nothing`. Drives stepping, the Moderation View highlight and the report. |
-| `WED_LiveryParksNothing(ramp, apt, msg)` | **The** shared check behind the validator's `warn_ramp_livery_parks_nothing`, the overview's "Parks nothing" filter, the Liveries tab's multi-stand count and the report. Built on one static analysis, `AnalyseStand` (classes the stand opens, classes a fitting livery exists at, whether the library has anything there), which also picks R14's wording: ahead of the art / out of reach / weights pointing where the operators do not fly. Same data and rule as the tab (`WED_LiveryFitsStand`, `WED_LiveryOperatorFitsRampOp`). A legacy stand (no 1313) opens every class at or below its letter - today's step-down falls through (spec R17). |
+| `WED_LiveryParksNothing(ramp, apt, msg)` | **The** shared check behind the validator's `warn_ramp_livery_parks_nothing`, the overview's "Parks nothing" filter, the livery editor's multi-stand count and the report. Built on one static analysis, `AnalyseStand` (classes the stand opens, classes a fitting livery exists at, whether the library has anything there), which also picks R14's wording: ahead of the art / out of reach / weights pointing where the operators do not fly. Same data and rule as the tab (`WED_LiveryFitsStand`, `WED_LiveryOperatorFitsRampOp`). A legacy stand (no 1313) opens every class at or below its letter - today's step-down falls through (spec R17). |
 | `WED_LiveryParksNothingFixable` / `WED_LiveryFixParksNothing` | R14's one-click Fix, behind the Validation list's **Fix** button (`WED_ValidateList.cpp`): weights on classes nothing fits move to the nearest fitting class at or below the stand's top; weighted stands only; the result text names a lowered 1301 letter (R23). |
 | `WED_LiveryLegacyUpdateWeights` | Updating a legacy stand to 1313: `WED_LegacyStepDownWeights` (0.75 x 0.25^k, `WED_LiveryRules`) with the fall-through folded in and a token 1 kept on the top class, so the stand parks what it parked and keeps its size. Used by the tab's "Set Spawn Weights" and Airport > Update Legacy Stands to Spawn Weights (`WED_DoLiveryLegacyUpdate`, `WED_LiveryAutoFill.cpp`). |
 | `WED_ModerationConfirmHidden(root)` | Moderator Mode, before Export Scenery Pack / Submit to Gateway: lists hidden items (hidden items are not exported) and offers Show All and Export (nested items too, one undo step), Export As Is or Cancel. |
@@ -491,7 +491,7 @@ in open documents, no restart. (Older moderator code in `WED_PropertyTable` and
 `wed_NextIssueStand`/`wed_PrevIssueStand` (Shift+X via `WED_MapPane::Map_KeyPress`
 so it does not steal capital X from text fields; Ctrl+Shift+X; moderator only).
 Both centre the stand with `WED_MapPane::CenterOnPoint` (zoom kept) and show the
-Static Liveries tab.
+Selection tab (the livery editor).
 
 ### The map overlays — `WED_ModerationLayer.{h,cpp}`
 
@@ -610,7 +610,7 @@ A plain `GUI_Pane` (independent toggles, not a `GUI_ToolBar`), placed by
 - **1313** - six spawn weights (spec R4/R5/R11/R17/R20/R23/R24). `AptIO.cpp`, `apt_startup_loc_weights`; `WED_RampPosition::Import/Export`.
 - **1315 A|M** - who set the stand's static-aircraft data (spec R30): `A` auto-filled, `M` hand-set with weights, absent otherwise. `apt_startup_loc_origin`; written after 1313 on X-Plane 12 exports; read back into the auto-fill watermark on import, so a Gateway moderator sees it.
 - Unknown rows are skipped and recorded on the airport (`AptInfo_t::discarded_rows`), shown as `warn_apt_dat_rows_not_imported` and in the moderation report, both keyed by the airport ID.
-- **1301 airline string** - `WED_RampPosition::CorrectAirlinesString` is the one place it is normalised on entry: lower case, single spaces, a repeated code dropped silently (first one kept), bounded at 1024 characters. The Gateway limit is `kGatewayAirlinesMaxChars` (299, `WED_RampPosition.h`), shared by the validator, auto-fill and the Liveries tab's card ticking, which stop at the last whole code.
+- **1301 airline string** - `WED_RampPosition::CorrectAirlinesString` is the one place it is normalised on entry: lower case, single spaces, a repeated code dropped silently (first one kept), bounded at 1024 characters. The Gateway limit is `kGatewayAirlinesMaxChars` (299, `WED_RampPosition.h`), shared by the validator, auto-fill and the livery editor's card ticking, which stop at the last whole code.
 
 The pinned base card (Moderation View) is kept in view: `WED_ModerationLayer::DrawDockedBase` docks it bottom left whenever its own card is not on screen; its header (`hit_GoTo`) centres the map on the stand without touching zoom or selection. Centring everywhere goes through `WED_MapZoomerNew::CenterOn`, which keeps pixels per metre.
 

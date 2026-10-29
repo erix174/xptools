@@ -907,7 +907,7 @@ endif()
 # the WIN32 branch, with a comment claiming it mirrored mac_copy_bundle_files() -
 # it did not, because WED_RESOURCE_FILES (which the Mac and Linux branches
 # deploy) never contained them. The result was that on Mac and Linux every
-# loader in this family silently reported LoadFailed() and the Liveries tab came
+# loader in this family silently reported LoadFailed() and the livery editor came
 # up empty.
 #
 # The destination differs per platform and must stay in step with

@@ -213,6 +213,11 @@ void	WED_LiveryPane::Hide(void)
 	AbortSizeDrag();
 	AbortWeightDrag();		// same reason - see AbortSizeDrag()'s caller comment above
 
+	// The editor also hides when the selection stops being all ramp starts; its
+	// search field must not keep the keyboard then, or Backspace types into it.
+	if (mSearchField && mSearchField->IsFocused())
+		mSearchField->LoseFocus(1);
+
 	// Nothing may keep animating behind a hidden tab: the timer would go on
 	// rebuilding the row list and re-laying it out every frame, forever, for a
 	// pane nobody is looking at.

@@ -150,7 +150,7 @@ static void GetExtentSel(Bbox2& box, IResolver * resolver)
 
 
 WED_MapPane::WED_MapPane(GUI_Commander * cmdr, double map_bounds[4], IResolver * resolver, WED_Archive * archive, WED_LibraryListAdapter * library)
-	: GUI_Commander(cmdr), mResolver(resolver)
+	: GUI_Commander(cmdr), mResolver(resolver), mTabMode(0), mSelectionFootprints(false)
 {
 	this->SetBkgkndImage("gradient.png");
 
@@ -880,8 +880,16 @@ void unhide_persistent(MapFilter_t& hide_list, const MapFilter_t& to_unhide)
 	}
 }
 
+void		WED_MapPane::ShowRampFootprintsOnSelection(bool on)
+{
+	mSelectionFootprints = on;
+	if (mTabMode == tab_Selection && mATCLayer->IsVisible() != on)
+		mATCLayer->SetVisible(on);
+}
+
 void		WED_MapPane::SetTabFilterMode(int mode)
 {
+	mTabMode = mode;
 	string title;
 	MapFilter_t hide_list, lock_list;
 
@@ -897,6 +905,7 @@ void		WED_MapPane::SetTabFilterMode(int mode)
 		title = "";
 		hide_list.clear();
 		lock_list.clear();
+		mATCLayer->SetVisible(mSelectionFootprints);
 	}
 	else if(mode == tab_Pavement)
 	{

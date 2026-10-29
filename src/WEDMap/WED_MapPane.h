@@ -111,6 +111,8 @@ private:
 	WED_SlippyMap *			mSlippyMap;
 	WED_StructureLayer *	mStructureLayer;
 	WED_ATCLayer *			mATCLayer;
+	int						mTabMode;				// tab_*, as SetTabFilterMode last set it
+	bool					mSelectionFootprints;	// ShowRampFootprintsOnSelection
 	WED_BoundaryLayer *		mBdyLayer;
 	WED_PreviewLayer *		mPreview;
 	WED_WorldMapLayer *		mWorldMap;
@@ -125,6 +127,9 @@ public:
 	// tool the tool, since the view may only be turned with it.
 			bool			IsViewRotated(void) const;
 			void			ToggleViewRotate(void);
+	// The green aircraft footprints on the Selection tab, while it shows the
+	// livery editor - so a size change shows the room it needs.
+			void			ShowRampFootprintsOnSelection(bool on);
 private:
 
 	GUI_Table *						mTable;

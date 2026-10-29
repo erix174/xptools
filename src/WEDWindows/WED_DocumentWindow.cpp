@@ -85,10 +85,11 @@ namespace
 	// everything selected is a ramp start (Julian, 2026-10-27 - it replaces the
 	// Static Liveries tab, where ramp start sizes were hard to find). The grid
 	// gets the height its rows need, up to half the tab; the editor the rest.
-	class WED_SelectionTabPane : public GUI_Pane, public GUI_Listener {
+	// A commander, as every tab is: the tab strip focuses the tab it shows.
+	class WED_SelectionTabPane : public GUI_Pane, public GUI_Commander, public GUI_Listener {
 	public:
-		WED_SelectionTabPane(IResolver * resolver, GUI_Broadcaster * archive) :
-			mResolver(resolver), mProps(NULL), mLivery(NULL), mLaidOut(-2)
+		WED_SelectionTabPane(GUI_Commander * owner, IResolver * resolver, GUI_Broadcaster * archive, WED_MapPane * map) :
+			GUI_Commander(owner), mResolver(resolver), mMap(map), mProps(NULL), mLivery(NULL), mLaidOut(-2)
 		{
 			archive->AddListener(this);
 		}
@@ -148,6 +149,7 @@ namespace
 			if (!force && props_h == mLaidOut) return;
 			mLaidOut = props_h;
 
+			if (mMap) mMap->ShowRampFootprintsOnSelection(props_h >= 0);
 			if (props_h < 0)
 			{
 				mLivery->Hide();
@@ -164,6 +166,7 @@ namespace
 		}
 
 		IResolver *				mResolver;
+		WED_MapPane *			mMap;
 		WED_PropertyPane *		mProps;
 		WED_LiveryPane *		mLivery;
 		int						mLaidOut;	// props_h of the current layout, -2 = none yet
@@ -301,17 +304,17 @@ WED_DocumentWindow::WED_DocumentWindow(
 	static const char * sel_t[] = { "Name", "Type", NULL };
 	static		 int	sel_w[] = { 120, 120 };
 
-	WED_SelectionTabPane * sel_tab = new WED_SelectionTabPane(inDocument, inDocument->GetArchive());
+	WED_SelectionTabPane * sel_tab = new WED_SelectionTabPane(prop_tabs->GetPaneOwner(), inDocument, inDocument->GetArchive(), mMapPane);
 	prop_tabs->AddPane(sel_tab, "Selection");
 	mSelectionTab = sel_tab;
 
-	WED_PropertyPane * prop_pane1 = new WED_PropertyPane(prop_tabs->GetPaneOwner(), inDocument, sel_t, sel_w,inDocument->GetArchive(), propPane_Selection, 0);
+	WED_PropertyPane * prop_pane1 = new WED_PropertyPane(sel_tab, inDocument, sel_t, sel_w,inDocument->GetArchive(), propPane_Selection, 0);
 	// Ramp start operation type, size and airlines, under the grid (the Static
 	// Liveries tab before 2.8.0-a1's moderation round, 2026-10-27)
 	WED_LiveryPane * livery_pane = new WED_LiveryPane(inDocument, inDocument->GetArchive(), prop_tabs);
 	sel_tab->SetPanes(prop_pane1, livery_pane);
 	// Its constructor synced to the selection before it had a parent: again,
-	// for a document saved with a ramp start selected.
+	// with the parent in place.
 	livery_pane->RebuildSelection();
 
 	// --------------- Pavement Tab Mode ---------------
