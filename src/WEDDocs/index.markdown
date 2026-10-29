@@ -326,6 +326,13 @@ Numbered 4 in [Figure 3](#wedwindow), the tool defaults pane changes the setting
 
 Before using any tool, set up the preferences first and you won't have to edit later.  When you change the defaults for a tool, WED will remember those changes so that the next time you use the tool, it will be set up the same way. This saves time when drawing many similar types of things.
 
+**Snapping new nodes.** The tools that draw outlines (taxiways, boundaries, facades, forests, strings, lines, polygons and the others in that family) have two options in the tool defaults pane, both off unless you turn them on:
+
+* **Snap To Vertices**: each node you place lands on the nearest vertex of a polygon, line or string within a few pixels of the click. A ring around the cursor shows how far the snap reaches, and a marker shows the vertex a click would land on. Objects, ramp starts, signs and other single points are never snap targets, nor are taxi routes and roads.
+* **Match Bezier Handles**: when you finish the shape, each of its nodes that sits on another shape's node, next to a node that does too, takes that shape's Bezier handles, as **Match Bezier Handles** in the menu does. A line traced around a curved polygon with Snap To Vertices on then follows its curves.
+
+**Help > Node Snap Radius (debug)** sets how many pixels the snap reaches (8 to start with); WED keeps the value.
+
 ### The Library Pane ###
 
 The library pane, numbered 1 in [Figure 3](#wedwindow), displays art assets currently available for inclusion in the scenery. Here, you can browse through the files in the X-Plane library using their virtual paths. (For our purposes, a full understanding of the library system is not required, but for further reading, see the appendix [About the X-Plane Library System][33].) Selecting an asset will also select an appropriate tool---for instance, if you select a `.obj` file, the object tool will become active, and if you select a `.for` file, the forest tool will become active.

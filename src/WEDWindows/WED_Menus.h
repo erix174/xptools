@@ -206,7 +206,8 @@ enum {
 	wed_HelpManual,
 	wed_HelpScenery,
 	wed_OSMFixTheMap,
-	wed_ESRIUses
+	wed_ESRIUses,
+	wed_NodeSnapRadius		// debug window: the drawing tools' snap radius, for Julian to tune
 };
 
 class	GUI_Application;

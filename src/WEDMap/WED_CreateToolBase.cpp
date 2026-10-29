@@ -265,6 +265,13 @@ void	WED_CreateToolBase::ControlsMoveBy	 (intptr_t id,        const Vector2& del
 {
 }
 
+// A click this close to the first node closes the ring (CreationUp). It is not
+// snapped: a vertex of another shape nearby would pull it out of closing range.
+bool		WED_CreateToolBase::ClosingClick(const Point2& pt) const
+{
+	return mCanClose && mPts.size() > 1 && within_dist(mPts.front(), pt, GetZoomer(), kCloseLoopDist);
+}
+
 int			WED_CreateToolBase::CreationDown(const Point2& start_pt)
 {
 	if (!CanCreateNow()) return 0;
@@ -279,9 +286,11 @@ int			WED_CreateToolBase::CreationDown(const Point2& start_pt)
 	}
 	else
 	{
-		mPts.push_back(start_pt);
-		mControlLo.push_back(start_pt);
-		mControlHi.push_back(start_pt);
+		Point2 node_pt(start_pt);
+		if (!ClosingClick(start_pt)) SnapNewNode(node_pt);
+		mPts.push_back(node_pt);
+		mControlLo.push_back(node_pt);
+		mControlHi.push_back(node_pt);
 		mHasDirs.push_back(mMustCurve);
 		mIsSplit.push_back(0);
 		mCreating = 1;
@@ -308,7 +317,11 @@ void		WED_CreateToolBase::CreationDrag(const Point2& start_pt, const Point2& now
 	if (mHasDirs.back())
 		mControlHi.back() = now_pt;
 	else
-		mControlHi.back() = mPts.back() = now_pt;
+	{
+		Point2 node_pt(now_pt);
+		if (!ClosingClick(now_pt)) SnapNewNode(node_pt);
+		mControlHi.back() = mPts.back() = node_pt;
+	}
 
 	RecalcHeadings();
 

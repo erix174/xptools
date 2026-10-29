@@ -37,6 +37,9 @@
 #include "GUI_Button.h"
 #include "GUI_Label.h"
 #include "GUI_TextField.h"
+#include "GUI_ScrollBar.h"
+#include "MathUtils.h"
+#include "GUI_Prefs.h"
 
 #include "WED_Globals.h"
 #if LIN
@@ -333,7 +336,8 @@ WED_Application::WED_Application(int argc, char const * const * argv) : GUI_Appl
 WED_Application::WED_Application(const char * args) : GUI_Application(args),
 #endif
 		mAboutBox(NULL),
-		mSettingsWin(NULL)
+		mSettingsWin(NULL),
+		mSnapRadiusWin(NULL)
 {
 }
 
@@ -341,7 +345,85 @@ WED_Application::~WED_Application()
 {
 	if (mAboutBox)    delete mAboutBox;
 	if (mSettingsWin) delete mSettingsWin;
+	if (mSnapRadiusWin) delete mSnapRadiusWin;
 }
+
+// Help > Node Snap Radius (debug): one slider for gNodeSnapRadius, so the snap
+// distance of the drawing tools' "Snap To Vertices" can be tried out while
+// drawing (Julian picks the value, 2026-10-29). The ring the tools draw around
+// the cursor follows it on the next mouse move; the value is saved as it changes.
+class WED_SnapRadiusWindow : public GUI_Window, public GUI_Listener {
+public:
+	WED_SnapRadiusWindow(GUI_Commander * cmdr) :
+		GUI_Window("Node Snap Radius", xwin_style_movable | xwin_style_centered | xwin_style_popup, sBounds, cmdr)
+	{
+		// the whole client area, whatever the DPI scaling made of it; the plain
+		// gradient, as the about.png logo sat behind the value
+		int wb[4];
+		GUI_Pane::GetBounds(wb);
+		GUI_Packer * packer = new GUI_Packer;
+		packer->SetParent(this);
+		packer->Show();
+		packer->SetBounds(wb);
+		packer->SetSticky(1,1,1,1);
+		packer->SetBkgkndImage("gradient.png");
+
+		float * white = WED_Color_RGBA(wed_Table_Text);
+		const int line_h = (int) GUI_GetLineHeight(font_UI_Basic);
+
+		mValue = new GUI_Label();
+		mValue->SetBounds(20, 112, 400, 112 + line_h + 4);
+		mValue->SetColors(white);
+		mValue->SetParent(this);
+		mValue->Show();
+
+		mSlider = new GUI_ScrollBar();
+		mSlider->SetBounds(20, 76, 400, 76 + mSlider->GetMinorAxis(0));
+		mSlider->SetMin(1);
+		mSlider->SetMax(40);
+		mSlider->SetPageSize(10);		// the arrows step a tenth of it: 1 px; the track 10 px
+		mSlider->SetValue(gNodeSnapRadius);
+		mSlider->SetParent(this);
+		mSlider->AddListener(this);
+		mSlider->Show();
+
+		GUI_Label * note = new GUI_Label();
+		note->SetBounds(20, 20, 400, 20 + 2 * line_h + 4);
+		note->SetColors(white);
+		note->SetDescriptor("For the Line, String and Polygon tools with\n\"Snap To Vertices\" on. The ring at the cursor shows it.");
+		note->SetParent(this);
+		note->Show();
+
+		ShowValue();
+	}
+
+	virtual bool Closed(void) { Hide(); return false; }
+
+	virtual	void ReceiveMessage(GUI_Broadcaster * inSrc, intptr_t inMsg, intptr_t inParam)
+	{
+		if (inSrc == mSlider)
+		{
+			gNodeSnapRadius = intlim((int) (mSlider->GetValue() + 0.5f), 1, 40);
+			ShowValue();
+			// saved now, not only on a clean quit: a crash or a killed WED
+			// would lose the value being tuned
+			WED_Document::WriteGlobalPrefs();
+			GUI_Prefs_Write("WED");
+		}
+	}
+
+private:
+	void	ShowValue(void)
+	{
+		mValue->SetDescriptor("Snap radius: " + to_string(gNodeSnapRadius) + " px  (default 8)");
+	}
+
+	static int		sBounds[4];
+	GUI_Label *		mValue;
+	GUI_ScrollBar *	mSlider;
+};
+
+int WED_SnapRadiusWindow::sBounds[4] = { 0, 0, 420, 160 };
 
 void	WED_Application::OpenFiles(const vector<string>& inFiles)
 {
@@ -377,6 +459,13 @@ int		WED_Application::HandleCommand(int command)
 			GUI_LaunchURL(WED_URL_MANUAL);
 		}
 		return 1;
+	case wed_NodeSnapRadius:
+		if (!mSnapRadiusWin) mSnapRadiusWin = new WED_SnapRadiusWindow(this);
+		mSnapRadiusWin->Show();
+#if APL
+		mSnapRadiusWin->Refresh();
+#endif
+		return 1;
 	default:
 		return GUI_Application::HandleCommand(command);
 	}
@@ -391,6 +480,7 @@ int		WED_Application::CanHandleCommand(int command, string& ioName, int& ioCheck
 	case wed_HelpManual:
 	case wed_OSMFixTheMap:
 	case wed_ESRIUses:
+	case wed_NodeSnapRadius:
 							return 1;
 	default:				return GUI_Application::CanHandleCommand(command, ioName, ioCheck);
 	}

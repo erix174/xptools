@@ -55,6 +55,10 @@ extern int gOrthoExport;
    auto-switches the property panel to the Selection tab once per new
    selection - see WED_LiveryPane::RebuildSelection(). Off by default. */
 extern int gPromptLiveriesOnRampSelect;
+/* How close, in screen pixels, a click must be to a polygon, line or string
+   vertex for the drawing tools' "Snap To Vertices" to put the new node on it.
+   Tuned in Help > Node Snap Radius (debug window). */
+extern int gNodeSnapRadius;
 /* "Show Recommendation" toggle in the livery editor's airline list
    toolbar - splits the list into up to several per-airport recommendation
    sections (manual pin, direct hit, same country, popular fleet - see

@@ -48,6 +48,20 @@
 #include "WED_ExclusionPoly.h"
 #include "WED_LinePlacement.h"
 #include "WED_StringPlacement.h"
+#include "WED_GISPoint_Bezier.h"
+#include "WED_GroupCommands.h"
+#include "WED_Globals.h"
+#include "WED_Colors.h"
+#include "WED_MapZoomerNew.h"
+#include "GUI_GraphState.h"
+#include "GUI_DrawUtils.h"
+#include "GUI_Pane.h"
+#include "XESConstants.h"
+#if APL
+	#include <OpenGL/gl.h>
+#else
+	#include <GL/gl.h>
+#endif
 #include "WED_Taxiway.h"
 #include "WED_SimpleBezierBoundaryNode.h"
 #include "WED_SimpleBoundaryNode.h"
@@ -105,7 +119,10 @@ WED_CreatePolygonTool::WED_CreatePolygonTool(
 		mExclude(tool == create_ExcludePol ? this : NULL, PROP_Name("Exclusion", XML_Name("", "")), ExclusionTypes, 0),
 
 		mUVMap(tool == create_Polygon    ? this : NULL,PROP_Name("Use Texture Map - Orthophoto", XML_Name("","")), 0),
-		mPickWalls(tool == create_Facade ? this : NULL,PROP_Name("Pick Walls", XML_Name("","")), 0)
+		mPickWalls(tool == create_Facade ? this : NULL,PROP_Name("Pick Walls", XML_Name("","")), 0),
+		mSnapNodes(this, PROP_Name("Snap To Vertices", XML_Name("","")), 0),
+		mMatchHandles(this, PROP_Name("Match Bezier Handles", XML_Name("","")), 0),
+		mSnapKeyArchive(-1)
 {
 	mPavement.value = surf_Concrete;
 	mPickWalls.value = true;
@@ -422,6 +439,16 @@ void	WED_CreatePolygonTool::AcceptPath(
 	else if (mType == create_Hole && host->GetClass() == WED_DrapedOrthophoto::sClass)   // holes in orthos also need UV map set
 		dynamic_cast <WED_DrapedOrthophoto *> (host)->Redrape();
 
+	if (mMatchHandles.value && outer_ring)
+	{
+		vector<WED_GISPoint_Bezier *> nodes;
+		for (int n = 0; n < outer_ring->CountChildren(); ++n)
+			if (WED_GISPoint_Bezier * b = dynamic_cast<WED_GISPoint_Bezier *>(outer_ring->GetNthChild(n)))
+				nodes.push_back(b);
+		if (!nodes.empty())
+			WED_MatchBezierHandlesOf(WED_GetWorld(GetResolver()), nodes);
+	}
+
 	GetArchive()->CommitCommand();
 }
 
@@ -492,5 +519,115 @@ void	WED_CreatePolygonTool::GetNthPropertyDict(int n, PropertyDict_t& dict) cons
 	if(n == PropertyItemNumber(&mPavement) && mPavement.value != surf_Water)
 	{
 		dict.erase(surf_Water);
+	}
+}
+
+// ---- Snap To Vertices ----
+// Only the outlines of shapes are targets - polygons, lines, strings, the
+// airport's own chains. Points (objects, ramp starts, signs) and network edges
+// (taxi routes, roads) are other systems and are left out (Eric, 2026-10-29).
+void	WED_CreatePolygonTool::CollectSnapVertices(IGISEntity * e)
+{
+	if (!IsVisibleNow(e)) return;
+
+	switch (e->GetGISClass()) {
+	case gis_Composite:
+		if (IGISComposite * c = dynamic_cast<IGISComposite *>(e))
+			for (int n = 0; n < c->GetNumEntities(); ++n)
+				CollectSnapVertices(c->GetNthEntity(n));
+		break;
+	case gis_Polygon:
+		if (IGISPolygon * poly = dynamic_cast<IGISPolygon *>(e))
+		{
+			CollectSnapVertices(poly->GetOuterRing());
+			for (int n = 0; n < poly->GetNumHoles(); ++n)
+				CollectSnapVertices(poly->GetNthHole(n));
+		}
+		break;
+	case gis_PointSequence:
+	case gis_Ring:
+	case gis_Chain:
+		if (IGISPointSequence * ps = dynamic_cast<IGISPointSequence *>(e))
+			for (int n = 0; n < ps->GetNumPoints(); ++n)
+			{
+				Point2 loc;
+				ps->GetNthPoint(n)->GetLocation(gis_Geo, loc);
+				mSnapVertices.push_back(loc);
+			}
+		break;
+	default:
+		break;
+	}
+}
+
+// The nearest outline vertex within gNodeSnapRadius screen pixels of pt.
+bool	WED_CreatePolygonTool::FindSnapVertex(const Point2& pt, Point2& out_vertex)
+{
+	// Gathered once per change to the document, not per pan or zoom: a walk of
+	// a big airport on every frame of a pan made it stutter.
+	WED_Thing * wrl = WED_GetWorld(GetResolver());
+	long long key_a = wrl->GetArchive()->CacheKey();
+	if (key_a != mSnapKeyArchive)
+	{
+		mSnapVertices.clear();
+		CollectSnapVertices(dynamic_cast<IGISEntity *>(wrl));
+		mSnapKeyArchive = key_a;
+	}
+
+	// Only the vertices in a lat/lon box around pt go to the screen test.
+	const Point2 px = GetZoomer()->LLToPixel(pt);
+	const Point2 c1 = GetZoomer()->PixelToLL(Point2(px.x() - gNodeSnapRadius, px.y() - gNodeSnapRadius));
+	const Point2 c2 = GetZoomer()->PixelToLL(Point2(px.x() + gNodeSnapRadius, px.y() + gNodeSnapRadius));
+	const Bbox2 box(c1, c2);
+	double best = (double) gNodeSnapRadius * gNodeSnapRadius;
+	bool found = false;
+	for (const Point2& v : mSnapVertices)
+	{
+		if (!box.contains(v)) continue;
+		double d = Vector2(px, GetZoomer()->LLToPixel(v)).squared_length();
+		if (d <= best) { best = d; out_vertex = v; found = true; }
+	}
+	return found;
+}
+
+void	WED_CreatePolygonTool::SnapNewNode(Point2& io_pt)
+{
+	Point2 v;
+	if (mSnapNodes.value && FindSnapVertex(io_pt, v))
+		io_pt = v;
+}
+
+// The ring shows how far the snap reaches, the marker which vertex a click
+// would land on - so the radius can be judged while drawing.
+void	WED_CreatePolygonTool::DrawStructure(bool inCurrent, GUI_GraphState * g)
+{
+	WED_CreateToolBase::DrawStructure(inCurrent, g);
+	GUI_Pane * map = WED_MapLayer::GetHost();		// GetHost(int&) here is the new shape's parent
+	if (!inCurrent || !mSnapNodes.value || !map) return;
+
+	int x, y, b[4];
+	map->GetMouseLocNow(&x, &y);
+	map->GetBounds(b);
+	if (x < b[0] || x > b[2] || y < b[1] || y > b[3]) return;
+
+	g->SetState(false, false, false, true, true, false, false);
+	float col[4];
+	memcpy(col, WED_Color_RGBA(wed_ControlHandle), sizeof(col));
+	col[3] = 0.5f;
+	glColor4fv(col);
+	glBegin(GL_LINE_LOOP);
+	for (int i = 0; i < 32; ++i)
+	{
+		double a = i * 2.0 * M_PI / 32.0;
+		glVertex2d(x + gNodeSnapRadius * cos(a), y + gNodeSnapRadius * sin(a));
+	}
+	glEnd();
+
+	Point2 v;
+	if (FindSnapVertex(GetZoomer()->PixelToLL(Point2(x, y)), v))
+	{
+		Point2 p = GetZoomer()->LLToPixel(v);
+		GUI_PlotIcon(g, "handle_closeloop.png", p.x(), p.y(), 0, 1.2);
+		g->SetTexUnits(0);
 	}
 }

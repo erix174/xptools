@@ -104,6 +104,9 @@ int		WED_CanAlign(IResolver * resolver);
 void	WED_DoAlign(IResolver * resolver);
 int		WED_CanMatchBezierHandles(IResolver * resolver);
 void	WED_DoMatchBezierHandles(IResolver * resolver);
+class	WED_GISPoint_Bezier;
+// The same, for these points, inside a command the caller has open.
+void	WED_MatchBezierHandlesOf(WED_Thing * wrl, const vector<WED_GISPoint_Bezier *>& points);
 int		WED_CanOrthogonalize(IResolver * resolver);
 void	WED_DoOrthogonalize(IResolver * resolver);
 int		WED_CanMakeRegularPoly(IResolver * resolver);

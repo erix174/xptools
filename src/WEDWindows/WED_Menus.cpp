@@ -276,6 +276,8 @@ static const GUI_MenuItem_t kHelpMenu[] = {
 {	"&X-Plane Scenery Homepage",	0,	0,										0,	wed_HelpScenery },
 {	"&OpenStreetMap Bug Fixing",	0,	0,										0,	wed_OSMFixTheMap },
 {	"&Esri Imagery Permitted Uses",	0,	0,										0,	wed_ESRIUses },
+{	"-",							0,	0,										0,	0				},
+{	"&Node Snap Radius (debug)...",	0,	0,										0,	wed_NodeSnapRadius },
 #if IBM || LIN
 {	"-",							0,		0,									0,	0				},
 {	"&About WED",					0,		0,									0,	gui_About		},

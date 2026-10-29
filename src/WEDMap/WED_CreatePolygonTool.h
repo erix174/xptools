@@ -65,6 +65,9 @@ public:
 
 	virtual	void		GetNthPropertyDict(int n, PropertyDict_t& dict) const;
 
+	// WED_MapLayer: the snap target under the mouse, while snapping is on
+	virtual	void		DrawStructure(bool inCurrent, GUI_GraphState * g);
+
 protected:
 
 		WED_PropIntEnum					mPavement;
@@ -87,6 +90,12 @@ protected:
 
 		WED_PropStringText				mShapeText;
 
+		// Off unless the author turns them on (2026-10-29, Julian): new nodes go
+		// onto polygon, line and string vertices nearby; on finishing, the new
+		// shape takes their Bezier handles (as Match Bezier Handles).
+		WED_PropBoolText				mSnapNodes;
+		WED_PropBoolText				mMatchHandles;
+
 	virtual	void		AcceptPath(
 							const vector<Point2>&	pts,
 							const vector<Point2>&	dirs_lo,
@@ -95,6 +104,13 @@ protected:
 							const vector<int>		has_split,
 							int						closed);
 	virtual	bool		CanCreateNow(void);
+	virtual	void		SnapNewNode(Point2& io_pt);
+
+			bool		FindSnapVertex(const Point2& pt, Point2& out_vertex);
+			void		CollectSnapVertices(IGISEntity * e);
+
+		vector<Point2>	mSnapVertices;			// every outline vertex shown, per document change
+		long long		mSnapKeyArchive;
 
 
 			WED_Thing *	GetHost(int& idx);

@@ -92,6 +92,9 @@ protected:
 							const vector<int>		has_split,
 							int						closed)=0;
 	virtual	bool		CanCreateNow(void)=0;
+	// Where a new node goes for a click at pt: pt itself, unless a tool snaps it.
+	virtual	void		SnapNewNode(Point2& io_pt) { }
+			bool		ClosingClick(const Point2& pt) const;
 
 		inline WED_Archive * GetArchive(void) { return mArchive; }
 

@@ -2536,6 +2536,15 @@ void	WED_DoMatchBezierHandles(IResolver * resolver)
 		get_bezier_points(t, points);
 	}
 
+	WED_MatchBezierHandlesOf(wrl, points);
+	op->CommitOperation();
+}
+
+// Each point takes the handles of the points snapped to it whose neighbours on
+// that side are snapped together too - so a line traced over a polygon's nodes
+// follows its curves.
+void	WED_MatchBezierHandlesOf(WED_Thing * wrl, const vector<WED_GISPoint_Bezier *>& points)
+{
 	typedef multimap<Point2, WED_GISPoint_Bezier *, lesser_x_then_y> Snapped_t;
 	Snapped_t snapped;
 	get_snapped_bezier_points(wrl, points, snapped);
@@ -2579,8 +2588,6 @@ void	WED_DoMatchBezierHandles(IResolver * resolver)
 		if (have_hi)
 			copy_bezier_handle(BezierHandle(points[i], BezierHandle::HI), hi_handle);
 	}
-
-	op->CommitOperation();
 }
 
 static int IterateCanOrthogonalize(ISelectable * what, void * ref)

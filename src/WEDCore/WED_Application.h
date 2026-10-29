@@ -59,6 +59,7 @@ private:
 
 	GUI_Window   * mAboutBox;
 	WED_Settings * mSettingsWin;
+	GUI_Window   * mSnapRadiusWin;
 };
 
 class WED_Settings : public GUI_Window , public GUI_Listener, public GUI_Broadcaster {
