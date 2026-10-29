@@ -50,7 +50,11 @@ GUI_ScrollerPane::GUI_ScrollerPane(int inHScroll, int inVScroll) :
 	mScrollH(NULL),
 	mScrollV(NULL),
 	mContent(NULL),
-	mCalibrating(false)
+	mCalibrating(false),
+	mAutoHide(false),
+	mContentPane(NULL),
+	mSidePane(NULL),
+	mHeaderPane(NULL)
 {
 	// Note: we have to set some real bounds - default panes are zero rect.
 	// but we need to establish relative dimensions to our scroll bars from the outset!
@@ -104,7 +108,7 @@ void	GUI_ScrollerPane::Draw(GUI_GraphState * g)
 		GUI_DrawStretched(g, mImage.c_str(), bounds, tile);
 	}
 
-	if (mScrollV && mScrollH)
+	if (mScrollV && mScrollH && mScrollV->IsVisible() && mScrollH->IsVisible())
 	{
 		glColor3f(1,1,1);
 		GetBounds(bounds);
@@ -129,11 +133,12 @@ void	GUI_ScrollerPane::SetImage(const char * image_res)
 
 void	GUI_ScrollerPane::PositionInContentArea(GUI_Pane * inPane)
 {
+	mContentPane = inPane;
 	int bounds_me[4];
 	this->GetBounds(bounds_me);
-	if (mScrollH)
+	if (mScrollH && mScrollH->IsVisible())
 		bounds_me[1] += mScrollH->GetMinorAxis(0);
-	if (mScrollV)
+	if (mScrollV && mScrollV->IsVisible())
 		bounds_me[2] -= mScrollV->GetMinorAxis(1);
 
 	inPane->SetBounds(bounds_me);
@@ -142,11 +147,12 @@ void	GUI_ScrollerPane::PositionInContentArea(GUI_Pane * inPane)
 
 void	GUI_ScrollerPane::PositionSidePane(GUI_Pane * pane)
 {
+	mSidePane = pane;
 	int bounds_me[4];
 	this->GetBounds(bounds_me);
-	if (mScrollH)
+	if (mScrollH && mScrollH->IsVisible())
 		bounds_me[1] += mScrollH->GetMinorAxis(0);
-	if (mScrollV)
+	if (mScrollV && mScrollV->IsVisible())
 		bounds_me[2] -= mScrollV->GetMinorAxis(1);
 	int bounds_child[4];
 	pane->GetBounds(bounds_child);
@@ -157,9 +163,10 @@ void	GUI_ScrollerPane::PositionSidePane(GUI_Pane * pane)
 
 void	GUI_ScrollerPane::PositionHeaderPane(GUI_Pane * pane)
 {
+	mHeaderPane = pane;
 	int bounds_me[4];
 	this->GetBounds(bounds_me);
-	if (mScrollH)
+	if (mScrollH && mScrollH->IsVisible())
 		bounds_me[1] += mScrollH->GetMinorAxis(0);
 
 // Bens: let header overhang scrollbar.  Sider does not!
@@ -279,9 +286,53 @@ void	GUI_ScrollerPane::ReceiveMessage(
 		mCalibrateDirty = true;
 }
 
+void	GUI_ScrollerPane::SetAutoHideScrollBars(bool on)
+{
+	mAutoHide = on;
+	mCalibrateDirty = true;
+	if (!on)
+	{
+		if (mScrollH) mScrollH->Show();
+		if (mScrollV) mScrollV->Show();
+	}
+}
+
+// Which bars the content needs, from the room it would have without them: a
+// vertical bar narrows the view, which can make a horizontal one necessary, and
+// the other way round.
+void	GUI_ScrollerPane::AutoHideScrollBars(void)
+{
+	if (!mAutoHide || mContent == NULL) return;
+
+	float total[4], vis[4];
+	mContent->GetScrollBounds(total, vis);
+	int b[4];
+	GetBounds(b);
+	const float tw = total[2] - total[0], th = total[3] - total[1];
+	const int vw = mScrollV ? mScrollV->GetMinorAxis(1) : 0;
+	const int hh = mScrollH ? mScrollH->GetMinorAxis(0) : 0;
+
+	bool need_v = mScrollV && th > b[3] - b[1];
+	bool need_h = mScrollH && tw > b[2] - b[0] - (need_v ? vw : 0);
+	if (mScrollV && !need_v && need_h && th > b[3] - b[1] - hh) need_v = true;
+
+	bool changed = false;
+	if (mScrollV && mScrollV->IsVisible() != need_v) { if (need_v) mScrollV->Show(); else mScrollV->Hide(); changed = true; }
+	if (mScrollH && mScrollH->IsVisible() != need_h) { if (need_h) mScrollH->Show(); else mScrollH->Hide(); changed = true; }
+	if (!changed) return;
+
+	if (mScrollV) mScrollV->SetBounds(b[2] - vw, b[1] + (need_h ? hh : 0), b[2], b[3]);
+	if (mScrollH) mScrollH->SetBounds(b[0], b[1], b[2] - (need_v ? vw : 0), b[1] + hh);
+	if (mContentPane) PositionInContentArea(mContentPane);
+	if (mSidePane)    PositionSidePane(mSidePane);
+	if (mHeaderPane)  PositionHeaderPane(mHeaderPane);
+	Refresh();
+}
+
 void	GUI_ScrollerPane::CalibrateSBs(void)
 {
 	mCalibrateDirty = false;
+	AutoHideScrollBars();
 	mCalibrating = true;
 
 	if (mContent == NULL)

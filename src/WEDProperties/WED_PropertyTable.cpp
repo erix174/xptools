@@ -93,6 +93,8 @@ WED_PropertyTable::WED_PropertyTable(
 	GUI_Commander(cmdr),
 	mVertical(vertical),
 	mDynamicCols(dynamic_cols),
+	mFillWidth(0),
+	mHideRampOpType(false),
 	mSelOnly(sel_only),
 	mResolver(resolver),
 	mCacheValid(false),
@@ -125,6 +127,9 @@ void WED_PropertyTable::RecalculateColumns()
 		mColNames.clear();
 		mColNames.push_back("Name");
 		int total_objs = mVertical ? GetColCount() : GetRowCount();
+		bool only_ramps = total_objs > 0;
+		for (int i = 0; i < total_objs && only_ramps; ++i)
+			only_ramps = SAFE_CAST(WED_RampPosition, FetchNth(i)) != NULL;
 		for (int i = 0; i < total_objs; ++i)
 		{
 			WED_Thing * t = FetchNth(i);
@@ -136,6 +141,7 @@ void WED_PropertyTable::RecalculateColumns()
 					PropertyInfo_t info;
 					t->GetNthPropertyInfo(p,info);
 					if(!info.prop_name.empty() && info.prop_name[0] != '.')
+					if (!(mHideRampOpType && only_ramps && info.prop_name == "Ramp Operation Type"))
 					if (cols.count(info.prop_name) == 0)
 					{
 						cols.insert(info.prop_name);
@@ -145,6 +151,53 @@ void WED_PropertyTable::RecalculateColumns()
 			}
 		}
 	}
+}
+
+void	WED_PropertyTable::SetFillWidth(int w)
+{
+	mFillWidth = w;
+}
+
+void	WED_PropertyTable::SetHideRampOperationType(bool hide)
+{
+	mHideRampOpType = hide;
+	RecalculateColumns();
+}
+
+int		WED_PropertyTable::FillColWidth(void)
+{
+	if (!mVertical || mFillWidth <= 0) return 0;
+	int c = GetColCount();
+	if (c <= 0) return 0;
+	if (GUI_SimpleTableGeometry::GetCellRight(c - 1) >= mFillWidth) return 0;
+	return mFillWidth / c;
+}
+
+int		WED_PropertyTable::GetCellLeft(int n)
+{
+	int w = FillColWidth();
+	return w ? n * w : GUI_SimpleTableGeometry::GetCellLeft(n);
+}
+
+int		WED_PropertyTable::GetCellRight(int n)
+{
+	int w = FillColWidth();
+	if (!w) return GUI_SimpleTableGeometry::GetCellRight(n);
+	return n >= GetColCount() - 1 ? mFillWidth : (n + 1) * w;	// the last column takes the remainder
+}
+
+int		WED_PropertyTable::GetCellWidth(int n)
+{
+	return FillColWidth() ? GetCellRight(n) - GetCellLeft(n) : GUI_SimpleTableGeometry::GetCellWidth(n);
+}
+
+// Dragging a column edge means nothing while the columns are stretched to fill.
+// GUI_TextTable starts the drag anyway, so it is ignored here - it would move the
+// stored widths by the stretched ones and leave them wrong once stretching stops.
+void	WED_PropertyTable::SetCellWidth(int n, int w)
+{
+	if (FillColWidth()) return;
+	GUI_SimpleTableGeometry::SetCellWidth(n, w);
 }
 
 void	WED_PropertyTable::GetCellContent(
@@ -1245,6 +1298,8 @@ int			WED_PropertyTable::GetColCount(void)
 
 int		WED_PropertyTable::ColForX(int n)
 {
+	if (int w = FillColWidth())
+		return min(max(n, 0) / w, GetColCount() - 1);
 	int c = GUI_SimpleTableGeometry::ColForX(n);
 	int cc = GetColCount();
 	return min(c,cc-1);

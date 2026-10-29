@@ -38,7 +38,8 @@ WED_RampPosition::WED_RampPosition(WED_Archive * a, int i) : WED_GISPoint_Headin
 	// optional class weights now, which one letter in the grid cannot show. The
 	// leading "." hides it from the generic property grid (see
 	// WED_PropertyTable::RecalculateColumns). Ramp Operation Type stays in the
-	// grid. Airlines left it on 2026-09-30 (Eric): typed codes were where most
+	// grid, except on the Selection tab while the livery editor below it shows
+	// (2026-10-29), whose operation type buttons set it. Airlines left it on 2026-09-30 (Eric): typed codes were where most
 	// bad data came from (unknown codes, airline lists on GA stands), and the
 	// livery editor and Populate now set it. The list itself is unchanged -
 	// read, written, exported and validated as before; only the grid hides it.

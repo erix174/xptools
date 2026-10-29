@@ -187,6 +187,26 @@ void	WED_PropertyPane::FromPrefs(IDocPrefs * prefs,int id)
 	SetClosed(mClosedList);
 }
 
+void	WED_PropertyPane::SetSelectionTabStyle(void)
+{
+	mScroller->SetAutoHideScrollBars(true);
+	mPropertyTable.SetHideRampOperationType(true);
+	UpdateFillWidth();
+}
+
+void	WED_PropertyPane::UpdateFillWidth(void)
+{
+	int tb[4];
+	mTable->GetBounds(tb);
+	int w = tb[2] - tb[0];
+	if (w != mPropertyTable.GetFillWidth())
+	{
+		mPropertyTable.SetFillWidth(w);
+		mScroller->ContentGeometryChanged();
+		Refresh();
+	}
+}
+
 int		WED_PropertyPane::GetContentHeight(void)
 {
 	float total[4], vis[4];

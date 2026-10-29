@@ -56,6 +56,19 @@ public:
 
 	virtual			~WED_PropertyTable();
 
+	// The Selection tab's grid (WED_PropertyPane::SetSelectionTabStyle). Fill
+	// width: the object columns share this many pixels when they would not fill
+	// them, 0 = off. The ramp operation type row is left out for a selection of
+	// only ramp starts, whose livery editor sets it.
+			void	SetFillWidth(int w);
+			int		GetFillWidth(void) const { return mFillWidth; }
+			void	SetHideRampOperationType(bool hide);
+
+	virtual	int		GetCellLeft (int n);
+	virtual	int		GetCellRight(int n);
+	virtual	int		GetCellWidth(int n);
+	virtual	void	SetCellWidth(int n, int w);
+
 	virtual    void	GetCellContent(
 						int							cell_x,
 						int							cell_y,
@@ -221,6 +234,9 @@ private:
 
 	int							mVertical;
 	int							mDynamicCols;
+	int							mFillWidth;
+	bool						mHideRampOpType;
+			int		FillColWidth(void);			// 0 = the stored widths apply
 	int							mSelOnly;
 	set<string>					mFilter;
 

@@ -91,6 +91,10 @@ public:
 
 			void	SetImage(const char * image_res);
 
+			// Off by default. On, a scroll bar shows only while the content does
+			// not fit that way, and the panes placed with Position* above follow.
+			void	SetAutoHideScrollBars(bool on);
+
 	virtual	void	Draw(GUI_GraphState * g);
 
 	// From GUI_Pane
@@ -119,6 +123,11 @@ private:
 	bool							mCalibrating;
 	string							mImage;
 	bool							mCalibrateDirty;
+	bool							mAutoHide;
+	GUI_Pane *						mContentPane;	// as last placed by Position*, for the auto-hide
+	GUI_Pane *						mSidePane;
+	GUI_Pane *						mHeaderPane;
+			void	AutoHideScrollBars(void);
 
 };
 

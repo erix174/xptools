@@ -56,13 +56,15 @@ WED_LiveryPane::WED_LiveryPane(
 	mFlagTexId(0),
 	mFlagTexW(0),
 	mFlagTexH(0),
+	mInfoWarn(false),
+	mStatusWarn(false),
 	mSearchField(NULL),
 	mHoverClearButton(false),
 	mTrackClearButton(false),
 	mScrollOffset(0),
 	mPageScroll(0),
 	mContentDragStartY(-1),
-	mContentDragStartX(-1),		// declared later in the header (after mCachedStatusLines) -
+	mContentDragStartX(-1),		// declared later in the header (after mStatusWarn) -
 	mContentDragStartOffset(0),	// listed here anyway so all the "simple scalar" inits stay together
 	mCycleShow(0),
 	mRowsDirty(true),

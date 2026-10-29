@@ -1096,6 +1096,288 @@ void	WED_LiveryPane::DrawAirlineCard(GUI_GraphState * state, const RowSlot & slo
 // draw
 // ---------------------------------------------------------------------------------------------
 
+// The projected flag banner is about 2048 x 768 (WED_FlagProjector), pole and
+// wave included. The strip keeps a box of that shape for it before the texture
+// exists, so the strip's height and text never wait on it.
+static const float kStripFlagAspect = 2.67f;
+
+// The facts behind the airport strip: which airport the selected stands are
+// at, its country (and so its flag), and whether this project has researched
+// its airlines. No GL here, so the Selection tab can size the strip with it
+// outside a Draw(); the flag texture is only made when the strip is drawn.
+void	WED_LiveryPane::UpdateAirportInfo(void)
+{
+	string info_text;
+	string status_text;		// "" = no commercial-status line to show (only set alongside a successful lookup)
+	bool status_warn = false;	// true draws status_text in the same yellow as a warning info_text
+	bool warn = false;
+	string flag_country;		// "" = no flag banner to show for this state
+	mCurrentAirportIcao.clear();	// only set below on a successful lookup - see the "Show Recommendation" button
+	mAirportCountry.clear();
+
+	if (!mSelectedRamps.empty())
+	{
+		WED_Airport * apt = WED_GetParentAirport(mSelectedRamps[0]);
+		bool same_airport = true;
+		for (size_t i = 1; i < mSelectedRamps.size(); ++i)
+			if (WED_GetParentAirport(mSelectedRamps[i]) != apt) { same_airport = false; break; }
+
+		if (!same_airport)
+		{
+			info_text = "Selected ramp starts belong to different airports.";
+			warn = true;
+		}
+		else if (!apt)
+		{
+			info_text = "No parent airport found.";
+			warn = true;
+		}
+		else
+		{
+			string icao_primary, apt_name, country;
+			apt->GetICAO(icao_primary);	// primary apt.dat identifier ("Airport ID") - X-Plane's
+											// own, always-present code; NOT the same thing as the
+											// optional "ICAO Code" metadata key below
+			apt->GetName(apt_name);
+
+			// Prefer the airport's advertised ICAO Code metadata key when
+			// it's actually set: some airports (mostly custom/third-party
+			// scenery) carry a synthetic X-Plane identifier as their
+			// primary ID (e.g. "XUK001K") while separately recording
+			// their real ICAO in metadata (e.g. "UPKS") - that metadata
+			// value is the one worth looking up first. The overwhelming
+			// majority of real small airports have no ICAO metadata at
+			// all - for those, the primary ID itself IS the only code
+			// that exists, and is what we fall back to below.
+			string icao_meta;
+			if (apt->ContainsMetaDataKey("icao_code"))
+				icao_meta = apt->GetMetaDataValue("icao_code");
+
+			string icao = !icao_meta.empty() ? icao_meta : icao_primary;
+			WED_IcaoLookupResult r = LookupIcaoCountry(AirportDb(), icao, country);
+
+			// A metadata ICAO can be real (recognized by ICAO/IATA) without
+			// ever appearing as a primary identifier in X-Plane's own
+			// Global Airports database, so a miss there doesn't mean the
+			// airport has no usable country info - the primary ID's own
+			// apt.dat entry may still carry a perfectly good country line
+			// that a metadata-only lookup would otherwise shadow. Give
+			// that a second try before giving up.
+			//
+			// A PLACEHOLDER COUNTS AS A MISS. It used to retry only on
+			// NotFound, so an airport whose metadata still held a reserved
+			// code - "ZZLI" - kept reporting "placeholder, country unknown"
+			// after its Airport ID had been corrected to a real one, and the
+			// pane looked like it was failing to refresh when it was in fact
+			// faithfully reporting stale metadata. A reserved code carries no
+			// information by definition, so anything real must outrank it.
+			if ((r == wed_Icao_NotFound || r == wed_Icao_Placeholder) &&
+				!icao_meta.empty() && icao_meta != icao_primary)
+			{
+				string country2;
+				WED_IcaoLookupResult r2 = LookupIcaoCountry(AirportDb(), icao_primary, country2);
+				if (r2 == wed_Icao_Ok)
+				{
+					icao = icao_primary;
+					country = country2;
+					r = r2;
+				}
+			}
+
+			if (r == wed_Icao_Ok)
+			{
+				info_text = apt_name + " (" + icao + ") - " + country;
+				flag_country = country;		// already an IOC-normalized code - see WED_AirportDatabase.cpp
+				mCurrentAirportIcao = icao;
+				mAirportCountry     = country;	// for the military rule - see LiveryAllowedHere()
+
+				// Specifically whether THIS airport has its own hand-researched Direct
+				// Hit entry in WED_AirportDatabase.txt - not the broader "commercially
+				// served at all" question AirportIsCommercial() answers (that one falls
+				// back to the bulk OurAirports flag, which can say "yes" for an airport
+				// this project just hasn't researched yet - a misleading "available"
+				// promise when the checklist won't actually show anything for it).
+				if (!AirportDb().IsLoaded() && !AirportDb().LoadFailed())
+					AirportDb().EnsureLoaded(WedDataFileDir() + "WED_AirportDatabase.txt");
+				vector<string> direct_hit = GetRecommendedAirlineCodes(AirportDb(), icao);
+
+				if (!direct_hit.empty())
+				{
+					status_text = "Livery recommendation is available at this airport";
+				}
+				else
+				{
+					status_text = "Recommendation might not be available at this airport";
+					status_warn = true;
+				}
+			}
+			else if (r == wed_Icao_Placeholder)
+			{
+				// Two different situations reach wed_Icao_Placeholder and they
+				// need different sentences. Saying "not set" about a code the
+				// user can see filled in reads as a bug in WED rather than as
+				// a fact about the code - which is how it read for ZZLI, a
+				// deliberate choice from ICAO's reserved range.
+				if (icao.empty())
+					info_text = "Airport ICAO not set - country unknown, can't weight liveries by region.";
+				else
+					info_text = "\"" + icao + "\" is a placeholder or reserved ICAO code - country unknown, can't weight liveries by region.";
+				warn = true;
+			}
+			else if (r == wed_Icao_IndexUnavailable)
+			{
+				// Say WHICH way it failed. A file that is present but whose
+				// header was edited used to report as "not found", sending
+				// people to look for a file sitting in front of them.
+				info_text = string("WED_AirportDatabase.txt: ") +
+							WedDataFileErrorText(AirportDb().LoadError()) +
+							" - can't look up country.";
+				warn = true;
+			}
+			else
+			{
+				info_text = "ICAO \"" + icao + "\" not found in the local airport database - country unknown.";
+				warn = true;
+			}
+		}
+	}
+	mInfoText    = info_text;
+	mStatusText  = status_text;
+	mInfoWarn    = warn;
+	mStatusWarn  = status_warn;
+	mFlagCountry = flag_country;
+}
+
+// One line or two: the airport and country in the header colour, then whether
+// recommendations exist, muted (yellow when they may not). A warning about the
+// airport's code wraps over as many lines as it needs.
+void	WED_LiveryPane::AirportStripLines(float width, vector<string> & out_info, string & out_status, bool & out_status_own_line) const
+{
+	const float pad = 4;
+	const float line_h = GUI_GetLineHeight(font_UI_Basic);
+	const float flag_w = mFlagCountry.empty() ? 0.0f : (line_h + 6) * kStripFlagAspect + pad;
+	const float text_w = width - flag_w - pad * 2;
+	out_info = WrapText(font_UI_Basic, mInfoText, text_w);
+	out_status.clear();
+	out_status_own_line = false;
+	if (mStatusText.empty()) return;
+	out_status = mStatusWarn ? "recommendations may be missing" : "livery recommendations available";
+	if (out_info.empty()) { out_status_own_line = true; return; }
+	const string & last = out_info.back();
+	const string tail = "  -  " + out_status;
+	float used = GUI_MeasureRange(font_UI_Basic, last.c_str(), last.c_str() + last.size()) + 1;
+	float need = GUI_MeasureRange(font_UI_Basic, tail.c_str(), tail.c_str() + tail.size());
+	out_status_own_line = used + need > text_w;
+}
+
+float	WED_LiveryPane::AirportStripHeight(int width)
+{
+	UpdateAirportInfo();
+	vector<string> info; string status; bool own_line;
+	AirportStripLines((float) width, info, status, own_line);
+	const float line_h = GUI_GetLineHeight(font_UI_Basic);
+	int lines = (int) info.size() + (own_line ? 1 : 0);
+	if (lines == 0) return 0;
+	float text_h = lines * line_h + 8;
+	float flag_h = mFlagCountry.empty() ? 0.0f : line_h + 6 + 8;
+	return (std::max)(text_h, flag_h);
+}
+
+void	WED_LiveryPane::DrawSectionBar(GUI_GraphState * state, int b[4], const char * title)
+{
+	const float line_h = GUI_GetLineHeight(font_UI_Basic);
+	// The Selection tab calls this outside Draw(), where culling is still on and
+	// would drop this counter-clockwise quad - see point 1 at the top of Draw().
+	glPushAttrib(GL_ENABLE_BIT);
+	glDisable(GL_CULL_FACE);
+	state->SetState(0,0,0,0,0,0,0);
+	glColor4f(0.20f, 0.20f, 0.20f, 1.0f);
+	glBegin(GL_QUADS);
+		glVertex2f((float) b[0], (float) b[1]);
+		glVertex2f((float) b[2], (float) b[1]);
+		glVertex2f((float) b[2], (float) b[3]);
+		glVertex2f((float) b[0], (float) b[3]);
+	glEnd();
+	glPopAttrib();
+	if (title && *title)
+		GUI_FontDraw(state, font_UI_Basic, WED_Color_RGBA(wed_Header_Text),
+					 b[0] + 4.0f, b[3] - (b[3] - b[1]) * 0.5f - line_h * 0.4f, title);
+}
+
+void	WED_LiveryPane::DrawAirportStrip(GUI_GraphState * state, int b[4])
+{
+	UpdateAirportInfo();
+	EnsureFlagTexture(mFlagCountry);
+
+	const float pad = 4;
+	const float line_h = GUI_GetLineHeight(font_UI_Basic);
+
+	glPushAttrib(GL_ENABLE_BIT);
+	glDisable(GL_CULL_FACE);		// called outside Draw() - see DrawSectionBar()
+	state->SetState(0,0,0,0,0,0,0);
+	glColor4f(0.16f, 0.16f, 0.16f, 1.0f);
+	glBegin(GL_QUADS);
+		glVertex2f((float) b[0], (float) b[1]);
+		glVertex2f((float) b[2], (float) b[1]);
+		glVertex2f((float) b[2], (float) b[3]);
+		glVertex2f((float) b[0], (float) b[3]);
+	glEnd();
+	glPopAttrib();
+
+	float text_x = b[0] + pad;
+	if (!mFlagCountry.empty())
+	{
+		// the waving banner, small, its own aspect inside the box
+		const float box_h = line_h + 6, box_w = box_h * kStripFlagAspect;
+		const float box_x = b[0] + pad, box_y = b[3] - pad - box_h;
+		if (mFlagTexId != 0 && mFlagTexW > 0 && mFlagTexH > 0)
+		{
+			float w = box_w, h = box_w * (float) mFlagTexH / (float) mFlagTexW;
+			if (h > box_h) { h = box_h; w = box_h * (float) mFlagTexW / (float) mFlagTexH; }
+			const float x0 = box_x, y0 = box_y + (box_h - h) * 0.5f;
+			glPushAttrib(GL_ENABLE_BIT);
+			glDisable(GL_CULL_FACE);
+			state->SetState(0,1,0,0,1,0,0);
+			glColor4f(1,1,1,1);
+			state->BindTex((int) mFlagTexId, 0);
+			glBegin(GL_QUADS);
+				glTexCoord2f(0, 1); glVertex2f(x0,     y0);
+				glTexCoord2f(1, 1); glVertex2f(x0 + w, y0);
+				glTexCoord2f(1, 0); glVertex2f(x0 + w, y0 + h);
+				glTexCoord2f(0, 0); glVertex2f(x0,     y0 + h);
+			glEnd();
+			state->SetState(0,0,0,0,0,0,0);
+			glPopAttrib();
+		}
+		text_x = box_x + box_w + pad * 2;
+	}
+
+	vector<string> info; string status; bool own_line;
+	AirportStripLines((float) (b[2] - b[0]), info, status, own_line);
+
+	float warn_col[4] = { 1.0f, 0.75f, 0.25f, 1.0f };
+	float muted_col[4] = { 0.68f, 0.68f, 0.68f, 1.0f };
+	float * info_col = mInfoWarn ? warn_col : WED_Color_RGBA(wed_Header_Text);
+	float * status_col = mStatusWarn ? warn_col : muted_col;
+
+	int lines = (int) info.size() + (own_line ? 1 : 0);
+	float y = (b[1] + b[3]) * 0.5f + lines * line_h * 0.5f - line_h * 0.8f;
+	for (size_t i = 0; i < info.size(); ++i)
+	{
+		// no bold weight in GUI_Fonts: a 1px double-draw, as elsewhere in this pane
+		GUI_FontDraw(state, font_UI_Basic, info_col, text_x,     y, info[i].c_str());
+		GUI_FontDraw(state, font_UI_Basic, info_col, text_x + 1, y, info[i].c_str());
+		if (i + 1 == info.size() && !status.empty() && !own_line)
+		{
+			float w = GUI_MeasureRange(font_UI_Basic, info[i].c_str(), info[i].c_str() + info[i].size()) + 1;
+			GUI_FontDraw(state, font_UI_Basic, status_col, text_x + w, y, ("  -  " + status).c_str());
+		}
+		y -= line_h;
+	}
+	if (own_line && !status.empty())
+		GUI_FontDraw(state, font_UI_Basic, status_col, text_x, y, status.c_str());
+}
+
 void	WED_LiveryPane::Draw(GUI_GraphState * state)
 {
 	int b[4];
@@ -1146,12 +1428,9 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 	//    right below GetBounds(b). Reverting to <GL/gl.h> "to simplify" will silently break the
 	//    Windows build's texture upload.
 	//
-	// 4) THE FLAG'S TRAY SIZE DEPENDS ON THE TEXTURE, SO ORDER OF OPERATIONS MATTERS.
-	//    AirportInfoHeight()/FlagBannerRect() size the dark tray and the banner off mFlagTexW/H,
-	//    which EnsureFlagTexture() sets. EnsureFlagTexture() MUST run before AirportInfoYRange() is
-	//    first called each Draw() (see the airport/country info strip block below) - call it after
-	//    and the tray is sized from last frame's texture, then "pops" into the right size on the
-	//    next redraw. This bit us once already; the current ordering is deliberate, not incidental.
+	// 4) THE FLAG IS DRAWN BY DrawAirportStrip(), which the Selection tab calls above the property
+	//    grid. Its strip is sized without the texture (a fixed kStripFlagAspect box), so the strip's height
+	//    never waits on EnsureFlagTexture(); the flag fits inside the box at its own aspect.
 	//
 	// 5) THIS PORT DELIBERATELY DEVIATES FROM THE CODEX HANDOFF SPEC IN A FEW PLACES - see
 	//    WED_FlagAssets.h and WED_FlagProjector.h's own header comments for the full list (no SVG
@@ -1180,230 +1459,18 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 	float header_h  = HeaderHeight();
 	float row_h     = line_h + pad;
 
-	// --- airport / country info strip ---
-	{
-		// Figured out (and EnsureFlagTexture() called) BEFORE AirportInfoYRange()
-		// below - the tray's own height derives from the flag's now-current
-		// mFlagTexW/H (see AirportInfoHeight()), so this must run first or the
-		// tray is sized off last frame's texture and only self-corrects on the
-		// next redraw (the "pops back into place a beat late" bug).
-		string info_text;
-		string status_text;		// "" = no commercial-status line to show (only set alongside a successful lookup)
-		bool status_warn = false;	// true draws status_text in the same yellow as a warning info_text
-		bool warn = false;
-		string flag_country;		// "" = no flag banner to show for this state
-		mCurrentAirportIcao.clear();	// only set below on a successful lookup - see the "Show Recommendation" button
-		mAirportCountry.clear();
-
-		if (!mSelectedRamps.empty())
-		{
-			WED_Airport * apt = WED_GetParentAirport(mSelectedRamps[0]);
-			bool same_airport = true;
-			for (size_t i = 1; i < mSelectedRamps.size(); ++i)
-				if (WED_GetParentAirport(mSelectedRamps[i]) != apt) { same_airport = false; break; }
-
-			if (!same_airport)
-			{
-				info_text = "Selected ramp starts belong to different airports.";
-				warn = true;
-			}
-			else if (!apt)
-			{
-				info_text = "No parent airport found.";
-				warn = true;
-			}
-			else
-			{
-				string icao_primary, apt_name, country;
-				apt->GetICAO(icao_primary);	// primary apt.dat identifier ("Airport ID") - X-Plane's
-												// own, always-present code; NOT the same thing as the
-												// optional "ICAO Code" metadata key below
-				apt->GetName(apt_name);
-
-				// Prefer the airport's advertised ICAO Code metadata key when
-				// it's actually set: some airports (mostly custom/third-party
-				// scenery) carry a synthetic X-Plane identifier as their
-				// primary ID (e.g. "XUK001K") while separately recording
-				// their real ICAO in metadata (e.g. "UPKS") - that metadata
-				// value is the one worth looking up first. The overwhelming
-				// majority of real small airports have no ICAO metadata at
-				// all - for those, the primary ID itself IS the only code
-				// that exists, and is what we fall back to below.
-				string icao_meta;
-				if (apt->ContainsMetaDataKey("icao_code"))
-					icao_meta = apt->GetMetaDataValue("icao_code");
-
-				string icao = !icao_meta.empty() ? icao_meta : icao_primary;
-				WED_IcaoLookupResult r = LookupIcaoCountry(AirportDb(), icao, country);
-
-				// A metadata ICAO can be real (recognized by ICAO/IATA) without
-				// ever appearing as a primary identifier in X-Plane's own
-				// Global Airports database, so a miss there doesn't mean the
-				// airport has no usable country info - the primary ID's own
-				// apt.dat entry may still carry a perfectly good country line
-				// that a metadata-only lookup would otherwise shadow. Give
-				// that a second try before giving up.
-				//
-				// A PLACEHOLDER COUNTS AS A MISS. It used to retry only on
-				// NotFound, so an airport whose metadata still held a reserved
-				// code - "ZZLI" - kept reporting "placeholder, country unknown"
-				// after its Airport ID had been corrected to a real one, and the
-				// pane looked like it was failing to refresh when it was in fact
-				// faithfully reporting stale metadata. A reserved code carries no
-				// information by definition, so anything real must outrank it.
-				if ((r == wed_Icao_NotFound || r == wed_Icao_Placeholder) &&
-					!icao_meta.empty() && icao_meta != icao_primary)
-				{
-					string country2;
-					WED_IcaoLookupResult r2 = LookupIcaoCountry(AirportDb(), icao_primary, country2);
-					if (r2 == wed_Icao_Ok)
-					{
-						icao = icao_primary;
-						country = country2;
-						r = r2;
-					}
-				}
-
-				if (r == wed_Icao_Ok)
-				{
-					info_text = apt_name + " (" + icao + ") - " + country;
-					flag_country = country;		// already an IOC-normalized code - see WED_AirportDatabase.cpp
-					mCurrentAirportIcao = icao;
-					mAirportCountry     = country;	// for the military rule - see LiveryAllowedHere()
-
-					// Specifically whether THIS airport has its own hand-researched Direct
-					// Hit entry in WED_AirportDatabase.txt - not the broader "commercially
-					// served at all" question AirportIsCommercial() answers (that one falls
-					// back to the bulk OurAirports flag, which can say "yes" for an airport
-					// this project just hasn't researched yet - a misleading "available"
-					// promise when the checklist won't actually show anything for it).
-					if (!AirportDb().IsLoaded() && !AirportDb().LoadFailed())
-						AirportDb().EnsureLoaded(WedDataFileDir() + "WED_AirportDatabase.txt");
-					vector<string> direct_hit = GetRecommendedAirlineCodes(AirportDb(), icao);
-
-					if (!direct_hit.empty())
-					{
-						status_text = "Livery recommendation is available at this airport";
-					}
-					else
-					{
-						status_text = "Recommendation might not be available at this airport";
-						status_warn = true;
-					}
-				}
-				else if (r == wed_Icao_Placeholder)
-				{
-					// Two different situations reach wed_Icao_Placeholder and they
-					// need different sentences. Saying "not set" about a code the
-					// user can see filled in reads as a bug in WED rather than as
-					// a fact about the code - which is how it read for ZZLI, a
-					// deliberate choice from ICAO's reserved range.
-					if (icao.empty())
-						info_text = "Airport ICAO not set - country unknown, can't weight liveries by region.";
-					else
-						info_text = "\"" + icao + "\" is a placeholder or reserved ICAO code - country unknown, can't weight liveries by region.";
-					warn = true;
-				}
-				else if (r == wed_Icao_IndexUnavailable)
-				{
-					// Say WHICH way it failed. A file that is present but whose
-					// header was edited used to report as "not found", sending
-					// people to look for a file sitting in front of them.
-					info_text = string("WED_AirportDatabase.txt: ") +
-								WedDataFileErrorText(AirportDb().LoadError()) +
-								" - can't look up country.";
-					warn = true;
-				}
-				else
-				{
-					info_text = "ICAO \"" + icao + "\" not found in the local airport database - country unknown.";
-					warn = true;
-				}
-			}
-		}
-
-		EnsureFlagTexture(flag_country);
-
-		// Word-wrap BEFORE AirportInfoYRange() below - the tray's height
-		// (AirportInfoHeight()) has to account for however many lines this
-		// turns into on the SAME frame the text changes, same ordering
-		// requirement as the flag texture (see the top of Draw()). text_x's
-		// own final value is recomputed after top/bot are known (just below)
-		// since FlagBannerRect() needs them for the actual draw position,
-		// but its WIDTH component alone (needed here) never depends on them.
-		{
-			float banner_w_only = (mFlagTexId != 0) ? FlagBannerWidth(b) : 0.0f;
-			float avail_text_w = (b[2] - b[0]) - banner_w_only - pad * (mFlagTexId != 0 ? 3 : 2);
-			mCachedInfoLines   = WrapText(font_UI_Basic, info_text,   avail_text_w);
-			mCachedStatusLines = WrapText(font_UI_Basic, status_text, avail_text_w);
-		}
-
-		float top, bot;
-		AirportInfoYRange(b, top, bot);
-
-		state->SetState(0,0,0,0,0,0,0);
-		glColor4f(0.16f, 0.16f, 0.16f, 1.0f);
-		glBegin(GL_QUADS);
-			glVertex2f((float) b[0], bot);
-			glVertex2f((float) b[2], bot);
-			glVertex2f((float) b[2], top);
-			glVertex2f((float) b[0], top);
-		glEnd();
-
-		float text_x = b[0] + pad;
-
-		if (mFlagTexId != 0)
-		{
-			// Actual drawing happens at the very end of Draw() (see the
-			// bottom of this function) - only the geometry is needed here,
-			// to push the info text clear of the banner.
-			float bx0, by0, banner_w, banner_h;
-			FlagBannerRect(b, top, bot, bx0, by0, banner_w, banner_h);
-			text_x = bx0 + banner_w + pad * 2;
-		}
-
-		if (!mCachedInfoLines.empty() || !mCachedStatusLines.empty())
-		{
-			float warn_col[4] = { 1.0f, 0.75f, 0.25f, 1.0f };
-			float * text_col = warn ? warn_col : WED_Color_RGBA(wed_Header_Text);
-			float status_muted_col[4] = { 0.68f, 0.68f, 0.68f, 1.0f };		// muted - an FYI, not a warning
-			float * status_col = status_warn ? warn_col : status_muted_col;
-			float mid = bot + (top - bot) * 0.5f;
-
-			int total_lines = (int) mCachedInfoLines.size() + (int) mCachedStatusLines.size();
-			float gap = (!mCachedInfoLines.empty() && !mCachedStatusLines.empty()) ? 2.0f : 0.0f;
-			float block_h = total_lines * line_h + gap;
-
-			float cursor_y = mid + block_h * 0.5f - line_h * 0.9f;
-			for (size_t i = 0; i < mCachedInfoLines.size(); ++i)
-			{
-				// GUI_Fonts has no bold weight - approximate it with a 1px double-draw
-				// (same trick already used below for the "N Ramp Starts Selected" count).
-				GUI_FontDraw(state, font_UI_Basic, text_col, text_x,     cursor_y, mCachedInfoLines[i].c_str());
-				GUI_FontDraw(state, font_UI_Basic, text_col, text_x + 1, cursor_y, mCachedInfoLines[i].c_str());
-				cursor_y -= line_h;
-			}
-			cursor_y -= gap;
-			for (size_t i = 0; i < mCachedStatusLines.size(); ++i)
-			{
-				GUI_FontDraw(state, font_UI_Basic, status_col, text_x, cursor_y, mCachedStatusLines[i].c_str());
-				cursor_y -= line_h;
-			}
-		}
-	}
+	// The airport strip is drawn by the Selection tab, above the property grid
+	// (DrawAirportStrip); the rest of the pane needs its facts all the same -
+	// mCurrentAirportIcao for the recommendation button, mAirportCountry for
+	// the military rule.
+	UpdateAirportInfo();
 
 	// --- header strip ---
 	{
 		float top, bot;
 		HeaderYRange(b, top, bot);
-		state->SetState(0,0,0,0,0,0,0);
-		glColor4f(0.20f, 0.20f, 0.20f, 1.0f);
-		glBegin(GL_QUADS);
-			glVertex2f((float) b[0], bot);
-			glVertex2f((float) b[2], bot);
-			glVertex2f((float) b[2], top);
-			glVertex2f((float) b[0], top);
-		glEnd();
+		int hb[4] = { b[0], (int) bot, b[2], (int) top };
+		DrawSectionBar(state, hb, NULL);	// the title depends on the selection - below
 	}
 
 	float htop, hbot;
@@ -1420,11 +1487,10 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 	}
 	else if (mSelectedRamps.size() == 1)
 	{
-		string name;
-		mSelectedRamps[0]->GetName(name);
 		float pb[4];
 		ClearButtonRect(b, pb);				// Clear and Populate are drawn below, for any selection
-		string header = ElideToWidth(font_UI_Basic, string("Ramp Start: ") + name, pb[0] - 8 - tx);
+		// the stand's name is in the property grid right above
+		string header = ElideToWidth(font_UI_Basic, "Static aircraft", pb[0] - 8 - tx);
 		GUI_FontDraw(state, font_UI_Basic, header_col, tx, ty, header.c_str());
 
 	}
@@ -1439,7 +1505,7 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		GUI_FontDraw(state, font_UI_Basic, header_col, tx + 1, ty, count_str.c_str());
 
 		float count_w = GUI_MeasureRange(font_UI_Basic, count_str.c_str(), count_str.c_str() + count_str.size());
-		GUI_FontDraw(state, font_UI_Basic, header_col, tx + count_w + 4, ty, " Ramp Starts Selected");
+		GUI_FontDraw(state, font_UI_Basic, header_col, tx + count_w + 4, ty, " ramp starts - static aircraft");
 	}
 
 	if (!mSelectedRamps.empty())
@@ -3012,32 +3078,6 @@ void	WED_LiveryPane::Draw(GUI_GraphState * state)
 		const char * msg = "Select a ramp start to edit its liveries";
 		float msg_w = GUI_MeasureRange(font_UI_Basic, msg, msg + strlen(msg));
 		GUI_FontDraw(state, font_UI_Basic, warn_col, cx - msg_w * 0.5f, (float) (b[1] + b[3]) * 0.5f - line_h * 0.4f, msg);
-	}
-
-	// --- country flag banner, drawn last so its enlarged, overlapping
-	// footprint paints over the rows below it rather than being painted
-	// under them ---
-	if (mFlagTexId != 0)
-	{
-		float strip_top, strip_bot;
-		AirportInfoYRange(b, strip_top, strip_bot);
-		float bx0, by0, banner_w, banner_h;
-		FlagBannerRect(b, strip_top, strip_bot, bx0, by0, banner_w, banner_h);
-
-		state->SetState(0,1,0,0,1,0,0);		// blend on - the composite has a genuinely transparent background now
-		glColor4f(1,1,1,1);
-		state->BindTex((int) mFlagTexId, 0);
-		glBegin(GL_QUADS);
-			// Texture row 0 (the composited buffer's top row - see
-			// EnsureFlagTexture()) lands at texture-space t=0, so t=0
-			// belongs at this pane's screen-top vertex (Y increases
-			// upward here, same as every other quad in this file).
-			glTexCoord2f(0, 1); glVertex2f(bx0,            by0);
-			glTexCoord2f(1, 1); glVertex2f(bx0 + banner_w, by0);
-			glTexCoord2f(1, 0); glVertex2f(bx0 + banner_w, by0 + banner_h);
-			glTexCoord2f(0, 0); glVertex2f(bx0,            by0 + banner_h);
-		glEnd();
-		state->SetState(0,0,0,0,0,0,0);
 	}
 
 	glPopAttrib();		// restore GL_CULL_FACE (and anything else in GL_ENABLE_BIT) for whatever draws next

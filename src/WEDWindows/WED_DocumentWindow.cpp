@@ -44,6 +44,7 @@
 #include "GUI_Splitter.h"
 #include "GUI_Menus.h"
 #include "GUI_TabPane.h"
+#include "GUI_Fonts.h"
 
 #include "WED_ConvertCommands.h"
 #include "WED_DSFImport.h"
@@ -83,13 +84,16 @@ namespace
 
 	// The Selection tab: the property grid, and below it the livery editor when
 	// everything selected is a ramp start (Julian, 2026-10-27 - it replaces the
-	// Static Liveries tab, where ramp start sizes were hard to find). The grid
-	// gets the height its rows need, up to half the tab; the editor the rest.
+	// Static Liveries tab, where ramp start sizes were hard to find). For ramp
+	// starts it reads top to bottom: the airport strip, a "Ramp start" bar, the
+	// grid (as tall as its rows, at most half the room), then the editor under
+	// its own "Static aircraft" bar.
 	// A commander, as every tab is: the tab strip focuses the tab it shows.
 	class WED_SelectionTabPane : public GUI_Pane, public GUI_Commander, public GUI_Listener {
 	public:
 		WED_SelectionTabPane(GUI_Commander * owner, IResolver * resolver, GUI_Broadcaster * archive, WED_MapPane * map) :
-			GUI_Commander(owner), mResolver(resolver), mMap(map), mProps(NULL), mLivery(NULL), mLaidOut(-2)
+			GUI_Commander(owner), mResolver(resolver), mMap(map), mProps(NULL), mLivery(NULL),
+			mLaidOutProps(-2), mLaidOutStrip(-2), mMultiple(false)
 		{
 			archive->AddListener(this);
 		}
@@ -100,6 +104,7 @@ namespace
 			mLivery = livery;
 			mProps->SetParent(this);
 			mProps->Show();
+			mProps->SetSelectionTabStyle();
 			mLivery->SetParent(this);
 			mLivery->Hide();
 			Relayout(true);
@@ -112,12 +117,27 @@ namespace
 		{
 			// the editor aborts any drag and stops its animations on Hide
 			if (mLivery) mLivery->Hide();
-			mLaidOut = -2;
+			mLaidOutProps = -2;
 			GUI_Pane::Hide();
 		}
-		// The grid's row count is only known once it has caught up with the
-		// change, so the layout is checked here - and only redone when it moves.
-		virtual void	Draw(GUI_GraphState * state)	{ Relayout(false); }
+		// The grid's row count and the strip's text are only known once they have
+		// caught up with the change, so the layout is checked here - and only
+		// redone when it moves.
+		virtual void	Draw(GUI_GraphState * state)
+		{
+			Relayout(false);
+			if (mProps) mProps->UpdateFillWidth();
+			if (mLaidOutProps < 0) return;
+			int b[4];
+			GetBounds(b);
+			if (mLaidOutStrip > 0)
+			{
+				int sb[4] = { b[0], b[3] - mLaidOutStrip, b[2], b[3] };
+				mLivery->DrawAirportStrip(state, sb);
+			}
+			int hb[4] = { b[0], b[3] - mLaidOutStrip - HeaderHeight(), b[2], b[3] - mLaidOutStrip };
+			mLivery->DrawSectionBar(state, hb, mMultiple ? "Ramp starts" : "Ramp start");
+		}
 
 		virtual void	ReceiveMessage(GUI_Broadcaster * inSrc, intptr_t inMsg, intptr_t inParam)
 		{
@@ -126,28 +146,37 @@ namespace
 		}
 
 	private:
-		bool	OnlyRampStarts(void) const
+		int		OnlyRampStarts(void) const		// how many, 0 if anything else is selected
 		{
 			ISelection * sel = WED_GetSelect(mResolver);
 			int n = sel ? sel->GetSelectionCount() : 0;
 			for (int i = 0; i < n; ++i)
 				if (!SAFE_CAST(WED_RampPosition, sel->GetNthSelection(i)))
-					return false;
-			return n > 0;
+					return 0;
+			return n;
 		}
+
+		int		HeaderHeight(void) const	{ return (int) GUI_GetLineHeight(font_UI_Basic) + 8; }
 
 		void	Relayout(bool force)
 		{
 			if (!mProps || !mLivery) return;
 			int b[4];
 			GetBounds(b);
-			int h = b[3] - b[1];
 
 			int props_h = -1;		// -1: the grid has the whole tab
-			if (OnlyRampStarts())
-				props_h = max(min(mProps->GetContentHeight(), h / 2), min(60, h));
-			if (!force && props_h == mLaidOut) return;
-			mLaidOut = props_h;
+			int strip_h = 0;
+			int ramps = OnlyRampStarts();
+			if (ramps)
+			{
+				strip_h = (int) mLivery->AirportStripHeight(b[2] - b[0]);
+				int room = max(b[3] - b[1] - strip_h - HeaderHeight(), 0);
+				props_h = max(min(mProps->GetContentHeight(), room / 2), min(60, room));
+			}
+			mMultiple = ramps > 1;
+			if (!force && props_h == mLaidOutProps && strip_h == mLaidOutStrip) return;
+			mLaidOutProps = props_h;
+			mLaidOutStrip = strip_h;
 
 			if (mMap) mMap->ShowRampFootprintsOnSelection(props_h >= 0);
 			if (props_h < 0)
@@ -157,9 +186,9 @@ namespace
 			}
 			else
 			{
-				const int gap = 4;
-				mProps->SetBounds(b[0], b[3] - props_h, b[2], b[3]);
-				mLivery->SetBounds(b[0], b[1], b[2], max(b[1], b[3] - props_h - gap));
+				int top = b[3] - strip_h - HeaderHeight();
+				mProps->SetBounds(b[0], top - props_h, b[2], top);
+				mLivery->SetBounds(b[0], b[1], b[2], max(b[1], top - props_h));
 				if (IsVisible()) mLivery->Show();
 			}
 			Refresh();
@@ -169,7 +198,9 @@ namespace
 		WED_MapPane *			mMap;
 		WED_PropertyPane *		mProps;
 		WED_LiveryPane *		mLivery;
-		int						mLaidOut;	// props_h of the current layout, -2 = none yet
+		int						mLaidOutProps;	// grid height of the current layout, -1 = whole tab, -2 = none yet
+		int						mLaidOutStrip;	// airport strip height of the current layout
+		bool					mMultiple;		// more than one ramp start: "Ramp starts"
 	};
 }
 

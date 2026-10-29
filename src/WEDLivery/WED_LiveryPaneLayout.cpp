@@ -26,22 +26,6 @@
 // Where everything is: section heights, rectangles, hit tests.
 
 
-// Always exactly half the tab's horizontal width, flush to the pane's left
-// border and flush to the strip's own top edge (no inset either side) -
-// height follows from the fixed master aspect. AirportInfoHeight() sizes the
-// dark tray to match this exactly (same width-derived formula), so the two
-// can never drift apart. Pure geometry, no GL calls, so both the text-x
-// computation (early in Draw()) and the actual draw (issued last, so it
-// paints over whatever it now overlaps) always agree.
-void	WED_LiveryPane::FlagBannerRect(int bounds[4], float strip_top, float strip_bot,
-						float & out_x, float & out_y, float & out_w, float & out_h) const
-{
-	out_w = FlagBannerWidth(bounds);
-	out_h = out_w * ((float) mFlagTexH / (float) mFlagTexW);
-	out_x = (float) bounds[0];
-	out_y = strip_top - out_h;
-}
-
 // Bars are relative, so the track has no natural ceiling. Ten is the idiom the
 // format itself uses - §4.2 notes "3 and 7" means the same as "30 and 70" - but
 // a file that arrived carrying 700/300 has to stay both visible and draggable,
@@ -160,45 +144,6 @@ void	WED_LiveryPane::WeightButtonRect(int bounds[4], float b_out[4]) const
 // layout
 // ---------------------------------------------------------------------------------------------
 
-float	WED_LiveryPane::AirportInfoHeight(int bounds[4]) const
-{
-	// The dark "tray" wraps whichever is taller: the flag banner (flush top,
-	// tiny bottom pad - the banner's own width, half the tab's horizontal
-	// space, see FlagBannerRect(), drives its height via the fixed master
-	// aspect) or the word-wrapped text block (mCachedInfoLines/
-	// mCachedStatusLines - recomputed just before this is called each Draw(),
-	// see the top of Draw() for why that ordering matters). Falls back to a
-	// single compact line when there's neither a flag nor any text yet
-	// (nothing selected).
-	float line_h = GUI_GetLineHeight(font_UI_Basic);
-	int total_lines = (int) mCachedInfoLines.size() + (int) mCachedStatusLines.size();
-	float text_h = total_lines > 0 ? total_lines * line_h + 8 : line_h + 8;
-
-	if (mFlagTexId != 0)
-	{
-		float banner_w = FlagBannerWidth(bounds);
-		float banner_h = banner_w * ((float) mFlagTexH / (float) mFlagTexW);
-		return (std::max)(banner_h + 4, text_h);
-	}
-	return text_h;
-}
-
-// Half the tab's width, as before, but never taller than kFlagBannerMaxH: on a
-// wide panel the banner grew with the width and took a third of a 1080p tab
-// from the list (Dellanie, 2026-09-30). The aspect is kept, so it only shrinks.
-static const float kFlagBannerMaxH = 64.0f;
-
-float	WED_LiveryPane::FlagBannerWidth(int bounds[4]) const
-{
-	float w = (bounds[2] - bounds[0]) * 0.5f;
-	if (mFlagTexW > 0 && mFlagTexH > 0)
-	{
-		const float w_cap = kFlagBannerMaxH * (float) mFlagTexW / (float) mFlagTexH;
-		if (w > w_cap) w = w_cap;
-	}
-	return w;
-}
-
 // Far enough to roll everything above the list toolbar out of view; the
 // toolbar (search, recommendations, A-Z) stays, as the list's own header.
 float	WED_LiveryPane::PageScrollMax(int bounds[4]) const
@@ -266,17 +211,19 @@ float	WED_LiveryPane::GapHeight(void) const
 	return 10;
 }
 
+// The top of the content: the airport strip that used to sit here is drawn by
+// the Selection tab now, above the property grid (DrawAirportStrip).
 void	WED_LiveryPane::AirportInfoYRange(int bounds[4], float & top, float & bot) const
 {
 	top = (float) bounds[3] + mPageScroll;		// rolled up by the wheel - see mPageScroll
-	bot = top - AirportInfoHeight(bounds);
+	bot = top;
 }
 
 void	WED_LiveryPane::HeaderYRange(int bounds[4], float & top, float & bot) const
 {
 	float atop, abot;
 	AirportInfoYRange(bounds, atop, abot);
-	top = abot - GapHeight();
+	top = abot;
 	bot = top - HeaderHeight();
 }
 

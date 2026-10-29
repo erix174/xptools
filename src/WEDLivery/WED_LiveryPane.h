@@ -133,13 +133,20 @@ public:
 	// actually findable in the tab strip - see that call site for why.
 	void				RebuildSelection(void);
 
+	// The airport and its country, for the Selection tab to draw above the
+	// property grid. The height follows the width (a long warning wraps).
+	float				AirportStripHeight(int width);
+	void				DrawAirportStrip(GUI_GraphState * state, int bounds[4]);
+	// A section title bar in this pane's own style - its "Static aircraft" bar,
+	// and the Selection tab's "Ramp start" bar above the grid.
+	void				DrawSectionBar(GUI_GraphState * state, int bounds[4], const char * title);
+
 private:
 
 	// ---- layout ----
 	// Single source of truth for section Y-ranges, so hit-testing and drawing
 	// can never drift apart. Each section is separated from the next by
 	// GapHeight() of empty space.
-	float				AirportInfoHeight(int bounds[4]) const;
 	float				HeaderHeight(void) const;
 	float				FilterRowHeight(void) const;
 	float				SliderHeight(void) const;
@@ -536,7 +543,6 @@ private:
 	// chained off AirportInfoYRange, which is the only place that reads it.
 	float						mPageScroll;
 	float						PageScrollMax(int bounds[4]) const;
-	float						FlagBannerWidth(int bounds[4]) const;
 
 	// The airline code actually feeding the country/flag lookup this Draw()
 	// call (already the metadata-preferred, fallback-resolved code - see the
@@ -616,20 +622,14 @@ private:
 	unsigned int	mFlagTexId;
 	int				mFlagTexW, mFlagTexH;
 
-	// Always exactly half the tab's width, flush to the pane's left border
-	// and to the strip's own top edge. Single source of truth so the
-	// info-text x-offset (computed early) and the actual draw (issued last,
-	// so the banner paints over whatever it overlaps) always agree.
-	void			FlagBannerRect(int bounds[4], float strip_top, float strip_bot,
-						float & out_x, float & out_y, float & out_w, float & out_h) const;
-
-	// Word-wrapped info_text/status_text lines, recomputed once near the top
-	// of every Draw() call (before AirportInfoYRange() is first used) so
-	// AirportInfoHeight() can size the tray to fit them on the SAME frame
-	// they change, rather than a frame late - same reasoning as the flag
-	// texture ordering requirement documented at the top of Draw().
-	std::vector<std::string>	mCachedInfoLines;
-	std::vector<std::string>	mCachedStatusLines;
+	// The airport strip's facts (UpdateAirportInfo), kept for DrawAirportStrip.
+	void			UpdateAirportInfo(void);
+	void			AirportStripLines(float width, std::vector<std::string> & out_info, std::string & out_status, bool & out_status_own_line) const;
+	std::string		mInfoText;			// airport, ICAO and country - or why there is none
+	std::string		mStatusText;		// whether recommendations exist; "" = nothing to say
+	bool			mInfoWarn;
+	bool			mStatusWarn;
+	std::string		mFlagCountry;		// IOC code of the flag to show, "" = none
 
 	// ---- livery preview cards (framework/scaffolding only) ----
 	WED_LiveryThumbnailCache	mThumbCache;

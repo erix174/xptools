@@ -79,6 +79,10 @@ public:
 
 	void		SetClosed(set<int> id);
 	int			GetContentHeight(void);		// pane height that shows every row without scrolling
+	// The Selection tab's grid: scroll bars only when needed, the columns
+	// stretched across the pane, no ramp operation type row for ramp starts.
+	void		SetSelectionTabStyle(void);
+	void		UpdateFillWidth(void);		// after a resize; refreshes if it changed
 
 	virtual int		MouseMove(int x, int y);
 	virtual	void	ReceiveMessage(
