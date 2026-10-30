@@ -68,7 +68,7 @@ string gTiandituKey;
 int gTiandituVerified;
 int gOrthoExport;
 int gPromptLiveriesOnRampSelect;
-int gNodeSnapRadius = 8;
+int gNodeSnapRadius = 10;
 int gShowLiveryRecommendation;
 
 static set<WED_Document *> sDocuments;
@@ -790,7 +790,7 @@ void	WED_Document::ReadGlobalPrefs(void)
 	gPromptLiveriesOnRampSelect = atoi(GUI_GetPrefString("preferences","PromptLiveriesOnRampSelect","0"));
 	gShowLiveryRecommendation = atoi(GUI_GetPrefString("preferences","ShowLiveryRecommendation","1"));
 	gModeratorMode = atoi(GUI_GetPrefString("preferences","ModeratorMode","0"));
-	gNodeSnapRadius = intlim(atoi(GUI_GetPrefString("preferences","NodeSnapRadius","8")), 1, 40);
+	gNodeSnapRadius = intlim(atoi(GUI_GetPrefString("preferences","NodeSnapRadius","10")), 1, 40);
 }
 
 void	WED_Document::WriteGlobalPrefs(void)

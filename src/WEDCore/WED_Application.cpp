@@ -415,7 +415,7 @@ public:
 private:
 	void	ShowValue(void)
 	{
-		mValue->SetDescriptor("Snap radius: " + to_string(gNodeSnapRadius) + " px  (default 8)");
+		mValue->SetDescriptor("Snap radius: " + to_string(gNodeSnapRadius) + " px  (default 10)");
 	}
 
 	static int		sBounds[4];

@@ -331,7 +331,7 @@ Before using any tool, set up the preferences first and you won't have to edit l
 * **Snap To Vertices**: each node you place lands on the nearest vertex of a polygon, line or string within a few pixels of the click. A ring around the cursor shows how far the snap reaches, and a marker shows the vertex a click would land on. Objects, ramp starts, signs and other single points are never snap targets, nor are taxi routes and roads.
 * **Match Bezier Handles**: when you finish the shape, each of its nodes that sits on another shape's node, next to a node that does too, takes that shape's Bezier handles, as **Match Bezier Handles** in the menu does. A line traced around a curved polygon with Snap To Vertices on then follows its curves.
 
-**Help > Node Snap Radius (debug)** sets how many pixels the snap reaches (8 to start with); WED keeps the value.
+**Help > Node Snap Radius (debug)** sets how many pixels the snap reaches (10 to start with); WED keeps the value.
 
 ### The Library Pane ###
 
