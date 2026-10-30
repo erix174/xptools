@@ -59,6 +59,11 @@ extern int gPromptLiveriesOnRampSelect;
    vertex for the drawing tools' "Snap To Vertices" to put the new node on it.
    Tuned in Help > Node Snap Radius (debug window). */
 extern int gNodeSnapRadius;
+/* The drawing tools' "Snap To Vertices" and "Match Bezier Handles": one setting
+   for every outline tool, kept in WED's prefs across documents and launches.
+   Off unless turned on. */
+extern int gSnapToVertices;
+extern int gMatchBezierHandles;
 /* "Show Recommendation" toggle in the livery editor's airline list
    toolbar - splits the list into up to several per-airport recommendation
    sections (manual pin, direct hit, same country, popular fleet - see

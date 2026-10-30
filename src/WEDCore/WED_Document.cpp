@@ -69,6 +69,8 @@ int gTiandituVerified;
 int gOrthoExport;
 int gPromptLiveriesOnRampSelect;
 int gNodeSnapRadius = 10;
+int gSnapToVertices = 0;
+int gMatchBezierHandles = 0;
 int gShowLiveryRecommendation;
 
 static set<WED_Document *> sDocuments;
@@ -791,6 +793,8 @@ void	WED_Document::ReadGlobalPrefs(void)
 	gShowLiveryRecommendation = atoi(GUI_GetPrefString("preferences","ShowLiveryRecommendation","1"));
 	gModeratorMode = atoi(GUI_GetPrefString("preferences","ModeratorMode","0"));
 	gNodeSnapRadius = intlim(atoi(GUI_GetPrefString("preferences","NodeSnapRadius","10")), 1, 40);
+	gSnapToVertices = atoi(GUI_GetPrefString("preferences","SnapToVertices","0")) != 0;
+	gMatchBezierHandles = atoi(GUI_GetPrefString("preferences","MatchBezierHandles","0")) != 0;
 }
 
 void	WED_Document::WriteGlobalPrefs(void)
@@ -807,6 +811,8 @@ void	WED_Document::WriteGlobalPrefs(void)
 	GUI_SetPrefString("preferences","ShowLiveryRecommendation",gShowLiveryRecommendation ? "1" : "0");
 	GUI_SetPrefString("preferences","ModeratorMode",gModeratorMode ? "1" : "0");
 	GUI_SetPrefString("preferences","NodeSnapRadius",to_string(gNodeSnapRadius).c_str());
+	GUI_SetPrefString("preferences","SnapToVertices",gSnapToVertices ? "1" : "0");
+	GUI_SetPrefString("preferences","MatchBezierHandles",gMatchBezierHandles ? "1" : "0");
 
 	for (map<string,string>::iterator i = sGlobalPrefs.begin(); i != sGlobalPrefs.end(); ++i)
 		if(i->first != "doc/xml_compatibility")          // why NOT write that ? Cuz WED 2.0 ... 2.2 read that and if an PRE wed-2.0 document

@@ -51,6 +51,8 @@
 #include "WED_GISPoint_Bezier.h"
 #include "WED_GroupCommands.h"
 #include "WED_Globals.h"
+#include "WED_Document.h"
+#include "GUI_Prefs.h"
 #include "WED_Colors.h"
 #include "WED_MapZoomerNew.h"
 #include "GUI_GraphState.h"
@@ -120,8 +122,8 @@ WED_CreatePolygonTool::WED_CreatePolygonTool(
 
 		mUVMap(tool == create_Polygon    ? this : NULL,PROP_Name("Use Texture Map - Orthophoto", XML_Name("","")), 0),
 		mPickWalls(tool == create_Facade ? this : NULL,PROP_Name("Pick Walls", XML_Name("","")), 0),
-		mSnapNodes(this, PROP_Name("Snap To Vertices", XML_Name("","")), 0),
-		mMatchHandles(this, PROP_Name("Match Bezier Handles", XML_Name("","")), 0),
+		mSnapNodes(this, PROP_Name("Snap To Vertices", XML_Name("","")), gSnapToVertices),
+		mMatchHandles(this, PROP_Name("Match Bezier Handles", XML_Name("","")), gMatchBezierHandles),
 		mSnapKeyArchive(-1)
 {
 	mPavement.value = surf_Concrete;
@@ -439,7 +441,7 @@ void	WED_CreatePolygonTool::AcceptPath(
 	else if (mType == create_Hole && host->GetClass() == WED_DrapedOrthophoto::sClass)   // holes in orthos also need UV map set
 		dynamic_cast <WED_DrapedOrthophoto *> (host)->Redrape();
 
-	if (mMatchHandles.value && outer_ring)
+	if (gMatchBezierHandles && outer_ring)
 	{
 		vector<WED_GISPoint_Bezier *> nodes;
 		for (int n = 0; n < outer_ring->CountChildren(); ++n)
@@ -511,6 +513,31 @@ void		WED_CreatePolygonTool::SetResource(const string& r)
 		mUVMap.value = !pol_i->wrap;
 	else if(rmgr->GetFac(mResource.value, fac_i))
 		mMinPts = !fac_i->is_ring && !fac_i->has_roof ? 2 : 3;                        // allow placement of some 2-node facades
+}
+
+void	WED_PropBoolGlobal::GetProperty(PropertyVal_t& val) const
+{
+	val.int_val = mGlobal ? 1 : 0;
+	val.prop_kind = prop_Bool;
+}
+
+void	WED_PropBoolGlobal::SetProperty(const PropertyVal_t& val, WED_PropertyHelper * parent)
+{
+	DebugAssert(val.prop_kind == prop_Bool);
+	if ((mGlobal != 0) == (val.int_val != 0)) return;
+	parent->PropEditCallback(1);
+	mGlobal = val.int_val != 0;
+	parent->PropEditCallback(0);
+	// saved now, not only on a clean quit (as the snap radius)
+	WED_Document::WriteGlobalPrefs();
+	GUI_Prefs_Write("WED");
+}
+
+// The snap toggles are global prefs: the map pane must not save them with the
+// document, nor let a document saved by f40b717 overwrite them on opening.
+bool	WED_CreatePolygonTool::IsDocPref(int n) const
+{
+	return n != PropertyItemNumber(&mSnapNodes) && n != PropertyItemNumber(&mMatchHandles);
 }
 
 void	WED_CreatePolygonTool::GetNthPropertyDict(int n, PropertyDict_t& dict) const
@@ -593,7 +620,7 @@ bool	WED_CreatePolygonTool::FindSnapVertex(const Point2& pt, Point2& out_vertex)
 void	WED_CreatePolygonTool::SnapNewNode(Point2& io_pt)
 {
 	Point2 v;
-	if (mSnapNodes.value && FindSnapVertex(io_pt, v))
+	if (gSnapToVertices && FindSnapVertex(io_pt, v))
 		io_pt = v;
 }
 
@@ -603,7 +630,7 @@ void	WED_CreatePolygonTool::DrawStructure(bool inCurrent, GUI_GraphState * g)
 {
 	WED_CreateToolBase::DrawStructure(inCurrent, g);
 	GUI_Pane * map = WED_MapLayer::GetHost();		// GetHost(int&) here is the new shape's parent
-	if (!inCurrent || !mSnapNodes.value || !map) return;
+	if (!inCurrent || !gSnapToVertices || !map) return;
 
 	int x, y, b[4];
 	map->GetMouseLocNow(&x, &y);

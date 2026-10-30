@@ -611,6 +611,7 @@ void			WED_MapPane::FromPrefs(IDocPrefs * prefs)
 		int pc = mTools[t]->CountProperties();
 		for (int p = 0; p < pc; ++p)
 		{
+			if (!mTools[t]->IsDocPref(p)) continue;
 			PropertyInfo_t	inf;
 			PropertyVal_t	val;
 			mTools[t]->GetNthPropertyInfo(p,inf);
@@ -681,6 +682,7 @@ void			WED_MapPane::ToPrefs(IDocPrefs * prefs)
 		int pc = mTools[t]->CountProperties();
 		for (int p = 0; p < pc; ++p)
 		{
+			if (!mTools[t]->IsDocPref(p)) continue;
 			PropertyInfo_t	inf;
 			PropertyVal_t	val;
 			mTools[t]->GetNthPropertyInfo(p,inf);

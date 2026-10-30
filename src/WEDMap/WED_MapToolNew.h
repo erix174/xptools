@@ -46,6 +46,10 @@ public:
 	virtual	int					CountSubs(void);
 	virtual	IPropertyObject *	GetNthSub(int n);
 
+	// False for a setting kept in WED's global prefs rather than the document's,
+	// so the map pane neither saves it with the document nor loads it from one.
+	virtual	bool				IsDocPref(int n) const { return true; }
+
 			const char *		GetToolName(void) const;
 
 

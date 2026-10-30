@@ -326,7 +326,7 @@ Numbered 4 in [Figure 3](#wedwindow), the tool defaults pane changes the setting
 
 Before using any tool, set up the preferences first and you won't have to edit later.  When you change the defaults for a tool, WED will remember those changes so that the next time you use the tool, it will be set up the same way. This saves time when drawing many similar types of things.
 
-**Snapping new nodes.** The tools that draw outlines (taxiways, boundaries, facades, forests, strings, lines, polygons and the others in that family) have two options in the tool defaults pane, both off unless you turn them on:
+**Snapping new nodes.** The tools that draw outlines (taxiways, boundaries, facades, forests, strings, lines, polygons and the others in that family) have two options in the tool defaults pane, both off unless you turn them on. Each is one setting for all of these tools, and WED keeps it for every scenery package and the next time it starts:
 
 * **Snap To Vertices**: each node you place lands on the nearest vertex of a polygon, line or string within a few pixels of the click. A ring around the cursor shows how far the snap reaches, and a marker shows the vertex a click would land on. Objects, ramp starts, signs and other single points are never snap targets, nor are taxi routes and roads.
 * **Match Bezier Handles**: when you finish the shape, each of its nodes that sits on another shape's node, next to a node that does too, takes that shape's Bezier handles, as **Match Bezier Handles** in the menu does. A line traced around a curved polygon with Snap To Vertices on then follows its curves.

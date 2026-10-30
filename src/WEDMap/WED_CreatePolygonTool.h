@@ -46,6 +46,19 @@ enum CreateTool_t {
 	create_Polygon,
 };
 
+// A check box in the tool defaults pane bound to a global setting in WED's prefs
+// instead of its own value; a change is saved at once, as the snap radius is.
+class	WED_PropBoolGlobal : public WED_PropBoolText {
+public:
+	WED_PropBoolGlobal(WED_PropertyHelper * parent, const char * title, int offset, int& global) :
+		WED_PropBoolText(parent, title, offset, 0), mGlobal(global) { }
+
+	virtual void		GetProperty(PropertyVal_t& val) const;
+	virtual void		SetProperty(const PropertyVal_t& val, WED_PropertyHelper * parent);
+private:
+	int&				mGlobal;
+};
+
 class	WED_CreatePolygonTool : public WED_CreateToolBase {
 public:
 
@@ -64,6 +77,10 @@ public:
 	virtual	const char *		GetStatusText(void);
 
 	virtual	void		GetNthPropertyDict(int n, PropertyDict_t& dict) const;
+
+	// Snap To Vertices and Match Bezier Handles live in WED's global prefs,
+	// not in the document's.
+	virtual	bool		IsDocPref(int n) const;
 
 	// WED_MapLayer: the snap target under the mouse, while snapping is on
 	virtual	void		DrawStructure(bool inCurrent, GUI_GraphState * g);
@@ -92,9 +109,10 @@ protected:
 
 		// Off unless the author turns them on (2026-10-29, Julian): new nodes go
 		// onto polygon, line and string vertices nearby; on finishing, the new
-		// shape takes their Bezier handles (as Match Bezier Handles).
-		WED_PropBoolText				mSnapNodes;
-		WED_PropBoolText				mMatchHandles;
+		// shape takes their Bezier handles (as Match Bezier Handles). Both show
+		// and set gSnapToVertices / gMatchBezierHandles: one setting for every tool.
+		WED_PropBoolGlobal				mSnapNodes;
+		WED_PropBoolGlobal				mMatchHandles;
 
 	virtual	void		AcceptPath(
 							const vector<Point2>&	pts,
