@@ -2483,19 +2483,23 @@ static void get_handle_location(const BezierHandle & h, Point2 & location)
 // nodes. In that case get_matching_handle() finds a match against *each* of them, so
 // there's more than one candidate handle instead of exactly one. If all candidates
 // agree on the handle's location, there's no real ambiguity and it's safe to use any
-// of them; only bail out if they actually disagree.
+// of them; only bail out if they actually disagree. "Agree" allows a hair of
+// difference: shapes imported from a DSF (e.g. a Gateway airport's polygon and the
+// .lin along its edge) carry the same handle rounded apart by ~1e-14 degrees, and
+// an exact compare made Match Bezier Handles skip such nodes (CZST, 2026-10-30).
 static bool get_common_handle(const vector<BezierHandle> & matches, BezierHandle & out)
 {
 	if (matches.empty())
 		return false;
 
+	const double kSameHandle = 1e-7;		// degrees, ~1 cm
 	Point2 first_loc;
 	get_handle_location(matches.front(), first_loc);
 	for (size_t i = 1; i < matches.size(); ++i)
 	{
 		Point2 loc;
 		get_handle_location(matches[i], loc);
-		if (loc != first_loc)
+		if (fabs(loc.x() - first_loc.x()) > kSameHandle || fabs(loc.y() - first_loc.y()) > kSameHandle)
 			return false;
 	}
 	out = matches.front();
