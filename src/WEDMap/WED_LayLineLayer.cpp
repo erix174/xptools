@@ -34,10 +34,16 @@
 #include "GUI_Fonts.h"
 #include "GUI_GraphState.h"
 #include "GUI_Pane.h"
+#include "GUI_Prefs.h"
+#include "WED_Document.h"
+#include "WED_Globals.h"
 
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <cctype>
+#include <algorithm>
+#include <map>
 
 #if APL
 	#include <OpenGL/gl.h>
@@ -59,9 +65,11 @@ static const float kAmber[4]  = { 1.00f, 0.75f, 0.30f, 1.0f };
 static const float kHoverBg[4] = { 1.00f, 0.75f, 0.30f, 0.18f };
 static const float kFill[4]   = { 0.08f, 0.08f, 0.10f, 0.88f };	// a dark card: the list is read, not glanced at
 static const float kPad = 8.0f;
-static const float kIndent = 18.0f;
+static const float kIndent = 14.0f;
+static const float kCardW = 540.0f;
 static const float kGap = 48.0f;		// from the anchor to the card
-static const int   kMaxRows = 24;
+static const int   kMaxLines = 22;	// list lines, when the map has the room
+static const int   kMaxRecent = 40;	// kept in the prefs; shown: as many as fit
 
 // Not std::max: <windows.h>, force-included through XDefs.h, defines min/max macros.
 static inline float	Max(float a, float b) { return a > b ? a : b; }
@@ -72,11 +80,21 @@ static float	TextW(const string & s)
 	return s.empty() ? 0.0f : GUI_MeasureRange(font_UI_Basic, s.c_str(), s.c_str() + s.size());
 }
 
+// A name too long for its cell ends in "..." rather than running off the card.
+static string	Elide(const string & s, float w)
+{
+	if (TextW(s) <= w) return s;
+	string t = s;
+	while (!t.empty() && TextW(t + "...") > w) t.erase(t.size() - 1);
+	return t + "...";
+}
+
 static float	LineH(void)		{ return GUI_GetLineHeight(font_UI_Basic); }
 static float	Asc(void)		{ return GUI_GetLineAscent(font_UI_Basic); }
 static float	EntryH(void)	{ return LineH() + 3.0f; }
 static float	FolderH(void)	{ return LineH() + 1.0f; }
 static float	HeadH(void)		{ return LineH() + 8.0f; }
+static float	BarH(void)		{ return LineH() + 8.0f; }	// the search field, a row of tabs
 
 static void	Txt(GUI_GraphState * g, const float col[4], float x, float y, const char * s, int align = align_Left)
 {
@@ -105,18 +123,25 @@ static Point2	ToScreen(WED_MapZoomerNew * z, int x, int y)
 	return z->MapPixelToScreen(Point2(x, y));
 }
 
-// "lib/airport/ground/pavement_FX/edge_D" -> "pavement_FX / edge_D"
-static string	FolderLabel(const string & dir)
+// The container folders above the meaningful ones: dropped, not classified.
+static const char * kContainers[] = { "lib/airport/ground/", "lib/airport/", "lib/g10/", "lib/" };
+// apt.dat's own painted taxi lines: drawn with the Taxilines tool, not laid as .lin
+static const char * kLeftOut = "lib/airport/lines/";
+
+static string	Lower(const string & s)
 {
-	static const char * strip[] = { "lib/airport/ground/", "lib/airport/", "lib/" };
-	string d = dir;
-	for (const char * s : strip)
-		if (d.compare(0, strlen(s), s) == 0) { d.erase(0, strlen(s)); break; }
+	string o(s);
+	for (char & c : o) c = (char) tolower((unsigned char) c);
+	return o;
+}
+
+static string	Spaced(const string & path)		// "a/b" -> "a / b"
+{
 	string out;
-	for (char c : d)
+	for (char c : path)
 		if (c == '/') out += " / ";
 		else out += c;
-	return out.empty() ? dir : out;
+	return out;
 }
 
 // What WED_DoLayLineAlong lays along: a polygon, or a line, string or shape of
@@ -136,9 +161,20 @@ static bool	IsOutline(IGISEntity * e, WED_Thing * t)
 	}
 }
 
+static vector<string>	RecentList(void)
+{
+	vector<string> out;
+	string cur;
+	for (char c : gLayLineRecent)
+		if (c == ';') { if (!cur.empty()) out.push_back(cur); cur.clear(); }
+		else cur += c;
+	if (!cur.empty()) out.push_back(cur);
+	return out;
+}
+
 WED_LayLineLayer::WED_LayLineLayer(GUI_Pane * host, WED_MapZoomerNew * zoomer, IResolver * resolver) :
 	WED_MapLayer(host, zoomer, resolver), mLastTime(-9.9e9f), mLastX(0), mLastY(0), mLastShape(-1),
-	mOpen(false), mShapeID(-1), mScroll(0), mHover(-1), mListTop(0), mShown(0)
+	mOpen(false), mShapeID(-1), mTab(0), mScroll(0)
 {
 	mCard[0] = mCard[1] = mCard[2] = mCard[3] = 0;
 }
@@ -184,38 +220,148 @@ bool	WED_LayLineLayer::SelectedShapeAt(const Point2& ll, int& out_id) const
 	return false;
 }
 
-void	WED_LayLineLayer::BuildRows(void)
+// Every public library .lin, named from its virtual path alone (see the header).
+void	WED_LayLineLayer::BuildEntries(void)
 {
-	mRows.clear();
+	mEntries.clear();
+	mTabs.clear();
 	WED_LibraryMgr * lib = WED_GetLibraryMgr(GetResolver());
 	if (!lib) return;
-	// depth first: a folder's own lines, then its sub-folders, in library order
-	vector<string> todo(1, string());
+
+	// depth first, in library order: a folder's own lines, then its sub-folders
+	vector<string> vpaths, todo(1, string());
 	while (!todo.empty())
 	{
 		string dir = todo.back();
 		todo.pop_back();
 		vector<string> kids, dirs;
 		lib->GetResourceChildren(dir, pack_Library, kids);
-		bool head = false;
 		for (const string & k : kids)
 		{
 			const res_type t = lib->GetResourceType(k);
 			if (t == res_Directory) { dirs.push_back(k); continue; }
 			if (t != res_Line || !lib->IsResourceLibrary(k) || lib->IsResourceDeprecatedOrPrivate(k)) continue;
-			if (!head)
-			{
-				Row f = { true, FolderLabel(dir), string() };
-				mRows.push_back(f);
-				head = true;
-			}
-			string name = k.substr(k.find_last_of('/') + 1);
-			if (name.size() > 4 && name.compare(name.size() - 4, 4, ".lin") == 0)
-				name.erase(name.size() - 4);
-			Row r = { false, name, k };
-			mRows.push_back(r);
+			if (k.compare(0, strlen(kLeftOut), kLeftOut) == 0) continue;
+			vpaths.push_back(k);
 		}
 		todo.insert(todo.end(), dirs.rbegin(), dirs.rend());
+	}
+
+	vector<string> dirs;		// each entry's folder below its tab, before folding
+	for (const string & v : vpaths)
+	{
+		string rest = v;
+		for (const char * c : kContainers)
+			if (rest.compare(0, strlen(c), c) == 0) { rest.erase(0, strlen(c)); break; }
+		Entry e;
+		e.vpath = v;
+		size_t slash = rest.find('/');
+		string within;
+		if (slash == string::npos) { e.tab = "other"; within = rest; }
+		else { e.tab = rest.substr(0, slash); within = rest.substr(slash + 1); }
+		size_t last = within.find_last_of('/');
+		e.label = last == string::npos ? within : within.substr(last + 1);
+		if (e.label.size() > 4 && e.label.compare(e.label.size() - 4, 4, ".lin") == 0)
+			e.label.erase(e.label.size() - 4);
+		dirs.push_back(last == string::npos ? string() : within.substr(0, last));
+		mEntries.push_back(e);
+		if (std::find(mTabs.begin(), mTabs.end(), e.tab) == mTabs.end())
+			mTabs.push_back(e.tab);
+	}
+
+	// a folder with a single line folds into its parent, until none is left -
+	// but not into the tab itself, where it would read as the group above it
+	for (bool again = true; again; )
+	{
+		again = false;
+		std::map<string, int> count;
+		for (size_t i = 0; i < mEntries.size(); ++i) ++count[mEntries[i].tab + "/" + dirs[i]];
+		for (size_t i = 0; i < mEntries.size(); ++i)
+			if (dirs[i].find('/') != string::npos && count[mEntries[i].tab + "/" + dirs[i]] == 1)
+			{
+				size_t last = dirs[i].find_last_of('/');
+				mEntries[i].label = (last == string::npos ? dirs[i] : dirs[i].substr(last + 1)) + " " + mEntries[i].label;
+				dirs[i] = last == string::npos ? string() : dirs[i].substr(0, last);
+				again = true;
+			}
+	}
+	for (size_t i = 0; i < mEntries.size(); ++i)
+	{
+		mEntries[i].group = Spaced(dirs[i]);
+		mEntries[i].key = Lower(mEntries[i].tab + "/" + dirs[i] + "/" + mEntries[i].label + " " + mEntries[i].vpath);
+	}
+}
+
+// The list for what is shown now - search results, Recent, or one tab - cut
+// into lines for the card's width: a group's name, then its entries side by
+// side, as many to a row as the group's widest name allows.
+void	WED_LayLineLayer::LayOut(float inner_w, vector<Line>& out) const
+{
+	out.clear();
+	vector<int> picks;
+	const bool searching = !mQuery.empty();
+	if (searching)
+	{
+		vector<string> terms;
+		string cur;
+		for (char c : Lower(mQuery) + " ")
+			if (c == ' ') { if (!cur.empty()) terms.push_back(cur); cur.clear(); }
+			else cur += c;
+		for (int i = 0; i < (int) mEntries.size(); ++i)
+		{
+			bool all = true;
+			for (const string & t : terms)
+				if (mEntries[i].key.find(t) == string::npos) { all = false; break; }
+			if (all) picks.push_back(i);
+		}
+	}
+	else if (mTab == 0)
+	{
+		for (const string & v : RecentList())
+			for (int i = 0; i < (int) mEntries.size(); ++i)
+				if (mEntries[i].vpath == v)
+				{
+					Line l;
+					l.cells.push_back(i);
+					l.full = true;
+					out.push_back(l);
+					break;
+				}
+		return;
+	}
+	else if (mTab <= (int) mTabs.size())
+	{
+		for (int i = 0; i < (int) mEntries.size(); ++i)
+			if (mEntries[i].tab == mTabs[mTab - 1]) picks.push_back(i);
+	}
+
+	size_t g0 = 0;
+	while (g0 < picks.size())
+	{
+		const Entry & first = mEntries[picks[g0]];
+		size_t g1 = g0;
+		float cw = 0;
+		while (g1 < picks.size() && mEntries[picks[g1]].tab == first.tab && mEntries[picks[g1]].group == first.group)
+			cw = Max(cw, TextW(mEntries[picks[g1++]].label));
+		const string header = searching ? (first.group.empty() ? first.tab : first.tab + " / " + first.group) : first.group;
+		if (!header.empty())
+		{
+			Line h;
+			h.header = header;
+			h.full = false;
+			out.push_back(h);
+		}
+		int cols = (int) ((inner_w - kIndent) / (cw + 16.0f));
+		if (cols < 1) cols = 1;
+		for (size_t i = g0; i < g1; i += cols)
+		{
+			Line l;
+			l.full = false;
+			l.cols = cols;
+			for (size_t j = i; j < g1 && j < i + cols; ++j) l.cells.push_back(picks[j]);
+			out.push_back(l);
+		}
+		g0 = g1;
 	}
 }
 
@@ -233,10 +379,17 @@ void	WED_LayLineLayer::Open(int shape_id, const Point2& click_ll)
 			e->GetBounds(gis_Geo, b);
 			if (e->PtWithin(gis_Geo, b.centroid())) mAnchor = b.centroid();
 		}
-	BuildRows();
+	BuildEntries();
+	mQuery.clear();
 	mScroll = 0;
-	mHover = -1;
-	mShown = 0;
+	// Recent first, once there is something in it
+	mTab = 0;
+	{
+		vector<Line> l;
+		LayOut(kCardW, l);
+		if (l.empty() && !mTabs.empty()) mTab = 1;
+	}
+	mHits.clear();
 	mCard[0] = mCard[1] = mCard[2] = mCard[3] = 0;
 	GetHost()->Refresh();
 }
@@ -246,8 +399,29 @@ void	WED_LayLineLayer::Close(void)
 	if (!mOpen) return;
 	mOpen = false;
 	mShapeID = -1;
-	mRows.clear();
+	mEntries.clear();
+	mHits.clear();
 	GetHost()->Refresh();
+}
+
+void	WED_LayLineLayer::Pick(int entry)
+{
+	if (entry < 0 || entry >= (int) mEntries.size()) return;
+	const string vpath = mEntries[entry].vpath;
+	vector<string> recent = RecentList();
+	recent.erase(std::remove(recent.begin(), recent.end(), vpath), recent.end());
+	recent.insert(recent.begin(), vpath);
+	if (recent.size() > (size_t) kMaxRecent) recent.resize(kMaxRecent);
+	gLayLineRecent.clear();
+	for (const string & r : recent)
+	{
+		if (!gLayLineRecent.empty()) gLayLineRecent += ";";
+		gLayLineRecent += r;
+	}
+	WED_Document::WriteGlobalPrefs();
+	GUI_Prefs_Write("WED");
+	Close();
+	WED_DoLayLineAlong(GetResolver(), vpath);
 }
 
 int		WED_LayLineLayer::HandleClickDown(int inX, int inY, int inButton, GUI_KeyFlags modifiers)
@@ -259,24 +433,17 @@ int		WED_LayLineLayer::HandleClickDown(int inX, int inY, int inButton, GUI_KeyFl
 		const float x = sp.x(), y = sp.y();
 		if (Inside(x, y, mCard))
 		{
-			// rows from the top, as the last frame laid them out
-			if (y <= mListTop)
+			for (const Hit & h : mHits)
 			{
-				float top = mListTop;
-				for (int i = mScroll; i < (int) mRows.size() && i < mScroll + mShown; ++i)
+				if (x < h.x0 || x > h.x1 || y < h.y0 || y > h.y1) continue;
+				if (h.entry >= 0) { Pick(h.entry); break; }
+				if (h.tab >= 0)
 				{
-					const float h = mRows[i].folder ? FolderH() : EntryH();
-					if (y > top - h)
-					{
-						if (!mRows[i].folder)
-						{
-							const string vpath = mRows[i].vpath;
-							Close();
-							WED_DoLayLineAlong(GetResolver(), vpath);
-						}
-						break;
-					}
-					top -= h;
+					mTab = h.tab;
+					mQuery.clear();
+					mScroll = 0;
+					GetHost()->Refresh();
+					break;
 				}
 			}
 			return 1;		// a click on the card is ours, whatever it hit
@@ -318,11 +485,43 @@ int		WED_LayLineLayer::HandleScrollWheel(int inX, int inY, int inDist)
 	return 1;
 }
 
+// While the card is open, typing goes to its search field - letters would
+// otherwise pick tools, and Backspace delete the selection.
 int		WED_LayLineLayer::HandleLayerKeyPress(uint32_t inKey, int inVK, GUI_KeyFlags inFlags)
 {
-	if (!mOpen || inKey != GUI_KEY_ESCAPE) return 0;
-	Close();
-	return 1;
+	if (!mOpen) return 0;
+	if (inFlags & (gui_ControlFlag | gui_OptionAltFlag)) return 0;		// menu shortcuts
+	const bool down = (inFlags & gui_DownFlag) != 0;
+	switch (inKey) {
+	case GUI_KEY_ESCAPE:
+		if (down)
+		{
+			if (mQuery.empty()) Close();
+			else { mQuery.clear(); mScroll = 0; }
+		}
+		return 1;
+	case GUI_KEY_BACK:
+	case GUI_KEY_DELETE:
+		if (down && !mQuery.empty()) { mQuery.erase(mQuery.size() - 1); mScroll = 0; }
+		return 1;
+	case GUI_KEY_RETURN:
+		if (down && !mQuery.empty())
+		{
+			// the first match
+			vector<Line> l;
+			LayOut(kCardW, l);
+			for (const Line & ln : l)
+				if (!ln.cells.empty()) { Pick(ln.cells.front()); break; }
+		}
+		return 1;
+	default:
+		if (inKey >= 32 && inKey < 127)
+		{
+			if (down && mQuery.size() < 40) { mQuery += (char) inKey; mScroll = 0; }
+			return 1;
+		}
+		return 0;
+	}
 }
 
 void	WED_LayLineLayer::DrawSelected(bool inCurrent, GUI_GraphState * g)
@@ -332,10 +531,11 @@ void	WED_LayLineLayer::DrawSelected(bool inCurrent, GUI_GraphState * g)
 	WED_Thing * wrl = WED_GetWorld(GetResolver());
 	ISelection * sel = WED_GetSelect(GetResolver());
 	ISelectable * shape = dynamic_cast<ISelectable *>(wrl ? wrl->FetchPeer(mShapeID) : NULL);
-	if (!shape || !sel || !sel->IsSelected(shape) || !ToolAllows() || mRows.empty())
+	if (!shape || !sel || !sel->IsSelected(shape) || !ToolAllows() || mEntries.empty())
 	{
 		mOpen = false;
-		mRows.clear();
+		mEntries.clear();
+		mHits.clear();
 		return;
 	}
 
@@ -368,37 +568,48 @@ void	WED_LayLineLayer::DrawCard(GUI_GraphState * g)
 	double b[4];
 	GetZoomer()->GetPixelBounds(b[0], b[1], b[2], b[3]);
 	const Point2 a = GetZoomer()->MapPixelToScreen(GetZoomer()->LLToPixel(mAnchor));
-	const float lh = LineH(), asc = Asc();
+	const float asc = Asc();
+	const float w = Min(kCardW, (float) (b[2] - b[0]) - 2 * kPad);
+	const float inner_w = w - 2 * kPad;
 
-	// width: the longest name, within reason
-	float w = TextW("Lay line along shape") + TextW("0000") + 3 * kPad;
-	for (const Row & r : mRows)
-		w = Max(w, TextW(r.label) + (r.folder ? kPad * 2 + 24.0f : kIndent + kPad));
-	w = Min(w, 360.0f);
-
-	// height: up to kMaxRows entries, never past the map
-	const float avail = (float) (b[3] - b[1]) - 2 * kPad;
-	const float list_max = Min(kMaxRows * EntryH(), avail - HeadH() - 2 * kPad);
-	// the lowest first row that still fills the list: the wheel stops there
-	int max_scroll = (int) mRows.size();
+	// the tabs, wrapped onto as many rows as they need
+	struct TabBox { int tab; string label; float x, row; };
+	vector<TabBox> tabs;
 	{
-		float hsum = 0;
-		while (max_scroll > 0)
+		float x = 0, row = 0;
+		for (int t = 0; t <= (int) mTabs.size(); ++t)
 		{
-			const float h = mRows[max_scroll - 1].folder ? FolderH() : EntryH();
-			if (hsum + h > list_max) break;
-			hsum += h;
-			--max_scroll;
+			const string label = t == 0 ? string("Recent") : mTabs[t - 1];
+			const float tw = TextW(label) + 12.0f;
+			if (x > 0 && x + tw > inner_w) { x = 0; row += 1; }
+			TabBox tb = { t, label, x, row };
+			tabs.push_back(tb);
+			x += tw + 4.0f;
 		}
 	}
+	const int tab_rows = (int) tabs.back().row + 1;
+	const float top_h = HeadH() + BarH() + tab_rows * BarH() + 4.0f;
+
+	vector<Line> lines;
+	LayOut(inner_w, lines);
+
+	// one size for every tab, so the card does not jump about: kMaxLines entry
+	// lines, or what the map has room for
+	const float avail = (float) (b[3] - b[1]) - 2 * kPad;
+	const float list_h = Max(EntryH() * 3, Min(kMaxLines * EntryH(), avail - top_h - kPad));
+	const float h = top_h + list_h + kPad;
+	auto line_h = [](const Line & l) { return l.header.empty() ? EntryH() : FolderH(); };
+
+	// the first line that still fills the list: the wheel stops there. Recent
+	// shows as many as fit and does not scroll.
+	int max_scroll = (int) lines.size();
+	{
+		float hsum = 0;
+		while (max_scroll > 0 && hsum + line_h(lines[max_scroll - 1]) <= list_h)
+			hsum += line_h(lines[--max_scroll]);
+	}
+	if (mQuery.empty() && mTab == 0) max_scroll = 0;
 	if (mScroll > max_scroll) mScroll = max_scroll;
-	// the list as tall as all its rows, or list_max once they scroll - not only
-	// the rows that fit from the top: folder rows are shorter, and the last
-	// screenful has to fit as well
-	float list_h = 0;
-	for (const Row & r : mRows) list_h += r.folder ? FolderH() : EntryH();
-	list_h = Min(list_h, list_max);
-	const float h = HeadH() + list_h + kPad;
 
 	// beside the shape, to the right if it fits, inside the map
 	float x0 = a.x() + kGap;
@@ -409,6 +620,13 @@ void	WED_LayLineLayer::DrawCard(GUI_GraphState * g)
 	y1 = Max(y1, (float) b[1] + kPad + h);
 	const float x1 = x0 + w, y0 = y1 - h;
 	mCard[0] = x0; mCard[1] = y0; mCard[2] = x1; mCard[3] = y1;
+	mHits.clear();
+
+	int mx, my;
+	GetHost()->GetMouseLocNow(&mx, &my);
+	const Point2 mp = GetZoomer()->MapPixelToScreen(Point2(mx, my));
+	auto over = [&](float bx0, float by0, float bx1, float by1) {
+		return mp.x() >= bx0 && mp.x() <= bx1 && mp.y() >= by0 && mp.y() <= by1; };
 
 	g->SetState(0, 0, 0, 0, 1, 0, 0);
 
@@ -432,39 +650,75 @@ void	WED_LayLineLayer::DrawCard(GUI_GraphState * g)
 	glVertex2f(x0, y0); glVertex2f(x1, y0); glVertex2f(x1, y1); glVertex2f(x0, y1);
 	glEnd();
 
-	// header: what it does, and how many lines there are to pick from
+	// title, and how many lines the list holds now
 	int n_lines = 0;
-	for (const Row & r : mRows) if (!r.folder) ++n_lines;
+	for (const Line & l : lines) n_lines += (int) l.cells.size();
 	char count[16];
 	snprintf(count, sizeof(count), "%d", n_lines);
-	const float head_base = y1 - HeadH() + (HeadH() - asc) * 0.5f;
-	Txt(g, kWhite, x0 + kPad, head_base, "Lay line along shape");
-	Txt(g, kMuted, x1 - kPad, head_base, count, align_Right);
-	g->SetState(0, 0, 0, 0, 1, 0, 0);
-	glColor4fv(kRule);
-	glBegin(GL_LINES); glVertex2f(x0, y1 - HeadH()); glVertex2f(x1, y1 - HeadH()); glEnd();
+	float y = y1;
+	Txt(g, kWhite, x0 + kPad, y - HeadH() + (HeadH() - asc) * 0.5f, "Lay line along shape");
+	Txt(g, kMuted, x1 - kPad, y - HeadH() + (HeadH() - asc) * 0.5f, count, align_Right);
+	y -= HeadH();
 
-	// the hover row, from where the mouse is now
-	int mx, my;
-	GetHost()->GetMouseLocNow(&mx, &my);
-	const Point2 mp = GetZoomer()->MapPixelToScreen(Point2(mx, my));
-	mHover = -1;
-
-	mListTop = y1 - HeadH();
-	float top = mListTop;
-	mShown = 0;
-	for (int i = mScroll; i < (int) mRows.size(); ++i)
+	// the search field: typing goes here while the card is open
 	{
-		const Row & r = mRows[i];
-		const float rh = r.folder ? FolderH() : EntryH();
-		if (top - rh < y0 + kPad - 0.5f) break;
-		const float base = top - rh + (rh - asc) * 0.5f;
-		if (r.folder)
+		const float fy0 = y - BarH() + 2, fy1 = y - 2;
+		g->SetState(0, 0, 0, 0, 1, 0, 0);
+		Fill(x0 + kPad, fy0, x1 - kPad, fy1, kHoverBg);
+		glColor4fv(mQuery.empty() ? kRule : kAmber);
+		glBegin(GL_LINE_LOOP);
+		glVertex2f(x0 + kPad, fy0); glVertex2f(x1 - kPad, fy0); glVertex2f(x1 - kPad, fy1); glVertex2f(x0 + kPad, fy1);
+		glEnd();
+		const float base = fy0 + (fy1 - fy0 - asc) * 0.5f;
+		if (mQuery.empty())
+			Txt(g, kMuted, x0 + kPad + 6, base, "Type to search all lines");
+		else
+			Txt(g, kWhite, x0 + kPad + 6, base, (mQuery + "_").c_str());
+		y -= BarH();
+	}
+
+	// the tabs; a search looks through all of them, so then none is current
+	{
+		const float ty1 = y - 2;
+		for (const TabBox & t : tabs)
 		{
-			// a thin rule with the folder's name at its left
-			Txt(g, kMuted, x0 + kPad, base, r.label.c_str());
+			const float tx0 = x0 + kPad + t.x, tx1 = tx0 + TextW(t.label) + 12.0f;
+			const float by1 = ty1 - t.row * BarH(), by0 = by1 - BarH() + 4;
+			const bool cur = mQuery.empty() && t.tab == mTab;
+			const bool hov = over(tx0, by0, tx1, by1);
 			g->SetState(0, 0, 0, 0, 1, 0, 0);
-			const float lx = x0 + kPad + TextW(r.label) + 6.0f;
+			if (cur || hov) Fill(tx0, by0, tx1, by1, cur ? kRule : kHoverBg);
+			Txt(g, cur ? kWhite : (hov ? kAmber : kMuted), tx0 + 6, by0 + (by1 - by0 - asc) * 0.5f, t.label.c_str());
+			Hit hit = { tx0, by0, tx1, by1, -1, t.tab };
+			mHits.push_back(hit);
+		}
+		y -= tab_rows * BarH() + 4.0f;
+		g->SetState(0, 0, 0, 0, 1, 0, 0);
+		glColor4fv(kRule);
+		glBegin(GL_LINES); glVertex2f(x0, y); glVertex2f(x1, y); glEnd();
+	}
+
+	const float list_top = y, list_bottom = y0 + kPad;
+	if (lines.empty())
+	{
+		const char * none = !mQuery.empty() ? "No line matches" :
+							mTab == 0 ? "Lines you lay show up here" : "";
+		Txt(g, kMuted, x0 + kPad, list_top - EntryH() + (EntryH() - asc) * 0.5f, none);
+	}
+	float top = list_top;
+	int shown = 0;
+	for (int i = mScroll; i < (int) lines.size(); ++i)
+	{
+		const Line & l = lines[i];
+		const float rh = line_h(l);
+		if (top - rh < list_bottom - 0.5f) break;
+		const float base = top - rh + (rh - asc) * 0.5f;
+		if (!l.header.empty())
+		{
+			// a group: a thin rule with its folders' names at the left
+			Txt(g, kMuted, x0 + kPad, base, l.header.c_str());
+			g->SetState(0, 0, 0, 0, 1, 0, 0);
+			const float lx = x0 + kPad + TextW(l.header) + 6.0f;
 			if (lx < x1 - kPad)
 			{
 				glColor4fv(kRule);
@@ -473,24 +727,36 @@ void	WED_LayLineLayer::DrawCard(GUI_GraphState * g)
 		}
 		else
 		{
-			const bool hover = mp.x() >= x0 && mp.x() <= x1 && mp.y() <= top && mp.y() > top - rh;
-			if (hover)
+			// the group's columns share the row evenly
+			const float cell_w = l.full ? inner_w : (inner_w - kIndent) / (float) l.cols;
+			float cx = x0 + kPad + (l.full ? 0.0f : kIndent);
+			for (int c : l.cells)
 			{
-				mHover = i;
-				g->SetState(0, 0, 0, 0, 1, 0, 0);
-				Fill(x0 + 1, top - rh, x1 - 1, top, kHoverBg);
+				const Entry & e = mEntries[c];
+				const string label = !l.full ? e.label :
+									 e.group.empty() ? e.tab + " / " + e.label : e.tab + " / " + e.group + " / " + e.label;
+				const float bx0 = cx - 4, bx1 = Min(cx + cell_w - 4, x1 - 2);
+				const bool hov = over(bx0, top - rh, bx1, top);
+				if (hov)
+				{
+					g->SetState(0, 0, 0, 0, 1, 0, 0);
+					Fill(bx0, top - rh, bx1, top, kHoverBg);
+				}
+				Txt(g, hov ? kAmber : kWhite, cx, base, Elide(label, bx1 - cx - 2).c_str());
+				Hit hit = { bx0, top - rh, bx1, top, c, -1 };
+				mHits.push_back(hit);
+				cx += cell_w;
 			}
-			Txt(g, hover ? kAmber : kWhite, x0 + kIndent, base, r.label.c_str());
 		}
 		top -= rh;
-		++mShown;
+		++shown;
 	}
 
 	// a scroll bar when the list is longer than the card
-	if (max_scroll > 0)
+	if (max_scroll > 0 && !lines.empty())
 	{
-		const float t0 = y1 - HeadH() - 2, t1 = y0 + kPad;
-		const float frac = (float) mShown / (float) mRows.size();
+		const float t0 = list_top - 2, t1 = list_bottom;
+		const float frac = (float) shown / (float) lines.size();
 		const float pos = (float) mScroll / (float) max_scroll;
 		const float th = Max(12.0f, (t0 - t1) * frac);
 		const float ty1 = t0 - (t0 - t1 - th) * pos;

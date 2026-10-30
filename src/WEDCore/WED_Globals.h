@@ -64,6 +64,9 @@ extern int gNodeSnapRadius;
    Off unless turned on. */
 extern int gSnapToVertices;
 extern int gMatchBezierHandles;
+/* The lines last picked in the lay-line pop-out (WED_LayLineLayer), newest
+   first, separated by ';'. */
+extern string gLayLineRecent;
 /* "Show Recommendation" toggle in the livery editor's airline list
    toolbar - splits the list into up to several per-airport recommendation
    sections (manual pin, direct hit, same country, popular fleet - see
