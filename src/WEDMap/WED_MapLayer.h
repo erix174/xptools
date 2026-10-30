@@ -63,6 +63,9 @@ public:
 	// A layer that scrolls something of its own under the mouse returns 1 and
 	// the map does not zoom. Asked only of layers that want clicks.
 	virtual	int					HandleScrollWheel(int inX, int inY, int inDist)							{ return 0; }
+	// A layer with something of its own open (a pop-out) may take a key, Escape to
+	// close it, before the tool sees it. Asked only of layers that want clicks.
+	virtual	int					HandleLayerKeyPress(uint32_t inKey, int inVK, GUI_KeyFlags inFlags)	{ return 0; }
 	
 
 	// These provide generalized drawing routines.  Use this to draw background images and other such stuff.

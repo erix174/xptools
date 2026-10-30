@@ -2594,6 +2594,117 @@ void	WED_MatchBezierHandlesOf(WED_Thing * wrl, const vector<WED_GISPoint_Bezier 
 	}
 }
 
+// The outlines a line can be laid along: a polygon's rings, or the chain of a line,
+// string or shape. Taxi routes, roads and runways are not outlines.
+static void get_lay_line_outlines(ISelectable * what, vector<IGISPointSequence *>& out)
+{
+	IGISEntity * e = dynamic_cast<IGISEntity *>(what);
+	if (!e) return;
+	switch (e->GetGISClass()) {
+	case gis_Polygon:
+		if (IGISPolygon * poly = dynamic_cast<IGISPolygon *>(e))
+		{
+			out.push_back(poly->GetOuterRing());
+			for (int h = 0; h < poly->GetNumHoles(); ++h)
+				out.push_back(poly->GetNthHole(h));
+		}
+		break;
+	case gis_PointSequence:
+	case gis_Ring:
+	case gis_Chain:
+		// a polygon's own ring is laid with the polygon, not inside it
+		if (WED_Thing * t = dynamic_cast<WED_Thing *>(what))
+			if (dynamic_cast<IGISPolygon *>(t->GetParent())) break;
+		if (IGISPointSequence * ps = dynamic_cast<IGISPointSequence *>(e))
+			out.push_back(ps);
+		break;
+	default:
+		break;
+	}
+}
+
+int		WED_CanLayLineAlong(IResolver * resolver)
+{
+	ISelection * sel = WED_GetSelect(resolver);
+	vector<ISelectable *> selected;
+	sel->GetSelectionVector(selected);
+	vector<IGISPointSequence *> outlines;
+	for (ISelectable * s : selected)
+		get_lay_line_outlines(s, outlines);
+	for (IGISPointSequence * ps : outlines)
+		if (ps && ps->GetNumPoints() >= 2) return 1;
+	return 0;
+}
+
+void	WED_DoLayLineAlong(IResolver * resolver, const string& lin_vpath)
+{
+	ISelection * sel = WED_GetSelect(resolver);
+	vector<ISelectable *> selected;
+	sel->GetSelectionVector(selected);
+
+	string name = lin_vpath.substr(lin_vpath.find_last_of('/') + 1);
+	if (name.size() > 4 && name.compare(name.size() - 4, 4, ".lin") == 0)
+		name.erase(name.size() - 4);
+
+	IOperation * op = dynamic_cast<IOperation *>(sel);
+	op->StartOperation("Lay Line Along Shape");
+	vector<WED_Thing *> made;
+	for (ISelectable * s : selected)
+	{
+		WED_Thing * shape = dynamic_cast<WED_Thing *>(s);
+		if (!shape || !shape->GetParent()) continue;
+		vector<IGISPointSequence *> outlines;
+		get_lay_line_outlines(s, outlines);
+		// next to the shape in the hierarchy, in ring order
+		int idx = shape->GetMyPosition() + 1;
+		for (IGISPointSequence * ps : outlines)
+		{
+			if (!ps || ps->GetNumPoints() < 2) continue;
+			WED_LinePlacement * lin = WED_LinePlacement::CreateTyped(shape->GetArchive());
+			lin->SetParent(shape->GetParent(), idx++);
+			lin->SetName(name);
+			lin->SetResource(lin_vpath);
+			lin->SetClosed(ps->IsClosed());
+			// The shape's own nodes and handles, copied: exactly on its vertices and
+			// following its curves - what Snap To Vertices and Match Bezier Handles
+			// give a line traced by hand, without their search.
+			for (int n = 0; n < ps->GetNumPoints(); ++n)
+			{
+				IGISPoint * p = ps->GetNthPoint(n);
+				WED_SimpleBezierBoundaryNode * node = WED_SimpleBezierBoundaryNode::CreateTyped(shape->GetArchive());
+				node->SetParent(lin, n);
+				char buf[32];
+				snprintf(buf, sizeof(buf), "Node %d", n + 1);
+				node->SetName(buf);
+				if (IGISPoint_Bezier * b = dynamic_cast<IGISPoint_Bezier *>(p))
+				{
+					BezierPoint2 bp;
+					b->GetBezierLocation(gis_Geo, bp);
+					node->SetBezierLocation(gis_Geo, bp);
+				}
+				else
+				{
+					Point2 loc;
+					p->GetLocation(gis_Geo, loc);
+					node->SetLocation(gis_Geo, loc);
+					node->DeleteHandleLo();
+					node->DeleteHandleHi();
+				}
+			}
+			made.push_back(lin);
+		}
+	}
+	if (made.empty())
+	{
+		op->AbortOperation();
+		return;
+	}
+	sel->Clear();
+	for (WED_Thing * t : made)
+		sel->Insert(t);
+	op->CommitOperation();
+}
+
 static int IterateCanOrthogonalize(ISelectable * what, void * ref)
 {
 	if(!Iterate_IsStructuredObject(what, ref)) return 0;

@@ -346,6 +346,8 @@ set (WED_SOURCES
 	src/WEDMap/WED_VertexTool.h
 	src/WEDMap/WED_WorldMapLayer.cpp
 	src/WEDMap/WED_WorldMapLayer.h
+	src/WEDMap/WED_LayLineLayer.cpp
+	src/WEDMap/WED_LayLineLayer.h
 	src/WEDMap/WED_ModerationLayer.cpp
 	src/WEDMap/WED_ModerationLayer.h
 	src/WEDMap/WED_ModerationToolbar.cpp

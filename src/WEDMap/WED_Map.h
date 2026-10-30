@@ -53,6 +53,7 @@ public:
 	// turned, tool drags are not passed on, so nothing can be moved or drawn in
 	// a rotated frame. Held by this window alone: a document opens north up.
 			void		SetSelectTool(WED_MapToolNew * t) { mSelectTool = t; }
+			WED_MapToolNew *	GetTool(void) const { return mTool; }
 			bool		IsRotateMode(void) const { return mRotateMode; }
 			void		SetRotateMode(bool on);
 	virtual	void		GetMouseLocNow(int * out_x, int * out_y);

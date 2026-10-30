@@ -47,6 +47,7 @@
 #include "WED_PreviewLayer.h"
 #include "WED_DebugLayer.h"
 #include "WED_ModerationLayer.h"
+#include "WED_LayLineLayer.h"
 #include "WED_ModerationToolbar.h"
 #include "WED_VertexTool.h"
 #include "WED_TerraserverLayer.h"
@@ -170,6 +171,9 @@ WED_MapPane::WED_MapPane(GUI_Commander * cmdr, double map_bounds[4], IResolver *
 	// Last, so its callouts draw over every other layer; it takes a click only
 	// on a callout, so ordering does not steal clicks from anything else.
 	mLayers.push_back(					new WED_ModerationLayer(mMap, mMap, resolver));
+	// The lay-line pop-out: after the callouts, so its card draws over them; it
+	// takes a click only on its card or on a double click on a selected shape.
+	mLayers.push_back(					new WED_LayLineLayer(mMap, mMap, resolver));
 #if WITHNWLINK
 	WED_NWLinkAdapter * nwlink = (dynamic_cast<WED_Document *>(resolver))->GetNWLink();
 	if(nwlink)

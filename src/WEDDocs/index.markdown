@@ -333,6 +333,8 @@ Before using any tool, set up the preferences first and you won't have to edit l
 
 **Help > Node Snap Radius (debug)** sets how many pixels the snap reaches (10 to start with); WED keeps the value.
 
+**Laying a line along a shape.** With the Vertex (select) tool, double click a polygon, line or shape that is already selected. A card opens beside it, joined to it by a white line, listing every line (`.lin`) in the library; the library's folders are thin divider rows with their names at the left. Scroll it with the mouse wheel and click a line: WED lays it along the shape, exactly on its nodes and following its Bezier curves, one new line for each ring (holes too), placed right after the shape and selected. One Undo takes it away. The new line runs in the same direction as the shape's nodes; if an edge line lands on the wrong side, use **Reverse** (Ctrl+Shift+R) on it. A click anywhere else, Escape, another tool or a different selection closes the card.
+
 ### The Library Pane ###
 
 The library pane, numbered 1 in [Figure 3](#wedwindow), displays art assets currently available for inclusion in the scenery. Here, you can browse through the files in the X-Plane library using their virtual paths. (For our purposes, a full understanding of the library system is not required, but for further reading, see the appendix [About the X-Plane Library System][33].) Selecting an asset will also select an appropriate tool---for instance, if you select a `.obj` file, the object tool will become active, and if you select a `.for` file, the forest tool will become active.

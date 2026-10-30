@@ -734,6 +734,13 @@ int	WED_Map::MouseMove(int x, int y)
 
 int			WED_Map::HandleKeyPress(uint32_t inKey, int inVK, GUI_KeyFlags inFlags)
 {
+	for(vector<WED_MapLayer *>::iterator l = mLayers.begin(); l != mLayers.end(); ++l)
+	if((*l)->IsVisible())
+	{
+		bool draw_ent_v, draw_ent_s, wants_sel, wants_clicks;
+		(*l)->GetCaps(draw_ent_v, draw_ent_s, wants_sel, wants_clicks);
+		if (wants_clicks && (*l)->HandleLayerKeyPress(inKey, inVK, inFlags)) { Refresh(); return 1; }
+	}
 	if (mTool) 	return mTool->HandleToolKeyPress(inKey, inVK, inFlags);
 	else		return 0;
 }
