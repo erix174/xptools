@@ -110,7 +110,7 @@ void	WED_MatchBezierHandlesOf(WED_Thing * wrl, const vector<WED_GISPoint_Bezier 
 // Lay a line (.lin) along every outline of the selected polygons, lines and shapes:
 // one new line per ring or chain, on exactly its nodes and Bezier handles, one undo step.
 int		WED_CanLayLineAlong(IResolver * resolver);
-void	WED_DoLayLineAlong(IResolver * resolver, const string& lin_vpath);
+void	WED_DoLayLineAlong(IResolver * resolver, const string& lin_vpath, bool skip_shared = false);
 int		WED_CanOrthogonalize(IResolver * resolver);
 void	WED_DoOrthogonalize(IResolver * resolver);
 int		WED_CanMakeRegularPoly(IResolver * resolver);

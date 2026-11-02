@@ -70,6 +70,8 @@ static const float kCardW = 540.0f;
 static const float kGap = 48.0f;		// from the anchor to the card
 static const int   kMaxLines = 22;	// list lines, when the map has the room
 static const int   kMaxRecent = 40;	// kept in the prefs; shown: as many as fit
+static const int   kAllEdgesHit = -2;		// Hit::entry of the "All edges" choice
+static const int   kExposedEdgesHit = -3;	// Hit::entry of "Exposed edges only"
 
 // Not std::max: <windows.h>, force-included through XDefs.h, defines min/max macros.
 static inline float	Max(float a, float b) { return a > b ? a : b; }
@@ -421,7 +423,7 @@ void	WED_LayLineLayer::Pick(int entry)
 	WED_Document::WriteGlobalPrefs();
 	GUI_Prefs_Write("WED");
 	Close();
-	WED_DoLayLineAlong(GetResolver(), vpath);
+	WED_DoLayLineAlong(GetResolver(), vpath, gLayLineSkipShared != 0);
 }
 
 int		WED_LayLineLayer::HandleClickDown(int inX, int inY, int inButton, GUI_KeyFlags modifiers)
@@ -437,6 +439,14 @@ int		WED_LayLineLayer::HandleClickDown(int inX, int inY, int inButton, GUI_KeyFl
 			{
 				if (x < h.x0 || x > h.x1 || y < h.y0 || y > h.y1) continue;
 				if (h.entry >= 0) { Pick(h.entry); break; }
+				if (h.entry == kAllEdgesHit || h.entry == kExposedEdgesHit)
+				{
+					gLayLineSkipShared = h.entry == kExposedEdgesHit;
+					WED_Document::WriteGlobalPrefs();
+					GUI_Prefs_Write("WED");
+					GetHost()->Refresh();
+					break;
+				}
 				if (h.tab >= 0)
 				{
 					mTab = h.tab;
@@ -658,6 +668,28 @@ void	WED_LayLineLayer::DrawCard(GUI_GraphState * g)
 	float y = y1;
 	Txt(g, kWhite, x0 + kPad, y - HeadH() + (HeadH() - asc) * 0.5f, "Lay line along shape");
 	Txt(g, kMuted, x1 - kPad, y - HeadH() + (HeadH() - asc) * 0.5f, count, align_Right);
+
+	// "All edges" or "Exposed edges only", left of the count, kept in the prefs;
+	// drawn like the tabs
+	{
+		struct Choice { const char * label; int hit; bool cur; };
+		const Choice choices[2] = {
+			{ "All edges", kAllEdgesHit, gLayLineSkipShared == 0 },
+			{ "Exposed edges only", kExposedEdgesHit, gLayLineSkipShared != 0 } };
+		float cx1 = x1 - kPad - TextW(count) - 12.0f;
+		const float by1 = y - 4.0f, by0 = y - HeadH() + 4.0f;
+		for (int c = 1; c >= 0; --c)
+		{
+			const float cx0 = cx1 - TextW(choices[c].label) - 12.0f;
+			const bool hov = over(cx0, by0, cx1, by1);
+			g->SetState(0, 0, 0, 0, 1, 0, 0);
+			if (choices[c].cur || hov) Fill(cx0, by0, cx1, by1, choices[c].cur ? kRule : kHoverBg);
+			Txt(g, choices[c].cur ? kWhite : (hov ? kAmber : kMuted), cx0 + 6, by0 + (by1 - by0 - asc) * 0.5f, choices[c].label);
+			Hit hit = { cx0, by0, cx1, by1, choices[c].hit, -1 };
+			mHits.push_back(hit);
+			cx1 = cx0 - 2.0f;
+		}
+	}
 	y -= HeadH();
 
 	// the search field: typing goes here while the card is open

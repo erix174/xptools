@@ -72,6 +72,7 @@ int gNodeSnapRadius = 10;
 int gSnapToVertices = 0;
 int gMatchBezierHandles = 0;
 string gLayLineRecent;
+int gLayLineSkipShared = 0;
 int gShowLiveryRecommendation;
 
 static set<WED_Document *> sDocuments;
@@ -797,6 +798,7 @@ void	WED_Document::ReadGlobalPrefs(void)
 	gSnapToVertices = atoi(GUI_GetPrefString("preferences","SnapToVertices","0")) != 0;
 	gMatchBezierHandles = atoi(GUI_GetPrefString("preferences","MatchBezierHandles","0")) != 0;
 	gLayLineRecent = GUI_GetPrefString("preferences","LayLineRecent","");
+	gLayLineSkipShared = atoi(GUI_GetPrefString("preferences","LayLineSkipShared","0")) != 0;
 }
 
 void	WED_Document::WriteGlobalPrefs(void)
@@ -816,6 +818,7 @@ void	WED_Document::WriteGlobalPrefs(void)
 	GUI_SetPrefString("preferences","SnapToVertices",gSnapToVertices ? "1" : "0");
 	GUI_SetPrefString("preferences","MatchBezierHandles",gMatchBezierHandles ? "1" : "0");
 	GUI_SetPrefString("preferences","LayLineRecent",gLayLineRecent.c_str());
+	GUI_SetPrefString("preferences","LayLineSkipShared",gLayLineSkipShared ? "1" : "0");
 
 	for (map<string,string>::iterator i = sGlobalPrefs.begin(); i != sGlobalPrefs.end(); ++i)
 		if(i->first != "doc/xml_compatibility")          // why NOT write that ? Cuz WED 2.0 ... 2.2 read that and if an PRE wed-2.0 document

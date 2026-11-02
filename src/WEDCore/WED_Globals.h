@@ -67,6 +67,9 @@ extern int gMatchBezierHandles;
 /* The lines last picked in the lay-line pop-out (WED_LayLineLayer), newest
    first, separated by ';'. */
 extern string gLayLineRecent;
+/* The pop-out's "Exposed edges only" (1) or "All edges" (0): leave out the edges
+   where the shape butts up to another pavement polygon. All edges unless chosen. */
+extern int gLayLineSkipShared;
 /* "Show Recommendation" toggle in the livery editor's airline list
    toolbar - splits the list into up to several per-airport recommendation
    sections (manual pin, direct hit, same country, popular fleet - see

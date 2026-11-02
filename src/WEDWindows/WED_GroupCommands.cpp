@@ -2636,7 +2636,96 @@ int		WED_CanLayLineAlong(IResolver * resolver)
 	return 0;
 }
 
-void	WED_DoLayLineAlong(IResolver * resolver, const string& lin_vpath)
+// Exposed edges only: an edge whose two ends sit on two neighbouring nodes of another
+// pavement polygon (taxiway or draped polygon) butts up to it and gets no line. Ends
+// within kSharedTolMtr count as the same node, so imported airports match too. An edge
+// that touches only part of a longer one (a T junction) is not found.
+static const double kSharedTolMtr = 0.05;
+
+static bool same_spot(const Point2& a, const Point2& b)
+{
+	const double dy = (a.y() - b.y()) / MTR_TO_DEG_LAT;
+	const double dx = (a.x() - b.x()) / MTR_TO_DEG_LAT * cos(a.y() * DEG_TO_RAD);
+	return dx * dx + dy * dy <= kSharedTolMtr * kSharedTolMtr;
+}
+
+static Point2 point_of(IGISPointSequence * ps, int n)
+{
+	Point2 p;
+	ps->GetNthPoint(n)->GetLocation(gis_Geo, p);
+	return p;
+}
+
+static bool is_pavement(WED_Thing * t)
+{
+	return dynamic_cast<WED_Taxiway *>(t) || dynamic_cast<WED_PolygonPlacement *>(t);
+}
+
+// The edges of every other pavement polygon near the shape, hidden ones too: a hidden
+// taxiway still butts up to it.
+static void get_pavement_edges(WED_Thing * root, IGISEntity * shape, vector<Segment2>& out)
+{
+	Bbox2 around;
+	shape->GetBounds(gis_Geo, around);
+	around.expand(MTR_TO_DEG_LAT, MTR_TO_DEG_LAT);
+	vector<IGISPolygon *> pavements;
+	CollectRecursive(root, back_inserter(pavements), IgnoreVisiblity, is_pavement);
+	for (IGISPolygon * poly : pavements)
+	{
+		if (poly == dynamic_cast<IGISPolygon *>(shape)) continue;
+		Bbox2 b;
+		poly->GetBounds(gis_Geo, b);
+		if (!b.overlap(around)) continue;
+		for (int r = -1; r < poly->GetNumHoles(); ++r)
+		{
+			IGISPointSequence * ring = r < 0 ? poly->GetOuterRing() : poly->GetNthHole(r);
+			const int n = ring->GetNumPoints();
+			for (int i = 0; i < n; ++i)
+				out.push_back(Segment2(point_of(ring, i), point_of(ring, (i + 1) % n)));
+		}
+	}
+}
+
+// Nodes first..first+count-1 of the outline (wrapping around), as a new line beside the
+// shape: its own nodes and handles, copied - exactly on its vertices and following its
+// curves, what Snap To Vertices and Match Bezier Handles give a line traced by hand,
+// without their search.
+static WED_LinePlacement * lay_line(WED_Thing * shape, int idx, IGISPointSequence * ps, int first, int count, bool closed,
+									const string& name, const string& lin_vpath)
+{
+	WED_LinePlacement * lin = WED_LinePlacement::CreateTyped(shape->GetArchive());
+	lin->SetParent(shape->GetParent(), idx);
+	lin->SetName(name);
+	lin->SetResource(lin_vpath);
+	lin->SetClosed(closed);
+	const int np = ps->GetNumPoints();
+	for (int k = 0; k < count; ++k)
+	{
+		IGISPoint * p = ps->GetNthPoint((first + k) % np);
+		WED_SimpleBezierBoundaryNode * node = WED_SimpleBezierBoundaryNode::CreateTyped(shape->GetArchive());
+		node->SetParent(lin, k);
+		char buf[32];
+		snprintf(buf, sizeof(buf), "Node %d", k + 1);
+		node->SetName(buf);
+		if (IGISPoint_Bezier * b = dynamic_cast<IGISPoint_Bezier *>(p))
+		{
+			BezierPoint2 bp;
+			b->GetBezierLocation(gis_Geo, bp);
+			node->SetBezierLocation(gis_Geo, bp);
+		}
+		else
+		{
+			Point2 loc;
+			p->GetLocation(gis_Geo, loc);
+			node->SetLocation(gis_Geo, loc);
+			node->DeleteHandleLo();
+			node->DeleteHandleHi();
+		}
+	}
+	return lin;
+}
+
+void	WED_DoLayLineAlong(IResolver * resolver, const string& lin_vpath, bool skip_shared)
 {
 	ISelection * sel = WED_GetSelect(resolver);
 	vector<ISelectable *> selected;
@@ -2655,43 +2744,55 @@ void	WED_DoLayLineAlong(IResolver * resolver, const string& lin_vpath)
 		if (!shape || !shape->GetParent()) continue;
 		vector<IGISPointSequence *> outlines;
 		get_lay_line_outlines(s, outlines);
-		// next to the shape in the hierarchy, in ring order
-		int idx = shape->GetMyPosition() + 1;
+		vector<Segment2> pavement_edges;
+		if (skip_shared && !outlines.empty())
+			get_pavement_edges(WED_GetWorld(resolver), dynamic_cast<IGISEntity *>(s), pavement_edges);
+		// right above the shape in the hierarchy, as the drawing tools place a new
+		// thing above the selection; in ring order
+		int idx = shape->GetMyPosition();
 		for (IGISPointSequence * ps : outlines)
 		{
-			if (!ps || ps->GetNumPoints() < 2) continue;
-			WED_LinePlacement * lin = WED_LinePlacement::CreateTyped(shape->GetArchive());
-			lin->SetParent(shape->GetParent(), idx++);
-			lin->SetName(name);
-			lin->SetResource(lin_vpath);
-			lin->SetClosed(ps->IsClosed());
-			// The shape's own nodes and handles, copied: exactly on its vertices and
-			// following its curves - what Snap To Vertices and Match Bezier Handles
-			// give a line traced by hand, without their search.
-			for (int n = 0; n < ps->GetNumPoints(); ++n)
+			const int np = ps ? ps->GetNumPoints() : 0;
+			if (np < 2) continue;
+			const bool closed = ps->IsClosed();
+			const int ne = closed ? np : np - 1;
+			// edge i runs from node i to node i+1
+			vector<bool> shared(ne, false);
+			int n_shared = 0;
+			for (int i = 0; i < ne && !pavement_edges.empty(); ++i)
 			{
-				IGISPoint * p = ps->GetNthPoint(n);
-				WED_SimpleBezierBoundaryNode * node = WED_SimpleBezierBoundaryNode::CreateTyped(shape->GetArchive());
-				node->SetParent(lin, n);
-				char buf[32];
-				snprintf(buf, sizeof(buf), "Node %d", n + 1);
-				node->SetName(buf);
-				if (IGISPoint_Bezier * b = dynamic_cast<IGISPoint_Bezier *>(p))
-				{
-					BezierPoint2 bp;
-					b->GetBezierLocation(gis_Geo, bp);
-					node->SetBezierLocation(gis_Geo, bp);
-				}
-				else
-				{
-					Point2 loc;
-					p->GetLocation(gis_Geo, loc);
-					node->SetLocation(gis_Geo, loc);
-					node->DeleteHandleLo();
-					node->DeleteHandleHi();
-				}
+				const Point2 a = point_of(ps, i), b = point_of(ps, (i + 1) % np);
+				for (const Segment2 & e : pavement_edges)
+					if ((same_spot(a, e.p1) && same_spot(b, e.p2)) || (same_spot(a, e.p2) && same_spot(b, e.p1)))
+					{
+						shared[i] = true;
+						++n_shared;
+						break;
+					}
 			}
-			made.push_back(lin);
+			if (n_shared == 0)
+			{
+				made.push_back(lay_line(shape, idx++, ps, 0, np, closed, name, lin_vpath));
+				continue;
+			}
+			// one open line per run of edges between shared ones; a closed ring is
+			// walked from just after a shared edge, so no run is cut in two
+			int start = 0;
+			if (closed && n_shared < ne)
+				while (!shared[(start + ne - 1) % ne] || shared[start]) start = (start + 1) % ne;
+			int run_first = -1, run_len = 0;
+			for (int k = 0; k <= ne; ++k)
+			{
+				const int i = (start + k) % ne;
+				if (k < ne && !shared[i])
+				{
+					if (run_len++ == 0) run_first = i;
+					continue;
+				}
+				if (run_len > 0)
+					made.push_back(lay_line(shape, idx++, ps, run_first, run_len + 1, false, name, lin_vpath));
+				run_len = 0;
+			}
 		}
 	}
 	if (made.empty())
