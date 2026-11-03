@@ -2623,19 +2623,6 @@ static void get_lay_line_outlines(ISelectable * what, vector<IGISPointSequence *
 	}
 }
 
-int		WED_CanLayLineAlong(IResolver * resolver)
-{
-	ISelection * sel = WED_GetSelect(resolver);
-	vector<ISelectable *> selected;
-	sel->GetSelectionVector(selected);
-	vector<IGISPointSequence *> outlines;
-	for (ISelectable * s : selected)
-		get_lay_line_outlines(s, outlines);
-	for (IGISPointSequence * ps : outlines)
-		if (ps && ps->GetNumPoints() >= 2) return 1;
-	return 0;
-}
-
 // Exposed edges only: an edge whose two ends sit on two neighbouring nodes of another
 // pavement polygon (taxiway or draped polygon) butts up to it and gets no line. Ends
 // within kSharedTolMtr count as the same node, so imported airports match too. An edge

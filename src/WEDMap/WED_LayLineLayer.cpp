@@ -410,35 +410,36 @@ void	WED_LayLineLayer::Close(void)
 	GetHost()->Refresh();
 }
 
-int		WED_LayLineLayer::CanOpenForSelection(void)
+// The menu command is for polygons only (Julian): a selected line does not turn it on
+static WED_Thing * first_selected_polygon(IResolver * resolver)
 {
-	return WED_CanLayLineAlong(GetResolver());
-}
-
-// The card for the first selected shape a line can be laid along, its callout from
-// the middle of the shape's bounds
-void	WED_LayLineLayer::OpenForSelection(void)
-{
-	if (!WED_CanLayLineAlong(GetResolver())) return;
-	ISelection * sel = WED_GetSelect(GetResolver());
+	ISelection * sel = WED_GetSelect(resolver);
 	vector<ISelectable *> selected;
 	sel->GetSelectionVector(selected);
 	for (ISelectable * s : selected)
 	{
 		WED_Thing * t = dynamic_cast<WED_Thing *>(s);
-		IGISEntity * e = dynamic_cast<IGISEntity *>(s);
-		if (!t || !e) continue;
-		const GISClass_t c = e->GetGISClass();
-		if (c != gis_Polygon && c != gis_PointSequence && c != gis_Ring && c != gis_Chain) continue;
-		if (c != gis_Polygon && dynamic_cast<IGISPolygon *>(t->GetParent())) continue;
-		IGISPolygon * poly = dynamic_cast<IGISPolygon *>(e);
-		IGISPointSequence * ps = poly ? poly->GetOuterRing() : dynamic_cast<IGISPointSequence *>(e);
-		if (!ps || ps->GetNumPoints() < 2) continue;
-		Bbox2 b;
-		e->GetBounds(gis_Geo, b);
-		Open(t->GetID(), b.centroid());
-		return;
+		IGISPolygon * poly = dynamic_cast<IGISPolygon *>(s);
+		if (!t || !poly || poly->GetGISClass() != gis_Polygon) continue;
+		IGISPointSequence * ps = poly->GetOuterRing();
+		if (ps && ps->GetNumPoints() >= 2) return t;
 	}
+	return NULL;
+}
+
+int		WED_LayLineLayer::CanOpenForSelection(void)
+{
+	return first_selected_polygon(GetResolver()) != NULL;
+}
+
+// The card for the first selected polygon, its callout from the middle of its bounds
+void	WED_LayLineLayer::OpenForSelection(void)
+{
+	WED_Thing * t = first_selected_polygon(GetResolver());
+	if (!t) return;
+	Bbox2 b;
+	dynamic_cast<IGISEntity *>(t)->GetBounds(gis_Geo, b);
+	Open(t->GetID(), b.centroid());
 }
 
 void	WED_LayLineLayer::Pick(int entry)
