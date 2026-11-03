@@ -2712,6 +2712,62 @@ static WED_LinePlacement * lay_line(WED_Thing * shape, int idx, IGISPointSequenc
 	return lin;
 }
 
+bool	WED_GetLayLineStretch(IResolver * resolver, IGISPointSequence ** out_ps, int * out_first, int * out_count)
+{
+	ISelection * sel = WED_GetSelect(resolver);
+	if (!sel || sel->GetSelectionCount() != 2) return false;
+	vector<ISelectable *> selected;
+	sel->GetSelectionVector(selected);
+	WED_Thing * n0 = dynamic_cast<WED_Thing *>(selected[0]);
+	WED_Thing * n1 = dynamic_cast<WED_Thing *>(selected[1]);
+	if (!n0 || !n1 || !dynamic_cast<IGISPoint *>(n0) || !dynamic_cast<IGISPoint *>(n1)) return false;
+	if (n0->GetParent() != n1->GetParent()) return false;
+	IGISPointSequence * ps = dynamic_cast<IGISPointSequence *>(n0->GetParent());
+	// an outline get_lay_line_outlines would lay: a polygon's ring, a line, string or shape
+	WED_Thing * ps_thing = n0->GetParent();
+	if (!ps || !ps_thing || !ps_thing->GetParent()) return false;
+	if (IGISPolygon * poly = dynamic_cast<IGISPolygon *>(ps_thing->GetParent()))
+	{
+		if (poly->GetGISClass() != gis_Polygon) return false;		// boundaries, exclusions
+	}
+	else
+	{
+		vector<IGISPointSequence *> outlines;
+		get_lay_line_outlines(dynamic_cast<ISelectable *>(ps_thing), outlines);
+		if (outlines.empty()) return false;
+	}
+	const int np = ps->GetNumPoints();
+	int a = -1, b = -1;
+	for (int i = 0; i < np; ++i)
+	{
+		IGISPoint * p = ps->GetNthPoint(i);
+		if (p == dynamic_cast<IGISPoint *>(n0) || p == dynamic_cast<IGISPoint *>(n1))
+			(a < 0 ? a : b) = i;
+	}
+	if (a < 0 || b < 0) return false;
+	int first = a, count = b - a + 1;
+	if (ps->IsClosed())
+	{
+		// the shorter way round, by the length of the edges between the nodes
+		double fwd = 0, all = 0;
+		for (int i = 0; i < np; ++i)
+		{
+			const double d = LonLatDistMeters(point_of(ps, i), point_of(ps, (i + 1) % np));
+			all += d;
+			if (i >= a && i < b) fwd += d;
+		}
+		if (all - fwd < fwd)
+		{
+			first = b;
+			count = np - (b - a) + 1;
+		}
+	}
+	if (out_ps) *out_ps = ps;
+	if (out_first) *out_first = first;
+	if (out_count) *out_count = count;
+	return true;
+}
+
 void	WED_DoLayLineAlong(IResolver * resolver, const string& lin_vpath, bool skip_shared)
 {
 	ISelection * sel = WED_GetSelect(resolver);
@@ -2721,6 +2777,22 @@ void	WED_DoLayLineAlong(IResolver * resolver, const string& lin_vpath, bool skip
 	string name = lin_vpath.substr(lin_vpath.find_last_of('/') + 1);
 	if (name.size() > 4 && name.compare(name.size() - 4, 4, ".lin") == 0)
 		name.erase(name.size() - 4);
+
+	IGISPointSequence * stretch_ps;
+	int stretch_first, stretch_count;
+	if (WED_GetLayLineStretch(resolver, &stretch_ps, &stretch_first, &stretch_count))
+	{
+		// above the polygon the ring belongs to, or above the line itself
+		WED_Thing * shape = dynamic_cast<WED_Thing *>(stretch_ps);
+		if (dynamic_cast<IGISPolygon *>(shape->GetParent())) shape = shape->GetParent();
+		IOperation * op = dynamic_cast<IOperation *>(sel);
+		op->StartOperation("Lay Line Along Shape");
+		WED_Thing * lin = lay_line(shape, shape->GetMyPosition(), stretch_ps, stretch_first, stretch_count, false, name, lin_vpath);
+		sel->Clear();
+		sel->Insert(lin);
+		op->CommitOperation();
+		return;
+	}
 
 	IOperation * op = dynamic_cast<IOperation *>(sel);
 	op->StartOperation("Lay Line Along Shape");

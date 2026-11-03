@@ -28,8 +28,9 @@
 	WED_LayLineLayer - THEORY OF OPERATION
 
 	Lay a line (.lin) along a shape someone has already drawn: a double click on
-	a selected polygon, line or shape, with the select (Vertex) tool, pops out a
-	card beside it, a white callout line from the shape to the card:
+	a polygon, line or shape, with the select (Vertex) tool, pops out a card
+	beside it, a white callout line from the shape to the card. The first click
+	may be the one that selects it (Julian: three clicks were one too many).
 
 	                 Lay line along shape                 75
 	                 [ soil 1m_                          ]   <- type to search
@@ -55,6 +56,11 @@
 
 	Picking an entry runs WED_DoLayLineAlong: a new line on exactly the shape's
 	nodes and Bezier handles, one per ring, one undo step.
+
+	A stretch (Julian): with exactly two nodes of one outline selected, Edit >
+	Snap FX to Polygon lays the line only from one to the other, the shorter way
+	round a closed ring. The stretch shows amber on the map while the card is
+	open; All / Exposed edges do not apply to it and are not shown.
 
 	Nothing shows until it is asked for. A click anywhere else, Escape (once the
 	search is empty), another tool or a different selection closes it. The card
@@ -120,10 +126,12 @@ private:
 	// double click detection, as the drawing tools do it
 	float				mLastTime;
 	int					mLastX, mLastY;
-	int					mLastShape;		// the selected shape under the first click, -1 = none
+	int					mLastShape;		// the selected shape under the first click, -1 = none,
+										// kAnyShape = the click selected whatever was there
 
 	bool				mOpen;
-	int					mShapeID;		// the shape the card belongs to
+	int					mShapeID;		// the shape the card belongs to (a node, for a stretch)
+	bool				mStretch;		// two selected nodes: only the stretch between them
 	Point2				mAnchor;		// where the callout starts, lat/lon
 	std::vector<Entry>	mEntries;
 	std::vector<std::string>	mTabs;	// in library order; shown after Recent

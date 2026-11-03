@@ -58,6 +58,7 @@ using std::vector;
 // As the drawing tools tell a double click (WED_CreateToolBase).
 static const float	kDoubleClickTime = 0.2f;
 static const int	kDoubleClickDist = 3;
+static const int	kAnyShape = -2;				// mLastShape: the first click selected what it hit
 
 static const float kWhite[4]  = { 0.93f, 0.93f, 0.93f, 1.0f };
 static const float kMuted[4]  = { 0.62f, 0.62f, 0.64f, 1.0f };
@@ -179,7 +180,7 @@ static vector<string>	RecentList(void)
 
 WED_LayLineLayer::WED_LayLineLayer(GUI_Pane * host, WED_MapZoomerNew * zoomer, IResolver * resolver) :
 	WED_MapLayer(host, zoomer, resolver), mLastTime(-9.9e9f), mLastX(0), mLastY(0), mLastShape(-1),
-	mOpen(false), mShapeID(-1), mTab(0), mScroll(0)
+	mOpen(false), mShapeID(-1), mStretch(false), mTab(0), mScroll(0)
 {
 	mCard[0] = mCard[1] = mCard[2] = mCard[3] = 0;
 }
@@ -375,6 +376,7 @@ void	WED_LayLineLayer::Open(int shape_id, const Point2& click_ll)
 {
 	mOpen = true;
 	mShapeID = shape_id;
+	mStretch = false;
 	mAnchor = click_ll;
 	// a polygon's callout starts in its middle, if the middle is on it
 	WED_Thing * wrl = WED_GetWorld(GetResolver());
@@ -429,12 +431,26 @@ static WED_Thing * first_selected_polygon(IResolver * resolver)
 
 int		WED_LayLineLayer::CanOpenForSelection(void)
 {
-	return first_selected_polygon(GetResolver()) != NULL;
+	return first_selected_polygon(GetResolver()) != NULL || WED_GetLayLineStretch(GetResolver(), NULL, NULL, NULL);
 }
 
-// The card for the first selected polygon, its callout from the middle of its bounds
+// The card for two selected nodes, its callout from the middle node of the stretch;
+// else for the first selected polygon, its callout from the middle of its bounds
 void	WED_LayLineLayer::OpenForSelection(void)
 {
+	IGISPointSequence * ps;
+	int first, count;
+	if (WED_GetLayLineStretch(GetResolver(), &ps, &first, &count))
+	{
+		const int np = ps->GetNumPoints();
+		WED_Thing * node = dynamic_cast<WED_Thing *>(ps->GetNthPoint(first));
+		Point2 mid;
+		ps->GetNthPoint((first + count / 2) % np)->GetLocation(gis_Geo, mid);
+		if (!node) return;
+		Open(node->GetID(), mid);
+		mStretch = true;
+		return;
+	}
 	WED_Thing * t = first_selected_polygon(GetResolver());
 	if (!t) return;
 	Bbox2 b;
@@ -517,12 +533,19 @@ int		WED_LayLineLayer::HandleClickDown(int inX, int inY, int inButton, GUI_KeyFl
 		Open(id, GetZoomer()->PixelToLL(Point2(inX, inY)));
 		return 1;
 	}
-	// The first click goes on to the tool. It counts towards a double click
-	// only when the shape was already selected.
+	// The first click goes on to the tool, and counts towards a double click on
+	// the shape it was already on, or on whatever the tool selects with it.
+	if (on && mLastShape == kAnyShape && now - mLastTime < kDoubleClickTime &&
+		abs(inX - mLastX) <= kDoubleClickDist && abs(inY - mLastY) <= kDoubleClickDist)
+	{
+		mLastShape = -1;
+		Open(id, GetZoomer()->PixelToLL(Point2(inX, inY)));
+		return 1;
+	}
 	mLastTime = now;
 	mLastX = inX;
 	mLastY = inY;
-	mLastShape = on ? id : -1;
+	mLastShape = on ? id : kAnyShape;
 	return 0;
 }
 
@@ -582,7 +605,8 @@ void	WED_LayLineLayer::DrawSelected(bool inCurrent, GUI_GraphState * g)
 	WED_Thing * wrl = WED_GetWorld(GetResolver());
 	ISelection * sel = WED_GetSelect(GetResolver());
 	ISelectable * shape = dynamic_cast<ISelectable *>(wrl ? wrl->FetchPeer(mShapeID) : NULL);
-	if (!shape || !sel || !sel->IsSelected(shape) || !ToolAllows() || mEntries.empty())
+	if (!shape || !sel || !sel->IsSelected(shape) || !ToolAllows() || mEntries.empty() ||
+		(mStretch && !WED_GetLayLineStretch(GetResolver(), NULL, NULL, NULL)))
 	{
 		mOpen = false;
 		mEntries.clear();
@@ -681,6 +705,29 @@ void	WED_LayLineLayer::DrawCard(GUI_GraphState * g)
 
 	g->SetState(0, 0, 0, 0, 1, 0, 0);
 
+	// a stretch: the edges the line will follow, amber
+	IGISPointSequence * ps;
+	int first, count;
+	if (mStretch && WED_GetLayLineStretch(GetResolver(), &ps, &first, &count))
+	{
+		const int np = ps->GetNumPoints();
+		for (int pass = 0; pass < 2; ++pass)
+		{
+			if (pass) glColor4fv(kAmber); else glColor4f(0, 0, 0, 0.6f);
+			glLineWidth(pass ? 3.0f : 6.0f);
+			glBegin(GL_LINE_STRIP);
+			for (int k = 0; k < count; ++k)
+			{
+				Point2 ll;
+				ps->GetNthPoint((first + k) % np)->GetLocation(gis_Geo, ll);
+				const Point2 sp = GetZoomer()->MapPixelToScreen(GetZoomer()->LLToPixel(ll));
+				glVertex2f(sp.x(), sp.y());
+			}
+			glEnd();
+		}
+		glLineWidth(1.0f);
+	}
+
 	// the callout: a white line from the shape to the card's near edge
 	{
 		const float ex = a.x() < x0 ? x0 : x1;
@@ -723,7 +770,8 @@ void	WED_LayLineLayer::DrawCard(GUI_GraphState * g)
 	}
 
 	// "All edges" or "Exposed edges only", left of the X, kept in the prefs;
-	// drawn like the tabs
+	// drawn like the tabs. A stretch is laid as picked.
+	if (!mStretch)
 	{
 		struct Choice { const char * label; int hit; bool cur; };
 		const Choice choices[2] = {
