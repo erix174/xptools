@@ -58,8 +58,9 @@
 	nodes and Bezier handles, one per ring, one undo step.
 
 	A stretch (Julian): with exactly two nodes of one outline selected, Edit >
-	Snap FX to Polygon lays the line only from one to the other, the shorter way
-	round a closed ring. The stretch shows amber on the map while the card is
+	Snap FX to Polygon lays the line only from one to the other, the long way
+	round a closed ring or the short way (a choice on the card, in the prefs;
+	long unless chosen). The stretch shows amber on the map while the card is
 	open; All / Exposed edges do not apply to it and are not shown.
 
 	Nothing shows until it is asked for. A click anywhere else, Escape (once the

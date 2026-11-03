@@ -111,7 +111,7 @@ void	WED_MatchBezierHandlesOf(WED_Thing * wrl, const vector<WED_GISPoint_Bezier 
 // one new line per ring or chain, on exactly its nodes and Bezier handles, one undo step.
 void	WED_DoLayLineAlong(IResolver * resolver, const string& lin_vpath, bool skip_shared = false);
 // Exactly two selected nodes of one outline (Julian): the stretch between them, the
-// shorter way round a closed one - nodes first..first+count-1 of the outline, wrapping
+// long or short way round a closed one as gLayLineLongWay says - nodes first..first+count-1 of the outline, wrapping
 // around. WED_DoLayLineAlong then lays only that stretch; skip_shared does not apply.
 class	IGISPointSequence;
 bool	WED_GetLayLineStretch(IResolver * resolver, IGISPointSequence ** out_ps, int * out_first, int * out_count);

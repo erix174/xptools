@@ -70,6 +70,10 @@ extern string gLayLineRecent;
 /* The pop-out's "Exposed edges only" (1) or "All edges" (0): leave out the edges
    where the shape butts up to another pavement polygon. All edges unless chosen. */
 extern int gLayLineSkipShared;
+/* With two nodes of a closed ring selected: the pop-out's "Long way" (1) or
+   "Short way" (0) round between them. Long way unless chosen (Julian: the
+   exposed side is usually the long one). */
+extern int gLayLineLongWay;
 /* "Show Recommendation" toggle in the livery editor's airline list
    toolbar - splits the list into up to several per-airport recommendation
    sections (manual pin, direct hit, same country, popular fleet - see

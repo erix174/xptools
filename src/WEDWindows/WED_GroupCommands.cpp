@@ -2748,7 +2748,8 @@ bool	WED_GetLayLineStretch(IResolver * resolver, IGISPointSequence ** out_ps, in
 	int first = a, count = b - a + 1;
 	if (ps->IsClosed())
 	{
-		// the shorter way round, by the length of the edges between the nodes
+		// the long or short way round (gLayLineLongWay), by the length of the
+		// edges between the nodes
 		double fwd = 0, all = 0;
 		for (int i = 0; i < np; ++i)
 		{
@@ -2756,7 +2757,7 @@ bool	WED_GetLayLineStretch(IResolver * resolver, IGISPointSequence ** out_ps, in
 			all += d;
 			if (i >= a && i < b) fwd += d;
 		}
-		if (all - fwd < fwd)
+		if ((all - fwd < fwd) != (gLayLineLongWay != 0))
 		{
 			first = b;
 			count = np - (b - a) + 1;

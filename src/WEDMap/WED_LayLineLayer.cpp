@@ -74,6 +74,8 @@ static const int   kMaxLines = 22;	// list lines, when the map has the room
 static const int   kMaxRecent = 40;	// kept in the prefs; shown: as many as fit
 static const int   kAllEdgesHit = -2;		// Hit::entry of the "All edges" choice
 static const int   kExposedEdgesHit = -3;	// Hit::entry of "Exposed edges only"
+static const int   kShortWayHit = -5;		// Hit::entry of "Short way", for a stretch
+static const int   kLongWayHit = -6;			// Hit::entry of "Long way"
 static const int   kCloseHit = -4;			// Hit::entry of the X in the corner
 
 // Not std::max: <windows.h>, force-included through XDefs.h, defines min/max macros.
@@ -496,6 +498,14 @@ int		WED_LayLineLayer::HandleClickDown(int inX, int inY, int inButton, GUI_KeyFl
 					Close();
 					break;
 				}
+				if (h.entry == kShortWayHit || h.entry == kLongWayHit)
+				{
+					gLayLineLongWay = h.entry == kLongWayHit;
+					WED_Document::WriteGlobalPrefs();
+					GUI_Prefs_Write("WED");
+					GetHost()->Refresh();
+					break;
+				}
 				if (h.entry == kAllEdgesHit || h.entry == kExposedEdgesHit)
 				{
 					gLayLineSkipShared = h.entry == kExposedEdgesHit;
@@ -706,7 +716,7 @@ void	WED_LayLineLayer::DrawCard(GUI_GraphState * g)
 	g->SetState(0, 0, 0, 0, 1, 0, 0);
 
 	// a stretch: the edges the line will follow, amber
-	IGISPointSequence * ps;
+	IGISPointSequence * ps = NULL;
 	int first, count;
 	if (mStretch && WED_GetLayLineStretch(GetResolver(), &ps, &first, &count))
 	{
@@ -778,13 +788,16 @@ void	WED_LayLineLayer::DrawCard(GUI_GraphState * g)
 	}
 
 	// "All edges" or "Exposed edges only", left of the X, kept in the prefs;
-	// drawn like the tabs. A stretch is laid as picked.
-	if (!mStretch)
+	// drawn like the tabs. A stretch round a closed ring: "Short way" or "Long
+	// way" instead; one on an open line has only one way.
+	if (!mStretch || (ps && ps->IsClosed()))
 	{
 		struct Choice { const char * label; int hit; bool cur; };
 		const Choice choices[2] = {
-			{ "All edges", kAllEdgesHit, gLayLineSkipShared == 0 },
-			{ "Exposed edges only", kExposedEdgesHit, gLayLineSkipShared != 0 } };
+			{ mStretch ? "Short way" : "All edges", mStretch ? kShortWayHit : kAllEdgesHit,
+			  mStretch ? gLayLineLongWay == 0 : gLayLineSkipShared == 0 },
+			{ mStretch ? "Long way" : "Exposed edges only", mStretch ? kLongWayHit : kExposedEdgesHit,
+			  mStretch ? gLayLineLongWay != 0 : gLayLineSkipShared != 0 } };
 		float cx1 = x1 - kPad - xs - 10.0f;
 		const float by1 = y - 4.0f, by0 = y - HeadH() + 4.0f;
 		for (int c = 1; c >= 0; --c)
