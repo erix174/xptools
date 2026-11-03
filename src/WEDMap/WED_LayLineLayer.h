@@ -79,6 +79,10 @@ public:
 	virtual	void		DrawSelected(bool inCurrent, GUI_GraphState * g);
 	virtual	void		GetCaps(bool& draw_ent_v, bool& draw_ent_s, bool& cares_about_sel, bool& wants_clicks);
 
+			// Edit > Snap FX to Polygon: the card for the selection, as a double click opens it
+			int			CanOpenForSelection(void);
+			void		OpenForSelection(void);
+
 private:
 
 	struct Entry {

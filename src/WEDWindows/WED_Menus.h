@@ -75,6 +75,7 @@ enum {
 	wed_RegularPoly,
 	wed_Merge,
 	wed_Reverse,
+	wed_SnapFXToPolygon,
 	wed_Rotate,
 	wed_MoveFirst,
 	wed_MovePrev,

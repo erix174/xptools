@@ -173,7 +173,7 @@ WED_MapPane::WED_MapPane(GUI_Commander * cmdr, double map_bounds[4], IResolver *
 	mLayers.push_back(					new WED_ModerationLayer(mMap, mMap, resolver));
 	// The lay-line pop-out: after the callouts, so its card draws over them; it
 	// takes a click only on its card or on a double click on a selected shape.
-	mLayers.push_back(					new WED_LayLineLayer(mMap, mMap, resolver));
+	mLayers.push_back(mLayLineLayer =	new WED_LayLineLayer(mMap, mMap, resolver));
 #if WITHNWLINK
 	WED_NWLinkAdapter * nwlink = (dynamic_cast<WED_Document *>(resolver))->GetNWLink();
 	if(nwlink)
@@ -473,6 +473,16 @@ int		WED_MapPane::Map_HandleCommand(int command)
 	}
 
 	switch(command) {
+	case wed_SnapFXToPolygon:
+		// the pop-out lives with the Vertex tool, as it does on a double click
+		for (size_t n = 0; n < mTools.size(); ++n)
+			if (mTools[n] && dynamic_cast<WED_VertexTool *>(mTools[n]))
+			{
+				mToolbar->SetValue(n);
+				break;
+			}
+		mLayLineLayer->OpenForSelection();
+		return 1;
 	case wed_ImportOrtho:	WED_MakeOrthos(mResolver, mMap); return 1;
 	case wed_ImportDem:		WED_MakeTerrain(mResolver, mMap); return 1;
 	case wed_PickOverlay:	WED_DoMakeNewOverlay(mResolver, mMap); return 1;
@@ -532,6 +542,7 @@ int		WED_MapPane::Map_CanHandleCommand(int command, string& ioName, int& ioCheck
 	}
 
 	switch(command) {
+	case wed_SnapFXToPolygon:	return mLayLineLayer->CanOpenForSelection();
 	case wed_PickOverlay:														return 1;
 	case wed_ToggleWorldMap:ioCheck = mWorldMap->IsVisible();					return 1;
 	case wed_ToggleNavaidMap:ioCheck = mNavaidMap->IsVisible();					return 1;

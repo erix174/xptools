@@ -43,6 +43,7 @@
 #include <cstring>
 #include <cctype>
 #include <algorithm>
+#include <iterator>
 #include <map>
 
 #if APL
@@ -72,6 +73,7 @@ static const int   kMaxLines = 22;	// list lines, when the map has the room
 static const int   kMaxRecent = 40;	// kept in the prefs; shown: as many as fit
 static const int   kAllEdgesHit = -2;		// Hit::entry of the "All edges" choice
 static const int   kExposedEdgesHit = -3;	// Hit::entry of "Exposed edges only"
+static const int   kCloseHit = -4;			// Hit::entry of the X in the corner
 
 // Not std::max: <windows.h>, force-included through XDefs.h, defines min/max macros.
 static inline float	Max(float a, float b) { return a > b ? a : b; }
@@ -127,8 +129,9 @@ static Point2	ToScreen(WED_MapZoomerNew * z, int x, int y)
 
 // The container folders above the meaningful ones: dropped, not classified.
 static const char * kContainers[] = { "lib/airport/ground/", "lib/airport/", "lib/g10/", "lib/" };
-// apt.dat's own painted taxi lines: drawn with the Taxilines tool, not laid as .lin
-static const char * kLeftOut = "lib/airport/lines/";
+// Not listed: apt.dat's own painted taxi lines, drawn with the Taxilines tool, and
+// the XP10 terrain lines, kept for old sceneries but not for new work.
+static const char * kLeftOut[] = { "lib/airport/lines/", "lib/g10/terrain10/" };
 
 static string	Lower(const string & s)
 {
@@ -243,7 +246,8 @@ void	WED_LayLineLayer::BuildEntries(void)
 			const res_type t = lib->GetResourceType(k);
 			if (t == res_Directory) { dirs.push_back(k); continue; }
 			if (t != res_Line || !lib->IsResourceLibrary(k) || lib->IsResourceDeprecatedOrPrivate(k)) continue;
-			if (k.compare(0, strlen(kLeftOut), kLeftOut) == 0) continue;
+			if (std::any_of(std::begin(kLeftOut), std::end(kLeftOut),
+							[&](const char * l) { return k.compare(0, strlen(l), l) == 0; })) continue;
 			vpaths.push_back(k);
 		}
 		todo.insert(todo.end(), dirs.rbegin(), dirs.rend());
@@ -406,6 +410,37 @@ void	WED_LayLineLayer::Close(void)
 	GetHost()->Refresh();
 }
 
+int		WED_LayLineLayer::CanOpenForSelection(void)
+{
+	return WED_CanLayLineAlong(GetResolver());
+}
+
+// The card for the first selected shape a line can be laid along, its callout from
+// the middle of the shape's bounds
+void	WED_LayLineLayer::OpenForSelection(void)
+{
+	if (!WED_CanLayLineAlong(GetResolver())) return;
+	ISelection * sel = WED_GetSelect(GetResolver());
+	vector<ISelectable *> selected;
+	sel->GetSelectionVector(selected);
+	for (ISelectable * s : selected)
+	{
+		WED_Thing * t = dynamic_cast<WED_Thing *>(s);
+		IGISEntity * e = dynamic_cast<IGISEntity *>(s);
+		if (!t || !e) continue;
+		const GISClass_t c = e->GetGISClass();
+		if (c != gis_Polygon && c != gis_PointSequence && c != gis_Ring && c != gis_Chain) continue;
+		if (c != gis_Polygon && dynamic_cast<IGISPolygon *>(t->GetParent())) continue;
+		IGISPolygon * poly = dynamic_cast<IGISPolygon *>(e);
+		IGISPointSequence * ps = poly ? poly->GetOuterRing() : dynamic_cast<IGISPointSequence *>(e);
+		if (!ps || ps->GetNumPoints() < 2) continue;
+		Bbox2 b;
+		e->GetBounds(gis_Geo, b);
+		Open(t->GetID(), b.centroid());
+		return;
+	}
+}
+
 void	WED_LayLineLayer::Pick(int entry)
 {
 	if (entry < 0 || entry >= (int) mEntries.size()) return;
@@ -439,6 +474,11 @@ int		WED_LayLineLayer::HandleClickDown(int inX, int inY, int inButton, GUI_KeyFl
 			{
 				if (x < h.x0 || x > h.x1 || y < h.y0 || y > h.y1) continue;
 				if (h.entry >= 0) { Pick(h.entry); break; }
+				if (h.entry == kCloseHit)
+				{
+					Close();
+					break;
+				}
 				if (h.entry == kAllEdgesHit || h.entry == kExposedEdgesHit)
 				{
 					gLayLineSkipShared = h.entry == kExposedEdgesHit;
@@ -660,23 +700,35 @@ void	WED_LayLineLayer::DrawCard(GUI_GraphState * g)
 	glVertex2f(x0, y0); glVertex2f(x1, y0); glVertex2f(x1, y1); glVertex2f(x0, y1);
 	glEnd();
 
-	// title, and how many lines the list holds now
-	int n_lines = 0;
-	for (const Line & l : lines) n_lines += (int) l.cells.size();
-	char count[16];
-	snprintf(count, sizeof(count), "%d", n_lines);
+	// title, and an X in the corner that closes the card
 	float y = y1;
-	Txt(g, kWhite, x0 + kPad, y - HeadH() + (HeadH() - asc) * 0.5f, "Lay line along shape");
-	Txt(g, kMuted, x1 - kPad, y - HeadH() + (HeadH() - asc) * 0.5f, count, align_Right);
+	Txt(g, kWhite, x0 + kPad, y - HeadH() + (HeadH() - asc) * 0.5f, "Snap FX to Polygon");
+	const float xs = HeadH() - 8.0f;
+	{
+		const float bx1 = x1 - kPad + 4.0f, bx0 = bx1 - xs, by1 = y - 4.0f, by0 = by1 - xs;
+		const bool hov = over(bx0, by0, bx1, by1);
+		g->SetState(0, 0, 0, 0, 1, 0, 0);
+		if (hov) Fill(bx0, by0, bx1, by1, kHoverBg);
+		const float m = xs * 0.28f;
+		glColor4fv(hov ? kAmber : kMuted);
+		glLineWidth(1.5f);
+		glBegin(GL_LINES);
+		glVertex2f(bx0 + m, by0 + m); glVertex2f(bx1 - m, by1 - m);
+		glVertex2f(bx0 + m, by1 - m); glVertex2f(bx1 - m, by0 + m);
+		glEnd();
+		glLineWidth(1.0f);
+		Hit hit = { bx0, by0, bx1, by1, kCloseHit, -1 };
+		mHits.push_back(hit);
+	}
 
-	// "All edges" or "Exposed edges only", left of the count, kept in the prefs;
+	// "All edges" or "Exposed edges only", left of the X, kept in the prefs;
 	// drawn like the tabs
 	{
 		struct Choice { const char * label; int hit; bool cur; };
 		const Choice choices[2] = {
 			{ "All edges", kAllEdgesHit, gLayLineSkipShared == 0 },
 			{ "Exposed edges only", kExposedEdgesHit, gLayLineSkipShared != 0 } };
-		float cx1 = x1 - kPad - TextW(count) - 12.0f;
+		float cx1 = x1 - kPad - xs - 10.0f;
 		const float by1 = y - 4.0f, by0 = y - HeadH() + 4.0f;
 		for (int c = 1; c >= 0; --c)
 		{

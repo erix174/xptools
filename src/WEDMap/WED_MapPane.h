@@ -37,6 +37,7 @@ class GUI_ToolBar;
 class WED_Map;
 class WED_MapToolNew;
 class WED_MapLayer;
+class WED_LayLineLayer;
 class GUI_Table;
 class GUI_TextTable;
 class WED_ToolInfoAdapter;
@@ -110,6 +111,7 @@ private:
 
 	WED_SlippyMap *			mSlippyMap;
 	WED_StructureLayer *	mStructureLayer;
+	WED_LayLineLayer *		mLayLineLayer;
 	WED_ATCLayer *			mATCLayer;
 	int						mTabMode;				// tab_*, as SetTabFilterMode last set it
 	bool					mSelectionFootprints;	// ShowRampFootprintsOnSelection

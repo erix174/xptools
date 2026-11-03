@@ -127,6 +127,7 @@ static const GUI_MenuItem_t	kEditMenu[] = {
 {	"Make Regular Poly",	'Q',	gui_ControlFlag+gui_ShiftFlag,	0,	wed_RegularPoly },
 {	"Merge",				'M',	gui_ControlFlag+gui_ShiftFlag,	0,	wed_Merge		},
 {	"Rever&se",				'R',	gui_ControlFlag+gui_ShiftFlag,	0,	wed_Reverse		},
+{	"Snap FX to Polygon",	0,		0,								0,	wed_SnapFXToPolygon },
 {	"Rotate",				'R',	gui_ControlFlag,				0,	wed_Rotate		},
 {	"Cr&op Unselected",		0,		0,								0,	wed_Crop		},
 {	"Con&vert To",			0,		0,								0,	0				},
