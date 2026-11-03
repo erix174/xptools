@@ -715,13 +715,21 @@ void	WED_LayLineLayer::DrawCard(GUI_GraphState * g)
 		{
 			if (pass) glColor4fv(kAmber); else glColor4f(0, 0, 0, 0.6f);
 			glLineWidth(pass ? 3.0f : 6.0f);
+			auto vertex = [&](const Point2& ll) {
+				const Point2 sp = GetZoomer()->MapPixelToScreen(GetZoomer()->LLToPixel(ll));
+				glVertex2f(sp.x(), sp.y()); };
 			glBegin(GL_LINE_STRIP);
 			for (int k = 0; k < count; ++k)
 			{
+				const int n = (first + k) % np;
 				Point2 ll;
-				ps->GetNthPoint((first + k) % np)->GetLocation(gis_Geo, ll);
-				const Point2 sp = GetZoomer()->MapPixelToScreen(GetZoomer()->LLToPixel(ll));
-				glVertex2f(sp.x(), sp.y());
+				ps->GetNthPoint(n)->GetLocation(gis_Geo, ll);
+				vertex(ll);
+				// following the curve to the next node, as the line will
+				Bezier2 side;
+				if (k + 1 < count && ps->GetSide(gis_Geo, n, side))
+					for (int t = 1; t < 16; ++t)
+						vertex(side.midpoint(t / 16.0));
 			}
 			glEnd();
 		}
